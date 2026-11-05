@@ -20,6 +20,8 @@ const POLL: Duration = Duration::from_millis(200);
 const CREATE_WAIT: Duration = Duration::from_secs(30);
 const CHANGE_WAIT: Duration = Duration::from_secs(15);
 const SCRIPT_TIMEOUT_SECONDS: u32 = 15;
+const START_RETRIES: u32 = 2;
+const START_GAP: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Failure {
@@ -308,14 +310,19 @@ fn validate(probe: &dyn Probe, action: &Value, _state: &Value) -> Result<(), Ref
     if !creates(operation) {
         return Ok(());
     }
-    let count = run(
-        probe,
-        &format!(
-            "{}return count of matched",
-            matching(operation, &action["args"])
-        ),
-    )
-    .map_err(|failure| {
+    let question = format!(
+        "{}return count of matched",
+        matching(operation, &action["args"])
+    );
+    let mut attempt = run(probe, &question);
+    for _ in 0..START_RETRIES {
+        if !matches!(attempt, Err(Failure::ConnectionLost | Failure::Timeout)) {
+            break;
+        }
+        thread::sleep(START_GAP);
+        attempt = run(probe, &question);
+    }
+    let count = attempt.map_err(|failure| {
         if failure == Failure::Permission {
             refuse("forbidden")
         } else {
@@ -512,6 +519,20 @@ mod tests {
         assert_eq!(refusal.code, "conflict");
         assert_eq!(probe.seen.borrow().len(), 1);
         assert!(!probe.seen.borrow()[0].contains("make new"));
+    }
+
+    #[test]
+    fn a_mail_that_is_still_starting_gets_more_chances_before_a_refusal() {
+        let starting = Scripted::new(vec![Ok(json!({"error_number": -600})), Scripted::says("0")]);
+        validate(&starting, &draft(), &Value::Null).unwrap();
+        let down = Scripted::new(vec![
+            Ok(json!({"error_number": -600})),
+            Ok(json!({"error_number": -600})),
+            Ok(json!({"error_number": -600})),
+        ]);
+        let refusal = validate(&down, &draft(), &Value::Null).expect_err("refused");
+        assert_eq!(refusal.code, "unavailable");
+        assert_eq!(down.seen.borrow().len(), 3);
     }
 
     #[test]

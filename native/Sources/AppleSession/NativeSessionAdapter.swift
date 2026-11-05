@@ -59,6 +59,9 @@ extension AppleSession: NativeAdapter {
         if operation == "calendar.account" {
             return nativeFacts(single: await sources.calendar.account(args["calendar"].string), scope: "calendar")
         }
+        if operation == "contacts.derive_photo" {
+            return nativeFacts(single: await sources.contacts.derivePhoto(args["digest"].string), scope: "contacts")
+        }
         if operation == "mac.pasteboard" {
             guard args.object.isEmpty, let mac = additionalSources["mac"] as? MacSource else { throw SourceFailure.unsupported }
             return nativeFacts(single: try await mac.primitive("mac.pasteboard_policy", args: .object([:])), scope: "mac")

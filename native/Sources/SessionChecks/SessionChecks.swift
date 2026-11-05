@@ -28,9 +28,7 @@ struct FakeSource: Source {
     let once = Once()
     let started = Counter()
     let observes: Bool
-    func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: ["phone.set"])
-    }
+    func status() async -> JSON? { .object(["ok": .bool(true)]) }
     func primitive(_ operation: String, args: JSON) async throws -> JSON {
         guard operation == "phone.echo" else { throw SourceFailure.unsupported }
         return .object(["echo": args["value"]])
@@ -78,9 +76,9 @@ struct SessionChecks {
         try check(try await peer.next("Welcome")["protocol"] == .string("native/1"), "welcome")
         try peer.wire.send(.object(["t": .string("Session"), "checkpoints": .object(["phone": .object(["generation": .string("g1"), "checkpoint": .string("c0")])])]))
         let ready = try await peer.next("Ready")
-        try check(ready["capabilities"]["phone"].array.contains(.string("phone.set")) && ready["coverage"]["phone"] != .null, "ready lists the fake source")
-        let state = try await peer.next("SourceState")
-        try check(!state["source"].string.isEmpty && state["coverage"].object.count == 1, "source state shape")
+        try check(ready["framework"]["phone"]["ok"] == .bool(true) && ready["coverage"] == .null, "ready carries raw status only")
+        let state = try await peer.next("FrameworkStatus")
+        try check(state["status"]["phone"]["ok"] == .bool(true), "framework status")
 
         try peer.wire.send(.object(["t": .string("Query"), "id": .string("q1"), "op": .string("helper.version"), "args": .object([:]), "deadline_ms": .integer(1000)]))
         let result = try await peer.next("QueryResult")

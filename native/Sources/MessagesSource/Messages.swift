@@ -10,7 +10,6 @@ public actor Messages: Source {
         self.attachmentHome = attachmentHome
         commands = MessagesCommands(path: nil, labCommands: labCommands)
     }
-    public func open() async -> SourceReadiness { SourceReadiness(state: "ready", coverage: .object([:])) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         try await commands.primitive(operation, args: args)
     }

@@ -5,19 +5,18 @@ import SourceSupport
 public actor LocationStatus: Source {
     public nonisolated let name = "location"
     public init() {}
-    public func open() async -> SourceReadiness { await Self.readiness() }
+    public func status() async -> JSON? { await Self.authorizationName() }
     @MainActor private static let authorization = LocationAuthorization()
-    @MainActor private static func readiness() -> SourceReadiness {
-        let status = authorization.status
-        let reason: String
-        switch status {
-        case .notDetermined: reason = "not_determined"
-        case .denied: reason = "denied"
-        case .restricted: reason = "restricted"
-        case .authorizedAlways: reason = ""
-        default: reason = "unavailable"
+    @MainActor private static func authorizationName() -> JSON {
+        let name: String
+        switch authorization.status {
+        case .notDetermined: name = "not_determined"
+        case .denied: name = "denied"
+        case .restricted: name = "restricted"
+        case .authorizedAlways: name = "authorized_always"
+        default: name = "unavailable"
         }
-        return SourceReadiness(state: reason.isEmpty ? "ready" : "permission_missing", coverage: .object(["fields": .string("complete")]), reason: reason)
+        return .object(["authorization": .string(name)])
     }
 }
 

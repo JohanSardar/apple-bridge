@@ -6,6 +6,7 @@ import SourceSupport
 public actor MapsCommands: Source {
     public nonisolated let name = "maps"
     public init() {}
+    public func status() async -> JSON? { .object([:]) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         guard operation == "maps.show" else { throw SourceFailure.unsupported }
         return try await Self.show(args)

@@ -7,11 +7,13 @@ use crate::{
     Error,
     guard::{DispatchGuard, PreparedEffect, durable_action},
 };
+#[cfg(feature = "lab")]
+use ab_wire::native::Resolve;
 use ab_wire::{
     messages::IpcFrame,
     native::{
         BlobRead, Command, Dispatch, Frame as Link, Outcome, Prepared, Primitive, Query,
-        QueryCancel, Rejected, Resolve,
+        QueryCancel, Rejected,
     },
 };
 use serde_json::{Value, json};
@@ -339,7 +341,46 @@ impl Hub {
             });
             return Ok(());
         }
+        self.unowned_prepare(command)
+    }
+
+    #[cfg(feature = "lab")]
+    fn unowned_prepare(&self, command: Command) -> Result<(), Error> {
         self.send_link(&Link::Prepare(command))
+    }
+
+    #[cfg(not(feature = "lab"))]
+    #[allow(clippy::needless_pass_by_value)]
+    fn unowned_prepare(&self, command: Command) -> Result<(), Error> {
+        self.core()?.commands.preparing = None;
+        self.refuse(&command.command_id, "unsupported")
+    }
+
+    #[cfg(feature = "lab")]
+    fn unowned_dispatch(&self, message: Dispatch) -> Result<(), Error> {
+        self.send_link(&Link::Dispatch(message))
+    }
+
+    #[cfg(not(feature = "lab"))]
+    #[allow(clippy::needless_pass_by_value)]
+    fn unowned_dispatch(&self, message: Dispatch) -> Result<(), Error> {
+        self.core()?.commands.active = None;
+        self.refuse(&message.command_id, "unsupported")
+    }
+
+    #[cfg(feature = "lab")]
+    fn unowned_resolve(&self, id: String, saved: &Value) -> Result<(), Error> {
+        self.send_link(&Link::Resolve(Resolve {
+            command_id: id,
+            saved: raw(saved)?,
+        }))
+    }
+
+    #[cfg(not(feature = "lab"))]
+    #[allow(clippy::needless_pass_by_value)]
+    fn unowned_resolve(&self, id: String, saved: &Value) -> Result<(), Error> {
+        self.core()?.commands.take_resolving(&id);
+        self.send_gateway(&saved_frame(saved)?)
     }
 
     fn prepare_owned(&self, command: &Command) -> Result<(), Error> {
@@ -679,7 +720,7 @@ impl Hub {
             });
             return Ok(());
         }
-        self.send_link(&Link::Dispatch(message))
+        self.unowned_dispatch(message)
     }
 
     fn resolve<'scope>(
@@ -716,10 +757,7 @@ impl Hub {
                 });
                 return Ok(());
             }
-            return self.send_link(&Link::Resolve(Resolve {
-                command_id: id,
-                saved: raw(&saved)?,
-            }));
+            return self.unowned_resolve(id, &saved);
         }
         drop(core);
         self.send_gateway(&saved_frame(&saved)?)

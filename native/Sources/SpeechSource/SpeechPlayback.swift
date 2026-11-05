@@ -6,6 +6,7 @@ import SourceSupport
 public actor SpeechPlayback: Source {
     public nonisolated let name: String
     public init(name: String = "speech") { self.name = name }
+    public func status() async -> JSON? { .object([:]) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         guard operation == "speech.say" || operation == "capture.play_sound" else { throw SourceFailure.unsupported }
         return .object(["finished": .bool(try await Self.play(operation, args))])

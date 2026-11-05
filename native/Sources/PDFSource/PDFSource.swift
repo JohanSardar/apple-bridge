@@ -6,6 +6,7 @@ import SourceSupport
 public struct PDFSource: Source {
     public let name = "pdf"
     public init() {}
+    public func status() async -> JSON? { .object([:]) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         switch operation {
         case "pdf.inspect":

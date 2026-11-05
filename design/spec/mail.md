@@ -32,3 +32,4 @@ T19 adds command descriptors and a native scripting seam for create_draft, send,
 
 Mail deletes by moving: the draft's row goes, and a new row appears in Deleted Messages. So the deleted message's record is tombstoned and a new record takes its place in that mailbox.
 
+Mail commands run in ab-session. Drafts stay open until they are in the Drafts mailbox, because `close` right after `save` drops the save without an error: with Mail warm for 45 s the old script stored 1 of 5 drafts, the new one 5 of 5. A move or delete makes a new row, so the read-back follows the Message-ID and reports the new row's key. A recipient must be one bare address.

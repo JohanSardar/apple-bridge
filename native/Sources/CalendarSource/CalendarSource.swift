@@ -7,16 +7,14 @@ import SourceSupport
 public final class CalendarSource: Source {
     public nonisolated let name = "calendar"
     public static let operations = ["calendar.create_event", "calendar.update_event", "calendar.delete_event", "calendar.create_calendar"]
-    public static let coverage: JSON = .object(["operations": CalendarParity.coverage, "fields": .string("partial"), "missing": .array(["travel_time: positive native units unverified", "structured_location: coordinate units unverified", "detached store identities", "calendar attachment derivatives", "start location, proposals, comments and extra store alarms: positive native fixtures pending"].map(JSON.string))])
     private let gate: AgendaGate
     private let commandsEnabled: Bool
     public nonisolated init(gate: AgendaGate, commandsEnabled: Bool) {
         self.gate = gate; self.commandsEnabled = commandsEnabled
     }
 
-    public func open() async -> SourceReadiness {
-        let authorized = gate.authorized(.event)
-        return SourceReadiness(state: authorized ? "ready" : "permission_missing", coverage: Self.coverage, capabilities: authorized && commandsEnabled ? Self.operations : [], reason: authorized ? "" : "calendar_full_access_required")
+    public func status() async -> JSON? {
+        .object(["authorized": .bool(gate.authorized(.event))])
     }
 
     private func key(_ event: EKEvent) -> String {

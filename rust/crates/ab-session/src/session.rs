@@ -1,12 +1,9 @@
-use crate::{
-    Error,
-    flight::{Flight, Flights, Refused, typed_rows},
-};
+use crate::{Error, flight::Flights};
 use ab_wire::{
     crypto::ipc_proof,
     framing::MAX_FRAME,
-    messages::{IpcFrame, Observation},
-    native::{self, ErrorCode, Frame as Link, Scan, ScanCommitted, ScanFailed, Session, Source},
+    messages::IpcFrame,
+    native::{self, ErrorCode, Frame as Link, Session, Source},
 };
 use serde_json::value::RawValue;
 use std::{
@@ -16,10 +13,7 @@ use std::{
     net::Shutdown,
     os::unix::{fs::MetadataExt, net::UnixStream},
     path::Path,
-    sync::{
-        Arc, Condvar, Mutex, MutexGuard,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::{Arc, Condvar, Mutex, MutexGuard},
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -30,6 +24,8 @@ mod commands;
 mod contacts;
 mod files;
 mod focus;
+#[cfg(feature = "lab")]
+mod lab_scan;
 mod mac;
 mod mail;
 mod media;
@@ -50,6 +46,7 @@ pub fn cleanup_messages(link: UnixStream, request: &serde_json::Value) -> Result
 
 mod notes;
 mod owned;
+mod readiness;
 mod reminders;
 mod shortcuts;
 
@@ -108,15 +105,23 @@ impl Clock for SystemClock {
     }
 }
 
+#[cfg(feature = "lab")]
 const BULK_CHUNK_BYTES: usize = 16_000;
+#[cfg(feature = "lab")]
 const LIVE_CHUNK_BYTES: usize = 64_000;
+#[cfg(feature = "lab")]
 const CALENDAR_LIVE_CHUNK_BYTES: usize = 240_000;
+#[cfg(feature = "lab")]
 const OBSERVATION_LIMIT: usize = 240_000;
 const MAX_CREDIT: i64 = 4_194_304;
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
 enum Origin {
-    Helper { scan: String, last: bool },
+    #[cfg(feature = "lab")]
+    Helper {
+        scan: String,
+        last: bool,
+    },
     Reader(capture::ReaderFlight),
 }
 
@@ -124,6 +129,7 @@ struct Core {
     flights: Flights<Origin>,
     commands: commands::Commands,
     capture: capture::State,
+    framework: BTreeMap<String, crate::readers::Readiness>,
     closed: bool,
 }
 
@@ -132,7 +138,8 @@ struct Hub {
     changed: Condvar,
     gateway: Mutex<UnixStream>,
     link: Mutex<UnixStream>,
-    sequence: AtomicU64,
+    #[cfg(feature = "lab")]
+    sequence: std::sync::atomic::AtomicU64,
     epoch: u128,
     fence: u64,
     os_build: String,
@@ -180,8 +187,12 @@ impl Hub {
         }
     }
 
+    #[cfg(feature = "lab")]
     fn next_checkpoint(&self) -> String {
-        let n = self.sequence.fetch_add(1, Ordering::SeqCst) + 1;
+        let n = self
+            .sequence
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
         format!("ses-{:x}-{n}", self.epoch)
     }
 }
@@ -368,176 +379,18 @@ fn committed(hub: &Hub, frame: &IpcFrame) -> Result<(), Error> {
     hub.changed.notify_all();
     match &flight.origin {
         Origin::Reader(_) => hub.capture_committed(&source, &flight, token)?,
+        #[cfg(feature = "lab")]
         Origin::Helper { scan, last: true } => {
-            hub.send_link(&Link::ScanCommitted(ScanCommitted {
+            hub.send_link(&Link::ScanCommitted(native::ScanCommitted {
                 id: scan.clone(),
                 source: frame.source.ok_or(Error::Invalid)?,
                 checkpoint: flight.checkpoint.clone(),
             }))?;
         }
+        #[cfg(feature = "lab")]
         Origin::Helper { .. } => {}
     }
     Ok(())
-}
-
-fn limit(scan: &Scan) -> usize {
-    match (scan.live, scan.source) {
-        (true, Source::Calendar) => CALENDAR_LIVE_CHUNK_BYTES,
-        (true, _) => LIVE_CHUNK_BYTES,
-        (false, _) => BULK_CHUNK_BYTES,
-    }
-}
-
-fn split(scan: &Scan) -> Result<Vec<Vec<Observation>>, Error> {
-    let limit = if scan.whole { usize::MAX } else { limit(scan) };
-    let ordered = scan
-        .observations
-        .iter()
-        .filter(|row| row.kind != "absent")
-        .chain(scan.observations.iter().filter(|row| row.kind == "absent"));
-    let mut groups: Vec<Vec<Observation>> = vec![Vec::new()];
-    let mut bytes = 0;
-    for row in ordered {
-        let size = serde_json::to_vec(row)?.len() + 1;
-        if size >= OBSERVATION_LIMIT {
-            return Err(Error::Invalid);
-        }
-        if bytes + size > limit && groups.last().is_some_and(|group| !group.is_empty()) {
-            groups.push(Vec::new());
-            bytes = 0;
-        }
-        if let Some(group) = groups.last_mut() {
-            group.push(row.clone());
-        }
-        bytes += size;
-    }
-    Ok(groups)
-}
-
-enum Step {
-    Sent,
-    Closed,
-}
-
-fn send_chunk(
-    hub: &Hub,
-    scan: &Scan,
-    source: &str,
-    chunk: &[Observation],
-    checkpoint: &str,
-    last: bool,
-) -> Result<Step, Error> {
-    loop {
-        let predecessor = {
-            let mut core = hub.core()?;
-            while core.flights.contains(source) {
-                if core.closed {
-                    return Ok(Step::Closed);
-                }
-                core = hub
-                    .changed
-                    .wait_timeout(core, Duration::from_millis(100))
-                    .map_err(|_| Error::WorkerPanicked)?
-                    .0;
-            }
-            core.flights.predecessor(source, &scan.generation)
-        };
-        let capture = scan
-            .capture(chunk.to_vec(), predecessor.clone(), checkpoint.to_owned())
-            .map_err(|_| Error::Invalid)?;
-        let bytes = IpcFrame {
-            t: "Capture".into(),
-            capture: Some(capture),
-            ..IpcFrame::default()
-        }
-        .encode()
-        .map_err(|_| Error::Invalid)?;
-        let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
-        let flight = Flight::new(
-            scan.generation.clone(),
-            checkpoint.to_owned(),
-            size,
-            typed_rows(chunk),
-            Origin::Helper {
-                scan: scan.id.clone(),
-                last,
-            },
-        );
-        let mut core = hub.core()?;
-        if core.closed {
-            return Ok(Step::Closed);
-        }
-        if core.flights.predecessor(source, &scan.generation) != predecessor {
-            continue;
-        }
-        match core.flights.reserve(source, flight) {
-            Ok(()) => {
-                drop(core);
-                hub.write_gateway(&bytes)?;
-                return Ok(Step::Sent);
-            }
-            Err(Refused::TooLarge) => return Err(Error::Invalid),
-            Err(Refused::Busy) => {}
-            Err(Refused::Credit) => {
-                drop(
-                    hub.changed
-                        .wait_timeout(core, Duration::from_millis(100))
-                        .map_err(|_| Error::WorkerPanicked)?,
-                );
-            }
-        }
-    }
-}
-
-fn wait_free(hub: &Hub, source: &str) -> Result<bool, Error> {
-    let mut core = hub.core()?;
-    while core.flights.contains(source) {
-        if core.closed {
-            return Ok(false);
-        }
-        core = hub
-            .changed
-            .wait_timeout(core, Duration::from_millis(100))
-            .map_err(|_| Error::WorkerPanicked)?
-            .0;
-    }
-    Ok(true)
-}
-
-fn run_scan(hub: &Hub, scan: &Scan) -> Result<(), Error> {
-    let source = name(scan.source)?;
-    let chunks = split(scan)?;
-    let final_index = chunks.len() - 1;
-    let checkpoint = hub.next_checkpoint();
-    for (index, chunk) in chunks.iter().enumerate() {
-        let last = index == final_index;
-        let chunk_checkpoint = if last {
-            checkpoint.clone()
-        } else {
-            format!("{checkpoint}-{index}")
-        };
-        if matches!(
-            send_chunk(hub, scan, &source, chunk, &chunk_checkpoint, last)?,
-            Step::Closed
-        ) {
-            return Ok(());
-        }
-        if !last && !wait_free(hub, &source)? {
-            return Ok(());
-        }
-    }
-    Ok(())
-}
-
-fn scan_failed(hub: &Hub, id: &str, error: &Error) {
-    let code = match error {
-        Error::Invalid => "invalid",
-        _ => "unavailable",
-    };
-    let _ = hub.send_link(&Link::ScanFailed(ScanFailed {
-        id: id.to_owned(),
-        code: code.into(),
-    }));
 }
 
 fn start(
@@ -568,6 +421,16 @@ fn start(
         return Err(Error::Invalid);
     };
     let os_build = ready.os_build.clone();
+    if let Some(status) = ready.framework.take() {
+        let status: serde_json::Value = serde_json::from_str(status.get())?;
+        for (source, readiness) in readiness::framework(&status, &os_build) {
+            let coverage = RawValue::from_string(readiness.coverage.to_string())?;
+            let capabilities =
+                RawValue::from_string(serde_json::to_string(&readiness.capabilities)?)?;
+            ready.coverage.insert(source.clone(), coverage);
+            ready.capabilities.insert(source, capabilities);
+        }
+    }
     if let Some(capture) = capture {
         capture.advertise(&mut ready, fence)?;
     }
@@ -654,6 +517,7 @@ pub fn serve_attached(
             flights,
             commands,
             capture: capture_state,
+            framework: BTreeMap::new(),
             closed: false,
         }),
         changed: Condvar::new(),
@@ -663,7 +527,8 @@ pub fn serve_attached(
         capture,
         fence,
         os_build,
-        sequence: AtomicU64::new(0),
+        #[cfg(feature = "lab")]
+        sequence: std::sync::atomic::AtomicU64::new(0),
         epoch: SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| Error::Invalid)?
@@ -709,6 +574,8 @@ pub fn serve_attached(
                         messages_advertise::apply(&mut state.coverage, &mut state.capabilities);
                         hub.send_gateway(&state.into_ipc())?;
                     }
+                    Link::FrameworkStatus(framework) => hub.tell_framework(&framework)?,
+                    #[cfg(feature = "lab")]
                     Link::Scan(scan) => {
                         let hub = &hub;
                         let source = name(scan.source)?;
@@ -716,15 +583,18 @@ pub fn serve_attached(
                             let done = if hub.capture_owns(&source) {
                                 Err(Error::Conflict)
                             } else {
-                                run_scan(hub, &scan)
+                                lab_scan::run_scan(hub, &scan)
                             };
                             if let Err(error) = done {
-                                scan_failed(hub, &scan.id, &error);
+                                lab_scan::scan_failed(hub, &scan.id, &error);
                             }
                         });
                     }
+                    #[cfg(feature = "lab")]
                     Link::Prepared(prepared) => hub.prepared(prepared)?,
+                    #[cfg(feature = "lab")]
                     Link::Rejected(rejection) => hub.rejected_by_helper(rejection)?,
+                    #[cfg(feature = "lab")]
                     Link::Outcome(outcome) => {
                         if let Some((active, outcome)) = hub.outcome_from_helper(outcome)? {
                             let hub = &hub;
