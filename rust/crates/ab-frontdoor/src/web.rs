@@ -645,6 +645,7 @@ fn approval(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod budget_tests {
     use super::*;
 
