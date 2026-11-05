@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # App milestone gates
 
 Inventory refreshed during milestone qualification on 2026-10-22. This file distinguishes executed proof from pending and limited acceptance. Reports, native traces, host samples and screenshots stay private under `lab/evidence/private/`. Fix PRs carry no evidence JSON. Final milestone qualification may include sanitized summaries once; raw native data, traces and screenshots remain private.

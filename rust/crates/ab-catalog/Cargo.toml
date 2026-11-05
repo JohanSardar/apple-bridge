@@ -7,6 +7,10 @@ license.workspace = true
 [lints]
 workspace = true
 
+[[bin]]
+name = "operations-reference"
+path = "src/gen-operations-reference.rs"
+
 [dependencies]
 ab-domain = { path = "../ab-domain" }
 serde.workspace = true

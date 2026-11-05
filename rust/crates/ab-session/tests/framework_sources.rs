@@ -89,7 +89,7 @@ fn keys(capture: &Value) -> Vec<(String, String)> {
 #[test]
 fn a_restart_retires_the_tabs_it_told_the_gateway_about() -> Fallible<()> {
     let root = temporary("tab-restart")?;
-    let sockets = temporary("tab-restart-sock")?;
+    let sockets = temporary("tabr-sock")?;
     let facts: Facts = Facts::default();
     set(
         &facts,

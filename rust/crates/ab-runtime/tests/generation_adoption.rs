@@ -10,19 +10,13 @@ use std::{
     io::{Read, Write},
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 type Fallible<T> = Result<T, Box<dyn std::error::Error>>;
 
 fn scratch(name: &str) -> Fallible<PathBuf> {
-    let directory = std::env::temp_dir().join(format!(
-        "ab-adopt-{name}-{}-{}",
-        std::process::id(),
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
-    ));
-    std::fs::create_dir_all(&directory)?;
-    Ok(directory)
+    support::temporary(&format!("adopt-{name}"))
 }
 
 fn send(socket: &mut UnixStream, value: &Value) -> Fallible<()> {
