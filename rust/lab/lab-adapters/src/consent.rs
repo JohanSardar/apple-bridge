@@ -424,8 +424,8 @@ pub(crate) fn agent_oauth(world: &World, site: &Site, owner: &Owner, evidence: &
         "",
     );
     evidence.check(
-        "refresh_retry_tolerated",
-        refresh(&first.refresh).status == 200,
+        "refresh_retry_returns_saved_successor",
+        tokens(&refresh(&first.refresh)).refresh == rotated.refresh,
         "",
     );
     let aged = edit_credentials(&site.home, |data| {
