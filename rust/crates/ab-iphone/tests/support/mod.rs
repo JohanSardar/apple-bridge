@@ -196,5 +196,6 @@ pub fn live_row(id: &str, phone: &str, op: &str, state: CommandState) -> QueuedC
         state,
         created_at: "2026-01-01T00:00:00Z".into(),
         expires_at: "2099-01-01T00:00:00Z".into(),
+        review: None,
     }
 }
