@@ -572,6 +572,7 @@ fn exercise(
         cached == 200 && hits() == before + 1,
         "",
     );
+    let agents_before = world.gateway_cli(&["agent", "list"])?;
     for variant in [
         "good",
         "mismatch",
@@ -597,7 +598,7 @@ fn exercise(
             _ => CALLBACK,
         };
         set(&mut probe.query, "redirect_uri", redirect);
-        let (status, raw) = probe.request("GET");
+        let (status, _) = probe.request("GET");
         if variant == "private-redirect" {
             evidence.check(
                 "private_redirect_no_connection",
@@ -609,13 +610,36 @@ fn exercise(
         if variant == "good" {
             evidence.check("metadata_valid_consent", status == 200, "");
         } else {
-            evidence.check(
-                &format!("reject_{variant}"),
-                status == 400 && raw.contains("\"error\":\"invalid_request\""),
-                "",
-            );
+            for method in ["GET", "POST"] {
+                let reply = authorize(
+                    owner,
+                    method,
+                    &probe.query,
+                    Some(
+                        &json!({"decision": "approve", "level": "read", "scopes": ["messages:read"]}),
+                    ),
+                );
+                evidence.check(
+                    &format!("reject_{variant}_{method}"),
+                    reply.status == 400
+                        && crate::web_agent_oauth::header(&reply, "Location").is_empty()
+                        && crate::web_agent_oauth::header(&reply, "Content-Type")
+                            .starts_with("text/html")
+                        && contains(&reply, "<h1>This connection request isn't valid</h1>"),
+                    &format!(
+                        "status={} body={}",
+                        reply.status,
+                        String::from_utf8_lossy(&reply.body)
+                    ),
+                );
+            }
         }
     }
+    evidence.check(
+        "invalid_metadata_never_grants_an_agent",
+        world.gateway_cli(&["agent", "list"])? == agents_before,
+        "",
+    );
     set(&mut probe.query, "client_id", "https://client.example/good");
     set(&mut probe.query, "redirect_uri", CALLBACK);
     thread::sleep(Duration::from_millis(110));

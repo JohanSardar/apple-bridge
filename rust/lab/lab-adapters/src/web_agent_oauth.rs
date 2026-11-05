@@ -57,6 +57,25 @@ pub(crate) fn contains(reply: &Reply, needle: &str) -> bool {
     String::from_utf8_lossy(&reply.body).contains(needle)
 }
 
+pub(crate) fn error_redirect(
+    status: u16,
+    location: &str,
+    redirect: &str,
+    state: &str,
+    origin: &str,
+) -> bool {
+    status == 303
+        && location
+            == format!(
+                "{redirect}?{}",
+                query_string(&pairs(&[
+                    ("state", state),
+                    ("iss", origin),
+                    ("error", "invalid_request"),
+                ]))
+            )
+}
+
 pub(crate) fn query_string(fields: &[(String, String)]) -> String {
     let pairs: Vec<(&str, &str)> = fields
         .iter()
@@ -271,10 +290,21 @@ pub fn oauth(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resul
     for bad in ["plain", ""] {
         let mut variant = query.clone();
         set(&mut variant, "code_challenge_method", bad);
+        let reply = authorize(owner, "GET", &variant, None);
         evidence.check(
             &format!("reject_non_s256_{bad}"),
-            authorize(owner, "GET", &variant, None).status == 400,
-            "",
+            error_redirect(
+                reply.status,
+                &header(&reply, "Location"),
+                redirect,
+                "bridge-test",
+                &origin,
+            ),
+            &format!(
+                "status={} location={}",
+                reply.status,
+                header(&reply, "Location")
+            ),
         );
     }
     let mut variant = query.clone();
@@ -330,11 +360,18 @@ pub fn oauth(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resul
     let token = |fields: &Query| agent(&origin, "", "POST", "/oauth/token", None, Some(fields));
     let first_code = get(&response, "code");
     let wrong = "b".repeat(43);
-    evidence.check(
-        "pkce_wrong_verifier_rejected",
-        token(&code_form(&first_code, &wrong, &resource)).status == 400,
-        "",
-    );
+    for (name, proof) in [("wrong", Some(wrong.as_str())), ("missing", None)] {
+        let mut fields = code_form(&first_code, proof.unwrap_or_default(), &resource);
+        if proof.is_none() {
+            fields.retain(|(key, _)| key != "code_verifier");
+        }
+        let reply = token(&fields);
+        evidence.check(
+            &format!("pkce_{name}_verifier_rejected"),
+            reply.status == 400 && reply.json() == json!({"error": "invalid_grant"}),
+            &format!("status={} error={}", reply.status, reply.json()["error"]),
+        );
+    }
     evidence.check(
         "resource_binding",
         token(&code_form(
