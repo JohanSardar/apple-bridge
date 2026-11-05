@@ -13,6 +13,7 @@ lab = ["ab-wire/lab"]
 
 [dependencies]
 ab-native = { path = "../ab-native" }
+ab-shortcuts = { path = "../ab-shortcuts" }
 ab-sys = { path = "../ab-sys" }
 ab-wire = { path = "../ab-wire" }
 serde.workspace = true

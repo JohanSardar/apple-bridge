@@ -80,6 +80,11 @@ impl CaptureReader for FocusReader {
         }
     }
 
+    fn answer(&mut self, operation: &str, _args: &Value) -> Option<Result<Value, String>> {
+        (operation == "focus.assertions_path")
+            .then(|| Ok(serde_json::json!({"path": self.assertions.to_string_lossy()})))
+    }
+
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);

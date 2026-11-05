@@ -4,51 +4,21 @@ import CoreGraphics
 import PDFKit
 import SourceSupport
 
-public actor FilesSource: Source {
-    public nonisolated let name = "files"
-    let roots: [URL]
-    private let writer: BlobWriter
-    private var blobs: [String: URL] = [:]
-    public init(home: URL = FileManager.default.homeDirectoryForCurrentUser, roots: [URL] = []) throws {
-        let defaultRoot = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Bridge Test")
-        try FileManager.default.createDirectory(at: defaultRoot, withIntermediateDirectories: true)
-        let config = home.appendingPathComponent("Library/Application Support/AppleBridge/files-roots.json")
-        let configured = FileManager.default.fileExists(atPath: config.path) ? try JSONDecoder().decode([String].self, from: Data(contentsOf: config)) : []
-        guard configured.count + roots.count <= 16, configured.allSatisfy({ $0.hasPrefix("/") }) else { throw SourceFailure.invalid }
-        self.roots = ([defaultRoot] + roots + configured.map { URL(fileURLWithPath: $0) }).map { $0.standardizedFileURL.resolvingSymlinksInPath() }
-        writer = try BlobWriter(directory: home.appendingPathComponent("Library/Caches/AppleBridge/files-blobs"))
-    }
-    public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["roots": .number(Double(roots.count)), "max_items": .number(10000), "max_depth": .number(16)]), capabilities: ["files.search", "files.read", "files.transform"] + Self.commands)
-    }
-    public func ubiquity(_ paths: [String]) throws -> [JSON] {
-        guard !paths.isEmpty, paths.count <= 500 else { throw SourceFailure.invalid }
-        return try paths.map { path in
-            guard path.hasPrefix("/") else { throw SourceFailure.invalid }
-            let url = URL(fileURLWithPath: path).standardizedFileURL
-            guard url.path == path, roots.contains(where: { path.hasPrefix($0.path + "/") }) else { throw SourceFailure.invalid }
+public struct FilesSource: Source {
+    public let name = "files"
+    public init() {}
+    public func ubiquity(_ paths: [String]) -> [JSON] {
+        paths.map { path in
+            let url = URL(fileURLWithPath: path)
             let status = (try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]))?.ubiquitousItemDownloadingStatus?.rawValue ?? "local"
             return .object(["path": .string(path), "status": .string(status)])
         }
     }
-    public func read(_ args: JSON) async throws -> JSON {
-        let root = URL(fileURLWithPath: args["root"].string).standardizedFileURL.resolvingSymlinksInPath()
-        guard roots.contains(root), !args["path"].string.isEmpty else { throw SourceFailure.invalid }
-        var url = root.appendingPathComponent(args["path"].string).standardizedFileURL.resolvingSymlinksInPath()
-        guard url.path.hasPrefix(root.path + "/") else { throw SourceFailure.invalid }
-        let values = try url.resourceValues(forKeys: [.isUbiquitousItemKey])
-        if values.isUbiquitousItem == true {
-            try FileManager.default.startDownloadingUbiquitousItem(at: url)
-            let deadline = Date().addingTimeInterval(50)
-            while true {
-                url.removeAllCachedResourceValues()
-                guard let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus else { throw SourceFailure.unavailable }
-                if status != .notDownloaded { break }
-                guard Date() < deadline else { throw SourceFailure.unavailable }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-        }
-        let writer = self.writer
+    private func cloudState(_ url: URL) throws -> JSON {
+        let values = try url.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsUploadedKey, .ubiquitousItemUploadingErrorKey])
+        return .object(["ubiquitous": .bool(values.isUbiquitousItem == true), "status": .string(values.ubiquitousItemDownloadingStatus?.rawValue ?? ""), "uploaded": .bool(values.ubiquitousItemIsUploaded == true), "upload_error": .bool(values.ubiquitousItemUploadingError != nil)])
+    }
+    private func stage(_ url: URL, writer: BlobWriter) throws -> JSON {
         var staged: StagedBlob?
         var failure: Error?
         var coordinationError: NSError?
@@ -58,54 +28,43 @@ public actor FilesSource: Source {
         if let failure { throw failure }
         if let coordinationError { throw coordinationError }
         guard let blob = staged else { throw SourceFailure.unavailable }
-        blobs[blob.digest] = blob.file
-        return .object(["digest": .string(blob.digest), "size": .number(Double(blob.size))])
+        return .object(["digest": .string(blob.digest), "size": .number(Double(blob.size)), "file": .string(blob.file.path)])
     }
-    public func search(_ args: JSON) async throws -> JSON {
-        guard !args["query"].string.isEmpty, args["query"].string.utf8.count <= 4096 else { throw SourceFailure.invalid }
-        let field = args["field"].string.isEmpty ? "name" : args["field"].string
-        let attributes = ["name": "kMDItemFSName", "content": "kMDItemTextContent", "kind": "kMDItemContentType", "tag": "kMDItemUserTags", "date": "kMDItemFSContentChangeDate"]
-        guard let attribute = attributes[field] else { throw SourceFailure.invalid }
-        let value = args["query"].string.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let predicate = attribute + " == \"" + value + "\"cd"
-        let output = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        _ = FileManager.default.createFile(atPath: output.path, contents: nil, attributes: [.posixPermissions: 0o600])
-        defer { try? FileManager.default.removeItem(at: output) }
-        let handle = try FileHandle(forWritingTo: output)
-        defer { try? handle.close() }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
-        process.arguments = ["-0"] + roots.flatMap { ["-onlyin", $0.path] } + [predicate]
-        process.standardOutput = handle
-        process.standardError = FileHandle.nullDevice
-        try process.run()
-        defer { if process.isRunning { process.terminate() } }
-        let deadline = Date().addingTimeInterval(20)
-        while process.isRunning {
-            try Task.checkCancellation()
-            guard Date() < deadline, (try output.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) < 1 << 20 else { throw SourceFailure.unavailable }
-            try await Task.sleep(for: .milliseconds(50))
+    public func primitive(_ operation: String, args: JSON) async throws -> JSON {
+        var url = URL(fileURLWithPath: args["path"].string)
+        let fm = FileManager.default
+        switch operation {
+        case "files.cloud_state":
+            url.removeAllCachedResourceValues()
+            return try cloudState(url)
+        case "files.start_download":
+            try fm.startDownloadingUbiquitousItem(at: url)
+            return .object([:])
+        case "files.evict_item":
+            try fm.evictUbiquitousItem(at: url)
+            return .object([:])
+        case "files.trash_item":
+            var trashed: NSURL?
+            try fm.trashItem(at: url, resultingItemURL: &trashed)
+            return .object(["trash_path": .string((trashed as URL?)?.path ?? "")])
+        case "files.set_tags":
+            var values = URLResourceValues()
+            values.tagNames = args["tags"].array.map(\.string)
+            try url.setResourceValues(values)
+            url.removeAllCachedResourceValues()
+            return .object(["tags": .array((try url.resourceValues(forKeys: [.tagNamesKey]).tagNames ?? []).map(JSON.string))])
+        case "files.stage":
+            return try stage(url, writer: BlobWriter(directory: URL(fileURLWithPath: args["directory"].string)))
+        case "files.transform":
+            return try transform(args, writer: BlobWriter(directory: URL(fileURLWithPath: args["directory"].string)))
+        default:
+            throw SourceFailure.unsupported
         }
-        guard process.terminationStatus == 0 else { throw SourceFailure.unavailable }
-        let paths = try Data(contentsOf: output).split(separator: 0).compactMap { String(data: $0, encoding: .utf8) }
-        let items = paths.prefix(100).filter { path in roots.contains { path.hasPrefix($0.path + "/") } }.map { JSON.object(["path": .string($0)]) }
-        return .object(["items": .array(items)])
     }
-    public func readBlob(_ handle: String, offset: Int64, length: Int) throws -> JSON {
-        let digest = String(handle.dropFirst("files-blob:".count))
-        guard handle.hasPrefix("files-blob:"), let url = blobs[digest], offset >= 0, length > 0, length <= 131072 else { throw SourceFailure.invalid }
-        let input = try FileHandle(forReadingFrom: url)
-        defer { try? input.close() }
-        try input.seek(toOffset: UInt64(offset))
-        let bytes = try input.read(upToCount: length) ?? Data()
-        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "bytes": .string(bytes.base64EncodedString()), "digest": .string(digest), "eof": .bool(offset + Int64(bytes.count) == Int64(size))])
-    }
-    public func transform(_ args: JSON) throws -> JSON {
-        let inputs = args["inputs"].array
-        guard !inputs.isEmpty, inputs.count <= 100 else { throw SourceFailure.invalid }
-        let data = try inputs.map { input -> Data in
-            guard let url = blobs[input.string], (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 64 * 1024 * 1024 else { throw SourceFailure.invalid }
+    private func transform(_ args: JSON, writer: BlobWriter) throws -> JSON {
+        let data = try args["inputs"].array.map { input -> Data in
+            let url = URL(fileURLWithPath: input.string)
+            guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 64 * 1024 * 1024 else { throw SourceFailure.invalid }
             return try Data(contentsOf: url)
         }
         var outputs: [Data] = []
@@ -157,10 +116,8 @@ public actor FilesSource: Source {
         } else { throw SourceFailure.invalid }
         let references = try outputs.map { bytes -> JSON in
             let blob = try writer.stage(bytes)
-            blobs[blob.digest] = blob.file
-            return .object(["digest": .string(blob.digest), "size": .number(Double(blob.size)), "handle": .string("files-blob:" + blob.digest), "media_type": .string(type)])
+            return .object(["digest": .string(blob.digest), "size": .number(Double(blob.size)), "file": .string(blob.file.path), "media_type": .string(type)])
         }
         return .object(["outputs": .array(references)])
     }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }

@@ -30,6 +30,7 @@ pub struct Input {
     pub data: Option<Vec<u8>>,
     pub timeout: Duration,
     pub output_type: String,
+    pub output_limit: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -240,6 +241,11 @@ impl Cli {
         } else {
             timeout
         };
+        let limit = if input.output_limit == 0 {
+            MAX_BYTES
+        } else {
+            input.output_limit.min(MAX_BYTES)
+        };
         let deadline = Instant::now() + timeout;
         let scratch = Scratch(temporary_directory()?);
         let output = scratch.0.join("output");
@@ -270,7 +276,7 @@ impl Cli {
                 break status;
             }
             if let Ok(info) = fs::symlink_metadata(&output)
-                && (!info.is_file() || info.len() > MAX_BYTES as u64)
+                && (!info.is_file() || info.len() > limit as u64)
             {
                 exceeded.store(true, Ordering::SeqCst);
             }
@@ -303,14 +309,14 @@ impl Cli {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
             Err(error) => return Err(error.into()),
         };
-        if !info.is_file() || info.len() > MAX_BYTES as u64 {
+        if !info.is_file() || info.len() > limit as u64 {
             return Err(Error::InvalidOutput);
         }
         let mut data = Vec::new();
         fs::File::open(&output)?
-            .take(MAX_BYTES as u64 + 1)
+            .take(limit as u64 + 1)
             .read_to_end(&mut data)?;
-        if data.len() > MAX_BYTES {
+        if data.len() > limit {
             return Err(Error::OutputExceeded);
         }
         result.data = data;

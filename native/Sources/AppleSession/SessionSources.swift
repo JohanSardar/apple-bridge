@@ -7,7 +7,7 @@ import ContactsSource
 
 @MainActor
 internal enum SessionSources {
-    nonisolated static let rustDecidesReadiness: Set<String> = ["mail", "shortcuts", "files", "notes", "messages"]
+    nonisolated static let rustDecidesReadiness: Set<String> = ["mail", "shortcuts", "files", "notes", "messages", "mac"]
 
     struct Builtins: Sendable {
         let agenda: AgendaGate

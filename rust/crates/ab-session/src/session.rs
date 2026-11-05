@@ -28,6 +28,11 @@ mod calendar;
 mod capture;
 mod commands;
 mod contacts;
+mod files;
+mod focus;
+mod mac;
+mod mail;
+mod media;
 mod messages;
 mod messages_advertise;
 mod messages_cleanup;
@@ -46,14 +51,26 @@ pub fn cleanup_messages(link: UnixStream, request: &serde_json::Value) -> Result
 mod notes;
 mod owned;
 mod reminders;
+mod shortcuts;
 
 pub use capture::Attached;
+pub use mac::CAPABILITIES as MAC_CAPABILITIES;
 
-pub const RUST_COMMAND_SOURCES: [&str; 14] = [
+pub const RUST_COMMAND_SOURCES: [&str; 24] = [
     "reminders",
     "calendar",
     "contacts",
     "notes",
+    "mail",
+    "files",
+    "mac",
+    "shortcuts",
+    "focus",
+    "pdf",
+    "capture",
+    "print",
+    "speech",
+    "maps",
     "messages",
     "messages.send",
     "messages.reply",
@@ -302,6 +319,14 @@ fn gateway_frame<'scope>(
         "Pong" => {}
         "Committed" => committed(hub, frame)?,
         "BlobRead" if hub.capture_blob(frame)? => {}
+        "Query" if hub.owns_query(&frame.op) => {
+            let frame = frame.clone();
+            scope.spawn(move || {
+                if let Err(error) = hub.owned_query(&frame) {
+                    eprintln!("ab-session: query failed: {error}");
+                }
+            });
+        }
         "Query" if hub.capture_handles_query(&frame.op) => {
             let frame = frame.clone();
             scope.spawn(move || {

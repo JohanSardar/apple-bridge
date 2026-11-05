@@ -30,6 +30,8 @@ const READER_BIND_WAIT: Duration = Duration::from_secs(15);
 const READER_NUDGE: Duration = Duration::from_secs(1);
 const READ_WAIT: Duration = Duration::from_secs(10);
 const WRITE_WAIT: Duration = Duration::from_secs(30);
+const CAPTURE_WAIT: Duration = Duration::from_secs(90);
+const PLAYBACK_WAIT: Duration = Duration::from_secs(130);
 const DISPOSITIONS: &[&str] = &[
     "locally_observed",
     "indeterminate",
@@ -205,6 +207,10 @@ fn source_of(operation: &str) -> &str {
 }
 
 impl Probe for Hub {
+    fn staged(&self, prefix: &str) -> Option<std::sync::Arc<crate::staged::StagedBlobs>> {
+        self.capture_staged(prefix)
+    }
+
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String> {
         if let Some(source) = operation.strip_suffix(".reconcile")
             && let Some(done) = self.capture_reconcile(source, WRITE_WAIT)
@@ -216,17 +222,26 @@ impl Probe for Hub {
         if let Some(answer) = self.capture_answer(source_of(operation), operation, args) {
             return answer;
         }
-        let wait = if matches!(
-            operation,
+        let wait = match operation {
             "reminders.write"
-                | "calendar.write"
-                | "contacts.write"
-                | "contacts.write_group"
-                | "notes.write"
-        ) {
-            WRITE_WAIT
-        } else {
-            READ_WAIT
+            | "calendar.write"
+            | "contacts.write"
+            | "contacts.write_group"
+            | "notes.write"
+            | "mail.script"
+            | "files.trash_item"
+            | "files.set_tags"
+            | "files.stage"
+            | "files.transform"
+            | "mac.script"
+            | "mac.keep_awake"
+            | "mac.app_launch"
+            | "mac.set_wallpaper"
+            | "pdf.annotate"
+            | "maps.show" => WRITE_WAIT,
+            "capture.produce" => CAPTURE_WAIT,
+            "speech.say" | "capture.play_sound" => PLAYBACK_WAIT,
+            _ => READ_WAIT,
         };
         self.primitive(operation, args, wait)
     }
@@ -249,6 +264,30 @@ impl Hub {
             "BlobRead" => self.send_link(&Link::BlobRead(BlobRead::from_ipc(frame))),
             _ => Err(Error::Invalid),
         }
+    }
+
+    pub(super) fn owns_query(&self, operation: &str) -> bool {
+        (super::files::handles_query(operation) && self.capture_owns("files"))
+            || (super::mac::handles_query(operation) && self.owns_commands("mac"))
+    }
+
+    fn owns_commands(&self, source: &str) -> bool {
+        self.core()
+            .is_ok_and(|core| core.commands.owned.contains(source))
+    }
+
+    pub(super) fn owned_query(&self, frame: &IpcFrame) -> Result<(), Error> {
+        let args = frame
+            .args
+            .as_deref()
+            .map_or(Ok(Value::Null), |args| serde_json::from_str(args.get()))?;
+        let request = json!({"id": frame.id, "op": frame.op, "args": args});
+        let reply = if super::files::handles_query(&frame.op) {
+            super::files::query(self, &request)
+        } else {
+            super::mac::query(&request)
+        };
+        self.reply_query(&reply)
     }
 
     fn refuse(&self, command_id: &str, code: &str) -> Result<(), Error> {
@@ -305,7 +344,7 @@ impl Hub {
             .expected_state
             .as_deref()
             .map_or(Value::Null, parsed);
-        let Some(driver) = owned::driver(source_of(&command.operation())) else {
+        let Some(driver) = owned::driver_of(&command.operation()) else {
             return Err(Error::Invalid);
         };
         let command_value = json!({
@@ -316,6 +355,20 @@ impl Hub {
             "action": action,
             "expected_state": expected,
         });
+        let checks_origin = !matches!(
+            source_of(&command.operation()),
+            "reminders" | "calendar" | "contacts" | "notes" | "messages"
+        );
+        if let Some(refusal) = checks_origin
+            .then(|| super::messages::origin_of(&command_value).err())
+            .flatten()
+        {
+            return self.rejected_by_helper(self.rejection(
+                source_of(&command.operation()),
+                &command.command_id,
+                &refusal,
+            )?);
+        }
         let decided = match driver.prepare_command {
             Some(prepare) => prepare(self, &command_value),
             None => (driver.prepare)(self, &action, &expected),
@@ -451,13 +504,14 @@ impl Hub {
         let operation = evidence["prepared"]["action"]["op"]
             .as_str()
             .unwrap_or_default();
-        let driver = owned::driver(source_of(operation)).ok_or(Error::Invalid)?;
+        let driver = owned::driver_of(operation).ok_or(Error::Invalid)?;
         let observed = (driver.resolved)(self, evidence).filter(|found| {
             let args = (driver.reconcile_args)(found, operation);
             self.call(&format!("{}.reconcile", driver.name), &args)
                 .is_ok()
         });
         let (disposition, evidence) = match observed {
+            Some(found) if !needs_capture(operation) => ("locally_observed", found),
             Some(mut found) => {
                 let key = found["native_key"].as_str().unwrap_or_default().to_owned();
                 match self.bind(driver.name, &key, &[], true, 0)? {
@@ -495,7 +549,7 @@ impl Hub {
         let action = parsed(&command.action);
         let operation = command.operation();
         let source = source_of(&operation);
-        let driver = owned::driver(source).ok_or(Error::Invalid)?;
+        let driver = owned::driver_of(&operation).ok_or(Error::Invalid)?;
         if let Err(refusal) = (driver.validate)(self, &action, state) {
             return self.rejected_by_helper(self.rejection(
                 source,

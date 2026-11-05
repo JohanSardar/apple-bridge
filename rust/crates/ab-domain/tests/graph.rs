@@ -71,7 +71,10 @@ fn enforce_workspace_dependency_boundaries() -> Result<(), Box<dyn std::error::E
         ("ab-remote", &["ab-trust", "ab-wire"]),
         ("ab-iphone", &["ab-trust", "ab-operations", "ab-wire"]),
         ("ab-native", &["ab-domain", "ab-wire"]),
-        ("ab-session", &["ab-native", "ab-wire", "ab-sys"]),
+        (
+            "ab-session",
+            &["ab-native", "ab-shortcuts", "ab-wire", "ab-sys"],
+        ),
         ("ab-sys", &[]),
     ];
     for (id, name) in &names {

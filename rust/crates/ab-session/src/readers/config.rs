@@ -178,15 +178,7 @@ pub fn from_config_linked(
                     Duration::from_millis(config.facts_poll_ms.max(1)),
                 ))
             }
-            "pdf" => {
-                let client =
-                    linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
-                Box::new(PdfReader::new(
-                    config.root,
-                    client,
-                    Duration::from_millis(config.facts_poll_ms.max(1)),
-                ))
-            }
+            "pdf" => Box::new(PdfReader::new(config.root)),
             "shortcuts" => Box::new(ShortcutsReader::new(
                 config.root,
                 config

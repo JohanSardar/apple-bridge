@@ -3,6 +3,7 @@ use crate::{
     native_facts::Client,
     queries::{MailBodies, NativeQueries},
     readers::{self, CaptureReader},
+    staged::StagedBlobs,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -36,6 +37,9 @@ pub const STATE_DIRECTORY: &str = "session/capture-state";
 pub const STAGING_DIRECTORY: &str = "session/staging";
 const STAGED: &[&str] = &["notes", "voice_memos"];
 const FACTS_ROOT: &str = "session/facts";
+pub const FILES_BLOB: &str = "files-blob:";
+pub const CAPTURE_BLOB: &str = "capture-artifact:";
+pub const PDF_BLOB: &str = "pdf:";
 pub const MEDIA_DIRECTORY: &str = "session/media-derivatives";
 
 #[derive(Debug, Deserialize)]
@@ -213,10 +217,7 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
             "shortcuts".to_owned(),
             json!({"root": facts_root("shortcuts")?, "facts_poll_ms": 30_000}),
         ),
-        (
-            "pdf".to_owned(),
-            json!({"root": facts_root("pdf")?, "facts": "native", "facts_poll_ms": 3_600_000}),
-        ),
+        ("pdf".to_owned(), json!({"root": facts_root("pdf")?})),
         (
             "calendar".to_owned(),
             json!({
@@ -238,6 +239,33 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
             }),
         ),
     ]))
+}
+
+fn staged_blobs(home: &Path, user: Option<&Path>) -> Vec<(&'static str, Arc<StagedBlobs>)> {
+    let caches = user.map_or_else(
+        || home.join("session/blobs"),
+        |user| user.join("Library/Caches/AppleBridge"),
+    );
+    vec![
+        (
+            FILES_BLOB,
+            Arc::new(StagedBlobs::new(FILES_BLOB, caches.join("files-blobs"))),
+        ),
+        (
+            CAPTURE_BLOB,
+            Arc::new(StagedBlobs::new(
+                CAPTURE_BLOB,
+                home.join("capture-artifacts"),
+            )),
+        ),
+        (
+            PDF_BLOB,
+            Arc::new(StagedBlobs::new(
+                PDF_BLOB,
+                home.join("Library/Caches/AppleBridge/pdf-blobs"),
+            )),
+        ),
+    ]
 }
 
 fn read_file(home: &Path) -> Result<Option<File>, Error> {
@@ -352,6 +380,7 @@ pub fn load(home: &Path, user: Option<&Path>) -> Result<Option<Loaded>, Error> {
             queries: NativeQueries {
                 mail_bodies,
                 shortcut_roots: user.map(ab_native::shortcut_actions::default_roots),
+                staged: staged_blobs(home, user),
             },
         },
     };

@@ -10,7 +10,6 @@ import MessagesSource
 import MediaDerivatives
 import Contacts
 import FocusSource
-import PDFSource
 import SafariSource
 import ApplicationServices
 
@@ -23,7 +22,7 @@ extension AppleSession: NativeAdapter {
 
     private func nativeFacts(files paths: [String]) async throws -> NativeFacts {
         guard let source = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
-        return NativeFacts(items: try await source.ubiquity(paths), scope: .string("files"), generation: "native/1", complete: true)
+        return NativeFacts(items: source.ubiquity(paths), scope: .string("files"), generation: "native/1", complete: true)
     }
 
     private func nativeFacts(macState source: MacSource) async throws -> NativeFacts {
@@ -54,6 +53,10 @@ extension AppleSession: NativeAdapter {
             guard args.object.isEmpty else { throw SourceFailure.unsupported }
             return nativeFacts(single: await FocusSource.frameworkStatus(), scope: "focus")
         }
+        if operation == "mac.pasteboard" {
+            guard args.object.isEmpty, let mac = additionalSources["mac"] as? MacSource else { throw SourceFailure.unsupported }
+            return nativeFacts(single: try await mac.primitive("mac.pasteboard_policy", args: .object([:])), scope: "mac")
+        }
         if operation == "accessibility.trusted" {
             guard args.object.isEmpty else { throw SourceFailure.unsupported }
             return nativeFacts(single: .object(["trusted": .bool(AXIsProcessTrusted())]), scope: "accessibility")
@@ -61,10 +64,6 @@ extension AppleSession: NativeAdapter {
         if operation == "safari.tabs" {
             guard args.object.isEmpty, let safari = additionalSources["safari"] as? SafariSource else { throw SourceFailure.unsupported }
             return NativeFacts(items: try await safari.liveTabs(), scope: .string("safari.tab"), generation: "native/1", complete: true)
-        }
-        if operation == "pdf.artifacts" {
-            guard args.object.isEmpty, let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unsupported }
-            return NativeFacts(items: await pdf.artifactFacts(), scope: .string("pdf.artifact"), generation: "native/1", complete: true)
         }
         if operation == "files.ubiquity" {
             guard Set(args.object.keys) == ["paths"], case .array(let paths) = args["paths"], paths.allSatisfy({ if case .string = $0 { return true } else { return false } }) else { throw SourceFailure.invalid }
