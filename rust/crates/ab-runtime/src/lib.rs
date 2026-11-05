@@ -8,6 +8,8 @@ pub mod bundle;
 mod calendar_actions;
 #[cfg(feature = "replica-feed")]
 mod capture;
+#[cfg(feature = "replica-feed")]
+pub mod cli;
 pub mod connector;
 mod control;
 pub mod duration;

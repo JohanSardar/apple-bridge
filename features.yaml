@@ -43,6 +43,16 @@ features:
     notes: Screen Recording preflight failure and unavailable Automation targets return unknown; real status reads verify unchanged TCC, zero native request API calls and no new on-screen dialog owner windows; sim checks each native dispatch adapter and unknown-name rejection.
     scenarios:
       - {id: CORE-PERMISSION-STATUS, levels: [sim, real]}
+  - id: core.local-setup
+    title: One command local setup, per-source stats, terminal reads and agent linking
+    requirements: [R-PKG, R-API]
+    milestone: G0
+    modules: [rust/crates/ab-runtime]
+    depends_on: [core.permissions]
+    status: done
+    notes: Sim drives the real CLI against a real gateway and an independent peer. The real Claude Code connection proof ran by hand on a test copy of data; see docs/local-setup.md. The real Helper path of the permission guide is tested only through a fixture, because a real run would prompt.
+    scenarios:
+      - {id: SETUP-LOCAL-CLI, levels: [sim]}
   - id: core.shortcuts
     title: Deterministic workflow compilation and macOS shortcut signing
     requirements: [R-PKG]
