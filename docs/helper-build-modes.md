@@ -35,7 +35,7 @@ So a release gateway must itself be signed with the Helper's certificate, with `
 
 This stops a same-user process from using the Helper with its own executable or its own socket server. It does not stop that process running the genuinely signed `bridge` against a home it controls, and it does not establish how macOS attributes permissions to child processes.
 
-`packaging/dev/test_helper_identity.py` checks this with throwaway certificates and no real permissions. It needs `HelperIdentityChecks` and `HelperIdentityFixture` from a native build, and takes `--lab` for a lab build. `--helper` also attacks a test-signed copy of a release Helper. Never point it at an installed Helper.
+`packaging/dev/test_helper_identity.py` checks this with throwaway certificates and no real permissions. It needs `HelperIdentityChecks` and `HelperIdentityFixture` from a native build, and takes `--lab` for a lab build. `--helper` also attacks a test-signed copy of a release Helper. `--bridge` runs a real `bridge` binary, hardened and test-signed, in an isolated home with the file secret store and checks that it passes as the gateway peer. Never point these at an installed Helper or a real home.
 
 ## Immutable signed apps
 

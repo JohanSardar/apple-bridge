@@ -176,6 +176,43 @@ def synthetic_checks(output, signing, trusted, other, lab, failures):
         check(f"running child {name} ran", spawned_marker.exists(), expected == "admitted", failures)
 
 
+def real_gateway(bridge, output, signing, trusted, failures):
+    work = private_directory(signing.work / "real-gateway")
+    app = work / "Harness.app"
+    macos = application(app, output / "HelperIdentityChecks", "HelperIdentityChecks")
+    harness = macos / "HelperIdentityChecks"
+    session = macos / "ab-session"
+    shutil.copy2(output / "HelperIdentityFixture", session)
+    signing.sign(harness, trusted, "harness")
+    signing.sign(session, trusted, "ab-session")
+    gateway = work / "bridge"
+    shutil.copy2(bridge, gateway)
+    run("codesign", "--force", "--keychain", str(signing.keychain), "--sign", trusted, "--timestamp=none", "--options", "runtime", str(gateway))
+    details = subprocess.run(["codesign", "-dv", str(gateway)], capture_output=True, text=True).stderr
+    check("real bridge gets the identifier without asking", "Identifier=bridge\n" in details, True, failures)
+    secret = work / "secret"
+    secret.write_text("synthetic")
+    secret.chmod(0o600)
+    home = private_directory(Path(tempfile.mkdtemp(prefix="ab-id-", dir="/tmp")))
+    scenario = private_directory(work / "scenario")
+    environment = {**os.environ, "APPLE_BRIDGE_SECRET_STORE": "file"}
+    process = subprocess.Popen([str(gateway), "start", "--role", "gateway", "--home", str(home), "--api-addr", "127.0.0.1:0", "--peer-addr", "127.0.0.1:0"], env=environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        address = home / "run/peer.sock"
+        for _ in range(200):
+            if address.exists() or process.poll() is not None:
+                break
+            time.sleep(0.1)
+        check("real hardened bridge stays running", process.poll(), None, failures)
+        check("real bridge creates its socket", address.exists(), True, failures)
+        result = subprocess.run([str(harness), "launch", str(address), str(secret), str(scenario)], capture_output=True, text=True, env=environment, timeout=30)
+        check("real signed gateway passes the peer check", result.stdout.strip(), "launched", failures)
+    finally:
+        process.kill()
+        process.wait()
+        shutil.rmtree(home, ignore_errors=True)
+
+
 def media_parents(fixture, binary, signing, trusted, other, work, failures):
     request = '{"kind":"mime","uti":"public.jpeg"}'
     for name, identity, identifier, expected in (("trusted session", trusted, "ab-session", 0), ("other certificate", other, "ab-session", 1), ("other identifier", trusted, "bridge", 1)):
@@ -246,6 +283,7 @@ def main():
     parser.add_argument("--output", type=Path, help="native build output holding HelperIdentityChecks and HelperIdentityFixture")
     parser.add_argument("--lab", action="store_true", help="the output is a LAB build, where overrides stay available")
     parser.add_argument("--helper", type=Path, help="a release AppleBridgeHelper binary to attack on a test-signed copy")
+    parser.add_argument("--bridge", type=Path, help="a real bridge binary to test as a hardened, test-signed gateway in an isolated home")
     arguments = parser.parse_args()
     failures = []
     work = Path(tempfile.mkdtemp(prefix="ab-helper-identity-"))
@@ -255,6 +293,8 @@ def main():
         other = signing.identity("Apple Bridge Identity Test B")
         if arguments.output:
             synthetic_checks(arguments.output, signing, trusted, other, arguments.lab, failures)
+        if arguments.bridge and arguments.output:
+            real_gateway(arguments.bridge, arguments.output, signing, trusted, failures)
         if arguments.helper:
             fixture = arguments.output / "HelperIdentityFixture" if arguments.output else None
             helper_attacks(arguments.helper, signing, trusted, other, fixture, failures)
