@@ -129,6 +129,7 @@ mod tests {
                     media_type: "text/plain".into(),
                     preview: Preview::DownloadOnly,
                     excerpt: None,
+                    excerpt_complete: false,
                 }],
                 binding: "bound".into(),
                 requires_consent: true,

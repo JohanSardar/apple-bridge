@@ -28,6 +28,7 @@ pub struct ReviewedAttachment {
     pub media_type: String,
     pub preview: Preview,
     pub excerpt: Option<String>,
+    pub excerpt_complete: bool,
 }
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ApprovalReview {
@@ -99,17 +100,14 @@ pub fn phone_summary(review: &ApprovalReview) -> Vec<String> {
         if let Some(excerpt) = &attachment.excerpt {
             lines.push(format!("Starts with: {excerpt}"));
         }
-        if !previewable(attachment.preview) {
+        if !attachment.excerpt_complete {
             lines.push(
-                "Can't be previewed here. Approving sends these exact bytes; inspect it under Approvals in your browser first."
+                "You haven't seen all of this file here. Approving sends these exact bytes anyway; inspect it under Approvals in your browser first."
                     .to_owned(),
             );
         }
     }
     lines
-}
-const fn previewable(preview: Preview) -> bool {
-    matches!(preview, Preview::Text | Preview::Image)
 }
 fn image_type(head: &[u8]) -> Option<&'static str> {
     if head.starts_with(b"\x89PNG\r\n\x1a\n") {
@@ -166,6 +164,8 @@ fn classify(
         "application/octet-stream"
     };
     let text = text.filter(|_| media_type == "text/plain");
+    let excerpt = text.map(excerpt_of);
+    let excerpt_complete = whole && text.is_some_and(|text| text.chars().count() <= EXCERPT_CHARS);
     let preview = if size > MAX_INSPECT {
         Preview::TooLarge
     } else if image.is_some() {
@@ -187,7 +187,8 @@ fn classify(
         size,
         media_type: media_type.to_owned(),
         preview,
-        excerpt: text.map(excerpt_of),
+        excerpt,
+        excerpt_complete,
     }
 }
 fn binding_of(attachments: &[ReviewedAttachment]) -> Result<String, Error> {
@@ -240,7 +241,7 @@ impl LocalGateway {
         }
         Ok(ApprovalReview {
             binding: binding_of(&attachments)?,
-            requires_consent: attachments.iter().any(|a| !previewable(a.preview)),
+            requires_consent: attachments.iter().any(|a| a.preview != Preview::Text),
             attachments,
         })
     }

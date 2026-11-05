@@ -243,6 +243,7 @@ const REFRESH_RETRY_SECONDS: i64 = 60;
 const MAX_CLIENTS: usize = 1000;
 const MAX_PENDING_CLIENTS: usize = 64;
 const PENDING_CLIENT_SECONDS: i64 = 3600;
+const FRESH_CLIENT_SECONDS: i64 = 120;
 const MAX_CLIENT_METADATA_BYTES: usize = 4096;
 const MAX_DISPLAY_NAME_CHARS: usize = 64;
 const LAST_USED_RESOLUTION_SECONDS: i64 = 300;
@@ -375,16 +376,17 @@ impl Authority {
             let mut clients: Vec<Client> = read(d, "oauth_clients")?;
             let stale = c.client_id_issued_at - PENDING_CLIENT_SECONDS;
             clients.retain(|existing| existing.used || existing.client_id_issued_at > stale);
+            let fresh = c.client_id_issued_at - FRESH_CLIENT_SECONDS;
             let pending = clients.iter().filter(|existing| !existing.used).count();
             let mut evict = (pending + 1).saturating_sub(MAX_PENDING_CLIENTS);
             clients.retain(|existing| {
-                if evict > 0 && !existing.used {
+                if evict > 0 && !existing.used && existing.client_id_issued_at <= fresh {
                     evict -= 1;
                     return false;
                 }
                 true
             });
-            if clients.len() >= MAX_CLIENTS {
+            if evict > 0 || clients.len() >= MAX_CLIENTS {
                 return Err(Error::Unavailable);
             }
             clients.push(c.clone());

@@ -802,14 +802,13 @@ fn trust_boundaries(
 }
 
 fn replica_boundaries(world: &mut World, site: &Site, exposed: Result<Exposed>, e: &mut Evidence) {
-    let started =
-        replicas::start_with(
-            world,
-            1,
-            "messages:read,contacts:read,contacts:write,system:read",
-            0,
-        )
-        .is_ok();
+    let started = replicas::start_with(
+        world,
+        1,
+        "messages:read,contacts:read,contacts:write,system:read",
+        0,
+    )
+    .is_ok();
     let endpoint = replicas::endpoints().into_iter().next();
     let (Some(endpoint), true) = (endpoint, started) else {
         e.check("replica_fixture", false, "replicas did not start");

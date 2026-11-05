@@ -183,6 +183,24 @@ fn registration_refuses_oversized_metadata() {
     );
 }
 
+fn pending(authority: &Authority) -> Vec<Client> {
+    let saved = authority.load().unwrap();
+    let rows: Vec<Client> = read(&saved, "oauth_clients").unwrap();
+    rows.into_iter().filter(|row| !row.used).collect()
+}
+
+fn age_registrations(authority: &Authority, seconds: i64) {
+    authority
+        .update(|d| {
+            let mut rows: Vec<Client> = read(d, "oauth_clients")?;
+            for row in &mut rows {
+                row.client_id_issued_at -= seconds;
+            }
+            write(d, "oauth_clients", &rows)
+        })
+        .unwrap();
+}
+
 #[test]
 fn anonymous_registrations_cannot_occupy_the_store() {
     let home = tempfile::tempdir().unwrap();
@@ -199,18 +217,57 @@ fn anonymous_registrations_cannot_occupy_the_store() {
             write(d, "oauth_clients", &rows)
         })
         .unwrap();
-    let mut last = String::new();
     for _ in 0..100 {
-        last = authority
-            .register_oauth(client("Flood", &[CALLBACK.to_owned()]))
-            .unwrap()
-            .client_id;
+        let _ = authority.register_oauth(client("Flood", &[CALLBACK.to_owned()]));
     }
+    assert!(pending(&authority).len() <= 64);
     let saved = authority.load().unwrap();
     let rows: Vec<Client> = read(&saved, "oauth_clients").unwrap();
-    assert!(rows.iter().filter(|row| !row.used).count() <= 64);
     assert!(rows.iter().any(|row| row.client_id == approved.client_id));
-    assert!(rows.iter().any(|row| row.client_id == last));
+}
+
+#[test]
+fn a_flood_cannot_evict_a_registration_about_to_start_its_authorization() {
+    let home = tempfile::tempdir().unwrap();
+    let authority = Authority::open(home.path()).unwrap();
+    let waiting = authority
+        .register_oauth(client("Waiting", &[CALLBACK.to_owned()]))
+        .unwrap();
+    let mut refused = 0;
+    for _ in 0..100 {
+        if matches!(
+            authority.register_oauth(client("Flood", &[CALLBACK.to_owned()])),
+            Err(crate::Error::Unavailable)
+        ) {
+            refused += 1;
+        }
+    }
+    assert!(refused > 0, "a full store of fresh registrations refuses");
+    assert!(
+        authority.oauth_client(&waiting.client_id, CALLBACK).is_ok(),
+        "the waiting client can still begin authorization"
+    );
+}
+
+#[test]
+fn registration_recovers_once_a_flood_stops_being_fresh() {
+    let home = tempfile::tempdir().unwrap();
+    let authority = Authority::open(home.path()).unwrap();
+    for _ in 0..64 {
+        authority
+            .register_oauth(client("Flood", &[CALLBACK.to_owned()]))
+            .unwrap();
+    }
+    assert!(matches!(
+        authority.register_oauth(client("Real", &[CALLBACK.to_owned()])),
+        Err(crate::Error::Unavailable)
+    ));
+    age_registrations(&authority, 121);
+    let real = authority
+        .register_oauth(client("Real", &[CALLBACK.to_owned()]))
+        .unwrap();
+    assert!(authority.oauth_client(&real.client_id, CALLBACK).is_ok());
+    assert!(pending(&authority).len() <= 64);
 }
 
 #[test]

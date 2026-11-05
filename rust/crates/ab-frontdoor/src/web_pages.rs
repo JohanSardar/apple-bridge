@@ -276,7 +276,7 @@ pub(crate) fn connector_redirect(destination: &str) -> Response {
     )
 }
 
-const UNPREVIEWABLE_CONSENT: &str = "<label class=\"choice\"><input type=\"checkbox\" name=\"accept_unpreviewable\" value=\"1\" required><span><strong>Send it anyway</strong><span class=\"muted small\">I can't see inside at least one attachment and accept sending these exact bytes.</span></span></label>";
+const UNPREVIEWABLE_CONSENT: &str = "<label class=\"choice\"><input type=\"checkbox\" name=\"accept_unpreviewable\" value=\"1\" required><span><strong>Send it anyway</strong><span class=\"muted small\">I've inspected what I can of these attachments, and I accept sending these exact bytes.</span></span></label>";
 
 fn attachment_rows(id: &str, row: &Value) -> String {
     let mut rows = String::new();
@@ -287,7 +287,11 @@ fn attachment_rows(id: &str, row: &Value) -> String {
         let index = attachment["index"].as_u64().unwrap_or_default();
         let preview = attachment["preview"].as_str().unwrap_or_default();
         let (action, note) = match preview {
-            "text" | "image" => ("Preview", ""),
+            "text" => ("Preview", ""),
+            "image" => (
+                "Preview",
+                "<p class=\"small\">A preview shows only what your browser can draw. If nothing appears, or the file has more in it than the picture, you can't see that part.</p>",
+            ),
             "too_large" => (
                 "",
                 "<p class=\"small\">This file can't be previewed: it is too large to inspect here.</p>",

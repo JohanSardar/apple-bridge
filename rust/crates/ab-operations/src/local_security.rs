@@ -532,7 +532,10 @@ async fn an_image_previews_but_a_scriptable_or_binary_file_does_not() {
     let review = f.gateway.approval_review(&record).await.expect("review");
     assert_eq!(review.attachments[0].media_type, "image/png");
     assert_eq!(review.attachments[0].preview, Preview::Image);
-    assert!(!review.requires_consent);
+    assert!(
+        review.requires_consent,
+        "an image signature says nothing about what the owner will see"
+    );
     for (name, bytes, media) in [
         ("a.pdf", &b"%PDF-1.7 synthetic"[..], "application/pdf"),
         (
@@ -554,6 +557,34 @@ async fn an_image_previews_but_a_scriptable_or_binary_file_does_not() {
     let (_, record) = pending_with_upload(&f, "a.html", b"<script>alert(1)</script>").await;
     let review = f.gateway.approval_review(&record).await.expect("review");
     assert_eq!(review.attachments[0].media_type, "text/plain");
+}
+
+#[tokio::test]
+async fn the_phone_warns_unless_it_shows_the_whole_attachment() {
+    let f = fixture();
+    let warning = "You haven't seen all of this file here";
+    let summary = |review: &crate::approval_review::ApprovalReview| {
+        crate::approval_review::phone_summary(review).join("\n")
+    };
+    let (_, record) = pending_with_upload(&f, "short.txt", b"all of it").await;
+    let review = f.gateway.approval_review(&record).await.expect("review");
+    let shown = summary(&review);
+    assert!(shown.contains("Starts with: all of it"), "{shown}");
+    assert!(!shown.contains(warning), "{shown}");
+    assert!(!review.requires_consent);
+
+    let long = "synthetic ".repeat(100);
+    let (_, record) = pending_with_upload(&f, "long.txt", long.as_bytes()).await;
+    let review = f.gateway.approval_review(&record).await.expect("review");
+    assert!(summary(&review).contains(warning), "truncated text");
+
+    let (_, record) = pending_with_upload(&f, "a.png", b"\x89PNG\r\n\x1a\nsynthetic").await;
+    let review = f.gateway.approval_review(&record).await.expect("review");
+    assert!(summary(&review).contains(warning), "image");
+
+    let (_, record) = pending_with_upload(&f, "a.bin", b"\0\x01synthetic").await;
+    let review = f.gateway.approval_review(&record).await.expect("review");
+    assert!(summary(&review).contains(warning), "binary");
 }
 
 #[tokio::test]
