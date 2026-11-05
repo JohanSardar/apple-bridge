@@ -2825,7 +2825,7 @@
         "type": "integer"
       },
       "participants": {
-        "description": "Exact normalized phone/email handle set, 1\u201332 inputs; duplicates folded",
+        "description": "Exact normalized phone/email handle set, 1–32 inputs; duplicates folded",
         "items": {
           "type": "string"
         },
@@ -4704,7 +4704,7 @@
         "type": "string"
       },
       "q": {
-        "description": "Partial name, normalized phone or email; 1\u201364 characters after trimming",
+        "description": "Partial name, normalized phone or email; 1–64 characters after trimming",
         "type": "string"
       }
     },
@@ -7212,14 +7212,42 @@
       },
       "args": {
         "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "data_base64"
+            ]
+          },
+          {
+            "required": [
+              "blob"
+            ]
+          }
+        ],
         "properties": {
           "blob": {
-            "type": "string"
+            "additionalProperties": false,
+            "description": "A blob the caller may already read: query_id with digest, or collection and record_id with digest",
+            "properties": {
+              "collection": {
+                "type": "string"
+              },
+              "digest": {
+                "type": "string"
+              },
+              "query_id": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "digest"
+            ],
+            "type": "object"
           },
-          "blob_id": {
-            "type": "string"
-          },
-          "file": {
+          "data_base64": {
             "type": "string"
           },
           "printer": {
@@ -7999,7 +8027,26 @@
             "type": "array"
           },
           "blob": {
-            "type": "string"
+            "additionalProperties": false,
+            "description": "A blob the caller may already read: query_id with digest, or collection and record_id with digest",
+            "properties": {
+              "collection": {
+                "type": "string"
+              },
+              "digest": {
+                "type": "string"
+              },
+              "query_id": {
+                "type": "string"
+              },
+              "record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "digest"
+            ],
+            "type": "object"
           },
           "data_base64": {
             "type": "string"

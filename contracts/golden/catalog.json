@@ -28046,7 +28046,26 @@
               "type": "array"
             },
             "blob": {
-              "type": "string"
+              "additionalProperties": false,
+              "description": "A blob the caller may already read: query_id with digest, or collection and record_id with digest",
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "query_id": {
+                  "type": "string"
+                },
+                "record_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "digest"
+              ],
+              "type": "object"
             },
             "data_base64": {
               "type": "string"
@@ -44288,7 +44307,7 @@
   },
   {
     "capability": "print.document",
-    "description": "Print a file or authorized blob to PDF or a named printer",
+    "description": "Print an authorized blob or supplied PDF bytes to PDF or a named printer",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -44300,22 +44319,50 @@
           "additionalProperties": false,
           "properties": {
             "blob": {
-              "type": "string"
-            },
-            "blob_id": {
-              "type": "string"
-            },
-            "file": {
-              "type": "string"
+              "additionalProperties": false,
+              "description": "A blob the caller may already read: query_id with digest, or collection and record_id with digest",
+              "properties": {
+                "collection": {
+                  "type": "string"
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "query_id": {
+                  "type": "string"
+                },
+                "record_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "digest"
+              ],
+              "type": "object"
             },
             "printer": {
+              "type": "string"
+            },
+            "data_base64": {
               "type": "string"
             }
           },
           "required": [
             "printer"
           ],
-          "type": "object"
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "data_base64"
+              ]
+            },
+            {
+              "required": [
+                "blob"
+              ]
+            }
+          ]
         },
         "command_id": {
           "type": "string"

@@ -280,30 +280,23 @@ fn documents(client: &Client, id: &str, evidence: &mut Evidence) -> Result<()> {
             "content matches the fixture text",
         );
         let path = absolute(file);
-        let denied = ask(client, op, &json!({"file": path}), 10000)?;
-        evidence.check(
-            "file_requires_opt_in",
-            rejected_with(denied.as_ref(), "invalid"),
-            "file input without opt-in is invalid",
-        );
+        for (check, args) in [
+            ("file_path_refused", json!({"file": path})),
+            ("file_opt_in_refused", json!({"file": path, "allow_file": true})),
+        ] {
+            let refused = ask(client, op, &args, 10000)?;
+            evidence.check(
+                check,
+                rejected_with(refused.as_ref(), "invalid"),
+                "a caller path is never read",
+            );
+        }
         let blob = json!({"blob":{"query_id":"qry_missing","digest":"0".repeat(64)}});
         let unowned = ask(client, op, &blob, 10000)?;
         evidence.check(
             "unowned_blob_rejected",
             rejected_with(unowned.as_ref(), "forbidden"),
             "unowned blob is forbidden",
-        );
-        let file_reply = ask(
-            client,
-            op,
-            &json!({"file": path, "allow_file": true}),
-            30000,
-        )?;
-        let file_result = good(file_reply.as_ref()).map(|value| value["result_json"].clone());
-        evidence.check(
-            "file_input_matches_inline",
-            path.is_some() && file_result.is_some() && file_result == result,
-            "file input equals inline input",
         );
         if pdf {
             for needle in ["fixture", "missing"] {
@@ -535,13 +528,9 @@ fn capture(world: &World, evidence: &mut Evidence) -> Result<()> {
             let args = match op {
                 "capture.record_audio" | "mac.screen_record" => json!({"seconds":2}),
                 "print.document" => {
-                    let file = absolute("fixture.pdf");
-                    evidence.check(
-                        "print_fixture_path",
-                        file.is_some(),
-                        "fixture path resolved",
-                    );
-                    json!({"file": file, "printer": "PDF"})
+                    let data = fixture("fixture.pdf");
+                    evidence.check("print_fixture_read", data.is_ok(), "fixture read");
+                    json!({"data_base64": STANDARD.encode(data.unwrap_or_default()), "printer": "PDF"})
                 }
                 _ => json!({}),
             };

@@ -331,6 +331,12 @@ async fn changes(
                 return None;
             }
             loop {
+                if principal
+                    .expires_at
+                    .is_some_and(|expiry| expiry <= jiff::Timestamp::now())
+                {
+                    return None;
+                }
                 let result = frontdoor
                     .service
                     .identity

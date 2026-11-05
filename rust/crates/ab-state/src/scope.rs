@@ -106,7 +106,7 @@ impl<Role> State<Role> {
     }
     pub(crate) fn replica_status_result(&self, visibility: &Visibility) -> Result<Value> {
         let mut result = serde_json::json!({"records":[]});
-        if visibility.get("system") != Some(&true) && visibility.get("admin") != Some(&true) {
+        if !sees_replica_status(visibility) {
             return Ok(result);
         }
         if let Some(status) = self.project_replica_status(visibility)? {
@@ -115,4 +115,7 @@ impl<Role> State<Role> {
         }
         Ok(result)
     }
+}
+pub(crate) fn sees_replica_status(visibility: &Visibility) -> bool {
+    visibility.get("system") == Some(&true) || visibility.get("admin") == Some(&true)
 }

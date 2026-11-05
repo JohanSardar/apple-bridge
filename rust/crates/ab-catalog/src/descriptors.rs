@@ -1612,7 +1612,7 @@ examples: None,
 },
 OperationDescriptor {
 name: "print.document".into(),
-description: "Print a file or authorized blob to PDF or a named printer".into(),
+description: "Print an authorized blob or supplied PDF bytes to PDF or a named printer".into(),
 scope: "print:write".into(),
 capability: "print.document".into(),
 version: 1, kind: OperationKind::Command, read_model: false,
