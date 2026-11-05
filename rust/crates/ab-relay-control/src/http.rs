@@ -197,6 +197,9 @@ async fn proxy_accounts(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     request: Request,
 ) -> Response {
+    if request.uri().path() == "/api/auth/delete-user" {
+        return Error::Forbidden.into_response();
+    }
     let (parts, body) = request.into_parts();
     let Ok(body) = to_bytes(body, 16384).await else {
         return Error::Invalid.into_response();
@@ -267,6 +270,7 @@ async fn action(
         "device-start" => c.start_grant(
             text(&input, "public_key")?,
             input["name"].as_str().unwrap_or_default(),
+            &client_address(&headers, peer),
             time,
         )?,
         "device-poll" => c.poll(text(&input, "polling_secret")?, time)?,
@@ -278,14 +282,26 @@ async fn action(
             )?;
             complete(&app, &grant, time).await?
         }
-        _ => signed_in(&app, &action, &headers, &input, time).await?,
+        _ => signed_in(&app, &action, &headers, peer, &input, time).await?,
     };
     Ok(Json(result).into_response())
 }
 
 async fn complete(app: &App, grant: &VerifiedGrant, time: i64) -> Result<Value> {
-    let admitted = app.relay.admit(&grant.public_key).await?;
-    app.control.finish_grant(grant, &admitted.hostname, time)?;
+    let admitted = match app.relay.admit(&grant.public_key).await {
+        Ok(admitted) => admitted,
+        Err(error) => {
+            let _ = app.control.release_grant(grant);
+            return Err(error);
+        }
+    };
+    if let Err(error) = app.control.finish_grant(grant, &admitted.hostname, time) {
+        let _ = app.control.release_grant(grant);
+        if matches!(error, Error::Capacity) {
+            let _ = app.relay.policy(&admitted.hostname, true, true, 0).await;
+        }
+        return Err(error);
+    }
     Ok(json!({"hostname": admitted.hostname, "credential": admitted.credential}))
 }
 
@@ -293,6 +309,7 @@ async fn signed_in(
     app: &App,
     action: &str,
     headers: &HeaderMap,
+    peer: SocketAddr,
     input: &Value,
     time: i64,
 ) -> Result<Value> {
@@ -307,7 +324,7 @@ async fn signed_in(
     let c = &app.control;
     Ok(match action {
         "list" => c.list(&session.account)?,
-        "grant-view" => c.grant_view(text(input, "code")?, time)?,
+        "grant-view" => c.grant_view(text(input, "code")?, &client_address(headers, peer), time)?,
         "confirm" => {
             fresh()?;
             c.confirm(
@@ -341,23 +358,38 @@ async fn signed_in(
 }
 
 async fn apply_policy(control: &Control, relay: &dyn RelayAdmin) {
+    let Some(_serialized) = control.try_lock_policy_sync() else {
+        return;
+    };
+    apply_pending_policy(control, relay).await;
+}
+
+async fn apply_pending_policy(control: &Control, relay: &dyn RelayAdmin) {
     let Ok(pending) = control.pending_policy() else {
         return;
     };
     for change in pending {
         if relay
-            .policy(&change.hostname, change.disabled, change.revoked)
+            .policy(
+                &change.hostname,
+                change.disabled,
+                change.revoked,
+                change.version(),
+            )
             .await
             .is_ok()
         {
-            let _ = control.policy_applied(change.id);
+            let _ = control.policy_applied(&change);
         }
     }
 }
 
 pub async fn sync_policy(control: Arc<Control>, relay: Arc<dyn RelayAdmin>) {
     loop {
-        apply_policy(&control, relay.as_ref()).await;
+        {
+            let _serialized = control.lock_policy_sync().await;
+            apply_pending_policy(&control, relay.as_ref()).await;
+        }
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }

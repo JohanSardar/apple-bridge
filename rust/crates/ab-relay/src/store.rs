@@ -4,13 +4,61 @@ use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap, VecDeque},
     fs::{self, File, OpenOptions},
     io::Write,
     os::unix::fs::{DirBuilderExt, OpenOptionsExt},
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
+
+const NONCE_LIFETIME: Duration = Duration::from_secs(60);
+const NONCE_CAPACITY: usize = 4096;
+
+#[derive(Debug, Default)]
+struct NoncePool {
+    expiries: HashMap<String, Instant>,
+    issued: VecDeque<String>,
+}
+#[derive(Debug, Default)]
+pub struct Nonces(Mutex<NoncePool>);
+impl Nonces {
+    pub fn issue(&self) -> Result<String> {
+        let nonce = random_token()?;
+        let now = Instant::now();
+        let mut pool = self.0.lock().map_err(|_| Error::Denied)?;
+        let NoncePool { expiries, issued } = &mut *pool;
+        while issued
+            .front()
+            .is_some_and(|front| expiries.get(front).is_none_or(|until| *until < now))
+        {
+            if let Some(front) = issued.pop_front() {
+                expiries.remove(&front);
+            }
+        }
+        while expiries.len() >= NONCE_CAPACITY {
+            if let Some(oldest) = issued.pop_front() {
+                expiries.remove(&oldest);
+            }
+        }
+        if issued.len() >= 2 * NONCE_CAPACITY {
+            issued.retain(|nonce| expiries.contains_key(nonce));
+        }
+        expiries.insert(nonce.clone(), now + NONCE_LIFETIME);
+        issued.push_back(nonce.clone());
+        Ok(nonce)
+    }
+    #[must_use]
+    pub fn contains(&self, nonce: &str) -> bool {
+        self.0
+            .lock()
+            .is_ok_and(|pool| pool.expiries.contains_key(nonce))
+    }
+    fn take(&self, nonce: &str) -> Option<Instant> {
+        self.0.lock().ok()?.expiries.remove(nonce)
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -39,6 +87,12 @@ pub struct Device {
     pub limits: Limits,
     pub month: String,
     pub bytes: i64,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub policy_version: i64,
+}
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero(value: &i64) -> bool {
+    *value == 0
 }
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -75,7 +129,7 @@ pub struct Store {
     pub zone: String,
     defaults: Limits,
     pub devices: BTreeMap<String, Device>,
-    challenges: BTreeMap<String, Instant>,
+    pub nonces: Arc<Nonces>,
     owner_keys: Option<PathBuf>,
 }
 pub fn digest(value: &str) -> String {
@@ -146,7 +200,7 @@ impl Store {
             zone,
             defaults,
             devices,
-            challenges: BTreeMap::new(),
+            nonces: Arc::default(),
             owner_keys: None,
         })
     }
@@ -201,18 +255,10 @@ impl Store {
         result
     }
     pub fn challenge(&mut self) -> Result<String> {
-        let now = Instant::now();
-        self.challenges.retain(|_, until| *until >= now);
-        if self.challenges.len() >= 4096 {
-            return Err(Error::Denied);
-        }
-        let nonce = random_token()?;
-        self.challenges
-            .insert(nonce.clone(), now + Duration::from_secs(60));
-        Ok(nonce)
+        self.nonces.issue()
     }
     pub fn enroll(&mut self, input: Enrollment) -> Result<Credential> {
-        let expiry = self.challenges.remove(&input.nonce).ok_or(Error::Denied)?;
+        let expiry = self.nonces.take(&input.nonce).ok_or(Error::Denied)?;
         let message = format!("apple-bridge-relay-enroll\n{}\n{}", self.zone, input.nonce);
         if Instant::now() > expiry
             || !verify(&input.public_key, &input.signature, message.as_bytes())
@@ -290,7 +336,7 @@ impl Store {
             .is_some_and(|d| !d.revoked && !d.disabled && d.credential_hash == digest(token))
     }
     pub fn verify(&mut self, proof: &Proof, action: &str) -> bool {
-        let Some(expiry) = self.challenges.remove(&proof.nonce) else {
+        let Some(expiry) = self.nonces.take(&proof.nonce) else {
             return false;
         };
         self.devices.get(&proof.hostname).is_some_and(|d| {
@@ -310,7 +356,21 @@ impl Store {
         disabled: bool,
         revoked: bool,
     ) -> Result<()> {
+        self.versioned_policy(host, limits, disabled, revoked, 0)
+            .map(|_| ())
+    }
+    pub fn versioned_policy(
+        &mut self,
+        host: &str,
+        limits: Limits,
+        disabled: bool,
+        revoked: bool,
+        version: i64,
+    ) -> Result<bool> {
         let old = self.devices.get(host).cloned().ok_or(Error::Denied)?;
+        if version < old.policy_version && version != 0 {
+            return Ok(false);
+        }
         let limits = if limits == Limits::default() {
             old.limits
         } else {
@@ -323,7 +383,9 @@ impl Store {
         d.limits = limits;
         d.disabled = disabled;
         d.revoked |= revoked;
-        self.commit(host.to_owned(), d, Some(old))
+        d.policy_version = d.policy_version.max(version);
+        self.commit(host.to_owned(), d, Some(old))?;
+        Ok(true)
     }
     pub fn charge(&mut self, host: &str, size: usize) -> Result<usize> {
         let old = self.devices.get(host).cloned().ok_or(Error::Denied)?;

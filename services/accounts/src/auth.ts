@@ -52,7 +52,7 @@ export function open(config: Config) {
     emailAndPassword: { enabled: true, minPasswordLength: 12, autoSignIn: true },
     ...(config.google ? { socialProviders: { google: config.google } } : {}),
     account: { accountLinking: { enabled: false } },
-    user: { deleteUser: { enabled: true } },
+    user: { deleteUser: { enabled: false } },
     session: { expiresIn: SESSION_DAYS * 86_400, updateAge: 86_400, freshAge: 3600 },
     rateLimit: {
       enabled: true,
