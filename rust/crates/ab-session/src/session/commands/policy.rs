@@ -63,3 +63,87 @@ pub(super) fn saved_frame(saved: &Value) -> Result<IpcFrame, Error> {
 pub(super) fn source_of(operation: &str) -> &str {
     operation.split('.').next().unwrap_or_default()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn reopening_failed_delivery_requires_an_unresolved_part() {
+        for (part, expected) in [
+            ("locally_observed", true),
+            ("observed", true),
+            ("indeterminate", true),
+            ("delivered", false),
+            ("delivery_failed", false),
+            ("", false),
+        ] {
+            let saved = json!({"disposition": "delivery_failed", "evidence": {"parts": [{"disposition": part}]}});
+            assert_eq!(reopenable(&saved), expected, "{part}");
+        }
+        for disposition in ["delivered", "failed_no_effect", "", "unknown"] {
+            assert!(!reopenable(&json!({"disposition": disposition})));
+        }
+        for disposition in ["indeterminate", "locally_observed"] {
+            assert!(reopenable(&json!({"disposition": disposition})));
+        }
+        assert!(!reopenable(
+            &json!({"disposition": "delivery_failed", "evidence": {"parts": []}})
+        ));
+    }
+
+    #[test]
+    fn capture_requires_observation_and_limits_indeterminate_to_messages() {
+        for source in ["messages", "calendar", "", "mac"] {
+            for disposition in [
+                "indeterminate",
+                "locally_observed",
+                "delivered",
+                "delivery_failed",
+            ] {
+                for observed in [true, false] {
+                    assert_eq!(
+                        capturable(
+                            disposition,
+                            &json!({"source": source, "observed": observed})
+                        ),
+                        observed && (disposition != "indeterminate" || source == "messages"),
+                        "{source} {disposition} {observed}"
+                    );
+                }
+            }
+        }
+        assert!(!capturable("delivered", &json!({"observed": "true"})));
+    }
+
+    #[test]
+    fn capture_exemptions_are_exact_except_for_the_mac_source() {
+        for operation in [
+            "focus.set",
+            "speech.say",
+            "capture.play_sound",
+            "capture.screenshot",
+            "capture.camera_photo",
+            "capture.record_audio",
+            "print.document",
+            "maps.open",
+            "shortcuts.run",
+            "mac.open",
+            "mac.other",
+        ] {
+            assert!(!needs_capture(operation), "{operation}");
+        }
+        for operation in [
+            "messages.send",
+            "calendar.create",
+            "files.write",
+            "capture.other",
+            "focus.other",
+            "shortcuts.other",
+            "macaroni.open",
+        ] {
+            assert!(needs_capture(operation), "{operation}");
+        }
+    }
+}

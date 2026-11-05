@@ -51,3 +51,43 @@ pub(super) fn split(capture: &Value) -> Result<Vec<Value>, Error> {
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn chunks_keep_metadata_and_put_absences_after_present_records() -> Result<(), crate::Error> {
+        let capture = json!({"source": "messages", "generation": "g1", "observations": [
+            {"kind": "absent", "id": "gone"},
+            {"kind": "present", "id": "first", "body": "x".repeat(10_000)},
+            {"kind": "present", "id": "second", "body": "y".repeat(10_000)}
+        ]});
+        let chunks = split(&capture)?;
+        assert_eq!(chunks.len(), 2);
+        let ids: Vec<_> = chunks
+            .iter()
+            .flat_map(|chunk| chunk["observations"].as_array().into_iter().flatten())
+            .map(|row| row["id"].clone())
+            .collect();
+        assert_eq!(ids, vec![json!("first"), json!("second"), json!("gone")]);
+        for chunk in &chunks {
+            assert_eq!(chunk["source"], "messages");
+            assert_eq!(chunk["generation"], "g1");
+        }
+        let mut live = capture;
+        live["live"] = json!(true);
+        assert_eq!(split(&live)?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn empty_captures_still_emit_a_chunk_and_missing_observations_fail() -> Result<(), crate::Error>
+    {
+        let empty = json!({"observations": []});
+        assert_eq!(split(&empty)?, vec![empty]);
+        assert!(split(&json!({})).is_err());
+        Ok(())
+    }
+}

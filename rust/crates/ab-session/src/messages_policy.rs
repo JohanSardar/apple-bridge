@@ -812,3 +812,59 @@ mod conversation_tests {
         assert_eq!(pin_index(&json!("1")), None);
     }
 }
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+
+    #[test]
+    fn gated_and_tagged_sends_never_consult_owner_sources() {
+        for origin in [Origin::Gated, Origin::OwnerSelf, Origin::Interactive] {
+            let result: Result<bool, Failure<()>> = check_with(
+                origin,
+                "[ab-test sample] hello",
+                0,
+                || panic!("tagged sends do not query ownership"),
+                || panic!("tagged sends do not query recipients"),
+            );
+            assert_eq!(result, Ok(false));
+        }
+        let result: Result<bool, Failure<()>> = check_with(
+            Origin::Gated,
+            "hello",
+            0,
+            || panic!("gated sends do not query ownership"),
+            || panic!("gated sends do not query recipients"),
+        );
+        assert_eq!(result, Err(Failure::Policy(Refusal::TextTagRequired)));
+    }
+
+    #[test]
+    fn owner_sources_short_circuit_and_preserve_their_failure() {
+        let unavailable = check_with(
+            Origin::OwnerSelf,
+            "hello",
+            0,
+            || Err("own unavailable"),
+            || panic!("ownership failure stops recipient lookup"),
+        );
+        assert_eq!(unavailable, Err(Failure::Source("own unavailable")));
+        let missing: Result<bool, Failure<()>> = check_with(
+            Origin::OwnerSelf,
+            "hello",
+            0,
+            || Ok(None),
+            || panic!("missing ownership stops recipient lookup"),
+        );
+        assert_eq!(missing, Err(Failure::Policy(Refusal::TextTagRequired)));
+        let own = BTreeSet::from(["fixture@example.invalid".to_owned()]);
+        let recipients = check_with(
+            Origin::OwnerSelf,
+            "hello",
+            0,
+            || Ok(Some(own)),
+            || Err("recipients unavailable"),
+        );
+        assert_eq!(recipients, Err(Failure::Source("recipients unavailable")));
+    }
+}
