@@ -10,14 +10,14 @@ pub(crate) struct Window {
     deadline: Instant,
 }
 impl Window {
-    pub fn new(limit: usize) -> Self {
+    pub(crate) fn new(limit: usize) -> Self {
         Self {
             available: limit,
             pending: VecDeque::new(),
             deadline: Instant::now() + Duration::from_secs(30),
         }
     }
-    pub fn reserve(&mut self, size: usize, cursor: Option<Cursor>) -> bool {
+    pub(crate) fn reserve(&mut self, size: usize, cursor: Option<Cursor>) -> bool {
         if size > self.available {
             return false;
         }
@@ -28,7 +28,7 @@ impl Window {
         self.pending.push_back((size, cursor));
         true
     }
-    pub fn acknowledge(&mut self, ack: &FeedFrame) -> Result<(), Error> {
+    pub(crate) fn acknowledge(&mut self, ack: &FeedFrame) -> Result<(), Error> {
         let (size, expected) = self.pending.front().ok_or(Error::Invalid)?;
         if usize::try_from(ack.credits).ok() != Some(*size) {
             return Err(Error::Invalid);
@@ -45,10 +45,10 @@ impl Window {
         self.deadline = Instant::now() + Duration::from_secs(30);
         Ok(())
     }
-    pub fn pending(&self) -> bool {
+    pub(crate) fn pending(&self) -> bool {
         !self.pending.is_empty()
     }
-    pub fn deadline(&self) -> Instant {
+    pub(crate) fn deadline(&self) -> Instant {
         self.deadline
     }
 }
