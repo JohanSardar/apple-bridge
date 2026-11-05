@@ -61,11 +61,31 @@ impl NameResolver for SystemResolver {
         })
     }
 }
+const SOURCE_BUDGETS: usize = 4096;
 #[derive(Debug)]
 struct Budget {
     until: tokio::time::Instant,
     challenges: usize,
     enrollments: usize,
+    proofs: usize,
+}
+#[derive(Debug, Clone, Copy)]
+enum Spend {
+    Challenge,
+    Enrollment,
+    Proof,
+}
+impl Spend {
+    fn of(path: &str) -> Option<Self> {
+        match path {
+            "/challenge" => Some(Self::Challenge),
+            "/enroll" | "/rotate" => Some(Self::Enrollment),
+            "/dns" | "/domain" | "/certificate" | "/tunnel" | "/ct" | "/revoke" | "/info" => {
+                Some(Self::Proof)
+            }
+            _ => None,
+        }
+    }
 }
 #[derive(Debug)]
 pub struct Api {
@@ -104,28 +124,39 @@ impl Api {
             .with_state(self)
             .layer(axum::extract::DefaultBodyLimit::max(4096))
     }
-    async fn allowed(&self, ip: IpAddr, challenge: bool) -> bool {
+    async fn allowed(&self, ip: IpAddr, spend: Spend) -> bool {
         let now = tokio::time::Instant::now();
+        let key = crate::server::source_key(ip);
         let mut sources = self.sources.lock().await;
         sources.retain(|_, b| now < b.until);
-        if !sources.contains_key(&ip) && sources.len() >= 4096 {
-            return false;
+        if !sources.contains_key(&key)
+            && sources.len() >= SOURCE_BUDGETS
+            && let Some(oldest) = sources
+                .iter()
+                .min_by_key(|(_, budget)| budget.until)
+                .map(|(source, _)| *source)
+        {
+            sources.remove(&oldest);
         }
-        let b = sources.entry(ip).or_insert(Budget {
+        let b = sources.entry(key).or_insert(Budget {
             until: now + Duration::from_secs(60),
             challenges: 0,
             enrollments: 0,
+            proofs: 0,
         });
-        let (counter, max) = if challenge {
-            (&mut b.challenges, 30)
-        } else {
-            (&mut b.enrollments, 20)
+        let (counter, max) = match spend {
+            Spend::Challenge => (&mut b.challenges, 30),
+            Spend::Enrollment => (&mut b.enrollments, 20),
+            Spend::Proof => (&mut b.proofs, 60),
         };
         if *counter >= max {
             return false;
         }
         *counter += 1;
         true
+    }
+    fn nonce_is_live(&self, proof: &Proof) -> bool {
+        self.server.nonces.contains(&proof.nonce)
     }
     async fn upgrade(self: Arc<Self>, ws: WebSocket, proof: Proof, features: crate::mux::Features) {
         let (tx, rx) = mpsc::channel(32);
@@ -194,6 +225,7 @@ struct Policy {
     limits: Limits,
     disabled: bool,
     revoked: bool,
+    version: i64,
 }
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -231,8 +263,8 @@ async fn handle(
     body: Bytes,
 ) -> Response {
     let path = uri.path();
-    if matches!(path, "/challenge" | "/enroll" | "/rotate")
-        && !api.allowed(peer.ip(), path == "/challenge").await
+    if let Some(spend) = Spend::of(path)
+        && !api.allowed(peer.ip(), spend).await
     {
         let mut response = error(429, "busy");
         response
@@ -246,7 +278,7 @@ async fn handle(
         .unwrap_or("");
     let token = token.strip_prefix("Bearer ").unwrap_or(token);
     match (method.as_str(), path) {
-        ("GET" | "HEAD", "/challenge") => match api.server.store.lock().await.challenge() {
+        ("GET" | "HEAD", "/challenge") => match api.server.nonces.issue() {
             Ok(nonce) => reply(&json!({"nonce":nonce})),
             Err(_) => error(429, "busy"),
         },
@@ -268,7 +300,9 @@ async fn handle(
             let Some(proof) = header_proof(&headers) else {
                 return error(403, "denied");
             };
-            if !api.server.store.lock().await.verify(&proof, "tunnel") {
+            if !api.nonce_is_live(&proof)
+                || !api.server.store.lock().await.verify(&proof, "tunnel")
+            {
                 return error(403, "denied");
             }
             let Ok(ws) = ws else {
@@ -294,7 +328,7 @@ async fn handle(
             let Some(proof) = header_proof(&headers) else {
                 return error(403, "denied");
             };
-            if !api.server.store.lock().await.verify(&proof, "ct") {
+            if !api.nonce_is_live(&proof) || !api.server.store.lock().await.verify(&proof, "ct") {
                 return error(403, "denied");
             }
             reply(
@@ -309,6 +343,9 @@ async fn enrollment(api: &Api, body: &[u8], path: &str) -> Response {
     let Some(input) = decode::<Enrollment>(body) else {
         return error(400, "invalid request");
     };
+    if !api.server.nonces.contains(&input.nonce) {
+        return error(403, "enrollment refused");
+    }
     let result = api.server.store.lock().await.enroll(input);
     match result {
         Ok(c) => {
@@ -378,17 +415,18 @@ async fn policy(api: &Api, body: &[u8], token: &str) -> Response {
     let Some(input) = decode::<Policy>(body) else {
         return error(400, "invalid request");
     };
-    if api
-        .server
-        .store
-        .lock()
-        .await
-        .policy(&input.hostname, input.limits, input.disabled, input.revoked)
-        .is_err()
-    {
-        return error(403, "policy refused");
+    let applied = api.server.store.lock().await.versioned_policy(
+        &input.hostname,
+        input.limits,
+        input.disabled,
+        input.revoked,
+        input.version,
+    );
+    match applied {
+        Ok(true) => api.server.disconnect(&input.hostname).await,
+        Ok(false) => {}
+        Err(_) => return error(403, "policy refused"),
     }
-    api.server.disconnect(&input.hostname).await;
     StatusCode::NO_CONTENT.into_response()
 }
 
@@ -401,6 +439,7 @@ async fn dns(api: &Api, body: &[u8]) -> Response {
             .value
             .bytes()
             .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+        || !api.nonce_is_live(&input.proof)
         || !api
             .server
             .store
@@ -430,6 +469,7 @@ async fn domain(api: &Api, body: &[u8]) -> Response {
         return error(400, "invalid request");
     };
     if !valid_host(&input.domain)
+        || !api.nonce_is_live(&input.proof)
         || !api
             .server
             .store
@@ -476,13 +516,17 @@ async fn certificate(api: &Api, body: &[u8]) -> Response {
     let Some(input) = decode::<Certificate>(body) else {
         return error(400, "invalid request");
     };
-    let mut store = api.server.store.lock().await;
     if input.fingerprint.len() != 64
         || !input
             .fingerprint
             .bytes()
             .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
-        || !store.verify(&input.proof, &format!("certificate:{}", input.fingerprint))
+        || !api.nonce_is_live(&input.proof)
+    {
+        return error(403, "denied");
+    }
+    let mut store = api.server.store.lock().await;
+    if !store.verify(&input.proof, &format!("certificate:{}", input.fingerprint))
     {
         return error(403, "denied");
     }

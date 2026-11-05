@@ -188,6 +188,7 @@ dependencies = [
  "getrandom 0.3.4",
  "hickory-resolver",
  "humantime",
+ "hyper",
  "hyper-util",
  "instant-acme",
  "jiff",

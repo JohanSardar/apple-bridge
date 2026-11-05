@@ -63,6 +63,7 @@ struct Writer {
 pub struct Control {
     writer: Mutex<Writer>,
     public_url: String,
+    policy_sync: tokio::sync::Mutex<()>,
 }
 impl fmt::Debug for Control {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -112,6 +113,7 @@ impl Writer {
 
 const DEVICES_PER_ACCOUNT: i64 = 2;
 const GRANT_SECONDS: i64 = 600;
+const COMPLETION_SECONDS: i64 = 30;
 const USER_CODE_ALPHABET: &[u8] = b"BCDFGHJKLMNPQRSTVWXZ";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,6 +129,12 @@ pub struct PolicyChange {
     pub hostname: String,
     pub disabled: bool,
     pub revoked: bool,
+}
+impl PolicyChange {
+    #[must_use]
+    pub fn version(&self) -> i64 {
+        self.id
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceAction {
@@ -213,7 +221,9 @@ CREATE TABLE IF NOT EXISTS fence(epoch INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS grants(id TEXT PRIMARY KEY, poll TEXT UNIQUE NOT NULL, code TEXT UNIQUE NOT NULL, public TEXT NOT NULL, fingerprint TEXT NOT NULL, name TEXT NOT NULL, nonce TEXT NOT NULL, proof_until INTEGER NOT NULL, expires INTEGER NOT NULL, next_poll INTEGER NOT NULL, interval INTEGER NOT NULL, account TEXT, state TEXT NOT NULL CHECK(state IN ('pending','approved','consumed')));
 CREATE TABLE IF NOT EXISTS devices(hostname TEXT PRIMARY KEY, account TEXT NOT NULL, public TEXT UNIQUE NOT NULL, name TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('active','suspended','revoked')), linked_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS policy_outbox(id INTEGER PRIMARY KEY AUTOINCREMENT, hostname TEXT NOT NULL, disabled INTEGER NOT NULL, revoked INTEGER NOT NULL, epoch INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT NULL, count INTEGER NOT NULL);")?;
+CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT NULL, count INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS grant_completions(grant_id TEXT PRIMARY KEY, account TEXT NOT NULL, until INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS grant_sources(grant_id TEXT PRIMARY KEY, source TEXT NOT NULL, created INTEGER NOT NULL);")?;
         if !exists {
             db.execute("INSERT INTO fence VALUES(0)", [])?;
         }
@@ -226,6 +236,7 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
         Ok(Self {
             writer: Mutex::new(writer),
             public_url: public_url.trim_end_matches('/').to_owned(),
+            policy_sync: tokio::sync::Mutex::new(()),
         })
     }
     fn with<T>(&self, f: impl FnOnce(&mut Writer) -> Result<T>) -> Result<T> {
@@ -256,13 +267,17 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
             Ok(())
         })
     }
-    pub fn start_grant(&self, public: &str, name: &str, now: i64) -> Result<Value> {
+    pub fn start_grant(&self, public: &str, name: &str, source: &str, now: i64) -> Result<Value> {
         let key: [u8; 32] = decode(public)?.try_into().map_err(|_| Error::Invalid)?;
         VerifyingKey::from_bytes(&key).map_err(|_| Error::Invalid)?;
         let name = clean_name(name);
         let verification = format!("{}/device", self.public_url);
         self.with(|w| {
             w.db.execute("DELETE FROM grants WHERE expires<=?1", [now])?;
+            w.db.execute(
+                "DELETE FROM grant_sources WHERE grant_id NOT IN (SELECT id FROM grants)",
+                [],
+            )?;
             let waiting: i64 =
                 w.db.query_row("SELECT count(*) FROM grants", [], |r| r.get(0))?;
             if waiting >= 4096 {
@@ -287,6 +302,10 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
                     now + 5
                 ],
             )?;
+            w.db.execute(
+                "INSERT INTO grant_sources VALUES(?1,?2,?3)",
+                params![id, source, now],
+            )?;
             Ok(json!({
                 "transaction": id,
                 "polling_secret": poll,
@@ -299,17 +318,23 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
             }))
         })
     }
-    pub fn grant_view(&self, code: &str, now: i64) -> Result<Value> {
+    pub fn grant_view(&self, code: &str, viewer: &str, now: i64) -> Result<Value> {
         let code = normalize_code(code);
         self.with(|w| {
             w.db.query_row(
-                "SELECT fingerprint,name FROM grants WHERE code=?1 AND expires>?2 AND state='pending'",
+                "SELECT g.fingerprint,g.name,s.source,s.created FROM grants g LEFT JOIN grant_sources s ON s.grant_id=g.id WHERE g.code=?1 AND g.expires>?2 AND g.state='pending'",
                 params![hash(&code), now],
                 |r| {
+                    let source: Option<String> = r.get(2)?;
+                    let created: Option<i64> = r.get(3)?;
+                    let same_network = source.as_deref().map(|source| same_network(source, viewer));
                     Ok(json!({
                         "code": code,
                         "fingerprint": r.get::<_, String>(0)?,
                         "name": r.get::<_, String>(1)?,
+                        "source": source,
+                        "same_network": same_network,
+                        "age_seconds": created.map(|created| (now - created).max(0)),
                     }))
                 },
             )
@@ -383,15 +408,38 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
             let message =
                 ab_wire::framing::device_link_message(&self.public_url, &id, &nonce, &public_key);
             proof(&public_key, signature, &message)?;
-            if held_devices(&w.db, &account)? >= DEVICES_PER_ACCOUNT {
+            let tx = w.db.transaction()?;
+            tx.execute("DELETE FROM grant_completions WHERE until<=?1", [now])?;
+            let in_progress: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM grant_completions WHERE grant_id=?1)",
+                [&id],
+                |r| r.get(0),
+            )?;
+            if in_progress {
+                return Err(Error::SlowDown);
+            }
+            let completing: i64 = tx.query_row(
+                "SELECT count(*) FROM grant_completions WHERE account=?1",
+                [&account],
+                |r| r.get(0),
+            )?;
+            if held_devices(&tx, &account)? + completing >= DEVICES_PER_ACCOUNT {
                 return Err(Error::Capacity);
             }
+            tx.execute(
+                "INSERT INTO grant_completions VALUES(?1,?2,?3)",
+                params![id, account, now + COMPLETION_SECONDS],
+            )?;
+            tx.commit()?;
             Ok(VerifiedGrant { id, account, public_key, name })
         })
     }
     pub fn finish_grant(&self, grant: &VerifiedGrant, hostname: &str, now: i64) -> Result<()> {
         self.with(|w| {
             let tx = w.db.transaction()?;
+            if held_devices(&tx, &grant.account)? >= DEVICES_PER_ACCOUNT {
+                return Err(Error::Capacity);
+            }
             tx.execute(
                 "INSERT INTO devices VALUES(?1,?2,?3,?4,'active',?5)",
                 params![hostname, grant.account, grant.public_key, grant.name, now],
@@ -400,7 +448,20 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
                 "UPDATE grants SET state='consumed',nonce='' WHERE id=?1",
                 [&grant.id],
             )?;
+            tx.execute(
+                "DELETE FROM grant_completions WHERE grant_id=?1",
+                [&grant.id],
+            )?;
             tx.commit()?;
+            Ok(())
+        })
+    }
+    pub fn release_grant(&self, grant: &VerifiedGrant) -> Result<()> {
+        self.with(|w| {
+            w.db.execute(
+                "DELETE FROM grant_completions WHERE grant_id=?1",
+                [&grant.id],
+            )?;
             Ok(())
         })
     }
@@ -474,7 +535,7 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
     pub fn pending_policy(&self) -> Result<Vec<PolicyChange>> {
         self.with(|w| {
             let mut query = w.db.prepare(
-                "SELECT id,hostname,disabled,revoked FROM policy_outbox ORDER BY id LIMIT 100",
+                "SELECT o.id,o.hostname,o.disabled,o.revoked FROM policy_outbox o WHERE o.id=(SELECT max(id) FROM policy_outbox WHERE hostname=o.hostname) ORDER BY o.id LIMIT 100",
             )?;
             let rows = query
                 .query_map([], |r| {
@@ -489,11 +550,20 @@ CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT 
             Ok(rows)
         })
     }
-    pub fn policy_applied(&self, id: i64) -> Result<()> {
+    pub fn policy_applied(&self, change: &PolicyChange) -> Result<()> {
         self.with(|w| {
-            w.db.execute("DELETE FROM policy_outbox WHERE id=?1", [id])?;
+            w.db.execute(
+                "DELETE FROM policy_outbox WHERE hostname=?1 AND id<=?2",
+                params![change.hostname, change.id],
+            )?;
             Ok(())
         })
+    }
+    pub async fn lock_policy_sync(&self) -> tokio::sync::MutexGuard<'_, ()> {
+        self.policy_sync.lock().await
+    }
+    pub fn try_lock_policy_sync(&self) -> Option<tokio::sync::MutexGuard<'_, ()>> {
+        self.policy_sync.try_lock().ok()
     }
 }
 fn held_devices(db: &Connection, account: &str) -> Result<i64> {
@@ -502,4 +572,17 @@ fn held_devices(db: &Connection, account: &str) -> Result<i64> {
         [account],
         |r| r.get(0),
     )?)
+}
+fn network_of(address: &str) -> Option<std::net::IpAddr> {
+    match address.parse::<std::net::IpAddr>().ok()?.to_canonical() {
+        std::net::IpAddr::V6(address) => {
+            let mut segments = address.segments();
+            segments[4..].fill(0);
+            Some(std::net::IpAddr::from(segments))
+        }
+        address @ std::net::IpAddr::V4(_) => Some(address),
+    }
+}
+fn same_network(left: &str, right: &str) -> bool {
+    network_of(left).is_some_and(|left| network_of(right) == Some(left))
 }

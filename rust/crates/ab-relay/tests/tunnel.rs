@@ -513,7 +513,7 @@ async fn one_stalled_visitor_does_not_block_other_streams_or_keepalives() {
 async fn a_mac_that_overruns_the_window_loses_only_that_stream() {
     let fixture = fixture(8).await;
     let mut mac = fake_mac(&fixture, None).await;
-    let stalled = stalled_visitor(fixture.public, &mac.host).await;
+    let _stalled = stalled_visitor(fixture.public, &mac.host).await;
     let opened = mac.next_syn(Duration::from_secs(5)).await;
     let chunk = [b'x'; 16384];
     let mut reset = false;
@@ -584,5 +584,204 @@ async fn a_mac_that_asks_for_it_learns_the_address_the_relay_accepted() {
         vec![127, 0, 0, 1],
         "the source is the accepted peer, not anything a client can send"
     );
+    fixture.stop.cancel();
+}
+
+async fn stalling_origin() -> (SocketAddr, Origin) {
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.set_recv_buffer_size(4096).unwrap();
+    socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+    let address = socket.local_addr().unwrap();
+    let listener = socket.listen(64).unwrap();
+    let origin = Origin::default();
+    let counters = origin.clone();
+    tokio::spawn(async move {
+        let mut parked = Vec::new();
+        loop {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                return;
+            };
+            if counters.accepted.fetch_add(1, Ordering::SeqCst) == 0 {
+                parked.push(stream);
+                continue;
+            }
+            tokio::spawn(async move {
+                let mut buffer = [0u8; 1024];
+                let _ = stream.read(&mut buffer).await;
+                let _ = stream
+                    .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\nok")
+                    .await;
+                let _ = stream.shutdown().await;
+            });
+        }
+    });
+    (address, origin)
+}
+
+#[tokio::test]
+async fn a_gateway_that_stops_reading_one_stream_does_not_stall_the_mac_tunnel() {
+    let fixture = fixture(8).await;
+    let (upstream, _origin) = stalling_origin().await;
+    let tunnel = real_tunnel(&fixture, upstream).await;
+    let connector = visitor_tls(tunnel.site.clone());
+    let socket = TcpStream::connect(fixture.public).await.unwrap();
+    let mut uploading = connector
+        .connect(ServerName::try_from(tunnel.host.clone()).unwrap(), socket)
+        .await
+        .unwrap();
+    let chunk = vec![b'x'; 1 << 16];
+    loop {
+        let wrote = tokio::time::timeout(Duration::from_secs(2), async {
+            uploading.write_all(&chunk).await?;
+            uploading.flush().await
+        })
+        .await;
+        if wrote.is_err() {
+            break;
+        }
+    }
+    let socket = TcpStream::connect(fixture.public).await.unwrap();
+    let mut second = tokio::time::timeout(
+        Duration::from_secs(3),
+        connector.connect(ServerName::try_from(tunnel.host.clone()).unwrap(), socket),
+    )
+    .await
+    .expect("a second visitor stalled behind the blocked stream")
+    .unwrap();
+    second.write_all(b"GET / HTTP/1.1\r\n\r\n").await.unwrap();
+    second.flush().await.unwrap();
+    let mut reply = Vec::new();
+    tokio::time::timeout(Duration::from_secs(3), second.read_to_end(&mut reply))
+        .await
+        .expect("no reply through the tunnel while one stream was stalled")
+        .ok();
+    assert!(reply.ends_with(b"ok"));
+    assert!(!tunnel.run.is_finished());
+    tunnel.stop.send(true).unwrap();
+    fixture.stop.cancel();
+}
+
+#[tokio::test]
+async fn a_visitor_that_stalls_the_tls_handshake_is_closed_by_the_mac() {
+    let fixture = fixture(8).await;
+    let (upstream, _origin) = counting_origin(Vec::new()).await;
+    let tunnel = real_tunnel(&fixture, upstream).await;
+    let mut stalled = visitor(fixture.public, &tunnel.host).await;
+    let mut drained = Vec::new();
+    let closed =
+        tokio::time::timeout(Duration::from_secs(14), stalled.read_to_end(&mut drained)).await;
+    assert!(
+        closed.is_ok(),
+        "the Mac never gave up on a handshake that stopped"
+    );
+    tunnel.stop.send(true).unwrap();
+    fixture.stop.cancel();
+}
+
+#[tokio::test]
+async fn visitors_past_the_mac_stream_limit_cost_only_those_visitors() {
+    let fixture = fixture(64).await;
+    let (upstream, _origin) = counting_origin(Vec::new()).await;
+    let tunnel = real_tunnel(&fixture, upstream).await;
+    let mut first = visitor(fixture.public, &tunnel.host).await;
+    let mut rest = Vec::new();
+    for _ in 0..40 {
+        rest.push(visitor(fixture.public, &tunnel.host).await);
+    }
+    let mut closed = false;
+    if let Some(last) = rest.last_mut() {
+        let mut buffer = [0u8; 4096];
+        for _ in 0..20 {
+            match tokio::time::timeout(Duration::from_secs(1), last.read(&mut buffer)).await {
+                Ok(Ok(0) | Err(_)) => {
+                    closed = true;
+                    break;
+                }
+                Ok(Ok(_)) | Err(_) => {}
+            }
+        }
+    }
+    assert!(closed, "a stream past the Mac's limit was never refused");
+    let mut buffer = [0u8; 4096];
+    let early = tokio::time::timeout(Duration::from_secs(1), first.read(&mut buffer)).await;
+    assert!(
+        !matches!(early, Ok(Ok(0) | Err(_))),
+        "a stream under the limit died with the tunnel"
+    );
+    tunnel.stop.send(true).unwrap();
+    fixture.stop.cancel();
+}
+
+#[tokio::test]
+async fn the_gateway_learns_the_address_the_relay_accepted() {
+    let fixture = fixture(8).await;
+    let proof = [7u8; 32];
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let upstream = listener.local_addr().unwrap();
+    let (found, mut learned) = mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        loop {
+            let Ok((mut socket, _)) = listener.accept().await else {
+                return;
+            };
+            let found = found.clone();
+            tokio::spawn(async move {
+                let preamble = ab_remote::read_ingress_preamble(&mut socket, &proof).await;
+                let _ = found.send(preamble);
+                let mut buffer = [0u8; 1024];
+                while socket.read(&mut buffer).await.is_ok_and(|n| n > 0) {}
+            });
+        }
+    });
+    let home = tempfile::tempdir().unwrap();
+    let (http, tls) = client(&fixture.root);
+    let identity = ab_remote::relay::enroll(home.path(), &fixture.endpoint, ZONE, &http)
+        .await
+        .unwrap();
+    let host = identity.credential.hostname.clone();
+    let certified = rcgen::generate_simple_self_signed(vec![host.clone()]).unwrap();
+    let remote = home.path().join("remote");
+    std::fs::create_dir_all(&remote).unwrap();
+    std::fs::write(remote.join("relay-cert.pem"), certified.cert.pem()).unwrap();
+    std::fs::write(
+        remote.join("relay-key.pem"),
+        certified.signing_key.serialize_pem(),
+    )
+    .unwrap();
+    let relay = Relay {
+        home: home.path().to_owned(),
+        endpoint: fixture.endpoint.clone(),
+        zone: ZONE.into(),
+        client: http,
+        certificates: Arc::new(Certificates::new(
+            home.path().to_owned(),
+            "https://acme.invalid/directory".into(),
+        )),
+        tls,
+        domain: String::new(),
+        resolver: None,
+        domain_poll: Duration::from_millis(100),
+    };
+    let (statuses, observed) = watch::channel(std::collections::BTreeMap::new());
+    let gateway = Gateway::authenticated(upstream, proof).with_status(statuses);
+    let (stop, stopped) = watch::channel(false);
+    tokio::spawn(async move { relay.run(gateway, stopped).await });
+    wait_until("the tunnel never came up", Duration::from_secs(5), || {
+        observed.borrow().get("relay").is_some_and(|e| e.active)
+    })
+    .await;
+    let socket = TcpStream::connect(fixture.public).await.unwrap();
+    let _secure = visitor_tls(certified.cert.der().clone())
+        .connect(ServerName::try_from(host).unwrap(), socket)
+        .await
+        .unwrap();
+    let preamble = tokio::time::timeout(Duration::from_secs(5), learned.recv())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(preamble.source, Some("127.0.0.1".parse().unwrap()));
+    assert!(preamble.binding.is_some());
+    stop.send(true).unwrap();
     fixture.stop.cancel();
 }

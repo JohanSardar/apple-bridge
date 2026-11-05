@@ -12,7 +12,7 @@ use std::{
 };
 use tempfile::TempDir;
 use tokio::{
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     process::{Child, Command},
 };
@@ -34,6 +34,7 @@ struct Relay {
     public: SocketAddr,
     control: SocketAddr,
     log: PathBuf,
+    certificate: rustls::pki_types::CertificateDer<'static>,
     _dir: TempDir,
 }
 
@@ -46,6 +47,10 @@ fn unused_address() -> SocketAddr {
 
 impl Relay {
     async fn start(control: Control, open_file_limit: Option<u32>) -> Self {
+        Self::start_with(control, open_file_limit, &["--source-slots", "4096"]).await
+    }
+
+    async fn start_with(control: Control, open_file_limit: Option<u32>, extra: &[&str]) -> Self {
         let dir = TempDir::new().unwrap();
         let identity =
             rcgen::generate_simple_self_signed(vec![CONTROL_HOST.into(), APP_HOST.into()]).unwrap();
@@ -98,6 +103,8 @@ impl Relay {
             }
         }
 
+        args.extend(extra.iter().map(|arg| (*arg).to_owned()));
+
         let binary = env!("CARGO_BIN_EXE_ab-relay");
         let mut command = if let Some(limit) = open_file_limit {
             let mut shell = Command::new("sh");
@@ -122,6 +129,7 @@ impl Relay {
             public,
             control: own_control,
             log,
+            certificate: identity.cert.der().clone(),
             _dir: dir,
         };
         relay.wait_until_listening().await;
@@ -187,6 +195,43 @@ impl Relay {
                 );
             }
         }
+    }
+
+    async fn silent_tls(&self, host: &str) -> Option<tokio_rustls::client::TlsStream<TcpStream>> {
+        let mut roots = rustls::RootCertStore::empty();
+        roots.add(self.certificate.clone()).unwrap();
+        let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+        let socket = TcpStream::connect(self.public).await.ok()?;
+        let name = ServerName::try_from(host.to_owned()).unwrap();
+        tokio::time::timeout(
+            Duration::from_secs(5),
+            tokio_rustls::TlsConnector::from(Arc::new(config)).connect(name, socket),
+        )
+        .await
+        .ok()?
+        .ok()
+    }
+
+    #[cfg(target_os = "linux")]
+    async fn request_from(&self, source: &str, host: &str) -> reqwest::Result<StatusCode> {
+        reqwest::Client::builder()
+            .no_proxy()
+            .danger_accept_invalid_certs(true)
+            .resolve(host, self.public)
+            .local_address(source.parse::<std::net::IpAddr>().unwrap())
+            .timeout(Duration::from_secs(10))
+            .build()
+            .unwrap()
+            .get(format!("https://{host}:{}/info", self.public.port()))
+            .send()
+            .await
+            .map(|response| response.status())
     }
 
     async fn reset_after_client_hello(&mut self, host: &str) {
@@ -280,4 +325,108 @@ async fn a_failed_accept_on_the_control_listener_does_not_stop_the_relay() {
         StatusCode::OK
     );
     relay.assert_running();
+}
+
+async fn closes_within(
+    mut connection: tokio_rustls::client::TlsStream<TcpStream>,
+    within: Duration,
+) -> bool {
+    let mut byte = [0];
+    tokio::time::timeout(within, connection.read(&mut byte))
+        .await
+        .is_ok()
+}
+
+#[tokio::test]
+async fn a_tls_connection_that_never_sends_a_request_loses_its_slot() {
+    let relay = Relay::start(Control::SharedPort, None).await;
+    let silent = relay
+        .silent_tls(CONTROL_HOST)
+        .await
+        .expect("the handshake should finish");
+    assert!(
+        closes_within(silent, Duration::from_secs(13)).await,
+        "a silent TLS connection held its slot past the first-request deadline"
+    );
+}
+
+#[tokio::test]
+async fn a_tunnel_or_api_request_is_not_cut_off_by_the_first_request_deadline() {
+    let relay = Relay::start_with(
+        Control::SharedPort,
+        None,
+        &["--source-slots", "4096", "--first-request-timeout", "1s"],
+    )
+    .await;
+    for _ in 0..3 {
+        assert_eq!(
+            relay.request(CONTROL_HOST, relay.public).await,
+            StatusCode::OK
+        );
+        tokio::time::sleep(Duration::from_millis(1500)).await;
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn silent_connections_cannot_take_the_control_hosts_capacity() {
+    let relay = Relay::start(Control::SharedPort, None).await;
+    let mut held = Vec::new();
+    for _ in 0..300 {
+        if let Some(connection) = relay.silent_tls(APP_HOST).await {
+            held.push(connection);
+        }
+    }
+    assert_eq!(
+        relay
+            .request_from("127.0.0.2", CONTROL_HOST)
+            .await
+            .expect("the control host refused a fresh caller"),
+        StatusCode::OK
+    );
+    drop(held);
+}
+
+#[tokio::test]
+async fn each_host_has_its_own_slots() {
+    let relay = Relay::start_with(
+        Control::SharedPort,
+        None,
+        &["--source-slots", "4096", "--app-slots", "2"],
+    )
+    .await;
+    let mut held = Vec::new();
+    for _ in 0..2 {
+        held.push(relay.silent_tls(APP_HOST).await.expect("a free app slot"));
+    }
+    assert!(
+        relay.silent_tls(APP_HOST).await.is_none(),
+        "the sign-in host took more than its slots"
+    );
+    assert_eq!(
+        relay.request(CONTROL_HOST, relay.public).await,
+        StatusCode::OK
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn one_address_cannot_hold_more_than_its_share_of_anonymous_connections() {
+    let relay = Relay::start_with(Control::SharedPort, None, &["--source-slots", "2"]).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let mut held = Vec::new();
+    for _ in 0..2 {
+        held.push(relay.silent_tls(CONTROL_HOST).await.expect("a free slot"));
+    }
+    assert!(
+        relay.silent_tls(CONTROL_HOST).await.is_none(),
+        "one address held more than its share"
+    );
+    assert_eq!(
+        relay
+            .request_from("127.0.0.2", CONTROL_HOST)
+            .await
+            .expect("another address was refused"),
+        StatusCode::OK
+    );
 }

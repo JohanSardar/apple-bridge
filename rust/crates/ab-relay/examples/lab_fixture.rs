@@ -137,8 +137,11 @@ impl Fixture {
                     endpoint: field(&v, "callback")?.to_owned(),
                     client: reqwest::Client::new(),
                 });
+                let nonces = self.store.lock().await.nonces.clone();
                 let server = Arc::new(Server {
                     app: None,
+                    capacity: ab_relay::server::Capacity::default(),
+                    nonces,
                     store: self.store.clone(),
                     sessions: Mutex::new(HashMap::new()),
                     idle: Duration::from_secs(2),

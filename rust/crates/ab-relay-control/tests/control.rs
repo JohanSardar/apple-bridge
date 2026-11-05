@@ -54,11 +54,22 @@ impl Accounts for Fixture {
 struct Relay {
     admitted: Mutex<Vec<String>>,
     policy: Mutex<Vec<(String, bool, bool)>>,
+    versions: Mutex<Vec<i64>>,
     offline: std::sync::atomic::AtomicBool,
+    fail_next_policy: AtomicU32,
+    admit_delay_ms: AtomicU32,
+    refuse_admit: std::sync::atomic::AtomicBool,
 }
 impl RelayAdmin for Relay {
     fn admit<'a>(&'a self, public_key: &'a str) -> RelayFuture<'a, Admitted> {
         Box::pin(async move {
+            let delay = self.admit_delay_ms.load(Ordering::SeqCst);
+            if delay > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(u64::from(delay))).await;
+            }
+            if self.refuse_admit.load(Ordering::SeqCst) {
+                return Err(Error::Unavailable);
+            }
             let mut admitted = self.admitted.lock().unwrap();
             admitted.push(public_key.to_owned());
             Ok(Admitted {
@@ -72,11 +83,18 @@ impl RelayAdmin for Relay {
         hostname: &'a str,
         disabled: bool,
         revoked: bool,
+        version: i64,
     ) -> RelayFuture<'a, ()> {
         Box::pin(async move {
-            if self.offline.load(Ordering::SeqCst) {
+            if self.offline.load(Ordering::SeqCst)
+                || self
+                    .fail_next_policy
+                    .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+                    .is_ok()
+            {
                 return Err(Error::Unavailable);
             }
+            self.versions.lock().unwrap().push(version);
             self.policy
                 .lock()
                 .unwrap()
@@ -485,4 +503,203 @@ async fn a_restored_backup_cannot_bring_back_a_revoked_tunnel() {
         Control::open(&database, &fence, PUBLIC),
         Err(Error::Fenced)
     ));
+}
+
+fn signed_completion(w: &World, poll: &str, key: &SigningKey, public: &str) -> Value {
+    let proof = w.approved_poll(poll);
+    let message = ab_wire::framing::device_link_message(
+        PUBLIC,
+        proof["transaction"].as_str().unwrap(),
+        proof["nonce"].as_str().unwrap(),
+        public,
+    );
+    json!({"polling_secret": poll, "signature": B64.encode(key.sign(&message).to_bytes())})
+}
+
+async fn complete(w: &World, poll: &str, key: &SigningKey, public: &str) -> (StatusCode, Value) {
+    let body = signed_completion(w, poll, key, public);
+    w.post("device-complete", None, &body).await
+}
+
+async fn approved(w: &World, cookie: &str, seed: u8) -> (String, SigningKey, String) {
+    let key = SigningKey::from_bytes(&[seed; 32]);
+    let public = B64.encode(key.verifying_key().as_bytes());
+    let (status, start) = w
+        .post(
+            "device-start",
+            None,
+            &json!({"public_key": public, "name": "Mac"}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = w
+        .post(
+            "confirm",
+            Some(cookie),
+            &json!({"code": start["user_code"], "fingerprint": start["fingerprint"]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    (start["polling_secret"].as_str().unwrap().to_owned(), key, public)
+}
+
+#[tokio::test]
+async fn linking_many_macs_at_once_cannot_pass_the_account_limit() {
+    let w = world();
+    w.relay.admit_delay_ms.store(100, Ordering::SeqCst);
+    let mut macs = Vec::new();
+    for seed in 1..=5 {
+        macs.push(approved(&w, "ada", seed).await);
+    }
+    let (a, b, c, d, e) = tokio::join!(
+        complete(&w, &macs[0].0, &macs[0].1, &macs[0].2),
+        complete(&w, &macs[1].0, &macs[1].1, &macs[1].2),
+        complete(&w, &macs[2].0, &macs[2].1, &macs[2].2),
+        complete(&w, &macs[3].0, &macs[3].1, &macs[3].2),
+        complete(&w, &macs[4].0, &macs[4].1, &macs[4].2),
+    );
+    let linked = [&a, &b, &c, &d, &e]
+        .iter()
+        .filter(|(status, _)| *status == StatusCode::OK)
+        .count();
+    assert_eq!(linked, 2, "{a:?} {b:?} {c:?} {d:?} {e:?}");
+    assert_eq!(w.relay.admitted.lock().unwrap().len(), 2);
+    let (_, list) = w.post("list", Some("ada"), &json!({})).await;
+    assert_eq!(list["devices"].as_array().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn a_relay_that_refuses_a_link_gives_the_slot_back() {
+    let w = world();
+    let (poll, key, public) = approved(&w, "ada", 1).await;
+    let completion = signed_completion(&w, &poll, &key, &public);
+    w.relay.refuse_admit.store(true, Ordering::SeqCst);
+    let (status, _) = w.post("device-complete", None, &completion).await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    w.relay.refuse_admit.store(false, Ordering::SeqCst);
+    let (status, done) = w.post("device-complete", None, &completion).await;
+    assert_eq!(status, StatusCode::OK, "{done}");
+}
+
+#[tokio::test]
+async fn a_failed_suspend_retried_after_a_resume_cannot_win() {
+    let w = world();
+    let done = w.link("ada", 1).await;
+    let hostname = done["hostname"].as_str().unwrap();
+    w.relay.fail_next_policy.store(1, Ordering::SeqCst);
+    let (status, _) = w
+        .post("suspend", Some("ada"), &json!({"hostname": hostname}))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(w.relay.policy.lock().unwrap().len(), 0, "the suspend failed");
+    let (status, _) = w
+        .post("resume", Some("ada"), &json!({"hostname": hostname}))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let task = tokio::spawn(ab_relay_control::sync_policy(
+        w.control.clone(),
+        w.relay.clone(),
+    ));
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    task.abort();
+    let applied = w.relay.policy.lock().unwrap().clone();
+    assert_eq!(
+        applied.last(),
+        Some(&(hostname.to_owned(), false, false)),
+        "the relay ended on a stale state: {applied:?}"
+    );
+    assert!(w.control.pending_policy().unwrap().is_empty());
+    let versions = w.relay.versions.lock().unwrap().clone();
+    assert!(versions.windows(2).all(|pair| pair[0] <= pair[1]));
+    assert!(versions.iter().all(|version| *version > 0));
+}
+
+#[tokio::test]
+async fn a_failed_host_does_not_hold_up_another_host() {
+    let w = world();
+    let first = w.link("ada", 1).await;
+    let second = w.link("bea", 2).await;
+    w.relay.fail_next_policy.store(1, Ordering::SeqCst);
+    w.post(
+        "suspend",
+        Some("ada"),
+        &json!({"hostname": first["hostname"]}),
+    )
+    .await;
+    w.post(
+        "suspend",
+        Some("bea"),
+        &json!({"hostname": second["hostname"]}),
+    )
+    .await;
+    let applied = w.relay.policy.lock().unwrap().clone();
+    assert!(
+        applied
+            .iter()
+            .any(|(host, _, _)| Some(host.as_str()) == second["hostname"].as_str()),
+        "{applied:?}"
+    );
+}
+
+#[tokio::test]
+async fn the_link_page_says_plainly_what_is_being_linked_and_who_asked() {
+    let w = world();
+    let key = SigningKey::from_bytes(&[3; 32]);
+    let public = B64.encode(key.verifying_key().as_bytes());
+    let (_, start) = w
+        .post(
+            "device-start",
+            None,
+            &json!({"public_key": public, "name": "Your Work MacBook"}),
+        )
+        .await;
+    let (status, view) = w
+        .post(
+            "grant-view",
+            Some("ada"),
+            &json!({"code": start["user_code"]}),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(view["source"].as_str().is_some_and(|s| !s.is_empty()), "{view}");
+    assert_eq!(view["same_network"], false, "two different test addresses");
+    assert!(view["age_seconds"].as_i64().is_some_and(|age| age >= 0));
+
+    let request = Request::get("/device")
+        .header(header::HOST, HOST)
+        .header(header::COOKIE, "ada")
+        .body(Body::empty())
+        .unwrap();
+    let source: SocketAddr = "198.51.100.1:1".parse().unwrap();
+    let mut request = request;
+    request.extensions_mut().insert(ConnectInfo(source));
+    let response = w.app.clone().oneshot(request).await.unwrap();
+    let page = String::from_utf8(
+        response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec(),
+    )
+    .unwrap();
+    assert!(page.contains("If someone sent you this code"), "{page}");
+    assert!(page.contains("a name proves nothing"), "{page}");
+    assert!(page.contains("id=\"device-source\""));
+    assert!(page.contains("id=\"device-mine\""));
+    assert!(page.contains("disabled>Link this Mac"), "the button starts disabled");
+}
+
+#[tokio::test]
+async fn account_deletion_cannot_be_reached_while_macs_would_stay_admitted() {
+    let w = world();
+    let request = Request::post("/api/auth/delete-user")
+        .header(header::HOST, HOST)
+        .header(header::ORIGIN, PUBLIC)
+        .header(header::COOKIE, "ada")
+        .body(Body::from("{}"))
+        .unwrap();
+    let (status, _, _) = w.send(request).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
 }
