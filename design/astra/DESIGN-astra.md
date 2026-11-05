@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 **Apple Bridge — independent basic design by Astra**
 
 Research date: 2026-10-16. Target: macOS 26 and iOS 26; expanded Screen Time export requires iOS 26.4+.
@@ -66,4 +68,3 @@ Ask the owner:
 - Which advanced message/Notes features are essential, and are private APIs acceptable?
 - What history, attachments, local-only accounts, and Health types must be included?
 - Which agents may send/delete/write Health data, and what offline delay is acceptable?
-

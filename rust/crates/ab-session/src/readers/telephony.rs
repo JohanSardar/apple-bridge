@@ -123,6 +123,7 @@ impl CaptureReader for TelephonyReader {
         }
         let pending = match (self.scan)(&self.path, &self.state, &read, self.warm, MAX_ROWS) {
             Ok(pending) => pending,
+            Err(error) if error.is_busy() => return Ok(None),
             Err(error) => {
                 eprintln!("ab-session: {} scan: {error}", self.name);
                 self.failed = Some(current);

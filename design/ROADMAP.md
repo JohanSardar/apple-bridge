@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Apple Bridge roadmap — written 2026-10-27
 
 Everything still to do, in order. The aim is your Mac as a server you sign in to from any device, with every iMCP capability plus as much more of your Apple world as Apple allows, including your iPhone.

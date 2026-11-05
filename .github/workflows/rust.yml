@@ -1,0 +1,124 @@
+name: Rust
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: rust-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  RUST_TOOLCHAIN: "1.99.1"
+  CARGO_BUILD_JOBS: "4"
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+  CARGO_TARGET_DIR: ${{ github.workspace }}/rust/target
+
+jobs:
+  gates:
+    name: Gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          components: rustfmt
+          tool: cargo-deny@0.20.2
+      - name: Format
+        run: rust/check.sh fmt --all -- --check
+      - name: Source lint and capture switches
+        run: make lint
+      - name: Feature graph
+        run: make features
+      - name: Lab independence
+        run: make rust-lab-independence
+      - name: Native offline graph
+        run: python3 rust/check-native-graph.py
+      - name: Dependency policy
+        run: rust/check.sh deny check
+
+  clippy:
+    name: Clippy (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux
+            os: ubuntu-24.04
+          - label: macOS
+            os: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          components: clippy
+      - name: Workspace
+        run: rust/check.sh clippy --workspace --all-targets --locked -- -D warnings
+      - name: Session alone
+        run: rust/check.sh clippy -p ab-session --all-targets --locked -- -D warnings
+      - name: Session with the lab feature
+        run: rust/check.sh clippy -p ab-session --features lab --all-targets --locked -- -D warnings
+
+  tests:
+    name: Tests (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux
+            os: ubuntu-24.04
+          - label: macOS
+            os: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+        with:
+          tool: cargo-nextest@0.9.151
+      - name: Workspace
+        run: rust/check.sh nextest run --profile ci --workspace --locked
+      - name: Session alone
+        run: rust/check.sh nextest run --profile ci -p ab-session --locked
+      - name: Session with the lab feature
+        run: rust/check.sh nextest run --profile ci -p ab-session --features lab --locked
+      - name: Documentation examples
+        if: runner.os == 'Linux'
+        run: rust/check.sh test --workspace --locked --doc
+
+  search-perf:
+    name: Search update
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "off"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+      CARGO_PROFILE_RELEASE_STRIP: "none"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/rust
+      - name: Search stays correct while messages change
+        run: make rust-search-perf
