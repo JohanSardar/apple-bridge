@@ -8041,5 +8041,1965 @@
       "expected_version"
     ],
     "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "description": "The group.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "birthday": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "calendar": {
+                "type": "string"
+              },
+              "day": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "is_leap_month": {
+                "type": "boolean"
+              },
+              "month": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "year": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "month",
+              "day"
+            ],
+            "type": "object"
+          },
+          "dates": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": false,
+                  "nullable": true,
+                  "properties": {
+                    "calendar": {
+                      "type": "string"
+                    },
+                    "day": {
+                      "maximum": 31,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "is_leap_month": {
+                      "type": "boolean"
+                    },
+                    "month": {
+                      "maximum": 12,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "month",
+                    "day"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "department": {
+            "type": "string"
+          },
+          "emails": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "family_name": {
+            "type": "string"
+          },
+          "given_name": {
+            "type": "string"
+          },
+          "image": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "base64": {
+                "description": "Image bytes in base64, 8 MB at most.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "base64"
+            ],
+            "type": "object"
+          },
+          "instant_messages": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "job_title": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": "string"
+          },
+          "name_prefix": {
+            "type": "string"
+          },
+          "name_suffix": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "non_gregorian_birthday": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "calendar": {
+                "type": "string"
+              },
+              "day": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "is_leap_month": {
+                "type": "boolean"
+              },
+              "month": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "year": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "month",
+              "day"
+            ],
+            "type": "object"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "phones": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "phonetic_family_name": {
+            "type": "string"
+          },
+          "phonetic_given_name": {
+            "type": "string"
+          },
+          "phonetic_middle_name": {
+            "type": "string"
+          },
+          "phonetic_organization": {
+            "type": "string"
+          },
+          "postal_addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "previous_family_name": {
+            "type": "string"
+          },
+          "relations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "social_profiles": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "urls": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "minProperties": 2,
+        "properties": {
+          "birthday": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "calendar": {
+                "type": "string"
+              },
+              "day": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "is_leap_month": {
+                "type": "boolean"
+              },
+              "month": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "year": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "month",
+              "day"
+            ],
+            "type": "object"
+          },
+          "dates": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": false,
+                  "nullable": true,
+                  "properties": {
+                    "calendar": {
+                      "type": "string"
+                    },
+                    "day": {
+                      "maximum": 31,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "is_leap_month": {
+                      "type": "boolean"
+                    },
+                    "month": {
+                      "maximum": 12,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "month",
+                    "day"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "department": {
+            "type": "string"
+          },
+          "emails": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "family_name": {
+            "type": "string"
+          },
+          "given_name": {
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "image": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "base64": {
+                "description": "Image bytes in base64, 8 MB at most.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "base64"
+            ],
+            "type": "object"
+          },
+          "instant_messages": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "job_title": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": "string"
+          },
+          "name_prefix": {
+            "type": "string"
+          },
+          "name_suffix": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "non_gregorian_birthday": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "calendar": {
+                "type": "string"
+              },
+              "day": {
+                "maximum": 31,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "is_leap_month": {
+                "type": "boolean"
+              },
+              "month": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "year": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "month",
+              "day"
+            ],
+            "type": "object"
+          },
+          "organization": {
+            "type": "string"
+          },
+          "phones": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "phonetic_family_name": {
+            "type": "string"
+          },
+          "phonetic_given_name": {
+            "type": "string"
+          },
+          "phonetic_middle_name": {
+            "type": "string"
+          },
+          "phonetic_organization": {
+            "type": "string"
+          },
+          "postal_addresses": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "previous_family_name": {
+            "type": "string"
+          },
+          "relations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "social_profiles": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "urls": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "id": {
+            "description": "UUID of the alarm or timer.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "fire_at": {
+            "description": "Unix seconds, in the future.",
+            "type": "number"
+          },
+          "id": {
+            "description": "UUID of the alarm or timer.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "snooze_seconds": {
+            "exclusiveMinimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "fire_at"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "fire_at": {
+            "description": "Unix seconds, in the future.",
+            "type": "number"
+          },
+          "id": {
+            "description": "UUID of the alarm or timer.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "snooze_seconds": {
+            "exclusiveMinimum": 0,
+            "nullable": true,
+            "type": "number"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "id",
+          "fire_at"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "seconds": {
+            "maximum": 10,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device_id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "radius": {
+            "description": "Metres.",
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "number"
+          }
+        },
+        "required": [
+          "device_id",
+          "name",
+          "latitude",
+          "longitude",
+          "radius"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "activity": {
+            "description": "Required for a workout.",
+            "enum": [
+              "walking",
+              "running",
+              "cycling",
+              "other"
+            ],
+            "type": "string"
+          },
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "water",
+              "weight",
+              "mindful",
+              "workout"
+            ],
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tag": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "value": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "device_id",
+          "kind",
+          "value",
+          "start",
+          "tag"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "status": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Your id for this activity. Not _start.",
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "task_id",
+          "title",
+          "status",
+          "progress"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device_id",
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "maximum": 7,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "days"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "buttons": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "description": "Not starting with com.apple.",
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "title": {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "title"
+              ],
+              "type": "object"
+            },
+            "maxItems": 4,
+            "type": "array"
+          },
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "thread": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "time_sensitive": {
+            "type": "boolean"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "title",
+          "body"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "end_minute": {
+            "maximum": 1439,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start_minute": {
+            "description": "Minute of the day. The window must be at least 15 minutes.",
+            "maximum": 1439,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "device_id",
+          "start_minute",
+          "end_minute"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "description": "The paired iPhone, as iphone:<id>. See iphone.devices.",
+            "pattern": "^iphone:",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "description": "UUID of the alarm or timer.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "duration_seconds"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "folder_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "folder_id"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Only test folders can be renamed: the title must start with \"Bridge Test [ab-test\".",
+            "pattern": "^Bridge Test \\[ab-test",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
   }
 ]
