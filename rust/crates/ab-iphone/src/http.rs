@@ -17,7 +17,7 @@ use tokio::sync::{Semaphore, SemaphorePermit};
 
 const UPLOAD_HEADER: &str = "x-apple-bridge-upload";
 const UPLOAD_HEADER_LIMIT: usize = 512;
-const READ_DEADLINE: Duration = Duration::from_secs(120);
+const READ_DEADLINE: Duration = Duration::from_mins(2);
 const SLOT_WAIT: Duration = Duration::from_secs(15);
 
 #[derive(Debug)]

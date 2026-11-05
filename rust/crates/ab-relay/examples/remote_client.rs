@@ -45,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         domain: String::new(),
         resolver: None,
         domain_poll: std::time::Duration::from_secs(5),
+        certificate_monitor: false,
     };
     let (stop, rx) = tokio::sync::watch::channel(false);
     tokio::spawn(async move {

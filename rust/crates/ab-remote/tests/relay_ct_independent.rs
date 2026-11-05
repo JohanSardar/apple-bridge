@@ -21,21 +21,25 @@ impl CtClient for Fixture {
                     fingerprint: "known".into(),
                     names: vec!["mac.example.test".into()],
                     precertificate: false,
+                    public_key: "known-key".into(),
                 },
                 Certificate {
                     fingerprint: "wildcard".into(),
                     names: vec!["*.example.test".into()],
                     precertificate: false,
+                    public_key: "wildcard-key".into(),
                 },
                 Certificate {
                     fingerprint: "precert".into(),
                     names: vec!["custom.other.test".into()],
                     precertificate: true,
+                    public_key: "precert-key".into(),
                 },
                 Certificate {
                     fingerprint: "unrelated".into(),
                     names: vec!["badexample.test".into()],
                     precertificate: false,
+                    public_key: "unrelated-key".into(),
                 },
             ]
             .into_iter()
@@ -68,26 +72,32 @@ async fn relay_ct_independent() {
     println!("R2_ASSERT\tunexpected_precertificate");
     assert!(!report.unexpected.contains_key("known"));
     assert!(!report.unexpected.contains_key("unrelated"));
-    assert_ne!(report.unknown.len(), 0);
+    assert!(report.note.contains("lag"));
     println!("R2_ASSERT\taggregator_lag_unknown");
     let outage = ct::check(&Fixture { outage: true }, names, &known, &report, 200).await;
     assert_eq!(outage.unexpected.len(), 2);
     assert!(outage.unknown.iter().any(|s| s.contains("unavailable")));
     println!("R2_ASSERT\taggregator_outage_unknown");
-    assert!(outage.warnings(1200).iter().any(|s| s.contains("stale")));
+    assert!(outage.warnings(7500).iter().any(|s| s.contains("stale")));
     assert!(outage.warnings(100).iter().any(|s| s.contains("stale")));
     println!("R2_ASSERT\tstale_monitor_unknown");
     let home = tempfile::tempdir().unwrap();
-    state::write(home.path(), "r2-certificates", &true).unwrap();
-    assert_ne!(ct::doctor(home.path(), 100).len(), 0);
+    state::write(
+        home.path(),
+        "ingresses",
+        &std::collections::BTreeMap::from([("relay".to_owned(), true)]),
+    )
+    .unwrap();
+    assert_eq!(ct::doctor(home.path(), 100).len(), 0);
     state::write(home.path(), "ct-monitor", &outage).unwrap();
     assert!(
-        ct::doctor(home.path(), 1200)
+        ct::doctor(home.path(), 7500)
             .iter()
             .any(|s| s.contains("stale"))
     );
     Notifications {
         home: home.path().into(),
+        status: None,
     }
     .alert(&outage)
     .await
@@ -110,6 +120,7 @@ async fn relay_ct_independent() {
     state::write(home.path(), "ct-names", &BTreeSet::from(["*.extra.test"])).unwrap();
     let notifications = Notifications {
         home: home.path().into(),
+        status: None,
     };
     assert!(
         tokio::time::timeout(
@@ -129,9 +140,34 @@ async fn relay_ct_independent() {
     assert!(running.names.contains("custom.other.test"));
     assert!(running.names.contains("*.extra.test"));
     println!("R2_ASSERT\tall_owned_names");
-    assert!(running.unexpected.contains_key("wildcard"));
-    state::write(home.path(), "r2-certificates", &false).unwrap();
-    assert_eq!(ct::doctor(home.path(), 100).len(), 0);
+    assert_eq!(running.adopted, running_adopted(&running));
+    assert!(
+        running.unexpected.is_empty(),
+        "the first scan is a baseline"
+    );
+    state::write(
+        home.path(),
+        "ct-monitor",
+        &Report {
+            unexpected: outage.unexpected.clone(),
+            ..running
+        },
+    )
+    .unwrap();
+    state::write(
+        home.path(),
+        "ingresses",
+        &std::collections::BTreeMap::from([("relay".to_owned(), false)]),
+    )
+    .unwrap();
+    assert!(
+        ct::doctor(home.path(), 100)
+            .iter()
+            .all(|warning| warning.contains("unexpected"))
+    );
+}
+fn running_adopted(report: &Report) -> usize {
+    report.adopted
 }
 
 #[test]

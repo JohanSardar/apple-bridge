@@ -166,6 +166,11 @@ impl Gateway {
             });
         }
     }
+    pub(crate) fn refresh_status(&self) {
+        if let Some(statuses) = &self.statuses {
+            statuses.send_modify(|_| {});
+        }
+    }
     pub(crate) fn certificate_expiry(&self, name: &str, expiry: &str) {
         if let Some(statuses) = &self.statuses {
             statuses.send_if_modified(|entries| {

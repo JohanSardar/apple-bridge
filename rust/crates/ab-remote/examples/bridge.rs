@@ -88,6 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             domain: option("--domain").unwrap_or_default(),
             resolver: resolver(option("--dns-server").as_deref())?,
             domain_poll: std::time::Duration::from_millis(200),
+            certificate_monitor: false,
         }));
     }
     if via == "tailscale-app" || via == "both" {

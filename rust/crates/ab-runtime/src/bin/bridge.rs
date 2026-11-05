@@ -244,6 +244,10 @@ fn offline(args: &Arguments, home: &std::path::Path) -> Result<bool, Error> {
     Ok(false)
 }
 async fn remote(args: &Arguments, home: &std::path::Path) -> Result<(), Error> {
+    if args.action == "certificate-accept" {
+        ab_remote::ct::accept(home, &args.value)?;
+        return Ok(());
+    }
     let private = args.flag("private", "false") == "true";
     let mut via = args.flag("via", "relay");
     if private {
@@ -575,6 +579,10 @@ fn manage(
                 let status: serde_json::Value = ab_remote::state::read(home, "status")?;
                 if status["state"] != "on" {
                     return Err(ab_trust::Error::Unavailable.into());
+                }
+                let warning = ab_remote::ct::owner_warning(home, ab_remote::ct::now());
+                if !warning.is_empty() {
+                    eprintln!("{warning}");
                 }
                 let code = authority.pair_iphone_code(
                     status["url"].as_str().ok_or(Error::Invalid)?,

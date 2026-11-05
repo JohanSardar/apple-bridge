@@ -164,3 +164,33 @@ fn web_enroll_prints_the_url_then_a_terminal_qr() -> Check {
         || line.contains('\u{2584}')));
     Ok(())
 }
+
+#[test]
+fn remote_certificate_accept_clears_the_warning_and_rejects_bad_input() -> Check {
+    let home = tempfile::tempdir()?;
+    let fingerprint = "ab".repeat(32);
+    let report: ab_remote::ct::Report = serde_json::from_value(serde_json::json!({
+        "checked_at": 100,
+        "names": ["mac.example.test"],
+        "unknown": [],
+        "unexpected": {fingerprint.clone(): {
+            "fingerprint": fingerprint,
+            "names": ["mac.example.test"],
+            "precertificate": false
+        }}
+    }))?;
+    ab_remote::state::write(home.path(), "ct-monitor", &report)?;
+    assert_eq!(
+        bridge(home.path(), &["remote", "certificate-accept", "nope"])?
+            .status
+            .code(),
+        Some(1)
+    );
+    assert!(
+        bridge(home.path(), &["remote", "certificate-accept", &fingerprint])?
+            .status
+            .success()
+    );
+    assert_eq!(ab_remote::ct::owner_warning(home.path(), 100), "");
+    Ok(())
+}

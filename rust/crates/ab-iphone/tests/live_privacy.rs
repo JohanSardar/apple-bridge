@@ -13,11 +13,11 @@ fn with_tokens(world: &support::World, tasks: &[&str]) -> Check {
     Ok(())
 }
 
-fn handle(world: &support::World) -> Result<String, Box<dyn std::error::Error>> {
+fn handle(world: &support::World) -> String {
     let raw =
         ab_iphone::delivery::live_handle(&world.phone.encryption_public, "private-task-marker");
     assert_eq!(raw.len(), 32);
-    Ok(raw)
+    raw
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn start_push_carries_no_private_text() -> Check {
     assert!(!text.contains("private-status-marker"), "{text}");
     assert!(!text.contains("private-task-marker"), "{text}");
     let parsed: Value = serde_json::from_str(text)?;
-    assert_eq!(parsed["attributes"]["taskID"], handle(&world)?.as_str());
+    assert_eq!(parsed["attributes"]["taskID"], handle(&world).as_str());
     assert_eq!(parsed["content-state"]["progress"], json!(0));
     Ok(())
 }
@@ -46,7 +46,7 @@ fn start_push_carries_no_private_text() -> Check {
 #[test]
 fn update_and_end_pushes_carry_no_private_text_and_use_the_opaque_token() -> Check {
     let world = world()?;
-    let opaque = handle(&world)?;
+    let opaque = handle(&world);
     with_tokens(&world, &[&opaque])?;
     let phone = world.delivery.authority.principal(&world.phone.id)?;
     for op in ["iphone.live.update", "iphone.live.end"] {
@@ -90,8 +90,8 @@ fn real_state_reaches_a_new_app_only_through_the_sealed_channel() -> Check {
     let phone = world.delivery.authority.principal(&world.phone.id)?;
     let (wakes, pushes) = world.delivery.packets(&phone, 100, true, true)?;
     assert_eq!(pushes.len(), 1);
-    let pushed = pushes[0].packet.live_activity.as_ref().ok_or("aps")?.get();
-    assert!(!pushed.contains("private-"), "{pushed}");
+    let aps_text = pushes[0].packet.live_activity.as_ref().ok_or("aps")?.get();
+    assert!(!aps_text.contains("private-"), "{aps_text}");
     assert_eq!(
         wakes.len(),
         1,
@@ -100,17 +100,13 @@ fn real_state_reaches_a_new_app_only_through_the_sealed_channel() -> Check {
     assert!(wakes[0].live_activity.is_none());
 
     let path = "/v1/iphone/pending";
-    let old: support::Check = (|| {
-        let request = serde_json::from_slice(&world.phone.body(path, b"")?)?;
-        let answer = world.delivery.handle(path, &request, 100)?;
-        let packets: Vec<ab_iphone::Packet> = serde_json::from_str(answer.get())?;
-        assert!(
-            packets.is_empty(),
-            "an old app is not sent commands it would reject"
-        );
-        Ok(())
-    })();
-    old?;
+    let request = serde_json::from_slice(&world.phone.body(path, b"")?)?;
+    let answer = world.delivery.handle(path, &request, 100)?;
+    let packets: Vec<ab_iphone::Packet> = serde_json::from_str(answer.get())?;
+    assert!(
+        packets.is_empty(),
+        "an old app is not sent commands it would reject"
+    );
 
     let request = serde_json::from_slice(&world.phone.body(path, br#"{"live_state":true}"#)?)?;
     let answer = world.delivery.handle(path, &request, 100)?;

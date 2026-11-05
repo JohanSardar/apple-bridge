@@ -55,7 +55,7 @@ curl https://bridge.example.com/info
 bridge remote on --relay-url https://bridge.example.com
 ```
 
-It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Your Mac has its own certificate for it, and your relay only ever sees encrypted traffic.
+It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Your Mac has its own certificate for it, so in normal use your relay sees only encrypted traffic. [What your relay can and can't see](#what-your-relay-can-and-cant-see) explains the limit.
 
 ## 5. Connect an app
 
@@ -76,7 +76,7 @@ ab-relay-admin invite --note "Sam"
 
 Send them the link it prints. They create an account at `app.bridge.example.com`, then run `bridge remote on --relay-url https://bridge.example.com`, and a browser page asks them to confirm their Mac.
 
-An account can link Macs and turn tunnels off. It can't reach anyone's data, and that includes you as the relay's operator: each Mac still approves its own connections.
+An account can link Macs and turn tunnels off. It can't reach anyone's data. Each Mac still approves its own connections. You, as the relay's operator, hold more trust than an account does: see the next section.
 
 ## Everyday commands
 
@@ -93,9 +93,33 @@ To update, run `install.sh` again with the same options. Your data is kept.
 
 ## What your relay can and can't see
 
-It sees which hostname a connection is for, when, from where, and how many bytes. It can't read the traffic, because TLS ends on your Mac.
+It sees which hostname a connection is for, when, from where, and how many bytes. In normal use it can't read the traffic, because TLS ends on your Mac.
 
-You are the operator of your DNS and your relay, so you are also a party who could get a certificate for your own names. On a relay someone else runs, that party is them. This is the same trust you give any DNS host, and the Mac's certificate monitor (`bridge doctor`) exists to catch it.
+That protection depends on trusting the relay's operator. The relay answers DNS for your Mac's address, so whoever runs it, or takes it over, can get a valid public certificate for that address without your Mac's key and answer connections in your Mac's place. Connectors trust any valid public certificate, so they would send that party their traffic, including their tokens and the data they read. On your own relay that party is you. On a relay someone else runs, it is them. Nothing in Apple Bridge prevents this.
+
+Your iPhone has one more check. The pairing code carries your Mac's signing key, so a substitute server can't forge commands or approval requests to a phone paired that way.
+
+### The certificate warning
+
+Your Mac looks for this itself. About once an hour while Remote is on, it asks the public Certificate Transparency search at `crt.sh` for certificates covering its address, directly and not through the relay. If one appears that your Mac didn't request, you see a warning in:
+
+- `bridge remote status`, as `ct_warning`
+- `bridge doctor`
+- the Setup window
+- the connector approval window
+- `bridge pair --iphone`
+
+This is delayed detection, not prevention:
+
+- The certificate already exists by the time you see the warning, and it may already have been used.
+- Public logs can take hours to show a certificate, and the Mac has to be on and online to check.
+- The first check treats whatever is already public as yours, because it can't tell old certificates apart. It proves nothing about the time before it ran.
+- A certificate that never reaches a public log isn't seen. Connector apps and browsers normally reject those.
+- If `crt.sh` can't be reached, `bridge doctor` says so at once. The other places say so after a day.
+
+Each check tells `crt.sh` your Mac's address, which public logs already list.
+
+If you recognise the certificate, for example you requested one for your own domain somewhere else, run `bridge remote certificate-accept FINGERPRINT` with the fingerprint from `bridge doctor`. If you don't, run `bridge remote off` and stop using that relay.
 
 ## Back up
 
@@ -108,6 +132,7 @@ Everything worth keeping is in `/var/lib/ab-relay`, `/var/lib/ab-relay-control`,
 | `This relay does not list this Mac` | The key isn't on the relay | `ab-relay-admin add-key KEY`, with the key the message shows |
 | `certificate request failed` in `journalctl -u ab-relay` | Let's Encrypt couldn't check your domain | Check step 2 with `dig NS bridge.example.com` and open port 53 |
 | A connector says it can't reach the server | Your Mac is off, or Remote is off | `bridge remote status` on the Mac |
+| `ct_warning` in `bridge remote status` | A certificate your Mac didn't request is public for its address | See [The certificate warning](#the-certificate-warning) |
 | The approval window doesn't appear | Apple Bridge isn't running on the Mac | Open Apple Bridge, or run `bridge connector pending` |
 
 ## Moving the sign-in address

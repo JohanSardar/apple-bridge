@@ -39,7 +39,3 @@ tempfile = "3"
 default = []
 lab-harness = []
 r2-certificates = []
-
-[[test]]
-name = "relay_ct_independent"
-required-features = ["r2-certificates"]
