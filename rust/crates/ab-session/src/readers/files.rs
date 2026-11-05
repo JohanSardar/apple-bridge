@@ -165,6 +165,7 @@ impl CaptureReader for FilesReader {
                 self.seen.insert(walk.root.clone(), (walk, Instant::now()));
                 continue;
             }
+            self.seen.remove(&walk.root);
             let value = capture_value(&pending.batch)?;
             self.pending = Some(pending);
             return Ok(Some(value));

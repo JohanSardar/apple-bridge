@@ -235,6 +235,28 @@ fn write(path: &Path, bytes: &[u8]) -> Fallible<()> {
 }
 
 #[test]
+fn a_file_deleted_right_after_it_appeared_is_seen_at_once() -> Fallible<()> {
+    let root = scratch("files-quick")?;
+    write(&root.join("a.txt"), b"alpha")?;
+    let facts_home = scratch("files-quick-home")?;
+    let mut w = wire(&json!({"files":{"root":root,"facts":"native","home":facts_home}}))?;
+    let (size, first) = receive(&mut w.gateway)?;
+    commit(&mut w, "files", &first, size)?;
+    assert!(silent(&mut w.gateway)?);
+    let quick = root.join("b.txt");
+    write(&quick, b"beta")?;
+    let (size, added) = receive(&mut w.gateway)?;
+    std::fs::remove_file(&quick)?;
+    commit(&mut w, "files", &added, size)?;
+    let (_, removed) = receive(&mut w.gateway)?;
+    assert_eq!(
+        keys(&removed, "absent"),
+        vec![quick.to_string_lossy().into_owned()]
+    );
+    Ok(())
+}
+
+#[test]
 fn rust_walks_files_and_asks_swift_only_for_ubiquity() -> Fallible<()> {
     let root = scratch("files")?;
     write(&root.join("a.txt"), b"alpha")?;
