@@ -18,6 +18,25 @@ Product commands include `session`, `status`, `onboard` and the Messages `selfte
 
 A release Helper rejects these with `unknownCommand`, even when given valid lab arguments. Shared implementations used by product self-test, command safety and cleanup remain in release builds.
 
+## Code identity
+
+A release Helper trusts only code signed by its own certificate. It compares each of these against its own leaf certificate, a fixed identifier and the hardened runtime:
+
+| What | Identifier | When |
+|---|---|---|
+| The process listening on the gateway socket | `bridge` | Before starting a session |
+| `Contents/MacOS/ab-session` | `ab-session` | Before and after spawning it, while it is suspended |
+| `Contents/MacOS/bridge` | `bridge` | Before and after spawning it, while it is suspended |
+| The parent of `media-facts` | `ab-session` | Before answering |
+
+A lab build skips these checks and keeps its overrides: `AB_SESSION_BINARY`, `AB_SESSION_RUST_COMMANDS`, `--lab-commands` and the executable argument to `connector-approvals`. A release build compiles those four out.
+
+So a release gateway must itself be signed with the Helper's certificate, with `--options runtime` and identifier `bridge`, and a release Helper must bundle `bridge`. `packaging/build-app.sh` does both. A Helper built separately takes the binary through `AB_HELPER_BRIDGE_BINARY`.
+
+This stops a same-user process from using the Helper with its own executable or its own socket server. It does not stop that process running the genuinely signed `bridge` against a home it controls, and it does not establish how macOS attributes permissions to child processes.
+
+`packaging/dev/test_helper_identity.py` checks this with throwaway certificates and no real permissions. It needs `HelperIdentityChecks` and `HelperIdentityFixture` from a native build, and takes `--lab` for a lab build. `--helper` also attacks a test-signed copy of a release Helper. Never point it at an installed Helper.
+
 ## Immutable signed apps
 
 Give `build-helper.sh` and `build-truth.sh` a new destination for every World. Do not rebuild a running World's app or replace the shared installed dev app during verification. All modes use the existing signing script, certificate, bundle IDs and designated requirements.

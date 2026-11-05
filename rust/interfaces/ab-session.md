@@ -13,7 +13,7 @@ child without disclaiming responsibility (S2):
 
 The child owns the inherited descriptors, and the parent closes its ends and its copy of the gateway descriptor. fd 199 carries the
 native/1 session (`design/spec/native-1.md`); fd 200 carries the facts link. EOF or an error ends the session, and the parent reaps the
-child before reconnecting. `AB_SESSION_BINARY` overrides the bundled executable in a lab build. There is no other mode: the verbatim
+child before reconnecting. `AB_SESSION_BINARY` overrides the bundled executable in a lab build only; a release Helper verifies the bundled binary's code identity before running it. There is no other mode: the verbatim
 proxy, the routed relay, the effects layer and the flags and variables that selected them were removed with the Swift ipc/1 peer.
 
 ## Facts link

@@ -84,7 +84,7 @@ actor RustSelfTest {
     }
 
     private static func spawn(flag: String, link: Int32, request: String) throws -> pid_t {
-        let binary = ProcessInfo.processInfo.environment["AB_SESSION_BINARY"] ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/ab-session").path
+        let binary = try TrustedChild.session()
         guard link < 198, FileManager.default.isExecutableFile(atPath: binary) else { throw SourceFailure.unavailable }
         var actions: posix_spawn_file_actions_t?
         guard posix_spawn_file_actions_init(&actions) == 0 else { throw SourceFailure.unavailable }
@@ -100,7 +100,7 @@ actor RustSelfTest {
         sigemptyset(&mask)
         guard posix_spawnattr_setsigdefault(&attributes, &defaults) == 0,
               posix_spawnattr_setsigmask(&attributes, &mask) == 0,
-              posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0,
+              posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | TrustedChild.spawnFlags)) == 0,
               posix_spawn_file_actions_adddup2(&actions, link, 198) == 0,
               posix_spawn_file_actions_addinherit_np(&actions, 2) == 0 else { throw SourceFailure.unavailable }
         let arguments = [binary, flag, "198", request]
@@ -113,6 +113,7 @@ actor RustSelfTest {
             environment.withUnsafeBufferPointer { env in posix_spawn(&spawned, binary, &actions, &attributes, argv.baseAddress!, env.baseAddress!) }
         }
         guard status == 0 else { throw SourceFailure.unavailable }
+        try TrustedChild.admit(spawned, identifier: TrustedChild.sessionName)
         return spawned
     }
 

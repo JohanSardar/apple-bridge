@@ -32,10 +32,12 @@ final class SessionProxy: @unchecked Sendable {
         sigemptyset(&mask)
         guard posix_spawnattr_setsigdefault(&attributes, &defaults) == 0,
               posix_spawnattr_setsigmask(&attributes, &mask) == 0,
-              posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK)) == 0 else { throw fail() }
+              posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | TrustedChild.spawnFlags)) == 0 else { throw fail() }
         var spawned: pid_t = 0
         var arguments = [binary, "--gateway-fd", "198", "--helper-fd", "199", "--session-secret", session, "--session-home", home, "--user-home", FileManager.default.homeDirectoryForCurrentUser.path]
+        #if LAB
         if let owned = ProcessInfo.processInfo.environment["AB_SESSION_RUST_COMMANDS"], !owned.isEmpty { arguments += ["--rust-commands", owned] }
+        #endif
         let pointers = arguments.map { strdup($0) } + [nil]
         defer { for pointer in pointers { free(pointer) } }
         let environment = ProcessInfo.processInfo.environment.filter { $0.key != "AB_NATIVE_FACTS_FD" }.map { strdup($0.key + "=" + $0.value) } + [strdup("AB_NATIVE_FACTS_FD=200"), nil]
@@ -51,7 +53,7 @@ final class SessionProxy: @unchecked Sendable {
         let status = configured ? pointers.withUnsafeBufferPointer { argv in
             environment.withUnsafeBufferPointer { env in posix_spawn(&spawned, binary, &actions, &attributes, argv.baseAddress!, env.baseAddress!) }
         } : EINVAL
-        guard status == 0 else { throw fail() }
+        guard status == 0, (try? TrustedChild.admit(spawned, identifier: TrustedChild.sessionName)) != nil else { throw fail() }
         Darwin.close(pair[1])
         Darwin.close(facts[1])
         factsDescriptor = facts[0]

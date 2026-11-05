@@ -26,6 +26,11 @@ if [[ -n $session ]]; then
     cp "$session" "$app/Contents/MacOS/ab-session"
     chmod 755 "$app/Contents/MacOS/ab-session"
 fi
+if [[ -n ${AB_HELPER_BRIDGE_BINARY:-} ]]; then
+    [[ -x $AB_HELPER_BRIDGE_BINARY && -f $AB_HELPER_BRIDGE_BINARY ]]
+    cp "$AB_HELPER_BRIDGE_BINARY" "$app/Contents/MacOS/bridge"
+    chmod 755 "$app/Contents/MacOS/bridge"
+fi
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
 python3 "$root/packaging/dev/app-intents.py" "$app"
 "$root/packaging/dev/sign.sh" "$app"

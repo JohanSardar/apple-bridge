@@ -40,7 +40,7 @@ fn counted(chunks: usize, size: usize) -> (Body, Arc<AtomicUsize>) {
 
 fn stalled() -> Body {
     Body::from_stream(stream::once(async {
-        tokio::time::sleep(Duration::from_secs(86_400)).await;
+        tokio::time::sleep(Duration::from_hours(24)).await;
         Ok::<_, Infallible>(Bytes::new())
     }))
 }
@@ -76,10 +76,10 @@ async fn an_unknown_device_header_is_refused_before_the_body_is_read() -> Check 
     let router = world.delivery.router();
     let (body, read) = counted(64, 1 << 16);
     let header = format!(
-        "iphone:missing.{}.4096.{}.{}",
+        "iphone:missing.{}.4096.{}=.{}==",
         ab_trust::decision_now().as_second(),
-        format!("{}=", "A".repeat(43)),
-        format!("{}==", "A".repeat(86))
+        "A".repeat(43),
+        "A".repeat(86)
     );
     let request = Request::post(CAPTURE).header(HEADER, header).body(body)?;
     assert_eq!(

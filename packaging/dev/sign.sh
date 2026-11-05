@@ -42,6 +42,9 @@ shutil.copyfile(profile, app / "Contents/embedded.provisionprofile")
 print(hashlib.sha1(data["DeveloperCertificates"][0]).hexdigest().upper())
 PYPROFILE
 )
+    if [[ -f "$1/Contents/MacOS/bridge" ]]; then
+        codesign --force --sign "$identity" --options runtime --timestamp=none --identifier bridge "$1/Contents/MacOS/bridge"
+    fi
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
         codesign --force --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
     fi

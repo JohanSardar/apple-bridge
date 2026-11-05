@@ -77,9 +77,14 @@ public enum HelperCommand {
             lifetime.resume()
             defer { lifetime.cancel() }
             if kill(gatewayPID, 0) != 0 { return }
-            let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: arguments.contains("--lab-commands"))
+            #if LAB
+            let labCommands = arguments.contains("--lab-commands")
+            #else
+            let labCommands = false
+            #endif
+            let peer = try AppleSession(socket: socket, secretFile: secretFile, home: home, gatewayPID: gatewayPID, commandsEnabled: labCommands)
             Task { @MainActor in
-                await SessionSources.register(into: peer, home: home, labEnabled: arguments.contains("--lab-commands"))
+                await SessionSources.register(into: peer, home: home, labEnabled: labCommands)
                 try? await peer.runNative(socket: socket, secretFile: secretFile)
                 NSApplication.shared.terminate(nil)
             }

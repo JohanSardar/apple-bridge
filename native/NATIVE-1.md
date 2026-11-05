@@ -2,7 +2,7 @@
 
 The Helper connects and checks the gateway socket, then starts its bundled `Contents/MacOS/ab-session` child without disclaiming
 responsibility, passing fd 198 (gateway), fd 199 (session link) and fd 200 (facts, `AB_NATIVE_FACTS_FD=200`). `AB_SESSION_BINARY`
-overrides that executable for a lab build. ab-session authenticates and owns ipc/1; Swift speaks only native/1. Child termination closes the session,
+overrides that executable in a lab build only; a release build verifies the bundled binary and the gateway peer (see docs/helper-build-modes.md). ab-session authenticates and owns ipc/1; Swift speaks only native/1. Child termination closes the session,
 and reconnecting starts a fresh child.
 
 Commands reach Swift only as `Primitive` frames. `Ready` and `FrameworkStatus` carry raw status per source; ab-session

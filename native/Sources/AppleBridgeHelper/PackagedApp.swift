@@ -1,6 +1,7 @@
 import AppKit
 import AppleSession
 import ServiceManagement
+import SourceSupport
 import SwiftUI
 
 @MainActor
@@ -12,22 +13,20 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var setupHome: URL?
     var snapshotDirectory: URL?
     var connectorHome: String?
-    var connectorExecutable: String?
+    var connectorLabExecutable: String?
     var connectorTask: Task<Void, Never>?
 
-    nonisolated static func connectorCommand(_ arguments: [String], executable: String?) -> Data? {
-        let process = Process()
-        process.executableURL = executable.map { URL(fileURLWithPath: $0) } ?? Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/bridge")
-        process.arguments = ["connector"] + arguments
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            return process.terminationStatus == 0 ? data : nil
-        } catch { return nil }
+    nonisolated static func connectorCommand(_ arguments: [String], labExecutable: String?) -> Data? {
+        guard let path = try? TrustedChild.bridge(labExecutable: labExecutable) else { return nil }
+        return TrustedChild.capture(path, identifier: TrustedChild.bridgeName, arguments: ["connector"] + arguments)
+    }
+
+    nonisolated static func certificateWarning(home: String?) -> String? {
+        guard let home else { return nil }
+        struct Remote: Decodable { let ct_warning: String? }
+        let file = URL(fileURLWithPath: home).appendingPathComponent("remote/status.json")
+        guard let data = try? Data(contentsOf: file), let warning = (try? JSONDecoder().decode(Remote.self, from: data))?.ct_warning, !warning.isEmpty else { return nil }
+        return warning
     }
 
     struct ConnectorRequest: Decodable, Sendable {
@@ -48,12 +47,13 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { homeArguments = ["--home", arguments[index + 1]] }
         }
         let options = homeArguments
-        let executable = connectorExecutable
+        let executable = connectorLabExecutable
+        let warningHome = homeArguments.last
         connectorTask = Task { @MainActor [weak self] in
             var failures = 0
             var idle = 0
             while !Task.isCancelled {
-                let data = await Task.detached { Self.connectorCommand(["pending"] + options, executable: executable) }.value
+                let data = await Task.detached { Self.connectorCommand(["pending"] + options, labExecutable: executable) }.value
                 failures = data == nil ? failures + 1 : 0
                 if self?.connectorHome != nil, failures >= 3 { NSApplication.shared.terminate(nil); return }
                 let waiting = data.flatMap { try? JSONDecoder().decode([ConnectorRequest].self, from: $0) }?.isEmpty == false
@@ -62,7 +62,8 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 if let self, let data, let requests = try? JSONDecoder().decode([ConnectorRequest].self, from: data), let request = requests.first, let window = self.window, window.attachedSheet == nil {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
-                    alert.informativeText = "Code \(request.code)\n\nAllow only if this code matches your browser.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to: \(request.redirect_host)\nExpires in five minutes."
+                    let warning = Self.certificateWarning(home: warningHome).map { "\($0)\n\n" } ?? ""
+                    alert.informativeText = "\(warning)Code \(request.code)\n\nAllow only if this code matches your browser.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to: \(request.redirect_host)\nExpires in five minutes."
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""
@@ -71,7 +72,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     alert.beginSheetModal(for: window) { response in
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
-                            let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, executable: executable) }.value
+                            let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
                             if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
                             await self.setup?.refresh()
                         }
@@ -86,7 +87,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let controller = PackagedApp()
         if arguments.first == "connector-approvals", arguments.count >= 2 {
             controller.connectorHome = arguments[1]
-            if arguments.count == 3 { controller.connectorExecutable = arguments[2] }
+            #if LAB
+            if arguments.count == 3 { controller.connectorLabExecutable = arguments[2] }
+            #endif
         }
         if arguments.first == "setup-snapshot", arguments.count == 3 {
             controller.setupHome = URL(fileURLWithPath: arguments[1])
@@ -113,12 +116,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count {
             credentialArguments += ["--home", arguments[index + 1]]
         }
-        let process = Process()
-        process.executableURL = bundle.appendingPathComponent("Contents/MacOS/bridge")
-        process.arguments = credentialArguments
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw NSError(domain: "AppleBridgeCredentials", code: Int(process.terminationStatus)) }
+        guard TrustedChild.capture(try TrustedChild.bridge(), identifier: TrustedChild.bridgeName, arguments: credentialArguments) != nil else { throw NSError(domain: "AppleBridgeCredentials", code: 1) }
         try service.register()
         guard service.status == .enabled else {
             throw NSError(domain: "AppleBridgeBackgroundApprovalRequired", code: service.status.rawValue, userInfo: [NSLocalizedDescriptionKey: "Allow Apple Bridge in System Settings > General > Login Items & Extensions."])
