@@ -1,3 +1,8 @@
+mod policy;
+use policy::{
+    capturable, facts_source, needs_capture, part_keys, reopenable, saved_frame, source_of,
+};
+
 use super::{
     Hub,
     owned::{self, Probe, Refusal},
@@ -144,68 +149,6 @@ fn parsed(raw: &serde_json::value::RawValue) -> Value {
 
 fn raw(value: &Value) -> Result<Box<serde_json::value::RawValue>, Error> {
     Ok(serde_json::value::RawValue::from_string(value.to_string())?)
-}
-
-fn part_keys(evidence: &Value) -> Vec<String> {
-    evidence["parts"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|part| part["native_key"].as_str().map(str::to_owned))
-        .filter(|key| !key.is_empty())
-        .collect()
-}
-
-fn facts_source(operation: &str) -> bool {
-    matches!(
-        operation.split('.').next().unwrap_or_default(),
-        "calendar" | "contacts" | "reminders"
-    )
-}
-
-fn reopenable(saved: &Value) -> bool {
-    match saved["disposition"].as_str().unwrap_or_default() {
-        "indeterminate" | "locally_observed" => true,
-        "delivery_failed" => saved["evidence"]["parts"].as_array().is_some_and(|parts| {
-            parts.iter().any(|part| {
-                matches!(
-                    part["disposition"].as_str(),
-                    Some("locally_observed" | "observed" | "indeterminate")
-                )
-            })
-        }),
-        _ => false,
-    }
-}
-
-fn capturable(disposition: &str, evidence: &Value) -> bool {
-    evidence["observed"] == true
-        && (disposition != "indeterminate" || evidence["source"] == "messages")
-}
-
-fn needs_capture(operation: &str) -> bool {
-    let source = operation.split('.').next().unwrap_or_default();
-    source != "mac"
-        && !matches!(
-            operation,
-            "focus.set"
-                | "speech.say"
-                | "capture.play_sound"
-                | "capture.screenshot"
-                | "capture.camera_photo"
-                | "capture.record_audio"
-                | "print.document"
-                | "maps.open"
-                | "shortcuts.run"
-        )
-}
-
-fn saved_frame(saved: &Value) -> Result<IpcFrame, Error> {
-    Ok(serde_json::from_value(saved.clone())?)
-}
-
-fn source_of(operation: &str) -> &str {
-    operation.split('.').next().unwrap_or_default()
 }
 
 impl Probe for Hub {
