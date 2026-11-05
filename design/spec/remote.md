@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Remote onboarding
 
 Embedded tsnet is the default. The private state-file control remains shared between Runtime and CLI. `tailscale-app` selects the existing system backend; `system` remains an alias. No automatic system discovery occurs in embedded mode.

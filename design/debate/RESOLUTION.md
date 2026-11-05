@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Debate resolution (2026-10-16)
 
 Rounds: Astra independent design → Claude r1 → Astra r1 → Claude r2 (this file). No point was left unresolved, so no Fable tiebreak was needed.

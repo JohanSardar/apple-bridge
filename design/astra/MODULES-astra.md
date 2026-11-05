@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Apple Bridge: independent module architecture
 
 Proposal for implementers; no implementation authorized. [Decisions](../DECISIONS.md), [resolution](../debate/RESOLUTION.md), and the [20 reliability findings](../claude/astra-critique-of-claude-r1.md) override superseded choices in [my earlier design](DESIGN-astra.md). Only the permitted critique was read under `claude/`; `design/modules/` was not read.

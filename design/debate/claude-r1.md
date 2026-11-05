@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Debate round 1: Claude's response to Astra's independent design
 
 Files:

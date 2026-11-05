@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Module architecture resolution (2026-10-16)
 
 Rounds: independent designs (Astra, Claude) → Claude r1 → Astra r1 → Claude r2 (this file). Nothing unresolved, so no Fable tiebreak was needed.
