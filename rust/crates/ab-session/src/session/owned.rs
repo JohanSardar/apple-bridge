@@ -2,6 +2,9 @@ use serde_json::Value;
 
 pub(super) trait Probe {
     fn call(&self, operation: &str, args: &Value) -> Result<Value, String>;
+    fn staged(&self, _prefix: &str) -> Option<std::sync::Arc<crate::staged::StagedBlobs>> {
+        None
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -71,6 +74,13 @@ pub(super) fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value[key].as_str().unwrap_or_default()
 }
 
+pub(super) fn driver_of(operation: &str) -> Option<&'static Driver> {
+    if operation == "mac.screen_record" {
+        return Some(&super::media::CAPTURE);
+    }
+    driver(operation.split('.').next().unwrap_or_default())
+}
+
 pub(super) fn driver(source: &str) -> Option<&'static Driver> {
     match source {
         "reminders" => Some(&super::reminders::DRIVER),
@@ -78,6 +88,15 @@ pub(super) fn driver(source: &str) -> Option<&'static Driver> {
         "contacts" => Some(&super::contacts::DRIVER),
         "notes" => Some(&super::notes::DRIVER),
         "messages" => Some(&super::messages::DRIVER),
+        "mail" => Some(&super::mail::DRIVER),
+        "files" => Some(&super::files::DRIVER),
+        "mac" => Some(&super::mac::DRIVER),
+        "shortcuts" => Some(&super::shortcuts::DRIVER),
+        "focus" => Some(&super::focus::DRIVER),
+        "pdf" => Some(&super::media::PDF),
+        "capture" | "print" => Some(&super::media::CAPTURE),
+        "speech" => Some(&super::media::SPEECH),
+        "maps" => Some(&super::media::MAPS_DRIVER),
         _ => None,
     }
 }

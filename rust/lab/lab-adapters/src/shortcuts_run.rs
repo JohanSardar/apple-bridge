@@ -165,19 +165,12 @@ pub fn shortcuts_run(world: &mut World, _: &Value, evidence: &mut Evidence) -> R
     if !prepared {
         return Ok(());
     }
-    let binary = native_target(
+    crate::native_core::rust_tests(
         evidence,
-        "ShortcutsChecks",
-        &SHORTCUTS_NATIVE_INPUTS,
-        ("native_shortcuts_build", "native_shortcuts_output"),
+        "native_source_fixture",
+        "ab-session",
+        &["--lib", "session::shortcuts"],
     );
-    let Some(binary) = binary else {
-        let _ = fs::remove_dir_all(&directory);
-        return Ok(());
-    };
-    let executable = directory.join("shortcuts").to_string_lossy().into_owned();
-    let (ok, _) = run_native(&binary, &[&executable, &id]);
-    evidence.check("native_source_fixture", ok, "native source fixture");
     gateway_runner(world, evidence)?;
     let report = run_checks(
         &checks,
@@ -257,28 +250,11 @@ pub fn focus_sim(world: &mut World, _: &Value, evidence: &mut Evidence) -> Resul
     );
     let _ = fs::remove_dir_all(&directory);
     report_into(evidence, report.as_ref());
-    let built = Command::new("packaging/dev/build-native.sh")
-        .env("APPLE_BRIDGE_NATIVE_TARGET", "FocusChecks")
-        .output();
-    let ok = built.as_ref().is_ok_and(|o| o.status.success());
-    evidence.check("native_build", ok, "native focus checks build");
-    if !ok {
-        return Ok(());
-    }
-    let Some(binary) = native_directory().map(|d| d.join("FocusChecks")) else {
-        evidence.check("native_output", false, "native output directory");
-        return Ok(());
-    };
-    evidence.check("native_output", true, "native output directory");
-    let (passed, output) = run_native(&binary, &["sim"]);
-    if let Some(reason) = output.strip_prefix("limited:") {
-        evidence.check("not_limited", false, reason.trim());
-        return Ok(());
-    }
-    evidence.check(
+    crate::native_core::rust_tests(
+        evidence,
         "native_set_readback_restore",
-        passed && output.trim() == "passed",
-        "native set, readback and restore",
+        "ab-session",
+        &["--lib", "session::focus"],
     );
     Ok(())
 }

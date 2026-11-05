@@ -4,6 +4,7 @@ use super::{
     signature,
 };
 use ab_native::{capture, safari};
+use serde_json::json;
 
 #[derive(Debug)]
 pub struct SafariReader {
@@ -121,7 +122,11 @@ impl CaptureReader for SafariReader {
     }
 
     fn token(&self) -> Option<String> {
-        self.settled.as_ref().map(encode)
+        let tabs = self.reader.tab_keys();
+        if self.settled.is_none() && tabs.is_empty() {
+            return None;
+        }
+        Some(json!({"settled": self.settled.as_ref().map(encode), "tabs": tabs}).to_string())
     }
 
     fn adopts_generation(&self) -> bool {
@@ -129,8 +134,26 @@ impl CaptureReader for SafariReader {
     }
 
     fn resume(&mut self, token: &str) -> bool {
-        self.settled = decode(token);
-        self.settled.is_some()
+        let Ok(Value::Object(saved)) = serde_json::from_str::<Value>(token) else {
+            self.settled = decode(token);
+            return self.settled.is_some();
+        };
+        self.settled = saved
+            .get("settled")
+            .and_then(Value::as_str)
+            .and_then(decode);
+        let tabs: Vec<String> = saved
+            .get("tabs")
+            .and_then(Value::as_array)
+            .map(|keys| {
+                keys.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default();
+        self.reader.resume_tabs(&tabs);
+        true
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

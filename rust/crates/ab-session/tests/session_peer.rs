@@ -1193,7 +1193,7 @@ fn an_unknown_rust_owned_source_refuses_to_start() {
         &fresh_home(),
         std::sync::Arc::new(session::SystemClock::start()),
         &session::Options {
-            rust_commands: vec!["mail".into()],
+            rust_commands: vec!["vision".into()],
         },
     );
     assert!(matches!(result, Err(Error::Invalid)));

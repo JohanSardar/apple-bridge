@@ -22,28 +22,6 @@ enum HelperLabCommand {
             while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
             try JSONEncoder().encode(result!.get()).write(to: reportURL, options: .atomic)
             return true
-        case "focus-real-checks":
-            let reportURL = try report(arguments)
-            guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-            var finished = false
-            var failure: (any Error)?
-            Task { @MainActor in
-                do {
-                    let result = try await FocusQualification.run(arguments[1])
-                    try JSONEncoder().encode(result).write(to: reportURL, options: .atomic)
-                } catch { failure = error }
-                finished = true
-            }
-            while !finished { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-            if let failure { throw failure }
-            return true
-        case "mac-notify-proof":
-            let reportURL = try report(arguments)
-            var result: JSON?
-            Task { @MainActor in result = await MacNotifyProof.run() }
-            while result == nil { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
-            try JSONEncoder().encode(result!).write(to: reportURL, options: .atomic)
-            return true
         case "calendar-facts-proof":
             let reportURL = try report(arguments)
             var result: (state: String, reason: String)?

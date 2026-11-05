@@ -55,6 +55,9 @@ impl ActionResolver for Actions {
             return Ok(problem);
         }
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
+        if command.op.starts_with("mail.") && args["id"].is_null() {
+            return Ok(problem);
+        }
         let id = args["id"].as_str().ok_or(Code::Corrupt)?;
         let collection = collection(&command.op);
         let native_key = self.state.with(|state| state.native_key(collection, id))?;

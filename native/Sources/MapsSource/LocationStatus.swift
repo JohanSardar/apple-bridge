@@ -19,9 +19,6 @@ public actor LocationStatus: Source {
         }
         return SourceReadiness(state: reason.isEmpty ? "ready" : "permission_missing", coverage: .object(["fields": .string("complete")]), reason: reason)
     }
-    public func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
 }
 
 @MainActor

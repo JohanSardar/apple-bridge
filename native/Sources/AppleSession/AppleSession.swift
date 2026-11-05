@@ -1,7 +1,4 @@
 import NativeProtocol
-import PDFSource
-import FilesSource
-import MailSource
 import Foundation
 import CryptoKit
 import Darwin
@@ -14,19 +11,11 @@ import CalendarSource
 import MessagesSource
 
 public actor AppleSession {
-    private struct Ticket {
-        let command: JSON
-        let prepared: Prepared
-        let expiry: ContinuousClock.Instant
-        let fence: UInt64
-    }
     private var running = false
     var link: NativeSessionLink?
     private var facts: NativeServer?
     private var connected: Bool { link != nil }
-    private var fence: UInt64 = 0
     private var permissionStates: [String: String] = [:]
-    private var commandActive = false
     var additionalSources: [String: any Source] = [:]
     private var queryAudio: [String: (Data, Date)] = [:]
     var queryHandlers: [String: @Sendable (JSON) async throws -> QueryOutput] = [:]
@@ -108,9 +97,6 @@ public actor AppleSession {
         let id = UUID()
         frameTasks[id] = Task {
             switch frame["t"].string {
-            case "Prepare": await nativePrepare(frame)
-            case "Dispatch": await nativeDispatch(frame)
-            case "Resolve": await nativeResolve(frame)
             case "BlobRead": await readBlob(frame)
             case "Primitive": await nativePrimitive(frame)
             default: break
@@ -137,7 +123,6 @@ public actor AppleSession {
                 guard encoded.count <= 1 << 20 else { throw SourceFailure.invalid }
                 guard output.blobs.count <= 16, output.blobs.allSatisfy({ $0.size <= 64 << 20 && !$0.handle.isEmpty }) else { throw SourceFailure.invalid }
 
-                blobs = frame["op"].string == "files.read" ? [.object(["digest": result["digest"], "size": result["size"], "handle": .string("files-blob:" + result["digest"].string)])] : blobs
                 transmit(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
                 let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable"))
@@ -187,14 +172,6 @@ public actor AppleSession {
                 response = .object(["t": .string("BlobChunk"), "handle": frame["handle"], "offset": frame["offset"], "bytes": .string(cached.0.subdata(in: offset..<end).base64EncodedString()), "digest": .string(digest), "eof": .bool(end == cached.0.count)])
             }
             else if frame["handle"].string.hasPrefix("contacts-image:") || contactsVariant { response = try await contacts.readBlob(frame["handle"].string, offset: Int(frame["offset"].number), length: Int(frame["length"].number)) }
-            else if frame["handle"].string.hasPrefix("pdf:") {
-                guard let pdf = additionalSources["pdf"] as? PDFSource else { throw SourceFailure.unavailable }
-                response = try await pdf.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
-            }
-            else if frame["handle"].string.hasPrefix("files-blob:") {
-                guard let files = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
-                response = try await files.readBlob(frame["handle"].string, offset: Int64(frame["offset"].number), length: Int(frame["length"].number))
-            }
             else { throw SourceFailure.unavailable }
             guard current(), !Task.isCancelled else { return }
             try nativeLink.send(response)
@@ -209,15 +186,6 @@ public actor AppleSession {
 
 
 
-    private func nativeReject(_ frame: JSON, error: any Error, connection: NativeSessionLink) async {
-        let details = await rejection(frame, error: error)
-        try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: details.code, message: details.message, evidence: details.evidence))
-    }
-
-    private static func rustOwned(_ operation: String) -> Bool {
-        operation.hasPrefix("reminders.") || operation.hasPrefix("calendar.") || operation.hasPrefix("contacts.") || operation.hasPrefix("notes.")
-    }
-
     private func nativePrimitive(_ frame: JSON) async {
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
@@ -228,9 +196,7 @@ public actor AppleSession {
             let result: JSON
             if operation.hasPrefix("reminders.") { result = try await source.primitive(operation, args: frame["args"]) }
             else if operation.hasPrefix("calendar.") { result = try await calendar.primitive(operation, args: frame["args"]) }
-            else if operation.hasPrefix("contacts.") { result = try await contacts.primitive(operation, args: frame["args"]) }
-            else if operation.hasPrefix("messages."), let messages = additionalSources["messages"] as? Messages { result = try await messages.primitive(operation, args: frame["args"]) }
-            else if operation.hasPrefix("notes."), let notes = additionalSources["notes"] as? NotesSource { result = try await notes.primitive(operation, args: frame["args"]) }
+            else if let selected = additionalSources[captureRoute(operation)] { result = try await selected.primitive(operation, args: frame["args"]) }
             else { throw SourceFailure.unsupported }
             if operation.hasSuffix(".write") || operation.hasSuffix(".write_group") {
                 await sources.enumerations.invalidate(captureRoute(operation))
@@ -245,78 +211,9 @@ public actor AppleSession {
         }
     }
 
-    private func nativePrepare(_ frame: JSON) async {
-        let activity = ForegroundActivity.shared.begin()
-        defer { ForegroundActivity.shared.end(activity) }
-        guard let connection = link else { return }
-        do {
-            _ = try CommandOrigin(frame)
-            guard !frame["command_id"].string.isEmpty, !frame["principal"].string.isEmpty, !frame["request_hash"].string.isEmpty, let expires = parseTimestamp(frame["expires_at"].string), expires > Date() else { throw SourceFailure.invalid }
-            guard !Self.rustOwned(frame["action"]["op"].string), let selected = additionalSources[captureRoute(frame["action"]["op"].string)] else { throw SourceFailure.unsupported }
-            let prepared = try await selected.prepare(frame)
-            guard !Task.isCancelled, link === connection, expires > Date() else { throw SourceFailure.expired }
-            try connection.send(NativeSessionFrame.prepared(commandID: frame["command_id"], nativeState: prepared.nativeState, route: prepared.nativeState["route"].string.isEmpty ? "eventkit" : prepared.nativeState["route"].string, candidateIDs: prepared.nativeState["candidate_ids"].array, fingerprint: prepared.fingerprint))
-        } catch { if link === connection && !Task.isCancelled { await nativeReject(frame, error: error, connection: connection) } }
-    }
-
-    private func nativeDispatch(_ frame: JSON) async {
-        let activity = ForegroundActivity.shared.begin()
-        defer { ForegroundActivity.shared.end(activity) }
-        guard let connection = link else { return }
-        let operation = frame["action"]["op"].string
-        guard !Self.rustOwned(operation) else {
-            try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: "unsupported", message: "unsupported", evidence: nil))
-            return
-        }
-        let command: JSON = .object(["command_id": frame["command_id"], "request_hash": frame["request_hash"], "action": frame["action"]])
-        let ticket = Ticket(command: command, prepared: Prepared(nativeState: frame["native_state"], fingerprint: frame["fingerprint"].string, action: frame["action"]), expiry: ContinuousClock.now.advanced(by: .seconds(30)), fence: fence)
-        do {
-            let evidence = try await executeValidated(operation, ticket: ticket, expiresAt: UInt64.max)
-            guard link === connection, !Task.isCancelled else { return }
-            let disposition = evidence["disposition"].string.isEmpty ? "locally_observed" : evidence["disposition"].string
-            try connection.send(NativeSessionFrame.outcome(commandID: frame["command_id"], disposition: disposition, evidence: evidence))
-        } catch let rejection as NativeEffectRejection {
-            guard link === connection, !Task.isCancelled else { return }
-            try? connection.send(NativeSessionFrame.rejected(commandID: frame["command_id"], code: rejection.code, message: rejection.message, evidence: rejection.evidence))
-        } catch {
-            guard link === connection, !Task.isCancelled else { return }
-            try? connection.send(NativeSessionFrame.outcome(commandID: frame["command_id"], disposition: "indeterminate", evidence: .object(["reason": .string("dispatch_evidence_unavailable"), "observed": .bool(false)])))
-        }
-    }
-
-    private func nativeResolve(_ frame: JSON) async {
-        let activity = ForegroundActivity.shared.begin()
-        defer { ForegroundActivity.shared.end(activity) }
-        guard let connection = link else { return }
-        let id = frame["command_id"].string
-        let saved = frame["saved"]
-        var disposition = saved["disposition"].string
-        var evidence = saved["evidence"]
-        do {
-            if ["indeterminate", "locally_observed"].contains(disposition) {
-                let operation = saved["evidence"]["prepared"]["action"]["op"].string
-                guard !Self.rustOwned(operation) else { throw SourceFailure.unsupported }
-                guard let selected = additionalSources[captureRoute(operation)] else { throw SourceFailure.unsupported }
-                let resolved = await selected.resolve(id, evidence: saved["evidence"])
-                if resolved["observed"].bool {
-                    var result = resolved.object
-                    result["fingerprint"] = saved["evidence"]["prepared"]["request_hash"]
-                    result["prepared"] = saved["evidence"]["prepared"]
-                    evidence = .object(result)
-                    disposition = resolved["disposition"].string.isEmpty ? "locally_observed" : resolved["disposition"].string
-                } else { disposition = "indeterminate" }
-            }
-            guard link === connection, !Task.isCancelled else { return }
-            try connection.send(NativeSessionFrame.outcome(commandID: .string(id), disposition: disposition, evidence: evidence))
-        } catch {
-            guard link === connection, !Task.isCancelled else { return }
-            try? connection.send(NativeSessionFrame.outcome(commandID: .string(id), disposition: "indeterminate", evidence: evidence))
-        }
-    }
-
     private func handleNative(_ frame: JSON) async throws {
         switch frame["t"].string {
-        case "Prepare", "Dispatch", "Resolve", "BlobRead", "Primitive":
+        case "BlobRead", "Primitive":
             launchFrame(frame)
         case "Query":
             let id = frame["id"].string
@@ -368,7 +265,6 @@ public actor AppleSession {
                 let descriptor = started.descriptor
                 let connected = try await Task.detached { try NativeSessionLink(descriptor: descriptor) }.value
                 link = connected
-                fence = connected.fence
                 var coverage: [String: JSON] = [:]
                 var capabilities: [String: JSON] = [:]
                 for source in frameworkSources {
@@ -416,67 +312,9 @@ public actor AppleSession {
         case SourceFailure.conflict: return "conflict"
         case SourceFailure.expired: return "expired"
         case SourceFailure.unsupported: return "unsupported"
- case SourceFailure.capabilityUnproven: return "capability_unproven"
+        case SourceFailure.capabilityUnproven: return "capability_unproven"
         case SourceFailure.invalid: return "invalid"
         default: return "unavailable"
         }
     }
-
-    struct Rejection {
-        let code: String
-        let message: String
-        let evidence: JSON?
-    }
-
-    private func rejection(_ frame: JSON, error: any Error) async -> Rejection {
-        let code = errorCode(error)
-        let key = frame["action"]["native_key"].string
-        if frame["action"]["op"].string.hasPrefix("messages.") {
-            let detail = (error as? MessagesUIFailure)?.rawValue ?? code
-            return Rejection(code: code, message: detail, evidence: nil)
-        }
-        if frame["action"]["op"].string.hasPrefix("notes.") { return Rejection(code: code, message: code, evidence: nil) }
-        guard code == "conflict", !key.isEmpty else { return Rejection(code: code, message: code, evidence: nil) }
-        return Rejection(code: "unavailable", message: "unavailable", evidence: nil)
-    }
-
-    private func durableAction(_ action: JSON) -> JSON {
-        guard action["op"].string == "mac.clipboard_write" else { return action }
-        var safe = action.object
-        safe["args"] = .object([:])
-        return .object(safe)
-    }
-
-    private func executeValidated(_ operation: String, ticket: Ticket, expiresAt: UInt64) async throws -> JSON {
-        guard !commandActive else { throw NativeEffectRejection(code: "conflict", message: "conflict") }
-        commandActive = true
-        defer { commandActive = false }
-        guard let selected = additionalSources[captureRoute(operation)] else { throw NativeEffectRejection(code: "unsupported", message: "unsupported") }
-        do {
-            guard ticket.fence == fence, connected, ContinuousClock.now < ticket.expiry,
-                  expiresAt > UInt64(Date().timeIntervalSince1970) else { throw SourceFailure.expired }
-        } catch {
-            if error is CancellationError { throw error }
-            let details = await rejection(ticket.command, error: error)
-            throw NativeEffectRejection(code: details.code, message: details.message, evidence: details.evidence ?? .null)
-        }
-        let prepared: JSON = .object(["action": durableAction(ticket.prepared.action), "native_state": ticket.prepared.nativeState, "request_hash": ticket.command["request_hash"]])
-        do {
-            let result = try await selected.dispatch(ticket.prepared)
-            if result["observed"].bool, operation == "pdf.annotate" { await facts?.changed(source: "pdf", generation: "native/1") }
-            var fields = result.object
-            fields["fingerprint"] = ticket.command["request_hash"]
-            fields["before"] = ticket.prepared.nativeState
-            fields["candidate_ids"] = ticket.prepared.nativeState["candidate_ids"]
-            fields["prepared"] = prepared
-            return .object(fields)
-        } catch {
-            if error is CancellationError { throw error }
-            let nativeCode = (error as? SourceFailure).map { String(describing: $0) } ?? (error as? MessagesUIFailure)?.rawValue ?? "native_error"
-            let reason = (error as? MailCommandFailure)?.localizedDescription ?? "dispatch_evidence_unavailable"
-            return .object(["disposition": .string("indeterminate"), "observed": .bool(false), "reason": .string(reason), "native_error_code": .string(nativeCode), "prepared": prepared])
-        }
-    }
-
-
 }

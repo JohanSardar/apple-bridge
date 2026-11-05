@@ -1,102 +1,39 @@
 import Foundation
 import CaptureSource
-import MacSource
 import SourceSupport
 import PDFKit
 
 actor Fake: CaptureProvider {
     var allowed = true
-    var broken = false
-    var wrongDuration = false
-    func changeDuration() { wrongDuration = true }
-    var outside = false
-    func escapeOutput() { outside = true }
-    var calls = 0
-    var last: URL?
-    func removeLast() throws { if let last { try FileManager.default.removeItem(at: last) } }
     func deny() { allowed = false }
-    func breakOutput() { broken = true }
-    func count() -> Int { calls }
-    func outputExists() -> Bool { last.map { FileManager.default.fileExists(atPath: $0.path) } ?? false }
     func authorized(_ operation: String) async -> Bool { allowed }
     func produce(_ operation: String, args: JSON, directory: URL) async throws -> CaptureArtifact {
-        calls += 1
-        let target = outside ? directory.deletingLastPathComponent() : directory
-        let url = target.appendingPathComponent("[ab-test] capture " + UUID().uuidString)
-        try Data(broken ? [] : [1, 2, 3]).write(to: url)
-        last = url
-        return CaptureArtifact(url: url, duration: wrongDuration ? 100 : args["seconds"].number, width: 2, height: 2)
+        let url = directory.appendingPathComponent("[ab-test] capture " + UUID().uuidString)
+        try Data([1, 2, 3]).write(to: url)
+        return CaptureArtifact(url: url, duration: args["seconds"].number, width: 2, height: 2)
     }
 }
 
 @main struct Checks {
     @MainActor static func main() async throws {
-        let mac = MacSource()
-        _ = try await mac.prepare(.object(["action": .object(["op": .string("mac.iwork_export"), "args": .object(["app": .string("pages"), "format": .string("text"), "document_blob": .string(Data("[ab-test]".utf8).base64EncodedString())])])]))
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let provider = Fake()
-        let source = CaptureSource(directory: directory, provider: provider)
-        for op in CaptureSource.operations {
-            var args: JSON = .object([:])
-            if op == "capture.record_audio" || op == "mac.screen_record" { args = .object(["seconds": .number(2)]) }
-            if op == "print.document" { args = .object(["file": .string("fixture.pdf"), "printer": .string("PDF")]) }
-            let action: JSON = .object(["op": .string(op), "args": args])
-            let prepared = try await source.prepare(.object(["action": action, "request_hash": .string("synthetic")]))
-            let evidence = try await source.dispatch(prepared)
-            guard evidence["size"] == .number(3), evidence["digest"].string.count == 64, evidence.object["data"] == nil else { throw SourceFailure.corrupt }
-            var saved = evidence.object
-            saved["prepared"] = .object(["action": action])
-            guard await source.resolve("synthetic", evidence: .object(saved))["observed"].bool else { throw SourceFailure.corrupt }
-            try await provider.removeLast()
-            guard await source.resolve("synthetic", evidence: .object(saved)) == .null else { throw SourceFailure.corrupt }
-        }
-        for (op, seconds) in [("capture.record_audio", 61.0), ("mac.screen_record", 31.0)] {
-            do {
-                _ = try await source.prepare(.object(["action": .object(["op": .string(op), "args": .object(["seconds": .number(seconds)])])]))
-                throw SourceFailure.corrupt
-            } catch SourceFailure.invalid {}
-        }
-        let action: JSON = .object(["op": .string("capture.camera_photo"), "args": .object([:])])
-        let prepared = try await source.prepare(.object(["action": action]))
+        let source = CaptureSource(provider: provider)
+        let produced = try await source.primitive("capture.produce", args: .object(["op": .string("capture.record_audio"), "args": .object(["seconds": .number(2)]), "directory": .string(directory.path)]))
+        guard produced["duration"] == .number(2), produced["width"] == .number(2), FileManager.default.fileExists(atPath: produced["path"].string) else { throw SourceFailure.corrupt }
+        guard try await source.primitive("capture.authorized", args: .object(["op": .string("capture.camera_photo")]))["authorized"] == .bool(true) else { throw SourceFailure.corrupt }
         await provider.deny()
-        do { _ = try await source.dispatch(prepared); throw SourceFailure.corrupt } catch SourceFailure.permissionMissing {}
-        guard await provider.count() == 5 else { throw SourceFailure.corrupt }
-        let broken = Fake()
-        await broken.breakOutput()
-        let other = CaptureSource(directory: directory, provider: broken)
-        let ticket = try await other.prepare(.object(["action": action]))
-        do { _ = try await other.dispatch(ticket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
-        guard !(await broken.outputExists()) else { throw SourceFailure.corrupt }
-        let escaped = Fake()
-        await escaped.escapeOutput()
-        let confined = CaptureSource(directory: directory, provider: escaped)
-        let escapeTicket = try await confined.prepare(.object(["action": action]))
-        do { _ = try await confined.dispatch(escapeTicket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
-        guard await escaped.outputExists() else { throw SourceFailure.corrupt }
-        try await escaped.removeLast()
-        let mistimed = Fake()
-        await mistimed.changeDuration()
-        let timed = CaptureSource(directory: directory, provider: mistimed)
-        let timedAction: JSON = .object(["op": .string("capture.record_audio"), "args": .object(["seconds": .number(2)])])
-        let timedTicket = try await timed.prepare(.object(["action": timedAction]))
-        do { _ = try await timed.dispatch(timedTicket); throw SourceFailure.invalid } catch SourceFailure.corrupt {}
-        guard !(await mistimed.outputExists()) else { throw SourceFailure.corrupt }
+        guard try await source.primitive("capture.authorized", args: .object(["op": .string("capture.camera_photo")]))["authorized"] == .bool(false) else { throw SourceFailure.corrupt }
+        guard case .array = try await source.primitive("capture.printers", args: .object([:]))["printers"] else { throw SourceFailure.corrupt }
+        do { _ = try await source.primitive("capture.other", args: .object([:])); throw SourceFailure.corrupt } catch SourceFailure.unsupported {}
         let pdf = PDFDocument()
-        let page = PDFPage()
-        pdf.insert(page, at: 0)
+        pdf.insert(PDFPage(), at: 0)
         let input = directory.appendingPathComponent("input.pdf")
         guard pdf.write(to: input) else { throw SourceFailure.corrupt }
-        let real = CaptureSource(directory: directory)
-        let printAction: JSON = .object(["op": .string("print.document"), "args": .object(["file": .string(input.path), "printer": .string("PDF")])])
-        let printTicket = try await real.prepare(.object(["action": printAction]))
-        let printed = try await real.dispatch(printTicket)
-        guard printed["size"].number > 0 else { throw SourceFailure.corrupt }
-        let freshDirectory = URL(fileURLWithPath: "/tmp").appendingPathComponent("[ab-test] capture " + UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: freshDirectory) }
-        let fresh = CaptureSource(directory: freshDirectory)
-        let freshTicket = try await fresh.prepare(.object(["action": printAction]))
-        guard try await fresh.dispatch(freshTicket)["size"].number > 0 else { throw SourceFailure.corrupt }
+        let printed = try await CaptureSource().primitive("capture.produce", args: .object(["op": .string("print.document"), "args": .object(["file": .string(input.path), "printer": .string("PDF")]), "directory": .string(directory.path)]))
+        guard PDFDocument(url: URL(fileURLWithPath: printed["path"].string))?.pageCount == 1 else { throw SourceFailure.corrupt }
         print("CAP-SIM provider lifecycle passed")
     }
 }

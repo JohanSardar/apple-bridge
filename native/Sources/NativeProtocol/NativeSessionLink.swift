@@ -44,31 +44,6 @@ public enum NativeSessionFrame {
         .object(["t": .string("SourceState"), "source": .string(source), "state": .string(state), "coverage": .object([source: coverage]), "capabilities": .object([source: .array(capabilities.map(JSON.string))]), "reason": .string(reason)])
     }
 
-    public static func scan(id: String, source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) -> JSON {
-        var frame: [String: JSON] = ["t": .string("Scan"), "id": .string(id), "source": .string(source), "generation": .string(generation), "observations": .array(observations), "live": .bool(live), "blob_handles": .object(blobHandles.mapValues(JSON.string))]
-        if !scanID.isEmpty {
-            frame["scan_id"] = .string(scanID)
-            frame["scope"] = .array(scope.map(JSON.string))
-            frame["completion_evidence"] = .string(completionEvidence)
-            if !scanStartedAt.isEmpty { frame["scan_started_at"] = .string(scanStartedAt) }
-        }
-        return .object(frame)
-    }
-
-    public static func prepared(commandID: JSON, nativeState: JSON, route: String, candidateIDs: [JSON], fingerprint: String) -> JSON {
-        .object(["t": .string("Prepared"), "command_id": commandID, "native_state": nativeState, "route": .string(route), "candidate_ids": .array(candidateIDs), "fingerprint": .string(fingerprint)])
-    }
-
-    public static func rejected(commandID: JSON, code: String, message: String, evidence: JSON?) -> JSON {
-        var frame: [String: JSON] = ["t": .string("Rejected"), "command_id": commandID, "code": .string(code), "message": .string(message)]
-        if let evidence, evidence != .null { frame["evidence"] = evidence }
-        return .object(frame)
-    }
-
-    public static func outcome(commandID: JSON, disposition: String, evidence: JSON) -> JSON {
-        .object(["t": .string("Outcome"), "command_id": commandID, "disposition": .string(disposition), "evidence": evidence])
-    }
-
     public static func primitiveResult(id: JSON, result: JSON) -> JSON {
         .object(["t": .string("PrimitiveResult"), "id": id, "result": result])
     }

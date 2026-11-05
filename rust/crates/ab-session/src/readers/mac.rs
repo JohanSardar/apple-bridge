@@ -1,14 +1,16 @@
 use super::{
-    Arc, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Value, capture_value,
-    context_for, native_facts, reader_error,
+    Arc, CaptureReader, Debug, Duration, Error, Path, PathBuf, Readiness, ReadinessContext,
+    ScanContext, Value, capture_value, context_for, json, native_facts, reader_error,
 };
 use ab_native::{capture, mac};
 
 const OPERATIONS: &[&str] = &["mac.state"];
+const PASTEBOARD: &str = "mac.pasteboard";
 
 #[derive(Debug)]
 pub struct MacReader {
     root: PathBuf,
+    client: Arc<native_facts::Client>,
     pull: native_facts::Pull,
     state: capture::State,
     pending: Option<capture::Pending>,
@@ -20,7 +22,8 @@ impl MacReader {
     pub fn new(root: PathBuf, client: Arc<native_facts::Client>, interval: Duration) -> Self {
         Self {
             root,
-            pull: native_facts::Pull::new(client, mac::SOURCE, OPERATIONS, interval),
+            pull: native_facts::Pull::new(Arc::clone(&client), mac::SOURCE, OPERATIONS, interval),
+            client,
             state: capture::State::default(),
             pending: None,
             warm: false,
@@ -49,6 +52,25 @@ impl CaptureReader for MacReader {
             }
             Err(_) => false,
         }
+    }
+
+    fn readiness(&mut self, context: &ReadinessContext<'_>) -> Option<Readiness> {
+        let pasteboard = self.client.fetch(context.fence, PASTEBOARD).ok();
+        let allowed = pasteboard
+            .as_ref()
+            .and_then(|set| set.items.first())
+            .is_some_and(|item| item["always_allow"] == true);
+        let mut missing = vec![
+            "Night Shift has no supported public API",
+            "SSID requires Location authorization",
+        ];
+        if !allowed {
+            missing.push("Clipboard requires Always Allow in Paste from Other Apps");
+        }
+        Some(Readiness::ready(
+            json!({"fields": "partial", "missing": missing}),
+            &crate::session::MAC_CAPABILITIES,
+        ))
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

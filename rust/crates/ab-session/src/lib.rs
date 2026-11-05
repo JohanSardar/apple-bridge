@@ -11,6 +11,7 @@ pub mod production;
 pub mod queries;
 pub mod readers;
 pub mod session;
+pub mod staged;
 pub mod store;
 
 #[derive(Debug, thiserror::Error)]

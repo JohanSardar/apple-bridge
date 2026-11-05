@@ -34,6 +34,13 @@ struct Checks {
         }
         do { _ = try await cancelled.value; throw SourceFailure.invalid }
         catch is CancellationError {}
+        try require(await AppleScriptRunner.automationStatus { 0 } == 0)
+        try require(await AppleScriptRunner.automationStatus { -1743 } == -1743)
+        let release = DispatchSemaphore(value: 0)
+        let started = ContinuousClock.now
+        try require(await AppleScriptRunner.automationStatus(after: 0.02) { _ = release.wait(timeout: .now() + 2); return 0 } == -1712)
+        release.signal()
+        try require(ContinuousClock.now - started < .seconds(1))
         print("all SourceSupport checks passed")
     }
 }

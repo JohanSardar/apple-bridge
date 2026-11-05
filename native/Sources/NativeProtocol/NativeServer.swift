@@ -11,15 +11,6 @@ public struct NativeFacts: Sendable {
     }
 }
 
-public struct NativeEffectRejection: Error, Sendable {
-    public let code: String
-    public let message: String
-    public let evidence: JSON
-    public init(code: String, message: String, evidence: JSON = .null) {
-        self.code = code; self.message = message; self.evidence = evidence
-    }
-}
-
 public protocol NativeAdapter: Sendable {
     func facts(_ operation: String, args: JSON) async throws -> NativeFacts
     func revalidate(_ operation: String, identities: [JSON]) async throws -> [String]
@@ -32,7 +23,7 @@ public extension NativeAdapter {
 }
 
 public actor NativeServer {
-    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "files.ubiquity", "mac.state", "messages.media", "focus.status", "safari.tabs", "pdf.artifacts", "accessibility.trusted"]
+    public static let factOperations: Set<String> = ["agenda.calendars", "agenda.events", "agenda.reminder_lists", "agenda.reminders", "contacts.containers", "contacts.groups", "contacts.contacts", "files.ubiquity", "mac.state", "messages.media", "focus.status", "safari.tabs", "accessibility.trusted", "mac.pasteboard"]
     public static let maximumUbiquityPaths = 500
     public static let revalidationCollections: [String: String] = ["agenda.calendars": "calendar.calendar", "agenda.events": "calendar.event", "agenda.reminder_lists": "reminders.list", "agenda.reminders": "reminders.reminder", "contacts.containers": "contacts.container", "contacts.groups": "contacts.group", "contacts.contacts": "contacts.contact"]
     public static let maximumRevalidation = 500

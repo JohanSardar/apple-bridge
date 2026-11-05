@@ -1,8 +1,6 @@
 import AppKit
-import Darwin
 import SpeechSource
 import Foundation
-import CryptoKit
 import CoreGraphics
 import AVFoundation
 import PDFKit
@@ -26,96 +24,27 @@ public protocol CaptureProvider: Sendable {
     func produce(_ operation: String, args: JSON, directory: URL) async throws -> CaptureArtifact
 }
 
-public actor CaptureSource: Source {
-    public nonisolated let name = "capture"
-    public static let operations = ["capture.screenshot", "capture.camera_photo", "capture.record_audio", "mac.screen_record", "print.document"]
+public struct CaptureSource: Source {
+    public let name = "capture"
     let provider: any CaptureProvider
-    let directory: URL
-    var artifacts: [String: CaptureArtifact] = [:]
-    public init(directory: URL, provider: any CaptureProvider = SystemCaptureProvider()) {
-        self.directory = directory; self.provider = provider
-    }
     let playback = SpeechPlayback(name: "capture")
-    public func open() async -> SourceReadiness {
-        SourceReadiness(state: "ready", coverage: .object(["fields": .string("partial")]), capabilities: Self.operations + ["capture.play_sound"])
+    public init(provider: any CaptureProvider = SystemCaptureProvider()) {
+        self.provider = provider
     }
-    public func prepare(_ command: JSON) async throws -> Prepared {
-        if command["action"]["op"].string == "capture.play_sound" { return try await playback.prepare(command) }
-        let action = command["action"]
-        let op = action["op"].string
-        let args = action["args"]
-        guard Self.operations.contains(op), case .object = args else { throw SourceFailure.invalid }
-        let allowed: Set<String>
-        switch op {
-        case "capture.screenshot":
-            allowed = ["display", "window"]
-            guard args["display"] == .null || args["window"] == .null else { throw SourceFailure.invalid }
-            for value in args.object.values { guard value.number > 0, value.number.rounded() == value.number else { throw SourceFailure.invalid } }
-        case "capture.camera_photo": allowed = []
-        case "capture.record_audio", "mac.screen_record":
-            allowed = ["seconds"]
-            let seconds = args["seconds"].number
-            guard seconds >= 1, seconds <= (op == "mac.screen_record" ? 30 : 60), seconds.isFinite else { throw SourceFailure.invalid }
+    public func primitive(_ operation: String, args: JSON) async throws -> JSON {
+        switch operation {
+        case "capture.play_sound":
+            return try await playback.primitive(operation, args: args)
+        case "capture.authorized":
+            return .object(["authorized": .bool(await provider.authorized(args["op"].string))])
+        case "capture.printers":
+            return .object(["printers": .array(NSPrinter.printerNames.map(JSON.string))])
+        case "capture.produce":
+            let artifact = try await provider.produce(args["op"].string, args: args["args"], directory: URL(fileURLWithPath: args["directory"].string))
+            return .object(["path": .string(artifact.url.path), "duration": .number(artifact.duration), "width": .number(Double(artifact.width)), "height": .number(Double(artifact.height))])
         default:
-            allowed = ["file", "printer"]
-            guard !args["file"].string.isEmpty, !args["printer"].string.isEmpty else { throw SourceFailure.unsupported }
+            throw SourceFailure.unsupported
         }
-        guard Set(args.object.keys).isSubset(of: allowed) else { throw SourceFailure.invalid }
-        guard await provider.authorized(op) else { throw SourceFailure.permissionMissing }
-        return Prepared(nativeState: .null, fingerprint: command["request_hash"].string, action: action)
-    }
-    public func dispatch(_ prepared: Prepared) async throws -> JSON {
-        if prepared.action["op"].string == "capture.play_sound" { return try await playback.dispatch(prepared) }
-        _ = try await prepare(.object(["action": prepared.action]))
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let artifact = try await provider.produce(prepared.action["op"].string, args: prepared.action["args"], directory: directory)
-        let evidence: JSON
-        do { evidence = try verify(artifact, action: prepared.action) }
-        catch {
-            if owns(artifact.url) {
-                try? FileManager.default.removeItem(at: artifact.url)
-            }
-            throw error
-        }
-        artifacts[evidence["digest"].string] = artifact
-        return evidence
-    }
-    func owns(_ url: URL) -> Bool {
-        func canonical(_ directory: URL) -> String? {
-            guard let resolved = realpath(directory.path, nil) else { return nil }
-            defer { free(resolved) }
-            return String(cString: resolved)
-        }
-        guard let expected = canonical(directory), let actual = canonical(url.deletingLastPathComponent()) else { return false }
-        return expected == actual
-    }
-    func verify(_ artifact: CaptureArtifact, action: JSON) throws -> JSON {
-        guard owns(artifact.url) else { throw SourceFailure.corrupt }
-        let values = try artifact.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true, let size = values.fileSize, size > 0, size <= 128 << 20 else { throw SourceFailure.corrupt }
-        guard artifact.duration.isFinite, artifact.duration >= 0 else { throw SourceFailure.corrupt }
-        let seconds = action["args"]["seconds"].number
-        guard seconds == 0 || abs(artifact.duration - seconds) <= 0.5 else { throw SourceFailure.corrupt }
-        if ["capture.screenshot", "capture.camera_photo", "mac.screen_record"].contains(action["op"].string) {
-            guard artifact.width > 0, artifact.height > 0 else { throw SourceFailure.corrupt }
-        }
-        let bytes = try Data(contentsOf: artifact.url)
-        guard bytes.count == size else { throw SourceFailure.corrupt }
-        let digest = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
-        return .object(["handle": .string("capture-artifact:" + digest), "digest": .string(digest), "size": .number(Double(size)), "duration": .number(artifact.duration), "width": .number(Double(artifact.width)), "height": .number(Double(artifact.height)), "observed": .bool(true)])
-    }
-    public func readBlob(_ handle: String, offset: Int, length: Int) throws -> JSON {
-        let digest = String(handle.dropFirst("capture-artifact:".count))
-        guard handle.hasPrefix("capture-artifact:"), let artifact = artifacts[digest], offset >= 0, length > 0, length <= 131072 else { throw SourceFailure.invalid }
-        let data = try Data(contentsOf: artifact.url)
-        guard offset <= data.count else { throw SourceFailure.invalid }
-        let end = min(data.count, offset + length)
-        return .object(["t": .string("BlobChunk"), "handle": .string(handle), "offset": .number(Double(offset)), "digest": .string(digest), "bytes": .string(data.subdata(in: offset..<end).base64EncodedString()), "eof": .bool(end == data.count)])
-    }
-    public func resolve(_ command: String, evidence: JSON) async -> JSON {
-        if evidence["prepared"]["action"]["op"].string == "capture.play_sound" { return await playback.resolve(command, evidence: evidence) }
-        guard let artifact = artifacts[evidence["digest"].string], let verified = try? verify(artifact, action: evidence["prepared"]["action"]), verified["digest"] == evidence["digest"], verified["size"] == evidence["size"] else { return .null }
-        return verified
     }
 }
 
@@ -173,18 +102,6 @@ public struct SystemCaptureProvider: CaptureProvider {
         guard operation == "print.document" else { throw SourceFailure.unsupported }
         let input = URL(fileURLWithPath: args["file"].string)
         guard let document = PDFDocument(url: input), document.pageCount > 0, let bytes = document.dataRepresentation() else { throw SourceFailure.invalid }
-        if args["printer"].string != "PDF" {
-            let name = args["printer"].string
-            guard NSPrinter.printerNames.contains(name) else { throw SourceFailure.unavailable }
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/lp")
-            process.arguments = ["-d", name, "--", args["file"].string]
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
-            try process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { throw SourceFailure.unavailable }
-        }
         let output = directory.appendingPathComponent(UUID().uuidString + ".pdf")
         try bytes.write(to: output, options: [.atomic])
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: output.path)

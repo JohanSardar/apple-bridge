@@ -280,7 +280,7 @@ impl Capture {
             servers: readers
                 .values()
                 .filter_map(|reader| reader.blobs())
-                .chain(queries.blob_server())
+                .chain(queries.blob_servers())
                 .collect(),
             prefixed: readers
                 .iter()
@@ -540,6 +540,17 @@ impl Hub {
         self.capture
             .as_ref()
             .is_some_and(|capture| capture.queries.handles_operation(operation))
+    }
+
+    pub(super) fn capture_staged(&self, prefix: &str) -> Option<Arc<crate::staged::StagedBlobs>> {
+        self.capture.as_ref()?.queries.staged(prefix)
+    }
+
+    pub(super) fn reply_query(&self, reply: &Value) -> Result<(), Error> {
+        send_large(
+            &mut *self.gateway.lock().map_err(|_| Error::WorkerPanicked)?,
+            reply,
+        )
     }
 
     pub(super) fn capture_query(&self, frame: &IpcFrame) -> Result<(), Error> {

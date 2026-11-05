@@ -175,15 +175,6 @@ func sessionLinkChecks(_ hello: JSON) async throws {
     try peer.send(.object(["t": .string("Session"), "checkpoints": .object(["reminders": .object(["generation": .string("g"), "checkpoint": .string("c0")])])]))
     let link = try await connecting.value
     try check(link.fence == 7 && link.checkpoints["reminders"]?["checkpoint"] == .string("c0"), "session link fence and checkpoints")
-    try link.send(NativeSessionFrame.scan(id: "s1", source: "reminders", generation: "g", observations: [], scanID: "", scanStartedAt: "", scope: ["x"], completionEvidence: "complete", blobHandles: [:], live: false))
-    let unscoped = try await Task.detached { try peer.receive() }.value
-    try check(unscoped["id"] == .string("s1") && unscoped["scan_id"] == .null && unscoped["scope"] == .null && unscoped["completion_evidence"] == .null, "unscoped scan omits scan fields")
-    try link.send(NativeSessionFrame.scan(id: "s2", source: "calendar", generation: "g", observations: [.object(["kind": .string("upsert")])], scanID: "a", scanStartedAt: "2026-01-02T03:04:05Z", scope: ["calendar.event"], completionEvidence: "complete", blobHandles: ["d": "h"], live: true))
-    let scoped = try await Task.detached { try peer.receive() }.value
-    try check(scoped["scan_id"] == .string("a") && scoped["scope"].array.count == 1 && scoped["live"].bool && scoped["blob_handles"]["d"] == .string("h") && scoped["completion_evidence"] == .string("complete"), "scoped scan carries its scan fields")
-    try link.send(NativeSessionFrame.rejected(commandID: .string("c"), code: "conflict", message: "m", evidence: nil))
-    let rejected = try await Task.detached { try peer.receive() }.value
-    try check(rejected["code"] == .string("conflict") && rejected["evidence"] == .null, "rejected frame")
     link.close()
     var bad: [Int32] = [-1, -1]
     guard socketpair(AF_UNIX, SOCK_STREAM, 0, &bad) == 0 else { throw CheckFailure.failed("bad socketpair") }

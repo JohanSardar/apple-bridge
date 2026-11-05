@@ -31,13 +31,10 @@ struct FakeSource: Source {
     func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: ["phone.set"])
     }
-    func prepare(_ command: JSON) async throws -> Prepared {
-        Prepared(nativeState: .object(["before": .integer(1)]), fingerprint: "fp", action: command["action"])
+    func primitive(_ operation: String, args: JSON) async throws -> JSON {
+        guard operation == "phone.echo" else { throw SourceFailure.unsupported }
+        return .object(["echo": args["value"]])
     }
-    func dispatch(_ prepared: Prepared) async throws -> JSON {
-        .object(["observed": .bool(observes), "native_key": .string("k1"), "disposition": .string("locally_observed")])
-    }
-    func resolve(_ command: String, evidence: JSON) async -> JSON { .object(["observed": .bool(false)]) }
 }
 
 enum CheckFailure: Error { case failed(String) }
@@ -92,21 +89,14 @@ struct SessionChecks {
         let failure = try await peer.next("QueryError")
         try check(failure["id"] == .string("q2") && failure["code"] == .string("unsupported"), "unknown query is unsupported")
 
-        let action: JSON = .object(["op": .string("phone.set"), "native_key": .string("k1"), "args": .object([:])])
-        try peer.wire.send(.object(["t": .string("Prepare"), "command_id": .string("c1"), "principal": .string("token:abcdef"), "request_hash": .string("h1"), "origin": .string(""), "expires_at": .string(timestamp(Date().addingTimeInterval(600))), "action": action]))
-        let prepared = try await peer.next("Prepared")
-        try check(prepared["command_id"] == .string("c1") && prepared["fingerprint"] == .string("fp") && prepared["route"] == .string("eventkit") && prepared["native_state"]["before"] == .integer(1) && prepared["ticket"] == .null, "prepared carries the source's state and no ticket")
-        try peer.wire.send(.object(["t": .string("Dispatch"), "command_id": .string("c1"), "request_hash": .string("h1"), "action": action, "native_state": prepared["native_state"], "fingerprint": .string("fp")]))
-        let outcome = try await peer.next("Outcome")
-        try check(outcome["disposition"] == .string("locally_observed") && outcome["evidence"]["fingerprint"] == .string("h1") && outcome["evidence"]["native_key"] == .string("k1") && outcome["evidence"]["prepared"]["action"]["op"] == .string("phone.set") && outcome["evidence"]["capture_checkpoint"] == .null, "outcome evidence is unbound")
-
-        try peer.wire.send(.object(["t": .string("Resolve"), "command_id": .string("c1"), "saved": .object(["t": .string("Outcome"), "command_id": .string("c1"), "disposition": .string("indeterminate"), "evidence": .object(["prepared": .object(["action": action, "request_hash": .string("h1")])])])]))
-        let resolved = try await peer.next("Outcome")
-        try check(resolved["disposition"] == .string("indeterminate"), "unobserved resolve stays indeterminate")
-
-        try peer.wire.send(.object(["t": .string("Prepare"), "command_id": .string("c2"), "principal": .string("token:abcdef"), "request_hash": .string("h2"), "origin": .string(""), "expires_at": .string(timestamp(Date().addingTimeInterval(-5))), "action": action]))
-        let expired = try await peer.next("Rejected")
-        try check(expired["command_id"] == .string("c2") && expired["code"] == .string("invalid"), "an expired command is rejected")
+        try peer.wire.send(.object(["t": .string("Primitive"), "id": .string("p1"), "op": .string("phone.echo"), "args": .object(["value": .integer(3)])]))
+        let answer = try await peer.next("PrimitiveResult")
+        try check(answer["id"] == .string("p1") && answer["result"]["echo"] == .integer(3), "primitive reaches its source")
+        try peer.wire.send(.object(["t": .string("Primitive"), "id": .string("p2"), "op": .string("phone.other"), "args": .object([:])]))
+        let refused = try await peer.next("PrimitiveError")
+        try check(refused["id"] == .string("p2") && refused["code"] == .string("unsupported"), "unknown primitive is unsupported")
+        try peer.wire.send(.object(["t": .string("Primitive"), "id": .string("p3"), "op": .string("nowhere.other"), "args": .object([:])]))
+        try check(try await peer.next("PrimitiveError")["id"] == .string("p3"), "primitive for no source is refused")
 
         try peer.wire.send(.object(["t": .string("Bogus")]))
         running.cancel()

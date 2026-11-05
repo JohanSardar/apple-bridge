@@ -17,11 +17,6 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-};
 
 pub const SCOPE: &str = "mail:read,system:read";
 pub const NATIVE: [&str; 6] = [
@@ -53,17 +48,6 @@ pub const SCENARIOS: [&str; 7] = [
 fn add(evidence: &mut Evidence, name: &str, ok: bool) {
     evidence.check(name, ok, "");
 }
-fn mail_checks() -> Option<(PathBuf, Vec<u8>)> {
-    let built = Command::new("packaging/dev/build-native.sh")
-        .env("APPLE_BRIDGE_NATIVE_TARGET", "MailChecks")
-        .output()
-        .ok()?;
-    if !built.status.success() {
-        return None;
-    }
-    let directory = fs::read_to_string("native/.build/native-output-1").ok()?;
-    Some((Path::new(directory.trim()).join("MailChecks"), built.stdout))
-}
 pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     if id == "MAIL-REPLICA" {
@@ -78,15 +62,18 @@ pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
         return Err(Error::Invalid(format!("mail not ported for {id}")));
     }
     if id == "MAIL-COMMANDS" {
-        let Some((binary, _)) = mail_checks() else {
-            add(evidence, "native_mail_build", false);
-            return Ok(());
-        };
-        add(evidence, "native_mail_build", true);
-        let ok = Command::new(&binary)
-            .output()
-            .is_ok_and(|o| o.status.success());
-        add(evidence, "native_mail_fixture", ok);
+        crate::native_core::rust_tests(
+            evidence,
+            "native_mail_fixture",
+            "ab-session",
+            &["--lib", "session::mail"],
+        );
+        crate::native_core::rust_tests(
+            evidence,
+            "gateway_mail_validation",
+            "ab-commands",
+            &["--lib", "mail_tests"],
+        );
         return Ok(());
     }
     let (check, package, tests): (&str, &str, &[&str]) = match id.as_str() {

@@ -18,7 +18,7 @@ fn inherited_descriptor(
 }
 
 const FACTS_DESCRIPTOR: &str = "AB_NATIVE_FACTS_FD";
-const DEFAULT_RUST_COMMANDS: &str = "reminders,calendar,contacts,notes,messages";
+const DEFAULT_RUST_COMMANDS: &str = "reminders,calendar,contacts,notes,messages,mail,files,mac,shortcuts,focus,pdf,capture,print,speech,maps";
 
 fn exit_with_parent() {
     let parent = std::os::unix::process::parent_id();
