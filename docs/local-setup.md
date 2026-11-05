@@ -133,12 +133,14 @@ bridge down --home /tmp/bridge-try
 
 ## How long the first sync takes
 
-A real first sync has not been timed: it needs the Helper reading a Mac's real Apple data, and that was out of bounds for testing. What has been measured is the gateway's side:
+A real first sync has not been timed: it needs the Helper reading a Mac's real Apple data, and that was out of bounds for testing. Two measurements bound it, both from one run on an 8 GB MacBook Air that was also running other work:
 
-- **Storing records:** 195,243 synthetic messages went through the real capture path into a fresh home in 44.5 s on an 8 GB MacBook Air that was also running other work (4,391 records per second, single run). That is the same number of records as the test copy, but real records are about three times larger once stored (1.9 GB against 576 MB).
-- **Not included:** the time to read Apple's own stores, and attachments.
+| What was timed | Records | Time |
+|---|---|---|
+| Real data: a fresh replica home syncing from a clone of a test copy, over the local network path | 195,243 real records, 944 MB stored | 59.5 s |
+| Capture: synthetic messages through the real capture path into a fresh home | 195,243 synthetic records, 576 MB stored | 44.5 s |
 
-So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --watch` shows the real progress.
+Neither includes the time to read Apple's own stores, or attachments. So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --watch` shows the real progress. A replica's snapshot appears all at once, so its count stays at zero until the snapshot is complete.
 
 ## What has been proven
 
