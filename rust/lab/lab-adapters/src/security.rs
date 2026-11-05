@@ -440,8 +440,23 @@ fn oauth(world: &World, site: &Site, owner: &Owner, e: &mut Evidence) {
         );
         e.check(
             "pkce_downgrade_and_open_redirect_refused",
-            reply.status == 400 && reply.header("Location").is_none(),
-            "",
+            if key == "code_challenge_method" {
+                crate::web_agent_oauth::error_redirect(
+                    reply.status,
+                    reply.header("Location").unwrap_or_default(),
+                    redirect,
+                    "",
+                    origin,
+                )
+            } else {
+                reply.status == 400 && reply.header("Location").is_none()
+            },
+            &format!(
+                "{key}={value}: status={} location={:?} body={}",
+                reply.status,
+                reply.header("Location"),
+                String::from_utf8_lossy(&reply.body)
+            ),
         );
     }
     let request = |token: &str, collection: &str| {
@@ -527,12 +542,32 @@ fn oauth(world: &World, site: &Site, owner: &Owner, e: &mut Evidence) {
             "wrong-client",
         ),
     ] {
+        let reply = exchange(&raw, uri, proof, target, id);
         e.check(
             "mismatched_oauth_binding_refused",
-            exchange(&raw, uri, proof, target, id).status == 400,
-            "",
+            reply.status == 400,
+            &format!("status={} error={}", reply.status, reply.json()["error"]),
         );
     }
+    let missing = site.form(
+        "/oauth/token",
+        &[
+            ("grant_type", "authorization_code"),
+            ("client_id", &client),
+            ("code", &raw),
+            ("redirect_uri", redirect),
+            ("resource", &resource),
+        ],
+    );
+    e.check(
+        "pkce_missing_verifier_rejected",
+        missing.status == 400 && missing.json() == json!({"error": "invalid_grant"}),
+        &format!(
+            "status={} error={}",
+            missing.status,
+            missing.json()["error"]
+        ),
+    );
     let reply = exchange(&raw, redirect, &verifier, &resource, &client);
     let (access, refresh_token) = tokens(&reply);
     e.check(
@@ -630,6 +665,25 @@ fn oauth(world: &World, site: &Site, owner: &Owner, e: &mut Evidence) {
         "",
     );
     let raw = issue(e);
+    let missing = site.form(
+        "/oauth/token",
+        &[
+            ("grant_type", "authorization_code"),
+            ("client_id", &client),
+            ("code", &raw),
+            ("redirect_uri", redirect),
+            ("resource", &resource),
+        ],
+    );
+    e.check(
+        "pkce_missing_verifier_rejected",
+        missing.status == 400 && missing.json() == json!({"error": "invalid_grant"}),
+        &format!(
+            "status={} error={}",
+            missing.status,
+            missing.json()["error"]
+        ),
+    );
     let reply = exchange(&raw, redirect, &verifier, &resource, &client);
     let (live, live_refresh) = tokens(&reply);
     e.check(
