@@ -159,7 +159,7 @@ async fn the_approval_page_shows_what_each_attachment_is() {
 async fn an_unpreviewable_attachment_says_so_and_asks_for_consent() {
     let s = server();
     let page = text(s.get("/approvals").await).await;
-    let binary = page.split("cmd_binary").nth(1).unwrap();
+    let binary = page.split("/approvals/cmd_binary\"").nth(1).unwrap();
     assert!(page.contains("can't be previewed"), "{page}");
     assert!(binary.contains("name=\"accept_unpreviewable\" value=\"1\" required"));
     let plain = &page[page.find("/approvals/cmd_plain").unwrap()..];

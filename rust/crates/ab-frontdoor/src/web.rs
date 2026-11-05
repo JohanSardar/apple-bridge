@@ -268,8 +268,16 @@ async fn handle(State(web): State<Arc<Web>>, request: Request) -> Response {
             axum::http::HeaderValue::from_static(if auth_rate { "60" } else { "1" }),
         );
     }
+    if !response
+        .headers()
+        .contains_key(header::CONTENT_SECURITY_POLICY)
+    {
+        response.headers_mut().insert(
+            header::CONTENT_SECURITY_POLICY,
+            axum::http::HeaderValue::from_static(CSP),
+        );
+    }
     for (k, v) in [
-        ("content-security-policy", CSP),
         ("referrer-policy", "no-referrer"),
         ("x-content-type-options", "nosniff"),
         (
@@ -607,6 +615,15 @@ fn approval(
     let Some(id) = path.strip_prefix("/approvals/") else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    if let Some((id, index)) = id.split_once("/attachments/") {
+        return match (method, index.parse::<usize>()) {
+            ("GET", Ok(index)) => a.attachment(id, index).map_or_else(
+                |_| StatusCode::NOT_FOUND.into_response(),
+                |file| web_pages::attachment_file(index, file),
+            ),
+            _ => StatusCode::NOT_FOUND.into_response(),
+        };
+    }
     let record = if method == "GET" {
         a.command(id)
     } else {
@@ -623,8 +640,8 @@ fn approval(
             id,
             decision == "approve",
             &Reviewed {
-                binding: "",
-                accepted_unpreviewable: false,
+                binding: field(&f, "attachments"),
+                accepted_unpreviewable: field(&f, "accept_unpreviewable") == "1",
             },
         )
     };

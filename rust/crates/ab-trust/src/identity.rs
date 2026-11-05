@@ -216,7 +216,7 @@ impl Authority {
         if let Some(e) = d.enrollment {
             p.grants = effective_grants(&p.grants, &e.grants);
         }
-        if p.kind == "agent" {
+        if p.kind == "agent" && !crate::oauth::recently_used(&p) {
             self.update(|d| {
                 let current = d
                     .principals

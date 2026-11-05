@@ -189,6 +189,7 @@ async fn a_document_query_never_takes_a_caller_path() {
         for args in [
             json!({"file": path, "allow_file": true}),
             json!({"file": path}),
+            json!({"FILE": path, "ALLOW_FILE": true}),
         ] {
             let error = f
                 .gateway
@@ -384,13 +385,12 @@ async fn print_document_resolves_only_an_authorized_blob() {
         .expect("grant");
     let args = json!({"blob": {"query_id": "qry_print", "digest": digest.as_str()}, "printer": "PDF"});
     let denied = principal("agent:full", "agent", "full", &["print:write"]);
-    let record = f
+    let error = f
         .gateway
         .submit(&denied, command("cmd_print_denied", "print.document", &args))
         .await
-        .expect("admitted before resolution");
-    let value: Value = serde_json::from_str(record.get()).expect("record");
-    assert_eq!(value["state"], "rejected", "{value}");
+        .expect_err("no Files grant");
+    assert_eq!(error.code, Code::Forbidden);
     assert_eq!(queries_reaching_native(&f), 0);
 
     let allowed = principal("agent:full", "agent", "full", &["print:write", "files:read"]);

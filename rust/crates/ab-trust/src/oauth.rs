@@ -191,10 +191,45 @@ pub fn redirect_matches(registered: &str, presented: &str) -> bool {
         && registered.path() == presented.path()
         && registered.query() == presented.query()
 }
+fn invisible(c: char) -> bool {
+    matches!(
+        c,
+        '\u{ad}'
+            | '\u{61c}'
+            | '\u{180e}'
+            | '\u{200b}'..='\u{200f}'
+            | '\u{202a}'..='\u{202e}'
+            | '\u{2060}'..='\u{206f}'
+            | '\u{feff}'
+            | '\u{fff9}'..='\u{fffb}'
+            | '\u{e0000}'..='\u{e007f}'
+    )
+}
+pub fn normalized_name(raw: &str) -> String {
+    let visible: String = raw
+        .chars()
+        .filter(|c| !invisible(*c))
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    let words = visible.split_whitespace().collect::<Vec<_>>().join(" ");
+    let bounded: String = words.chars().take(MAX_DISPLAY_NAME_CHARS).collect();
+    bounded.trim_end().to_owned()
+}
+pub fn callback_label(authority: &str) -> String {
+    let loopback = url::Url::parse(&format!("http://{authority}"))
+        .ok()
+        .and_then(|u| u.host_str().map(loopback_host))
+        .unwrap_or(false);
+    if loopback {
+        "Returns to an app on this computer. Allow it only if you just started this.".to_owned()
+    } else {
+        format!("Returns to {authority}")
+    }
+}
 pub fn display_name(client: &Client) -> String {
-    let name = client.client_name.trim();
+    let name = normalized_name(&client.client_name);
     if !name.is_empty() {
-        return name.chars().take(120).collect();
+        return name;
     }
     client
         .redirect_uris
@@ -206,11 +241,36 @@ pub fn display_name(client: &Client) -> String {
 pub const OFFLINE_ACCESS: &str = "offline_access";
 const REFRESH_RETRY_SECONDS: i64 = 60;
 const MAX_CLIENTS: usize = 1000;
-const UNUSED_CLIENT_SECONDS: i64 = 86400;
+const MAX_PENDING_CLIENTS: usize = 64;
+const PENDING_CLIENT_SECONDS: i64 = 3600;
+const MAX_CLIENT_METADATA_BYTES: usize = 4096;
+const MAX_DISPLAY_NAME_CHARS: usize = 64;
+const LAST_USED_RESOLUTION_SECONDS: i64 = 300;
 struct Spent {
     principal: String,
     reused: bool,
+    retry_salt: Option<String>,
     refresh_expires: String,
+}
+fn successor(spent: &str, salt: &str, label: &str) -> String {
+    let mut hash = Sha256::new();
+    hash.update(b"apple-bridge oauth successor\0");
+    hash.update(label.as_bytes());
+    hash.update(b"\0");
+    hash.update(salt.as_bytes());
+    hash.update(b"\0");
+    hash.update(spent.as_bytes());
+    URL_SAFE_NO_PAD.encode(hash.finalize())
+}
+pub(crate) fn recently_used(p: &Principal) -> bool {
+    p.extra
+        .get("last_used")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|used| used.parse::<jiff::Timestamp>().ok())
+        .is_some_and(|used| {
+            let age = jiff::Timestamp::now().as_second() - used.as_second();
+            (0..LAST_USED_RESOLUTION_SECONDS).contains(&age)
+        })
 }
 fn spend_code(codes: &mut [Code], e: &Exchange) -> Result<Spent, Error> {
     let c = codes
@@ -230,10 +290,11 @@ fn spend_code(codes: &mut [Code], e: &Exchange) -> Result<Spent, Error> {
     Ok(Spent {
         principal: c.principal.clone(),
         reused,
+        retry_salt: None,
         refresh_expires: expiry(90 * 86400),
     })
 }
-fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange) -> Result<Spent, Error> {
+fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange, salt: &str) -> Result<Spent, Error> {
     let r = refreshes
         .iter_mut()
         .find(|r| r.hash == fingerprint(e.refresh_token.as_bytes()))
@@ -243,13 +304,23 @@ fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange) -> Result<Spent, Error
     }
     let now = jiff::Timestamp::now().as_second();
     let reused = r.used && now - r.rotated_at > REFRESH_RETRY_SECONDS;
+    let retry_salt = if r.used && !reused {
+        if r.retry_salt.is_empty() {
+            return Err(Error::Unauthorized);
+        }
+        Some(r.retry_salt.clone())
+    } else {
+        None
+    };
     if !r.used {
         r.rotated_at = now;
+        r.retry_salt = salt.to_owned();
     }
     r.used = true;
     Ok(Spent {
         principal: r.principal.clone(),
         reused,
+        retry_salt,
         refresh_expires: r.expires_at.clone(),
     })
 }
@@ -259,6 +330,8 @@ impl Authority {
             || c.redirect_uris.is_empty()
             || c.redirect_uris.len() > 10
             || !c.redirect_uris.iter().all(|s| valid_redirect(s))
+            || c.client_name.len() + c.redirect_uris.iter().map(String::len).sum::<usize>()
+                > MAX_CLIENT_METADATA_BYTES
         {
             return Err(Error::Invalid);
         }
@@ -271,10 +344,17 @@ impl Authority {
         c.response_types = vec!["code".into()];
         self.update(|d| {
             let mut clients: Vec<Client> = read(d, "oauth_clients")?;
-            if clients.len() >= MAX_CLIENTS {
-                let stale = c.client_id_issued_at - UNUSED_CLIENT_SECONDS;
-                clients.retain(|existing| existing.used || existing.client_id_issued_at > stale);
-            }
+            let stale = c.client_id_issued_at - PENDING_CLIENT_SECONDS;
+            clients.retain(|existing| existing.used || existing.client_id_issued_at > stale);
+            let pending = clients.iter().filter(|existing| !existing.used).count();
+            let mut evict = (pending + 1).saturating_sub(MAX_PENDING_CLIENTS);
+            clients.retain(|existing| {
+                if evict > 0 && !existing.used {
+                    evict -= 1;
+                    return false;
+                }
+                true
+            });
             if clients.len() >= MAX_CLIENTS {
                 return Err(Error::Unavailable);
             }
@@ -344,14 +424,22 @@ impl Authority {
         Ok(raw)
     }
     pub fn exchange_oauth(&self, e: &Exchange) -> Result<Tokens, Error> {
-        let access = token(32);
-        let next = token(32);
+        let salt = token(32);
+        let refreshing = e.grant_type == "refresh_token";
+        let (access, next) = if refreshing {
+            (
+                successor(&e.refresh_token, &salt, "access"),
+                successor(&e.refresh_token, &salt, "refresh"),
+            )
+        } else {
+            (token(32), token(32))
+        };
         self.update(|d| {
             let mut codes: Vec<Code> = read(d, "oauth_codes")?;
             let mut refreshes: Vec<Refresh> = read(d, "oauth_refresh")?;
             let spent = match e.grant_type.as_str() {
                 "authorization_code" => spend_code(&mut codes, e)?,
-                "refresh_token" => spend_refresh(&mut refreshes, e)?,
+                "refresh_token" => spend_refresh(&mut refreshes, e, &salt)?,
                 _ => return Err(Error::Invalid),
             };
             if spent.reused {
@@ -379,6 +467,32 @@ impl Authority {
             {
                 return Err(Error::Invalid);
             }
+            if let Some(saved) = &spent.retry_salt {
+                let access = successor(&e.refresh_token, saved, "access");
+                let next = successor(&e.refresh_token, saved, "refresh");
+                let accesses: Vec<Access> = read(d, "oauth_access")?;
+                let expires = accesses
+                    .iter()
+                    .find(|a| a.hash == fingerprint(access.as_bytes()) && live(&a.expires_at))
+                    .and_then(|a| a.expires_at.parse::<jiff::Timestamp>().ok())
+                    .ok_or(Error::Unauthorized)?;
+                if !refreshes
+                    .iter()
+                    .any(|r| r.hash == fingerprint(next.as_bytes()) && live(&r.expires_at))
+                {
+                    return Err(Error::Unauthorized);
+                }
+                return Ok(Ok(Tokens {
+                    access_token: access,
+                    token_type: "Bearer".into(),
+                    expires_in: u32::try_from(
+                        expires.as_second() - jiff::Timestamp::now().as_second(),
+                    )
+                    .unwrap_or(0),
+                    refresh_token: next,
+                    scope: scopes,
+                }));
+            }
             p.token_hash.clear();
             p.extra.insert("resource".into(), e.resource.clone().into());
             let mut accesses: Vec<Access> = read(d, "oauth_access")?;
@@ -389,7 +503,14 @@ impl Authority {
                 resource: e.resource.clone(),
                 expires_at: expiry(3600),
             });
+            let window_start = jiff::Timestamp::now().as_second() - REFRESH_RETRY_SECONDS;
             refreshes.retain(|r| live(&r.expires_at));
+            for r in refreshes
+                .iter_mut()
+                .filter(|r| r.used && r.rotated_at < window_start)
+            {
+                r.retry_salt.clear();
+            }
             refreshes.push(Refresh {
                 hash: fingerprint(next.as_bytes()),
                 client_id: e.client_id.clone(),
@@ -443,6 +564,9 @@ impl Authority {
         }
         if let Some(e) = d.enrollment {
             p.grants = effective_grants(&p.grants, &e.grants);
+        }
+        if recently_used(&p) {
+            return Ok(p);
         }
         self.update(|d| {
             let current = d

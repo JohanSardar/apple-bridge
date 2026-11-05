@@ -493,11 +493,11 @@ const SHORTCUTRUNARGS: &[Field] = &[
 const CAPTUREARGS: &[Field] = &[
     Field {
         name: "blob",
-        kind: "string",
+        kind: "raw",
         omit: true,
     },
     Field {
-        name: "blob_id",
+        name: "data_base64",
         kind: "string",
         omit: true,
     },
@@ -804,11 +804,6 @@ pub fn fields(name: &str) -> &'static [Field] {
             Field {
                 name: "file",
                 kind: "string",
-                omit: true,
-            },
-            Field {
-                name: "allow_file",
-                kind: "bool",
                 omit: true,
             },
             Field {
