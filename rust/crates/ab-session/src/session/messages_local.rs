@@ -1,3 +1,8 @@
+mod uploads;
+use uploads::{
+    confined_upload, copy_new, file_digest, plain_name, selftest_upload, selftest_upload_remove,
+};
+
 use super::messages::route_proof;
 use super::messages_ui;
 use super::owned::{Probe, text};
@@ -12,8 +17,8 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     fs,
-    io::{Read, Write},
-    os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
+    io::Write,
+    os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
 };
 
@@ -25,12 +30,12 @@ const TEST_CONTACT_KEYS: [&str; 2] = ["REMY_IMESSAGE_TEST_HANDLE", "REMY_IMESSAG
 
 #[derive(Clone, Debug)]
 pub(super) struct Config {
-    pub lab: bool,
-    pub chat_db: PathBuf,
-    pub home: PathBuf,
-    pub reports: PathBuf,
-    pub os_build: String,
-    pub agent_policy: Option<PathBuf>,
+    pub(in crate::session) lab: bool,
+    pub(in crate::session) chat_db: PathBuf,
+    pub(in crate::session) home: PathBuf,
+    pub(in crate::session) reports: PathBuf,
+    pub(in crate::session) os_build: String,
+    pub(in crate::session) agent_policy: Option<PathBuf>,
 }
 
 impl Config {
@@ -561,51 +566,6 @@ impl Probe for Local<'_> {
     }
 }
 
-fn plain_name(name: &str) -> bool {
-    !name.is_empty() && !name.contains('/') && name != "." && name != ".."
-}
-
-fn confined_upload(path: &str) -> Option<PathBuf> {
-    let source = fs::canonicalize(path).ok()?;
-    let parent = source.parent()?;
-    if parent.file_name()?.to_str()? != "message-uploads" {
-        return None;
-    }
-    let uid = ab_sys::user_id();
-    let directory = fs::metadata(parent).ok()?;
-    let file = fs::symlink_metadata(&source).ok()?;
-    (directory.mode() & 0o777 == 0o700
-        && directory.uid() == uid
-        && file.uid() == uid
-        && file.file_type().is_file())
-    .then_some(source)
-}
-
-fn copy_new(source: &Path, target: &Path) -> std::io::Result<()> {
-    let mut input = fs::File::open(source)?;
-    let mut output = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(0o600)
-        .open(target)?;
-    std::io::copy(&mut input, &mut output)?;
-    output.sync_all()
-}
-
-fn file_digest(path: &Path) -> Option<String> {
-    let mut file = fs::File::open(path).ok()?;
-    let mut digest = Sha256::new();
-    let mut buffer = vec![0_u8; 128 * 1024];
-    loop {
-        let count = file.read(&mut buffer).ok()?;
-        if count == 0 {
-            break;
-        }
-        digest.update(&buffer[..count]);
-    }
-    Some(format!("{:x}", digest.finalize()))
-}
-
 fn agent_policy(config: &Config) -> Result<Value, String> {
     let Some(path) = config.agent_policy.as_ref().filter(|path| path.exists()) else {
         return Ok(json!({"configured": false}));
@@ -632,37 +592,12 @@ fn mark_policy_used(config: &Config, command: &str) -> Result<Value, String> {
     Ok(json!({}))
 }
 
-fn selftest_upload(config: &Config, args: &Value) -> Result<Value, String> {
-    let name = text(args, "name");
-    if !plain_name(name) {
-        return Err(INVALID.into());
-    }
-    let directory = Local::uploads(config);
-    fs::create_dir_all(&directory).map_err(|_| UNAVAILABLE.to_owned())?;
-    fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))
-        .map_err(|_| UNAVAILABLE.to_owned())?;
-    let bytes = text(args, "text").as_bytes();
-    let path = directory.join(name);
-    write_private(&path, bytes)?;
-    Ok(json!({"path": path.to_string_lossy(), "digest": sha(bytes)}))
-}
-
-fn selftest_upload_remove(config: &Config, args: &Value) -> Result<Value, String> {
-    let uploads = fs::canonicalize(Local::uploads(config)).map_err(|_| INVALID.to_owned())?;
-    let file = fs::canonicalize(text(args, "path")).map_err(|_| INVALID.to_owned())?;
-    if file.parent() != Some(uploads.as_path()) {
-        return Err(INVALID.into());
-    }
-    let _ = fs::remove_file(file);
-    Ok(json!({}))
-}
-
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
     use rusqlite::Connection;
-    use std::os::unix::fs::symlink;
+    use std::os::unix::fs::{MetadataExt, symlink};
 
     struct NoLink;
 
