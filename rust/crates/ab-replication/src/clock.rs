@@ -5,7 +5,7 @@ pub(crate) struct Probe {
     pending: Option<(String, jiff::Timestamp)>,
 }
 impl Probe {
-    pub async fn ping(&mut self, writer: &Writer) -> Result<(), Error> {
+    pub(crate) async fn ping(&mut self, writer: &Writer) -> Result<(), Error> {
         let now = jiff::Timestamp::now();
         if self
             .pending
@@ -23,7 +23,7 @@ impl Probe {
         self.pending = Some((id, now));
         writer.send(ping).await
     }
-    pub fn complete(
+    pub(crate) fn complete(
         &mut self,
         response: &FeedFrame,
         received: jiff::Timestamp,
