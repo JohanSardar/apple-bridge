@@ -112,6 +112,7 @@ impl Writer {
 }
 
 const DEVICES_PER_ACCOUNT: i64 = 2;
+const FRESH_FENCE: &str = "0\n";
 const GRANT_SECONDS: i64 = 600;
 const COMPLETION_SECONDS: i64 = 30;
 const USER_CODE_ALPHABET: &[u8] = b"BCDFGHJKLMNPQRSTVWXZ";
@@ -204,11 +205,14 @@ impl Control {
         fence_file
             .try_lock_exclusive()
             .map_err(|_| Error::Unavailable)?;
-        if !exists {
-            if fence_file.metadata()?.len() != 0 {
+        if !exists && fence_file.metadata()?.len() != 0 {
+            let mut written = String::new();
+            fence_file.read_to_string(&mut written)?;
+            if written != FRESH_FENCE {
                 return Err(Error::Fenced);
             }
-            fence_file.write_all(b"0\n")?;
+        } else if !exists {
+            fence_file.write_all(FRESH_FENCE.as_bytes())?;
             fence_file.sync_all()?;
             if let Some(parent) = fence.parent() {
                 File::open(parent)?.sync_all()?;
@@ -224,14 +228,20 @@ CREATE TABLE IF NOT EXISTS policy_outbox(id INTEGER PRIMARY KEY AUTOINCREMENT, h
 CREATE TABLE IF NOT EXISTS throttle(source TEXT PRIMARY KEY, window INTEGER NOT NULL, count INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS grant_completions(grant_id TEXT PRIMARY KEY, account TEXT NOT NULL, until INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS grant_sources(grant_id TEXT PRIMARY KEY, source TEXT NOT NULL, created INTEGER NOT NULL);")?;
-        if !exists {
-            db.execute("INSERT INTO fence VALUES(0)", [])?;
-        }
         let mut writer = Writer {
             db,
             fence: fence_file,
             _lock: lock,
         };
+        let recorded: i64 = writer
+            .db
+            .query_row("SELECT count(*) FROM fence", [], |r| r.get(0))?;
+        if recorded == 0 {
+            if writer.epoch()? != 0 {
+                return Err(Error::Fenced);
+            }
+            writer.db.execute("INSERT INTO fence VALUES(0)", [])?;
+        }
         writer.check()?;
         Ok(Self {
             writer: Mutex::new(writer),

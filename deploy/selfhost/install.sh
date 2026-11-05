@@ -166,10 +166,10 @@ if [ -n "$owner_key" ]; then
   /usr/local/bin/ab-relay-admin add-key "$owner_key"
 fi
 systemctl daemon-reload
-systemctl enable --now ab-relay
+systemctl enable ab-relay
 systemctl restart ab-relay
 if [ "$accounts" = 1 ]; then
-  systemctl enable --now ab-accounts ab-relay-control
+  systemctl enable ab-accounts ab-relay-control
   systemctl restart ab-accounts ab-relay-control
 fi
 cat <<DONE

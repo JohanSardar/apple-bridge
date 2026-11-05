@@ -74,6 +74,9 @@ class Identities(unittest.TestCase):
         ):
             self.assertGreater(script.index(cutover), stop, cutover)
 
+    def test_a_first_start_is_never_interrupted_by_the_installer(self):
+        self.assertNotIn("enable --now", INSTALL.read_text())
+
     def test_a_failed_install_says_how_to_recover(self):
         self.assertIn("run it again", INSTALL.read_text())
 

@@ -504,6 +504,53 @@ async fn a_restored_backup_cannot_bring_back_a_revoked_tunnel() {
     ));
 }
 
+#[test]
+fn a_first_start_killed_part_way_recovers_because_nothing_was_ever_committed() {
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("control.sqlite");
+    let fence = dir.path().join("epoch");
+    std::fs::write(&fence, "0\n").unwrap();
+    let control = Control::open(&database, &fence, PUBLIC).unwrap();
+    control.throttle("x", 1).unwrap();
+    drop(control);
+
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("control.sqlite");
+    let fence = dir.path().join("epoch");
+    rusqlite::Connection::open(&database)
+        .unwrap()
+        .execute_batch("CREATE TABLE fence(epoch INTEGER NOT NULL);")
+        .unwrap();
+    std::fs::write(&fence, "0\n").unwrap();
+    let control = Control::open(&database, &fence, PUBLIC).unwrap();
+    control.throttle("x", 1).unwrap();
+}
+
+#[test]
+fn a_missing_database_with_committed_changes_stays_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("control.sqlite");
+    let fence = dir.path().join("epoch");
+    std::fs::write(&fence, "0\n1\n").unwrap();
+    assert!(matches!(
+        Control::open(&database, &fence, PUBLIC),
+        Err(Error::Fenced)
+    ));
+
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("control.sqlite");
+    let fence = dir.path().join("epoch");
+    rusqlite::Connection::open(&database)
+        .unwrap()
+        .execute_batch("CREATE TABLE fence(epoch INTEGER NOT NULL);")
+        .unwrap();
+    std::fs::write(&fence, "0\n1\n").unwrap();
+    assert!(matches!(
+        Control::open(&database, &fence, PUBLIC),
+        Err(Error::Fenced)
+    ));
+}
+
 fn signed_completion(w: &World, poll: &str, key: &SigningKey, public: &str) -> Value {
     let proof = w.approved_poll(poll);
     let message = ab_wire::framing::device_link_message(
