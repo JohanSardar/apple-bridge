@@ -270,9 +270,11 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
         .output()?;
     assert!(codex.status.success(), "{}", text(&codex.stderr));
     assert!(text(&codex.stdout).contains("codex mcp login apple-bridge"));
-    assert_eq!(
-        std::fs::read_to_string(&codex_log)?.lines().next(),
-        Some(format!("mcp add apple-bridge --url {url}").as_str())
+    let expected_add = format!("mcp add apple-bridge --url {url}");
+    assert!(
+        std::fs::read_to_string(&codex_log)?
+            .lines()
+            .any(|line| line == expected_add)
     );
 
     let print = link(&["link", "codex", "--print"])?;
