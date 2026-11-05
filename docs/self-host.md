@@ -123,7 +123,7 @@ If you recognise the certificate, for example you requested one for your own dom
 
 ## Back up
 
-Everything worth keeping is in `/var/lib/ab-relay`, `/var/lib/ab-relay-control`, `/var/lib/ab-accounts` and `/etc/ab-relay`. Stop the services before you copy. Restoring an old control database on purpose refuses to start, so a restore can't bring back a Mac you removed: move `/var/lib/ab-relay-control/epoch` only if you accept that.
+Everything worth keeping is in `/var/lib/ab-relay`, `/var/lib/ab-relay-control`, `/var/lib/ab-accounts` and `/etc/ab-relay`. Each service runs as its own system user (`ab-relay`, `ab-control`, `ab-accounts`) and owns only its own directory and secret. Run the installer again to upgrade. It moves an older install to these users and keeps your Macs and accounts. Stop the services before you copy. Restoring an old control database on purpose refuses to start, so a restore can't bring back a Mac you removed: move `/var/lib/ab-relay-control/epoch` only if you accept that.
 
 ## When something's wrong
 
