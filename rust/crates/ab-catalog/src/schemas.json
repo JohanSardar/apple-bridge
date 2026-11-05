@@ -2825,7 +2825,7 @@
         "type": "integer"
       },
       "participants": {
-        "description": "Exact normalized phone/email handle set, 1–32 inputs; duplicates folded",
+        "description": "Exact normalized phone/email handle set, 1\u201332 inputs; duplicates folded",
         "items": {
           "type": "string"
         },
@@ -4704,7 +4704,7 @@
         "type": "string"
       },
       "q": {
-        "description": "Partial name, normalized phone or email; 1–64 characters after trimming",
+        "description": "Partial name, normalized phone or email; 1\u201364 characters after trimming",
         "type": "string"
       }
     },
@@ -7253,6 +7253,792 @@
     },
     "required": [
       "args"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "cc": {
+            "items": {
+              "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "subject": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "to": {
+            "items": {
+              "description": "One bare address, such as name@example.com. No display names, commas or line breaks.",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "to",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mailbox": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mailbox",
+          "account"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "flagged": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "flagged"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "read"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "Do Not Disturb"
+            ],
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "on"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "type": "string"
+          },
+          "volume": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "Basso",
+              "Blow",
+              "Bottle",
+              "Frog",
+              "Funk",
+              "Glass",
+              "Hero",
+              "Morse",
+              "Ping",
+              "Pop",
+              "Purr",
+              "Sosumi",
+              "Submarine",
+              "Tink"
+            ],
+            "type": "string"
+          },
+          "volume": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "lat",
+              "lon"
+            ]
+          },
+          {
+            "required": [
+              "from",
+              "to",
+              "mode"
+            ]
+          }
+        ],
+        "properties": {
+          "from": {
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "lon": {
+                "maximum": 180,
+                "minimum": -180,
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "type": "object"
+          },
+          "lat": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "driving",
+              "walking",
+              "transit",
+              "cycling"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "maximum": 90,
+                "minimum": -90,
+                "type": "number"
+              },
+              "lon": {
+                "maximum": 180,
+                "minimum": -180,
+                "type": "number"
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "data_base64"
+            ]
+          },
+          {
+            "required": [
+              "blob"
+            ]
+          },
+          {
+            "required": [
+              "file"
+            ]
+          }
+        ],
+        "properties": {
+          "annotations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "height": {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                "page": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "text": {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "note",
+                    "highlight"
+                  ],
+                  "type": "string"
+                },
+                "width": {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                "x": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "y": {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "page",
+                "type",
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "blob": {
+            "type": "string"
+          },
+          "data_base64": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotations"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
+    ],
+    "type": "object"
+  },
+  {
+    "additionalProperties": false,
+    "properties": {
+      "admission_era": {
+        "type": "string"
+      },
+      "args": {
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "data_base64"
+            ]
+          },
+          {
+            "required": [
+              "blob"
+            ]
+          }
+        ],
+        "properties": {
+          "annotations": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "height": {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                "page": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "text": {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "note",
+                    "highlight"
+                  ],
+                  "type": "string"
+                },
+                "width": {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                "x": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "y": {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "page",
+                "type",
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "blob": {
+            "type": "string"
+          },
+          "data_base64": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "annotations"
+        ],
+        "type": "object"
+      },
+      "command_id": {
+        "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._:-]+$",
+        "type": "string"
+      },
+      "expected_version": {
+        "type": "integer"
+      },
+      "expires_at": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "op": {
+        "type": "string"
+      },
+      "origin": {
+        "type": "string"
+      },
+      "wait_ms": {
+        "maximum": 15000,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "args",
+      "expected_version"
     ],
     "type": "object"
   }

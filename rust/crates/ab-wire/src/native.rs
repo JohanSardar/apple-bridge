@@ -20,6 +20,19 @@ pub const MAX_FRAME: usize = 262_144;
 
 type Raw = Box<RawValue>;
 
+#[must_use]
+pub fn mail_recipient(value: &str) -> bool {
+    let Some((local, domain)) = value.split_once('@') else {
+        return false;
+    };
+    !local.is_empty()
+        && !domain.is_empty()
+        && !domain.contains('@')
+        && !value
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || ",;:<>()[]\"\\".contains(c))
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Session {
     #[serde(default)]
@@ -823,5 +836,33 @@ mod tests {
             whole: false,
         };
         assert!(Frame::Scan(scan).encode().is_err());
+    }
+}
+
+#[cfg(test)]
+mod mail_recipient_tests {
+    use super::mail_recipient;
+
+    #[test]
+    fn only_one_bare_address_is_a_recipient() {
+        for good in ["a@example.com", "first.last+tag@sub.example.co"] {
+            assert!(mail_recipient(good), "{good}");
+        }
+        for bad in [
+            "",
+            "plain",
+            "@example.com",
+            "a@",
+            "a@b@c",
+            "a@example.com, b@example.com",
+            "a@example.com;b@example.com",
+            "Name <a@example.com>",
+            "a@example.com\nbcc: b@example.com",
+            "a@example.com\rb",
+            "a @example.com",
+            "\"a\"@example.com",
+        ] {
+            assert!(!mail_recipient(bad), "{bad}");
+        }
     }
 }

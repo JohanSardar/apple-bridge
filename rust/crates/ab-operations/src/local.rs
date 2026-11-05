@@ -1277,6 +1277,12 @@ fn outcome_timeout(command: &Command) -> Result<Duration, Error> {
     if command.op.starts_with("messages.") {
         return Ok(Duration::from_secs(35));
     }
+    if command.op.starts_with("mail.") {
+        return Ok(Duration::from_secs(60));
+    }
+    if matches!(command.op.as_str(), "files.evict" | "files.download") {
+        return Ok(Duration::from_secs(110));
+    }
     if command.op == "shortcuts.run" {
         let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
         let millis = args["timeout_ms"].as_u64().unwrap_or(0);
