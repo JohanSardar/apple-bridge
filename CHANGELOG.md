@@ -21,6 +21,19 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 - The post-login redirect stays on this site, and the link page warns plainly about codes someone else sent.
 - Unauthenticated relay routes have per-source budgets, a full nonce pool evicts the oldest entry, and the installer pins the Node.js archive by a checksum verified against its signature.
 
+### Added
+
+- `bridge up` starts Apple Bridge for agents on this Mac with no account, server, domain or questions. `bridge down` stops it.
+- `bridge link claude` and `bridge link codex` connect an agent to the local MCP address, and `bridge unlink` removes it.
+- `bridge stats` shows counts per source, never content. `--watch` follows a first sync as each source finishes.
+- `bridge read`, `bridge search` and `bridge call` read synced data in a terminal, with `--json` for scripts.
+- `bridge permissions guide` and `bridge permissions status` walk through the Mac permissions.
+- `bridge skills list` and `bridge skills get` print agent instructions built into the binary.
+
+### Changed
+
+- `bridge` uses a standard argument parser. `--help` and `--version` work, and errors say what went wrong and what to do next. Existing commands and their output are unchanged.
+
 ## [0.1.2] - 2026-11-05
 
 ### Added

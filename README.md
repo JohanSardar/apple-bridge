@@ -10,27 +10,30 @@ Early access is by invite from the repository maintainers. Public installation i
 
 ## Quick start: Level 1, local agents (default)
 
-Install Apple Bridge on your Mac through the early-access invitation, then connect agents running on that same computer. The local MCP address is `http://127.0.0.1:7780/mcp`. No account, server or domain is needed. The relay is off unless you turn it on.
+With Apple Bridge installed through your invitation, run this on your Mac:
 
-**Not yet tested with a real local app.** Authentication and tool use with a local agent still need a real-app test.
+```sh
+bridge up                   # start Apple Bridge. It asks nothing
+bridge link claude          # connect Claude Code. Or: bridge link codex
+bridge permissions guide    # allow the Mac permissions you want
+bridge stats --watch        # counts per source, as each one finishes
+```
 
-For invited testers who already have Apple Bridge installed:
+No account, server or domain is needed, and the relay stays off. Agents reach your Mac at `http://127.0.0.1:7780/mcp`.
 
-1. Open Apple Bridge, start the gateway and grant the permissions for the sources you want to use, such as Messages, Calendar, Reminders, Contacts or Notes.
-2. With Claude Code installed on that Mac, run this from the project where you want to use it:
+`bridge link` signs in through your browser. Check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connector allow`. Allowed agents can read, and every change waits for your approval.
 
-   ```sh
-   claude mcp add --transport http apple-bridge http://127.0.0.1:7780/mcp
-   ```
+Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
 
-   This is Claude Code’s HTTP MCP registration command; see its [MCP documentation](https://code.claude.com/docs/en/mcp). Other local agents, including Codex, use the same server address in their MCP settings.
-3. Check the agent’s connection status and complete any requested authorization. Review the requested access before approving, then try reading one item from a source you enabled.
+To try things yourself, use `bridge read reminders`, `bridge read chats` or `bridge search "dinner"`. To teach an agent, tell it to run `bridge skills get core`. [Setting up your Mac](docs/local-setup.md) covers every command, and `bridge --help` lists them.
+
+**What has been tested.** On a test copy of real data, a fresh home reached a real Claude Code read in about 10 seconds through the local MCP address and sign-in, and Codex completed sign-in the same way. A script played the browser and the approval. The Apple Bridge window, real macOS permission prompts and a real first sync from Apple's apps were not part of that test. See [what was proven](docs/local-setup.md#what-has-been-proven).
 
 ## Level 2: other apps and bots on this Mac
 
-Other MCP-capable apps and bots running on the same computer use the same local address, `http://127.0.0.1:7780/mcp`. Developers can also use the local REST API. No account, server or domain is needed, and the relay can stay off. This route is also **not yet tested with a real local app**.
+Other MCP-capable apps and bots on the same computer use the same local address. `bridge link other` prints what they need, including how to create a read-only token with `bridge agent create`. No account, server or domain is needed, and the relay can stay off. Developers can also use the local REST API. This route is **not yet tested with a real app** other than Claude Code and Codex.
 
-The local address only works on that Mac. ChatGPT and Claude’s websites cannot reach it.
+The local address only works on that Mac. ChatGPT and Claude's websites cannot reach it.
 
 ## Level 3: remote access (optional)
 
@@ -55,6 +58,7 @@ Review [connector approvals](docs/connectors/approvals.md) before connecting an 
 
 ## Documentation
 
+- [Setting up your Mac](docs/local-setup.md)
 - [Feature status and known limits](features.yaml)
 - [Operations reference](docs/reference/operations.md)
 - [Self-hosting](docs/self-host.md)

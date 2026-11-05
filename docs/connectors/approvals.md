@@ -4,6 +4,8 @@ The OAuth authorization page says which app wants what, in product words, and as
 
 There is one queue of requests per gateway, shared by every hostname, so a request arriving through the relay reaches the Mac and iPhone. The gateway opens the Helper's Allow and Deny window when a request starts waiting, and the window closes after a minute with nothing waiting. A paired iPhone receives the encrypted request through the existing push and pending-delivery transport, displays its code and scopes, and requires Face ID before sending a signed decision. The physical iPhone check belongs to I1.
 
+`bridge link claude` and `bridge link codex` also watch this queue while they sign in, and print the request with the command that allows it. They never show the code or allow the request themselves, so it can only be allowed by someone who can see the page.
+
 The owner can also use the CLI on the gateway Mac:
 
 ```

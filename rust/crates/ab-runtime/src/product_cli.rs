@@ -22,6 +22,7 @@ pub const PERMISSIONS: [&str; 11] = [
     "automation_shortcuts_events",
 ];
 const PERMISSION_TIMEOUT: Duration = Duration::from_secs(180);
+const ONBOARD_TIMEOUT: Duration = Duration::from_secs(320);
 const SELFTEST_TIMEOUT: Duration = Duration::from_secs(600);
 const GATEWAY_PLIST: &str = "Contents/Library/LaunchAgents/dev.applebridge.gateway.plist";
 
@@ -169,6 +170,23 @@ pub fn permissions_request(
         timeout.unwrap_or(PERMISSION_TIMEOUT),
     )?;
     Ok(serde_json::from_slice(&std::fs::read(&report.0)?)?)
+}
+
+pub fn onboard_arguments(app: &str, report: &Path) -> Vec<String> {
+    let mut arguments: Vec<String> = ["-n", "-W", "-g", "-a"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    arguments.push(helper_or_default(app));
+    arguments.extend(["--args", "onboard", "--report"].map(str::to_owned));
+    arguments.push(report.to_string_lossy().into_owned());
+    arguments
+}
+
+pub fn onboard(program: &Path, report_dir: &Path, app: &str) -> Result<(), Error> {
+    std::fs::create_dir_all(report_dir)?;
+    let report = Report(report_dir.join(format!("onboard-{}.json", run_id())));
+    run_bounded(program, &onboard_arguments(app, &report.0), ONBOARD_TIMEOUT)
 }
 
 #[derive(Debug)]

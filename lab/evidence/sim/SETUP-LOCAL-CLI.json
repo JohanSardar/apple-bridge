@@ -1,0 +1,76 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "SETUP-LOCAL-CLI",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "d8cd7c55c66e0aeba2a325dd950f3fb64c98027f",
+ "at": "2026-11-05T23:28:16Z",
+ "hosts": [
+  "ubuntu"
+ ],
+ "assertions": [
+  {
+   "name": "world_started",
+   "passed": true,
+   "detail": "gateway and SimApple peer ready"
+  },
+  {
+   "name": "stats_watch_reports_the_source_finishing_with_its_count",
+   "passed": true,
+   "detail": "25 seeded"
+  },
+  {
+   "name": "stats_watch_ends_when_every_source_has_finished",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "first_sync_time_measured",
+   "passed": true,
+   "detail": "25 records in 1.0 s, 25 records/s"
+  },
+  {
+   "name": "stats_watch_never_shows_content",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "stats_count_matches_the_truth_peer",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "stats_never_show_content",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "read_returns_what_was_captured",
+   "passed": true,
+   "detail": "count 25"
+  },
+  {
+   "name": "read_prints_for_people_and_respects_the_limit",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "up_finds_the_running_gateway_and_keeps_remote_off",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "down_leaves_a_gateway_it_did_not_start",
+   "passed": true,
+   "detail": ""
+  },
+  {
+   "name": "existing_commands_still_answer",
+   "passed": true,
+   "detail": ""
+  }
+ ]
+}
