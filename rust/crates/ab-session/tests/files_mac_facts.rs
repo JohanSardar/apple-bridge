@@ -97,9 +97,13 @@ struct Wire {
 }
 
 fn wire(config: &Value) -> Fallible<Wire> {
+    wire_with(config, World::default())
+}
+
+fn wire_with(config: &Value, world: World) -> Fallible<Wire> {
     let (native, server) = UnixStream::pair()?;
     let push = server.try_clone()?;
-    let world: Shared = Arc::new(Mutex::new(World::default()));
+    let world: Shared = Arc::new(Mutex::new(world));
     serve(server, Arc::clone(&world));
     let client = Arc::new(Client::inherited(native)?);
     let sources = readers::from_config_linked(&config.to_string(), Some(&client))?;
@@ -154,12 +158,17 @@ fn mac_row(collection: &str, key: &str, data: &Value) -> Value {
 #[test]
 fn mac_facts_are_diffed_in_rust_and_changed_wakes_the_pull() -> Fallible<()> {
     let root = scratch("mac")?;
-    let mut w = wire(&json!({"mac":{"root":root,"facts":"native","facts_poll_ms":600_000}}))?;
-    w.world.lock().map_err(|_| "poisoned")?.mac = vec![
-        mac_row("mac.power", "system", &json!({"charging":false})),
-        mac_row("mac.app", "10", &json!({"name":"Mail"})),
-        mac_row("mac.app", "11", &json!({"name":"Notes"})),
-    ];
+    let mut w = wire_with(
+        &json!({"mac":{"root":root,"facts":"native","facts_poll_ms":600_000}}),
+        World {
+            mac: vec![
+                mac_row("mac.power", "system", &json!({"charging":false})),
+                mac_row("mac.app", "10", &json!({"name":"Mail"})),
+                mac_row("mac.app", "11", &json!({"name":"Notes"})),
+            ],
+            ..World::default()
+        },
+    )?;
     let (size, first) = receive(&mut w.gateway)?;
     assert_eq!(first["source"], "mac");
     assert_eq!(first["generation"], "native/1");
@@ -201,9 +210,13 @@ fn mac_facts_are_diffed_in_rust_and_changed_wakes_the_pull() -> Fallible<()> {
 #[test]
 fn a_mac_row_outside_the_scope_is_refused() -> Fallible<()> {
     let root = scratch("macscope")?;
-    let mut w = wire(&json!({"mac":{"root":root,"facts":"native","facts_poll_ms":20}}))?;
-    w.world.lock().map_err(|_| "poisoned")?.mac =
-        vec![mac_row("mac.bluetooth_device", "x", &json!({}))];
+    let mut w = wire_with(
+        &json!({"mac":{"root":root,"facts":"native","facts_poll_ms":20}}),
+        World {
+            mac: vec![mac_row("mac.bluetooth_device", "x", &json!({}))],
+            ..World::default()
+        },
+    )?;
     assert!(silent(&mut w.gateway)?);
     drop(w.helper);
     std::fs::remove_dir_all(&root)?;
@@ -263,12 +276,17 @@ fn rust_walks_files_and_asks_swift_only_for_ubiquity() -> Fallible<()> {
     write(&root.join("sub/b.pdf"), b"beta!!")?;
     std::os::unix::fs::symlink("/etc/passwd", root.join("link"))?;
     let facts_home = scratch("fileshome")?;
-    let mut w = wire(&json!({"files":{"root":root,"facts":"native","home":facts_home}}))?;
     let b = root.join("sub/b.pdf").to_string_lossy().into_owned();
-    w.world.lock().map_err(|_| "poisoned")?.statuses.insert(
-        b.clone(),
-        "NSURLUbiquitousItemDownloadingStatusNotDownloaded".into(),
-    );
+    let mut w = wire_with(
+        &json!({"files":{"root":root,"facts":"native","home":facts_home}}),
+        World {
+            statuses: BTreeMap::from([(
+                b.clone(),
+                "NSURLUbiquitousItemDownloadingStatusNotDownloaded".into(),
+            )]),
+            ..World::default()
+        },
+    )?;
     let (size, first) = receive(&mut w.gateway)?;
     assert_eq!(first["source"], "files");
     assert_eq!(first["scope"], json!(["files.item"]));
