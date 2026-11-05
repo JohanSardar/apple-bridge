@@ -115,6 +115,7 @@ pub struct Delivery<G: Gateway> {
     pub authority: Arc<Authority>,
     gateway: Mutex<G>,
     wake: tokio::sync::Notify,
+    pub(crate) uploads: crate::http::Admission,
 }
 impl<G: Gateway> Delivery<G> {
     pub fn new(authority: Arc<Authority>, gateway: G) -> Self {
@@ -122,6 +123,7 @@ impl<G: Gateway> Delivery<G> {
             authority,
             gateway: Mutex::new(gateway),
             wake: tokio::sync::Notify::new(),
+            uploads: crate::http::Admission::default(),
         }
     }
     fn lock(&self) -> Result<std::sync::MutexGuard<'_, G>, Error> {
@@ -144,7 +146,13 @@ impl<G: Gateway> Delivery<G> {
         }
         match path {
             "/v1/iphone/capture" => raw(&self.capture(&phone, &payload)?),
-            "/v1/iphone/pending" => raw(&self.packets(&phone, now, true, false)?.0),
+            "/v1/iphone/pending" => {
+                let mut packets = self.packets(&phone, now, true, false)?.0;
+                if wants_live_state(&payload) {
+                    packets.extend(self.live_state(&phone, now)?);
+                }
+                raw(&packets)
+            }
             "/v1/iphone/result" => {
                 self.complete(&phone, request, &payload)?;
                 raw(&serde_json::json!({"accepted":true}))
@@ -391,6 +399,7 @@ impl<G: Gateway> Delivery<G> {
                 .map_err(|_| Error::Invalid)?,
             )?;
             if let Some((token, aps)) = live_payload {
+                packets.push(packet.clone());
                 packet.live_activity = Some(aps);
                 pushes.push(LivePush { token, packet });
             } else {
@@ -401,6 +410,35 @@ impl<G: Gateway> Delivery<G> {
             }
         }
         Ok((packets, pushes))
+    }
+    fn live_state(&self, phone: &Principal, now: i64) -> Result<Vec<Packet>, Error> {
+        let phone = self.authority.principal(&phone.id)?;
+        let mut gateway = self.lock()?;
+        let mut rows = gateway.commands()?;
+        order_live(&mut rows)?;
+        let mut packets = vec![];
+        for row in rows {
+            if !row.live()?
+                || row.source != "iphone"
+                || row.state != CommandState::Dispatched
+                || row.target()? != phone.id
+                || now >= row.expires()?
+            {
+                continue;
+            }
+            packets.push(self.authority.seal_iphone(
+                &phone,
+                &encode(&Job {
+                    command: row.command.clone(),
+                    request_hash: row.request_hash.clone(),
+                    expires: row.expires()?,
+                })?,
+            )?);
+            if packets.len() >= 32 {
+                break;
+            }
+        }
+        Ok(packets)
     }
     fn approval(
         &self,
@@ -502,6 +540,14 @@ pub struct LivePush {
     pub packet: Packet,
 }
 #[derive(Deserialize)]
+struct PendingOptions {
+    #[serde(default)]
+    live_state: bool,
+}
+fn wants_live_state(payload: &[u8]) -> bool {
+    serde_json::from_slice::<PendingOptions>(payload).is_ok_and(|options| options.live_state)
+}
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PushToken {
     token: String,
@@ -566,6 +612,25 @@ fn validate_location_summary(data: &RawValue) -> Result<(), Error> {
     }
     Ok(())
 }
+const LIVE_TITLE: &str = "Apple Bridge task";
+const LIVE_STATUS: &str = "Open Apple Bridge for details";
+const LIVE_FINISHED: &str = "Finished";
+
+pub fn live_handle(encryption_key: &[u8], task: &str) -> String {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    use std::fmt::Write;
+    let Ok(mut mac) = Hmac::<Sha256>::new_from_slice(encryption_key) else {
+        return String::new();
+    };
+    mac.update(format!("apple-bridge-iphone-live/1\0{task}").as_bytes());
+    mac.finalize().into_bytes()[..16]
+        .iter()
+        .fold(String::new(), |mut out, byte| {
+            let _ = write!(out, "{byte:02x}");
+            out
+        })
+}
 pub fn live_payload(
     phone: &Principal,
     command: &Value,
@@ -596,19 +661,36 @@ pub fn live_payload(
 
     let task = string_field(args, "task_id")?;
     let event = op.trim_start_matches("iphone.live.");
-    let key = if event == "start" { "_start" } else { &task };
-    let token = phone
+    let encryption_key = phone
         .extra
-        .get("iphone_live_tokens")
-        .and_then(|t| t.get(key))
+        .get("iphone_encryption_key")
         .and_then(Value::as_str)
-        .filter(|t| !t.is_empty())
-        .ok_or(Error::Unavailable)?;
-    let mut aps = serde_json::json!({"timestamp":now,"event":event,"content-state":{"status":args["status"].as_str().unwrap_or_default(),"progress":RawValue::from_string(go_number(args["progress"].as_f64().unwrap_or(0.0)))?}});
+        .and_then(|key| STANDARD.decode(key).ok())
+        .ok_or(Error::Invalid)?;
+    let handle = live_handle(&encryption_key, &task);
+    let tokens = phone.extra.get("iphone_live_tokens");
+    let lookup = |key: &str| {
+        tokens
+            .and_then(|t| t.get(key))
+            .and_then(Value::as_str)
+            .filter(|t| !t.is_empty())
+    };
+    let token = if event == "start" {
+        lookup("_start")
+    } else {
+        lookup(&handle).or_else(|| lookup(&task))
+    }
+    .ok_or(Error::Unavailable)?;
+    let status = if event == "end" {
+        LIVE_FINISHED
+    } else {
+        LIVE_STATUS
+    };
+    let mut aps = serde_json::json!({"timestamp":now,"event":event,"content-state":{"status":status,"progress":0}});
     if event == "start" {
         aps["attributes-type"] = "AgentTaskAttributes".into();
-        aps["attributes"] = serde_json::json!({"taskID":task,"title":args["title"]});
-        aps["alert"] = serde_json::json!({"title":"Apple Bridge","body":args["title"]});
+        aps["attributes"] = serde_json::json!({"taskID":handle,"title":LIVE_TITLE});
+        aps["alert"] = serde_json::json!({"title":"Apple Bridge","body":LIVE_TITLE});
     }
     if event == "end" {
         aps["dismissal-date"] = now.into();
