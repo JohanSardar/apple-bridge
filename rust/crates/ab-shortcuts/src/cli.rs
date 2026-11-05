@@ -30,7 +30,6 @@ pub struct Input {
     pub data: Option<Vec<u8>>,
     pub timeout: Duration,
     pub output_type: String,
-    /// Bytes of output before the run is killed; zero means `MAX_BYTES`.
     pub output_limit: usize,
 }
 

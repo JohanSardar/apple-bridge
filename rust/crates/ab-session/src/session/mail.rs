@@ -2,6 +2,7 @@ use super::owned::{Driver, Probe, Refusal, Settled, conflict, native_failure, re
 use ab_wire::native::mail_recipient;
 use serde_json::{Value, json};
 use std::{
+    fmt::Write as _,
     thread,
     time::{Duration, Instant},
 };
@@ -146,7 +147,6 @@ fn folder(operation: &str) -> &'static str {
     }
 }
 
-/// The messages in `operation`'s folder with this exact subject whose content starts with this exact body.
 fn matching(operation: &str, args: &Value) -> String {
     format!(
         "set matched to {{}}\nset expectedBody to {body}\nrepeat with candidate in (messages of {folder} whose subject is {subject})\nset candidateBody to (content of candidate) as string\nif candidateBody starts with expectedBody or candidateBody starts with (linefeed & expectedBody) or candidateBody starts with (return & expectedBody) or candidateBody starts with (return & linefeed & expectedBody) then set end of matched to contents of candidate\nend repeat\n",
@@ -164,21 +164,21 @@ fn composed(operation: &str, args: &Value) -> String {
     );
     for kind in ["to", "cc"] {
         for address in strings(&args[kind]) {
-            body.push_str(&format!(
-                "tell m to make new {kind} recipient at end of {kind} recipients with properties {{address:{}}}\n",
+            let _ = writeln!(
+                body,
+                "tell m to make new {kind} recipient at end of {kind} recipients with properties {{address:{}}}",
                 quote(address)
-            ));
+            );
         }
     }
     if operation == "mail.send" {
         body.push_str("send m\n");
     } else {
-        // `close` drops a save Mail has not finished, and it reports success either way. Keep the compose window
-        // open until the draft is in the Drafts mailbox.
-        body.push_str(&format!(
-            "save m\nset saved to false\nrepeat 40 times\nif (count of (messages of drafts mailbox whose subject is {subject})) > 0 then\nset saved to true\nexit repeat\nend if\ndelay 0.25\nend repeat\nif saved then close m saving yes\n",
+        let _ = writeln!(
+            body,
+            "save m\nset saved to false\nrepeat 40 times\nif (count of (messages of drafts mailbox whose subject is {subject})) > 0 then\nset saved to true\nexit repeat\nend if\ndelay 0.25\nend repeat\nif saved then close m saving yes",
             subject = quote(text(args, "subject")),
-        ));
+        );
     }
     body
 }
@@ -250,7 +250,6 @@ fn set_status(
     })
 }
 
-/// Moving makes a new row with a new id. The Message-ID survives the move, so it finds the new row.
 fn moved(
     probe: &dyn Probe,
     operation: &str,
@@ -330,6 +329,7 @@ fn validate(probe: &dyn Probe, action: &Value, _state: &Value) -> Result<(), Ref
     }
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn write(
     probe: &dyn Probe,
     _command: &str,
@@ -343,6 +343,7 @@ fn write(
     })
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn settle(_operation: &str, written: &Value) -> Option<Settled> {
     let observed = written["observed"] == true;
     Some(Settled {

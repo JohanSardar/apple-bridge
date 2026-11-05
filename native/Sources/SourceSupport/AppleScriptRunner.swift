@@ -17,12 +17,10 @@ private final class PermissionReply: @unchecked Sendable {
     }
 }
 
-/// NSAppleScript inside the identity that holds the Automation grant. Rust writes the script and reads the result.
 public enum AppleScriptRunner {
     private static let permissionQueue = DispatchQueue(label: "apple-bridge.automation-permission")
     private static let timedOut: Int32 = -1712
 
-    /// `AEDeterminePermissionToAutomateTarget` can block forever, so it answers `errAETimeout` after `interval`.
     public static func automationStatus(after interval: TimeInterval = 10, check: @escaping @Sendable () -> Int32) async -> Int32 {
         await withCheckedContinuation { continuation in
             let reply = PermissionReply(continuation)
@@ -43,8 +41,6 @@ public enum AppleScriptRunner {
         return (try? await NSWorkspace.shared.openApplication(at: url, configuration: configuration)) != nil
     }
 
-    /// `{result}` on success, `{error_number}` with the Apple event error otherwise. With a target, the app is
-    /// started without activating it and the Automation grant is checked without ever asking.
     @MainActor
     public static func run(_ source: String, target bundle: String? = nil) async throws -> JSON {
         try Task.checkCancellation()

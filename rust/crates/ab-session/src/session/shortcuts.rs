@@ -27,7 +27,6 @@ fn decoded_input(args: &Value) -> Result<Vec<u8>, Refusal> {
     Ok(bytes)
 }
 
-/// The name reaches the `shortcuts` command line as an argument, so it must not look like a flag.
 pub(super) fn checked(action: &Value) -> Result<(), Refusal> {
     if text(action, "op") != "shortcuts.run" {
         return Err(refuse("invalid"));
@@ -118,6 +117,7 @@ fn write(
     }))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn settle(_operation: &str, written: &Value) -> Option<Settled> {
     Some(Settled {
         disposition: if written["exit_status"] == 0 && written["timed_out"] != true {

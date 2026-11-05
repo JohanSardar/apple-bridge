@@ -52,12 +52,6 @@ fn no_reconcile(_found: &Value, _operation: &str) -> Value {
     json!({})
 }
 
-fn nothing_to_prepare<T>(_: T) -> Value {
-    Value::Null
-}
-
-// Speech and system sounds.
-
 fn playback_checked(action: &Value) -> Result<(), Refusal> {
     let args = &action["args"];
     let volume = &args["volume"];
@@ -119,6 +113,7 @@ fn playback_write(
     Ok(json!({"finished_callback": finished, "observed": finished}))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn playback_settle(_operation: &str, written: &Value) -> Option<Settled> {
     Some(Settled {
         disposition: if written["observed"] == true {
@@ -150,8 +145,6 @@ pub(super) const SPEECH: Driver = Driver {
     resolved: playback_resolved,
     reconcile_args: no_reconcile,
 };
-
-// Maps.
 
 fn valid_point(point: &Value) -> bool {
     only_keys(point, &["lat", "lon"])
@@ -207,6 +200,7 @@ fn maps_write(
     Ok(json!({}))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn maps_settle(_operation: &str, written: &Value) -> Option<Settled> {
     Some(Settled {
         disposition: if text(written, "frontmost_bundle") == MAPS {
@@ -240,8 +234,6 @@ pub(super) const MAPS_DRIVER: Driver = Driver {
     resolved: maps_resolved,
     reconcile_args: no_reconcile,
 };
-
-// Capture: screenshot, camera, audio, screen recording and print.
 
 fn capture_args(action: &Value) -> Result<(), Refusal> {
     let operation = text(action, "op");
@@ -307,7 +299,8 @@ fn capture_prepare(probe: &dyn Probe, action: &Value, expected: &Value) -> Resul
     if text(action, "op") == "capture.play_sound" {
         return playback_prepare(probe, action, expected);
     }
-    capture_checked(probe, action).map(nothing_to_prepare)
+    capture_checked(probe, action)?;
+    Ok(Value::Null)
 }
 
 fn capture_validate(probe: &dyn Probe, action: &Value, _state: &Value) -> Result<(), Refusal> {
@@ -317,7 +310,6 @@ fn capture_validate(probe: &dyn Probe, action: &Value, _state: &Value) -> Result
     capture_checked(probe, action)
 }
 
-/// The artifact must be a real file directly inside our directory, the size and length the command asked for.
 fn verified(
     directory: &Path,
     path: &Path,
@@ -455,6 +447,7 @@ fn make_private(directory: &Path) -> Result<(), String> {
         .map_err(|_| "unavailable".to_owned())
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn capture_settle(operation: &str, written: &Value) -> Option<Settled> {
     if operation == "capture.play_sound" {
         return playback_settle(operation, written);
@@ -487,9 +480,6 @@ pub(super) const CAPTURE: Driver = Driver {
     reconcile_args: no_reconcile,
 };
 
-// PDF annotation.
-
-/// The bytes of a document argument: inline or a regular local file, never more than the limit.
 pub(super) fn document(args: &Value) -> Result<Vec<u8>, &'static str> {
     let encoded = text(args, "data_base64");
     let path = text(args, "file");
@@ -591,14 +581,16 @@ fn pdf_validate(_probe: &dyn Probe, _action: &Value, _state: &Value) -> Result<(
     Ok(())
 }
 
-/// Each annotation names a page that exists and fits inside that page's media box.
 pub(super) fn annotations_fit(items: &[Value], pages: &[Value]) -> bool {
     items.iter().all(|item| {
-        let number = item["page"].as_f64().unwrap_or(0.0);
-        if number < 1.0 || number.fract() != 0.0 || number > pages.len() as f64 {
+        let Some(bounds) = item["page"]
+            .as_u64()
+            .and_then(|number| usize::try_from(number).ok())
+            .and_then(|number| number.checked_sub(1))
+            .and_then(|index| pages.get(index))
+        else {
             return false;
-        }
-        let bounds = &pages[number as usize - 1];
+        };
         let (x, y, width, height) = (
             item["x"].as_f64().unwrap_or(f64::NAN),
             item["y"].as_f64().unwrap_or(f64::NAN),

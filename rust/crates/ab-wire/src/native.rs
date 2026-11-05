@@ -20,8 +20,6 @@ pub const MAX_FRAME: usize = 262_144;
 
 type Raw = Box<RawValue>;
 
-/// Whether `value` names exactly one Mail recipient. A display name, a comma or a line break could make Mail
-/// add someone the command never listed, so only a bare `local@domain` passes.
 #[must_use]
 pub fn mail_recipient(value: &str) -> bool {
     let Some((local, domain)) = value.split_once('@') else {

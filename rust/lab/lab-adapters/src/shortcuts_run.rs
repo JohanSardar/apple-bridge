@@ -2,8 +2,8 @@ use crate::{
     http::{Client, random_id},
     queries::agent_token,
     shortcuts::{
-        SHORTCUTS_NATIVE_INPUTS, await_until, checks_binary, native_directory, native_target,
-        run_checks, run_native, scratch_directory,
+        await_until, checks_binary, native_directory, native_target, run_checks, run_native,
+        scratch_directory,
     },
 };
 use lab_runner::Evidence;

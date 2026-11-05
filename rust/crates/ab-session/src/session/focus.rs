@@ -23,7 +23,6 @@ pub(super) fn future(until: &str) -> bool {
         .is_ok_and(|moment| moment > jiff::Timestamp::now())
 }
 
-/// Do Not Disturb is the only mode the pack sets, and only turning it on can carry an end time.
 pub(super) fn checked_args(action: &Value) -> Result<(), Refusal> {
     let args = &action["args"];
     if text(action, "op") != "focus.set"
@@ -84,6 +83,7 @@ fn write(
     Err("unavailable".to_owned())
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn settle(_operation: &str, written: &Value) -> Option<Settled> {
     Some(Settled {
         disposition: "locally_observed",

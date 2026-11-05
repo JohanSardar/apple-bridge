@@ -11,7 +11,6 @@ use std::{
     sync::Mutex,
 };
 
-/// Files the session or the Helper staged for the gateway to fetch, named by digest.
 #[derive(Debug)]
 pub struct StagedBlobs {
     prefix: &'static str,

@@ -131,7 +131,6 @@ pub fn reset_signals() {
 pub const O_NOFOLLOW: i32 = libc::O_NOFOLLOW;
 pub const O_NONBLOCK: i32 = libc::O_NONBLOCK;
 
-/// Renames `from` to `to`, failing with `AlreadyExists` rather than replacing what is there.
 #[allow(unsafe_code)]
 pub fn rename_exclusive(from: &std::path::Path, to: &std::path::Path) -> io::Result<()> {
     use std::{ffi::CString, os::unix::ffi::OsStrExt};

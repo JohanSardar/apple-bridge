@@ -444,7 +444,6 @@ impl Reader {
         };
         self.prepare(kind, scan, input, &prior, context)
     }
-    /// The tab keys the gateway was last told about. A restart has to know them to retire the ones now gone.
     #[must_use]
     pub fn tab_keys(&self) -> Vec<String> {
         self.states.get(&Kind::Tabs).map_or_else(Vec::new, |state| {

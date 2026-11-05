@@ -77,7 +77,6 @@ fn iwork_application(app: &str) -> Option<&'static str> {
     }
 }
 
-/// Everything that can be decided without touching the Mac.
 fn args_ok(action: &Value) -> Result<(), &'static str> {
     let args = &action["args"];
     let ok = match text(action, "op") {
@@ -436,6 +435,7 @@ fn write(
     Ok(json!({"observed": true, "readback": answer}))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn settle(_operation: &str, written: &Value) -> Option<Settled> {
     Some(Settled {
         disposition: "locally_observed",

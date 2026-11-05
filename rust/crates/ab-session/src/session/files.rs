@@ -57,7 +57,6 @@ fn roots(probe: &dyn Probe) -> Result<Vec<PathBuf>, Refusal> {
         .unwrap_or_default())
 }
 
-/// `root` must be exactly one of the configured roots.
 fn root_of(roots: &[PathBuf], root: &str) -> Result<PathBuf, Denied> {
     let path = Path::new(root);
     if !path.is_absolute() || path.components().any(|part| part == Component::ParentDir) {
@@ -71,8 +70,6 @@ fn root_of(roots: &[PathBuf], root: &str) -> Result<PathBuf, Denied> {
         .ok_or(Denied::Invalid)
 }
 
-/// Walks `relative` below `root` a component at a time. A symbolic link anywhere refuses, and so does anything
-/// that resolves outside the root.
 pub(super) fn confined(
     roots: &[PathBuf],
     root: &str,
@@ -205,8 +202,6 @@ fn create_file(url: &Path, bytes: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
-/// Replaces the whole file through a temporary next to it. Mode stays; extended attributes do not, as with
-/// `Data.write(options: .atomic)`, which this took over from.
 fn replace_file(url: &Path, bytes: &[u8]) -> Result<(), String> {
     let metadata = fs::symlink_metadata(url).map_err(|error| code_of(&error))?;
     if !metadata.is_file() {
@@ -293,7 +288,6 @@ fn cloud(probe: &dyn Probe, operation: &str, url: &Path) -> Result<(), String> {
     })
 }
 
-/// Inputs are staged blobs, named by digest. The framework work and its checks stay with ImageIO and PDFKit.
 fn transform(probe: &dyn Probe, args: &Value) -> Result<Value, String> {
     let blobs = probe.staged(BLOB_PREFIX).ok_or("unavailable")?;
     let inputs = args["inputs"].as_array().ok_or("invalid")?;
@@ -342,7 +336,7 @@ fn write(
     let args = &action["args"];
     let root = text(args, "root");
     let denied = |denied: Denied| {
-        match denied {
+        match &denied {
             Denied::Invalid => "invalid",
             Denied::Unavailable => "unavailable",
         }
@@ -417,6 +411,7 @@ fn write(
     }
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn settle(_operation: &str, written: &Value) -> Option<Settled> {
     if written["observed"] != true {
         return None;
@@ -519,7 +514,6 @@ fn tempdir() -> std::io::Result<PathBuf> {
     Ok(path)
 }
 
-/// Only paths inside a root leave, whatever mdfind prints.
 fn search_items(roots: &[PathBuf], output: &[u8]) -> Vec<Value> {
     output
         .split(|byte| *byte == 0)
@@ -543,7 +537,6 @@ fn search(probe: &dyn Probe, args: &Value) -> Result<Value, String> {
     Ok(json!({"items": search_items(&roots, &output)}))
 }
 
-/// Reads may follow a link that stays inside the root; only the resolved path counts.
 fn readable(roots: &[PathBuf], root: &str, relative: &str) -> Result<PathBuf, Denied> {
     let root = root_of(roots, root)?;
     if relative.is_empty() || relative.starts_with('/') || relative.contains('\0') {

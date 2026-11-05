@@ -4,7 +4,6 @@ import CoreGraphics
 import PDFKit
 import SourceSupport
 
-/// File facts and actions that need a framework. ab-session confines every path before it gets here.
 public struct FilesSource: Source {
     public let name = "files"
     public init() {}
