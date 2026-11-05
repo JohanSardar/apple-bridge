@@ -262,6 +262,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-tungstenite 0.29.0",
+ "tokio-util",
  "webpki-roots 1.0.11",
  "x509-parser",
 ]
@@ -315,6 +316,8 @@ dependencies = [
  "ab-wire",
  "axum",
  "data-encoding",
+ "futures-util",
+ "http-body",
  "hyper",
  "hyper-util",
  "jiff",

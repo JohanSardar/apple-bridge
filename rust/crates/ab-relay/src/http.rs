@@ -127,7 +127,7 @@ impl Api {
         *counter += 1;
         true
     }
-    async fn upgrade(self: Arc<Self>, ws: WebSocket, proof: Proof) {
+    async fn upgrade(self: Arc<Self>, ws: WebSocket, proof: Proof, features: crate::mux::Features) {
         let (tx, rx) = mpsc::channel(32);
         let cancel = CancellationToken::new();
         let Ok(session) = self
@@ -137,7 +137,7 @@ impl Api {
         else {
             return;
         };
-        crate::mux::run(ws, rx, cancel).await;
+        crate::mux::run(ws, rx, cancel, features).await;
         let mut sessions = self.server.sessions.lock().await;
         if sessions
             .get(&proof.hostname)
@@ -274,8 +274,18 @@ async fn handle(
             let Ok(ws) = ws else {
                 return error(400, "WebSocket protocol violation");
             };
+            let features = crate::mux::Features {
+                source: headers
+                    .get(ab_wire::framing::TUNNEL_FEATURES_HEADER)
+                    .and_then(|value| value.to_str().ok())
+                    .is_some_and(|value| {
+                        value
+                            .split(',')
+                            .any(|feature| feature.trim() == ab_wire::framing::TUNNEL_FEATURE_SOURCE)
+                    }),
+            };
             ws.max_message_size(4 << 20)
-                .on_upgrade(move |socket| api.upgrade(socket, proof))
+                .on_upgrade(move |socket| api.upgrade(socket, proof, features))
         }
         ("POST", "/dns") => dns(&api, &body).await,
         ("POST", "/domain") => domain(&api, &body).await,

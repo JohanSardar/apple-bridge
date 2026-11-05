@@ -166,7 +166,10 @@ impl Server {
         let transfer = async {
             session
                 .open
-                .send(mux::Open { reply: tx })
+                .send(mux::Open {
+                    source: peer.ip().to_canonical(),
+                    reply: tx,
+                })
                 .await
                 .map_err(|_| Error::Denied)?;
             let mut upstream = tokio::time::timeout(Duration::from_secs(10), rx)

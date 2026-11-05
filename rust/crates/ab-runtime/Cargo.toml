@@ -15,6 +15,7 @@ rand = "0.8"
 data-encoding = "2"
 rustls.workspace = true
 hyper.workspace = true
+http-body = "1"
 hyper-util = { version = "0.1", features = ["tokio", "service"] }
 tower = { version = "0.5", features = ["util"] }
 webpki-roots = "1"
@@ -53,5 +54,6 @@ name = "frontdoor_fixture"
 required-features = ["replica-feed", "lab-harness"]
 
 [dev-dependencies]
+futures-util = "0.3"
 ab-session = { path = "../ab-session" }
 tempfile = "3"

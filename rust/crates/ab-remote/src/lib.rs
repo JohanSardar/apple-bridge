@@ -86,7 +86,50 @@ impl Drop for ActiveIngress {
         }
     }
 }
-pub const INGRESS_MAGIC: &[u8] = b"ab-ingress/1\0";
+const INGRESS_MAGIC: &[u8] = b"ab-ingress/1\0";
+const INGRESS_HAS_BINDING: u8 = 1;
+const INGRESS_HAS_SOURCE: u8 = 2;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IngressPreamble {
+    pub binding: Option<[u8; 32]>,
+    pub source: Option<std::net::IpAddr>,
+}
+
+pub async fn read_ingress_preamble<R>(socket: &mut R, proof: &[u8; 32]) -> Result<IngressPreamble>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    use subtle::ConstantTimeEq;
+    use tokio::io::AsyncReadExt;
+    let mut magic = vec![0; INGRESS_MAGIC.len()];
+    socket.read_exact(&mut magic).await?;
+    let mut received = [0; 32];
+    socket.read_exact(&mut received).await?;
+    if magic != INGRESS_MAGIC || !bool::from(proof.ct_eq(&received)) {
+        return Err(Error::Contract("ingress proof"));
+    }
+    let flags = socket.read_u8().await?;
+    if flags & !(INGRESS_HAS_BINDING | INGRESS_HAS_SOURCE) != 0 {
+        return Err(Error::Contract("ingress flags"));
+    }
+    let mut preamble = IngressPreamble::default();
+    if flags & INGRESS_HAS_BINDING != 0 {
+        let mut binding = [0; 32];
+        socket.read_exact(&mut binding).await?;
+        preamble.binding = Some(binding);
+    }
+    if flags & INGRESS_HAS_SOURCE != 0 {
+        let length = usize::from(socket.read_u8().await?);
+        if length != 4 && length != 16 {
+            return Err(Error::Contract("ingress source"));
+        }
+        let mut address = vec![0; length];
+        socket.read_exact(&mut address).await?;
+        preamble.source = ab_wire::framing::decode_tunnel_source(&address);
+    }
+    Ok(preamble)
+}
 #[derive(Clone)]
 pub struct Gateway {
     pub address: SocketAddr,
@@ -183,21 +226,31 @@ impl Gateway {
         }
     }
     pub(crate) async fn connect(&self) -> Result<tokio::net::TcpStream> {
-        self.connect_bound(None).await
+        self.connect_stream(None, None).await
     }
-    pub(crate) async fn connect_bound(
+    pub(crate) async fn connect_stream(
         &self,
         binding: Option<[u8; 32]>,
+        source: Option<std::net::IpAddr>,
     ) -> Result<tokio::net::TcpStream> {
         use tokio::io::AsyncWriteExt;
         let mut socket = tokio::net::TcpStream::connect(self.address).await?;
         if let Some(proof) = &self.proof {
-            socket.write_all(INGRESS_MAGIC).await?;
-            socket.write_all(proof.as_ref()).await?;
-            socket.write_all(&[u8::from(binding.is_some())]).await?;
+            let mut preamble = INGRESS_MAGIC.to_vec();
+            preamble.extend_from_slice(proof.as_ref());
+            preamble.push(
+                u8::from(binding.is_some()) * INGRESS_HAS_BINDING
+                    + u8::from(source.is_some()) * INGRESS_HAS_SOURCE,
+            );
             if let Some(binding) = binding {
-                socket.write_all(&binding).await?;
+                preamble.extend_from_slice(&binding);
             }
+            if let Some(source) = source {
+                let address = ab_wire::framing::encode_tunnel_source(source);
+                preamble.push(u8::try_from(address.len()).map_err(|_| Error::Contract("source"))?);
+                preamble.extend_from_slice(&address);
+            }
+            socket.write_all(&preamble).await?;
         }
         Ok(socket)
     }
