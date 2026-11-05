@@ -146,12 +146,12 @@ Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setu
 
 | Step | Fresh, empty home | Fresh home, test copy of data (195,243 records) |
 |---|---|---|
-| `bridge up` | PROOF_EMPTY_UP | PROOF_COPY_UP |
-| `bridge stats` | PROOF_EMPTY_STATS | PROOF_COPY_STATS |
-| `bridge link`, server registered | PROOF_EMPTY_LINK | PROOF_COPY_LINK |
-| Signed in | PROOF_EMPTY_SIGNIN | PROOF_COPY_SIGNIN |
-| First real read by Claude Code | PROOF_EMPTY_READ | PROOF_COPY_READ |
-| Claude Code ran `bridge stats` and read the total | PROOF_EMPTY_STATSREAD | PROOF_COPY_STATSREAD |
+| `bridge up` | 0.8 s | 0.2 s |
+| `bridge stats` | 0.8 s | 1.4 s |
+| `bridge link`, server registered | 2.2 s | 2.4 s |
+| Signed in | 7.3 s | 7.7 s |
+| First real read by Claude Code | 12.8 s | 13.8 s |
+| Claude Code ran `bridge stats` and read the total | 17.8 s | 18.6 s |
 
 Times are cumulative from the start of `bridge up`, from one run each. On the test copy, `bridge stats` matched the source on all 32 collections, and Claude Code's read returned the right count through the local MCP route and sign-in. Only counts were checked.
 

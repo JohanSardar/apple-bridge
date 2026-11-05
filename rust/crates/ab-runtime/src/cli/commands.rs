@@ -120,9 +120,7 @@ pub fn backup(home: &Path, path: &Path) -> Outcome {
 }
 
 pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
-    let backup = args.backup.or(args.path).ok_or_else(|| {
-        Failure::new("Say which backup to restore.").next("bridge restore <FILE>")
-    })?;
+    let backup = args.backup.or(args.path).unwrap_or_default();
     crate::maintenance::restore(home, &backup, args.accept_ledger_loss).map_err(|error| {
         if matches!(error, Error::Invalid) {
             Failure::new(format!("{} could not be restored.", backup.display()))
@@ -233,10 +231,10 @@ pub async fn join(home: &Path, args: &JoinArgs) -> Outcome {
     let authority = authority(home)?;
     let refused = |remote_failure: bool| {
         if remote_failure {
-            Failure::new("The gateway refused this pairing code.")
+            Failure::new("unauthorized: the gateway refused this pairing code.")
                 .next("Pairing codes expire. Create a new one with `bridge pair` on the gateway.")
         } else {
-            Failure::new("The gateway could not be reached.").next(
+            Failure::new("unavailable: the gateway could not be reached.").next(
                 "Check it is running and the address in the code is reachable, then try again.",
             )
         }
