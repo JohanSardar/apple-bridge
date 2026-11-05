@@ -200,6 +200,7 @@ async fn real_tunnel(fixture: &Fixture, upstream: SocketAddr) -> Tunnel {
         domain: String::new(),
         resolver: None,
         domain_poll: Duration::from_millis(100),
+        certificate_monitor: false,
     };
     let (statuses, observed) = watch::channel(std::collections::BTreeMap::new());
     let gateway = Gateway::new(upstream).with_status(statuses);
@@ -763,6 +764,7 @@ async fn the_gateway_learns_the_address_the_relay_accepted() {
         domain: String::new(),
         resolver: None,
         domain_poll: Duration::from_millis(100),
+        certificate_monitor: false,
     };
     let (statuses, observed) = watch::channel(std::collections::BTreeMap::new());
     let gateway = Gateway::authenticated(upstream, proof).with_status(statuses);

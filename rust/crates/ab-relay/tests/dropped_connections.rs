@@ -508,6 +508,7 @@ async fn an_attached_tunnel_outlives_every_connection_deadline() {
         domain: String::new(),
         resolver: None,
         domain_poll: Duration::from_millis(100),
+        certificate_monitor: false,
     };
     let (statuses, observed) = tokio::sync::watch::channel(std::collections::BTreeMap::new());
     let gateway = Gateway::new(origin_address).with_status(statuses);
