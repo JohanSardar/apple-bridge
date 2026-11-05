@@ -279,9 +279,7 @@ impl Actions {
                     return Err(Code::Unsupported.into());
                 }
                 if data["recently_deleted"] == true
-                    || command.op == "notes.update"
-                        && (data["locked"] == true
-                            || args["html"].is_null() && data["editable"] != "plain")
+                    || command.op == "notes.update" && note_update_refused(&data, &args)
                 {
                     return Err(Code::Unsupported.into());
                 }
@@ -429,8 +427,28 @@ fn native_command(op: &str) -> bool {
         )
 }
 
+fn note_update_refused(data: &Value, args: &Value) -> bool {
+    let finished = data["content_status"] == "complete";
+    data["locked"] == true || finished && args["html"].is_null() && data["editable"] != "plain"
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_note_whose_body_has_not_arrived_is_not_refused_yet() {
+        use super::note_update_refused;
+        use serde_json::json;
+        let args = json!({"plain_text": "x"});
+        let pending = json!({"content_status": "partial", "editable": "none"});
+        assert!(!note_update_refused(&pending, &args));
+        let finished = json!({"content_status": "complete", "editable": "none"});
+        assert!(note_update_refused(&finished, &args));
+        let plain = json!({"content_status": "complete", "editable": "plain"});
+        assert!(!note_update_refused(&plain, &args));
+        let locked = json!({"content_status": "locked", "editable": "none", "locked": true});
+        assert!(note_update_refused(&locked, &args));
+    }
+
     use super::*;
 
     #[test]
