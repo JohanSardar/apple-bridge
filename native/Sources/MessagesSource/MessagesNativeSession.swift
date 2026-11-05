@@ -1,8 +1,8 @@
 import Foundation
+import CryptoKit
 import ObjectiveC
 import Darwin
 import SourceSupport
-import Decoders
 
 @MainActor
 enum MessagesNativeSession {
@@ -10,13 +10,14 @@ enum MessagesNativeSession {
         guard let runtime = dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY), let implementation = dlsym(runtime, "objc_msgSend") else { return nil }
         return unsafeBitCast(implementation, to: IMP.self)
     }()
+    private static func digest(_ text: String) -> String { SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined() }
     private static func method(_ object: AnyObject, _ name: String) throws -> (Selector, IMP) {
         let selector = NSSelectorFromString(name)
         let type: AnyClass? = object_getClass(object)
         if let type, let method = class_getInstanceMethod(type, selector) { return (selector, method_getImplementation(method)) }
         if (object as? NSObjectProtocol)?.responds(to: selector) == true, let implementation = forwardedImplementation { return (selector, implementation) }
-        let receiver = type.map { BodyDigest.hash(Data(NSStringFromClass($0).utf8)) } ?? ""
-        try? PrivateReport.write(["selector_digest": BodyDigest.hash(Data(name.utf8)), "receiver_digest": receiver, "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
+        let receiver = type.map { digest(NSStringFromClass($0)) } ?? ""
+        try? PrivateReport.write(["selector_digest": digest(name), "receiver_digest": receiver, "selector_available": false], to: PrivateReport.directory.appendingPathComponent("messages-native-method-diagnostic.json"))
         throw SourceFailure.unsupported
     }
     private static func object(_ receiver: AnyObject, _ name: String, argument: AnyObject? = nil) throws -> AnyObject? {

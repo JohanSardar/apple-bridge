@@ -44,10 +44,10 @@ enum ExternalChange {
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             let gate = AgendaGate()
             let listener = await gate.changes()
-            await gate.remindersHint(CaptureTrace.now())
+            await gate.remindersHint(DispatchTime.now().uptimeNanoseconds)
             try await Task.sleep(for: .milliseconds(200))
-            let source = try CalendarSource(gate: gate, home: root, commandsEnabled: false, profilingEnabled: false)
-            let enumeration = try await source.enumerate(storeInRust: true)
+            let source = try CalendarSource(gate: gate, home: root, commandsEnabled: false)
+            let enumeration = try await source.enumerate()
             _ = listener
             return ("done", "rows \(enumeration.rows.count)")
         } catch {

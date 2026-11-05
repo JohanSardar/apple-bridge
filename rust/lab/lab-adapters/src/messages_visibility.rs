@@ -16,40 +16,12 @@ pub const SCENARIOS: [&str; 1] = ["MSG-DELETE-VISIBILITY"];
 const SCOPE: &str = "messages:read,system:read";
 
 pub fn sim(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
-    let output = Command::new("packaging/dev/check-messages-capture.sh").output();
-    let (stdout, stderr) = output.as_ref().map_or_else(
-        |_| (String::new(), String::new()),
-        |o| {
-            (
-                String::from_utf8_lossy(&o.stdout).into_owned(),
-                String::from_utf8_lossy(&o.stderr).into_owned(),
-            )
-        },
+    crate::native_core::rust_tests(
+        evidence,
+        "native_capture_visibility_and_restore",
+        "ab-native",
+        &["--test", "messages_paging"],
     );
-    let combined = format!("{stdout}{stderr}");
-    let passed = output.as_ref().is_ok_and(|o| o.status.success())
-        && combined.contains("all Messages capture checks passed");
-    let mut detail = combined
-        .lines()
-        .find_map(|line| line.strip_prefix("Messages capture checks failed: "))
-        .unwrap_or_default()
-        .to_owned();
-    if !passed && detail.is_empty() {
-        let tail: String = combined
-            .trim()
-            .chars()
-            .rev()
-            .take(2048)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        detail = match &output {
-            Ok(o) => format!("{}: {tail}", o.status),
-            Err(error) => format!("{error}: {tail}"),
-        };
-    }
-    evidence.check("native_capture_visibility_and_restore", passed, &detail);
     Ok(())
 }
 

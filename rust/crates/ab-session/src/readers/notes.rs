@@ -1,6 +1,7 @@
 use super::{
-    BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Signature,
-    SystemTime, Value, capture_value, confine_staging, decode, encode, reader_error, signature,
+    Arc, BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, Readiness,
+    ReadinessContext, ScanContext, Signature, SystemTime, Value, capture_value, confine_staging,
+    decode, encode, json, native_facts, reader_error, signature,
 };
 use crate::media_facts::MediaFacts;
 use ab_native::{capture, notes_reader};
@@ -34,7 +35,24 @@ pub struct NotesReader {
     media: Option<MediaFacts>,
     failed_facts: BTreeMap<String, Instant>,
     scanned_last: bool,
+    client: Option<Arc<native_facts::Client>>,
+    home: Option<PathBuf>,
 }
+
+const OPERATIONS: [&str; 6] = [
+    "notes.create",
+    "notes.update",
+    "notes.delete",
+    "notes.create_folder",
+    "notes.move",
+    "notes.rename_folder",
+];
+const DELETION: [&str; 2] = ["notes.delete", "notes.delete_folder"];
+const EXTRAS: [&str; 2] = ["notes.move", "notes.rename_folder"];
+const MISSING: &str = "unknown protobuf fields and unavailable attachment bytes are explicit; rich HTML text edits require preserved structure; checklist edits remain unsupported; folder deletion requires per-build proof";
+const PROOFS: &str = "notes-deletion-proofs.json";
+const TRUST: &str = "accessibility.trusted";
+const MAX_COMMAND_FACTS: u32 = 64;
 
 impl NotesReader {
     pub fn new(root: PathBuf, staging: &Path) -> Result<Self, Error> {
@@ -55,6 +73,8 @@ impl NotesReader {
             media: None,
             failed_facts: BTreeMap::new(),
             scanned_last: false,
+            client: None,
+            home: None,
         })
     }
 
@@ -110,6 +130,60 @@ impl NotesReader {
             facts: self.facts.clone(),
             asset_paths: Vec::new(),
         })
+    }
+}
+
+impl NotesReader {
+    #[must_use]
+    pub fn with_status(
+        mut self,
+        client: Option<Arc<native_facts::Client>>,
+        home: Option<PathBuf>,
+    ) -> Self {
+        self.client = client;
+        self.home = home;
+        self
+    }
+
+    fn with_facts<T>(
+        &mut self,
+        read: impl Fn(&notes_reader::Facts) -> capture::Result<T>,
+    ) -> capture::Result<T> {
+        let mut budget = MAX_COMMAND_FACTS;
+        loop {
+            match read(&self.facts) {
+                Err(capture::Error::FactsRequired(fact)) if budget > 0 && self.resolve(&fact) => {
+                    budget -= 1;
+                }
+                other => return other,
+            }
+        }
+    }
+
+    fn proven_deletion(&self, operation: &str, os_build: &str, generation: Option<&str>) -> bool {
+        if operation == "notes.delete" {
+            return true;
+        }
+        let Some(ledger) = self
+            .home
+            .as_ref()
+            .and_then(|home| std::fs::read(home.join(PROOFS)).ok())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        else {
+            return false;
+        };
+        if ledger["version"] != 1
+            || ledger["os_build"] != os_build
+            || generation.is_none_or(|generation| ledger["generation"] != generation)
+        {
+            return false;
+        }
+        let proof = &ledger["operations"][operation];
+        proof["before_active"] == true
+            && proof["command_completed"] == true
+            && proof["notestore_verified"] == true
+            && ["gone", "marked", "trashed"]
+                .contains(&proof["after_state"].as_str().unwrap_or_default())
     }
 }
 
@@ -224,6 +298,107 @@ impl CaptureReader for NotesReader {
 
     fn refresh(&mut self) -> bool {
         true
+    }
+
+    fn answer(&mut self, operation: &str, args: &Value) -> Option<Result<Value, String>> {
+        let database = self.root.join("NoteStore.sqlite");
+        let key = args["native_key"].as_str().unwrap_or_default();
+        let collection = args["collection"].as_str().unwrap_or("notes.note");
+        let answer = match operation {
+            "notes.read" => self
+                .with_facts(|facts| notes_reader::read_record(&database, collection, key, facts))
+                .map(|found| found.unwrap_or_else(|| json!({"exists": false}))),
+            "notes.observe" => {
+                let script = args["script_id"].as_str().unwrap_or_default();
+                self.with_facts(|facts| notes_reader::read_script_id(&database, script, facts))
+                    .map(|found| {
+                        let mut seen = found.map_or_else(
+                            || json!({"observed": false}),
+                            |found| {
+                                json!({
+                                    "observed": true,
+                                    "native_key": found["native_key"],
+                                    "data": found["data"],
+                                })
+                            },
+                        );
+                        if !key.is_empty() {
+                            seen["deletion_state"] = json!(
+                                notes_reader::deletion_state(&database, key, "notes.note")
+                                    .unwrap_or_default()
+                            );
+                        }
+                        seen
+                    })
+            }
+            "notes.trash_folder" => self
+                .with_facts(|facts| notes_reader::trash_folder(&database, key, facts))
+                .map(|alias| json!({"scoped_alias": alias})),
+            _ => return None,
+        };
+        Some(answer.map_err(|error| {
+            eprintln!("ab-session: {operation}: {error}");
+            match error {
+                capture::Error::Conflict => "conflict".to_owned(),
+                _ => "unavailable".to_owned(),
+            }
+        }))
+    }
+
+    fn readiness(&mut self, context: &ReadinessContext<'_>) -> Option<Readiness> {
+        let database = self.root.join("NoteStore.sqlite");
+        let generation = notes_reader::store_generation(&database);
+        let trusted = self.client.as_ref().is_some_and(|client| {
+            client.fetch(context.fence, TRUST).is_ok_and(|set| {
+                set.items
+                    .first()
+                    .is_some_and(|item| item["trusted"] == true)
+            })
+        });
+        let extra = |operation: &str| operation != "notes.rename_folder" || trusted;
+        let operations: Vec<Value> = DELETION
+            .iter()
+            .chain(EXTRAS.iter())
+            .map(|operation| {
+                let proven =
+                    self.proven_deletion(operation, context.os_build, generation.as_deref());
+                let is_extra = EXTRAS.contains(operation) && extra(operation);
+                let reason = if *operation == "notes.delete" {
+                    "public_script_notestore_verified"
+                } else if proven {
+                    "os_build_notestore_deletion_verified"
+                } else if is_extra {
+                    "public_script_move_rename"
+                } else {
+                    "capability_unproven"
+                };
+                json!({"operation": operation, "proven": proven || is_extra, "reason": reason})
+            })
+            .collect();
+        let coverage = json!({"fields": "partial", "operations": operations, "missing": [MISSING]});
+        let readable = generation.is_some();
+        Some(Readiness {
+            state: if readable {
+                "ready"
+            } else {
+                "permission_missing"
+            },
+            coverage,
+            capabilities: if readable {
+                OPERATIONS
+                    .iter()
+                    .filter(|operation| !EXTRAS.contains(operation) || extra(operation))
+                    .map(|operation| (*operation).to_owned())
+                    .collect()
+            } else {
+                Vec::new()
+            },
+            reason: if readable {
+                String::new()
+            } else {
+                "notes_database_access_required".to_owned()
+            },
+        })
     }
 
     fn commit(&mut self) -> Result<(), Error> {

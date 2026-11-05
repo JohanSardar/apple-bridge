@@ -15,9 +15,7 @@ public final class MacSource: Source {
     public nonisolated let name = "mac"
     private var assertion: IOPMAssertionID = 0
     private var expiry: Task<Void, Never>?
-    private var generation = UUID().uuidString
     private var path: NWPath?
-    private var committed: [String: JSON] = [:]
     public init() {}
     public func open() async -> SourceReadiness {
         var missing: [JSON] = [.string("Night Shift has no supported public API"), .string("SSID requires Location authorization")]
@@ -92,25 +90,6 @@ public final class MacSource: Source {
             current["mac.app/" + String(app.processIdentifier)] = .object(["bundle_id": .string(bundle), "name": .string(app.localizedName ?? bundle), "running": .bool(!app.isTerminated), "frontmost": .bool(app.isActive), "hidden": .bool(app.isHidden)])
         }
         return current
-    }
-    private func scan(_ sink: any ObservationSink, live: Bool) async throws {
-        let current = try state()
-        let started = timestamp()
-        var observations: [JSON] = []
-        for (key, value) in current where !live || committed[key] != value {
-            let parts = key.split(separator: "/", maxSplits: 1).map(String.init)
-            observations.append(.object(["kind": .string("upsert"), "collection": .string(parts[0]), "native_key": .string(parts[1]), "scoped_alias": .string("mac/" + key), "data": value, "observed_at": .string(started)]))
-        }
-        for (key, value) in committed where current[key] == nil {
-            let parts = key.split(separator: "/", maxSplits: 1).map(String.init)
-            observations.append(.object(["kind": .string("absent"), "collection": .string(parts[0]), "native_key": .string(parts[1]), "data": value, "revalidated": .bool(true), "observed_at": .string(started)]))
-        }
-        try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: observations, scanID: UUID().uuidString, scanStartedAt: started, scope: ["mac.audio_device", "mac.display", "mac.power", "mac.network", "mac.app"], completionEvidence: "complete", blobHandles: [:], live: live)
-        committed = current
-    }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
-        try await observe { live in try await self.scan(sink, live: live) }
     }
     public func observe(_ handler: @MainActor (Bool) async throws -> Void) async throws {
         let initialDevices = Set(try audio().compactMap { UInt32($0.0) } + [AudioObjectID(kAudioObjectSystemObject)])

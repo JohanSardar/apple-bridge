@@ -81,12 +81,4 @@ impl CaptureReader for MacReader {
         self.warm = true;
         Ok(())
     }
-
-    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        if capture["source"] == mac::SOURCE {
-            self.pull.hint();
-            return Ok(true);
-        }
-        Ok(false)
-    }
 }

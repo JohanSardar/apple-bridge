@@ -221,6 +221,25 @@ fn local_audio(root: &Path, value: &str) -> Option<std::path::PathBuf> {
             .is_some_and(|v| v.eq_ignore_ascii_case("m4a")))
     .then_some(path)
 }
+const RECORDING_COLUMNS: &[&str] = &[
+    "Z_PK",
+    "ZUNIQUEID",
+    "ZCUSTOMLABEL",
+    "ZDATE",
+    "ZDURATION",
+    "ZEVICTIONDATE",
+    "ZFOLDER",
+];
+
+#[must_use]
+pub fn readable(path: &Path) -> bool {
+    Snapshot::open(path, GENERATION).is_ok_and(|reader| {
+        reader
+            .require(&[("ZCLOUDRECORDING", RECORDING_COLUMNS)])
+            .is_ok()
+    })
+}
+
 #[derive(Debug)]
 pub struct Reader {
     state: State,
@@ -301,18 +320,7 @@ impl Reader {
         max_rows: usize,
     ) -> Result<Pending> {
         let reader = Snapshot::open(path, GENERATION)?;
-        reader.require(&[(
-            "ZCLOUDRECORDING",
-            &[
-                "Z_PK",
-                "ZUNIQUEID",
-                "ZCUSTOMLABEL",
-                "ZDATE",
-                "ZDURATION",
-                "ZEVICTIONDATE",
-                "ZFOLDER",
-            ],
-        )])?;
+        reader.require(&[("ZCLOUDRECORDING", RECORDING_COLUMNS)])?;
         let columns = reader.query(
             "PRAGMA table_info(ZCLOUDRECORDING)",
             &[],

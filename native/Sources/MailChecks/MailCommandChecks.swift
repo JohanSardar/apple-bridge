@@ -21,33 +21,6 @@ actor MailFake {
     }
     func scripts() -> [String] { calls }
 }
-private actor MailCommandSink: ObservationSink {
-    var messages: [JSON] = []
-    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
-    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { throw SourceFailure.corrupt }
-    func emitCheckpoint(source: String, generation: String, checkpoint: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {
-        try require(source == "mail" && !generation.isEmpty && !checkpoint.isEmpty && observations.count == 1 && scope.isEmpty && completionEvidence.isEmpty && live)
-        messages = observations
-    }
-}
-func checkMailCommandCapture(_ path: String) async throws {
-    let fake = MailFake("true")
-    let source = MailSource(path: path, script: { await fake.run($0) })
-    try require(Set(await source.open().capabilities) == Set(MailCommands.operations))
-    _ = try await source.snapshot()
-    let prepared = try await source.prepare(.object(["action": .object(["op": .string("mail.set_flag"), "native_key": .string("123"), "args": .object(["flagged": .bool(true)])])]))
-    let proof = try await source.dispatch(prepared)
-    try require(proof["observed"].bool && proof["native_key"].string == "123")
-    try execute(path, "DELETE FROM messages WHERE ROWID=124")
-    let sink = MailCommandSink()
-    try await source.captureCommand(proof, into: sink)
-    try require(await sink.messages.first?["native_key"].string == "123")
-    let (_, after, complete) = try await source.snapshot()
-    try require(complete && after.contains { $0["kind"].string == "absent" && $0["native_key"].string == "124" })
-    let denied = MailSource(path: path, script: { _ in throw MailCommandFailure.permission })
-    let failure = try await denied.dispatch(prepared)
-    try require(!failure["observed"].bool && failure["disposition"].string == "indeterminate" && failure["reason"].string == MailCommandFailure.permission.localizedDescription)
-}
 func checkMailCommands() async throws {
     try await MailCommands.requireAutomationPermission { 0 }
     do { try await MailCommands.requireAutomationPermission { -1743 }; throw SourceFailure.corrupt }
@@ -155,7 +128,6 @@ func checkMailCommands() async throws {
     catch MailCommandFailure.unconfirmed {}
     try require(await unidentified.scripts().filter { $0.contains("send m") }.count == 1)
     #if LAB
-    try await checkMailQualification()
     #endif
     try require(MailCommands.quote("\"\n\\") == "\"\\\"\\n\\\\\"")
 }

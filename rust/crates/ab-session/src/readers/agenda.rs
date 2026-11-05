@@ -391,21 +391,6 @@ impl CaptureReader for AgendaReader {
         restored
     }
 
-    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        let Some(pull) = self.pull.as_mut() else {
-            return Ok(false);
-        };
-        let partial = capture["scan_id"]
-            .as_str()
-            .is_some_and(|scan| !scan.is_empty())
-            && capture["completion_evidence"].as_str() != Some("complete");
-        if partial {
-            return Ok(false);
-        }
-        pull.hint();
-        Ok(true)
-    }
-
     fn refresh(&mut self) -> bool {
         match self.pull.as_mut() {
             Some(pull) => {

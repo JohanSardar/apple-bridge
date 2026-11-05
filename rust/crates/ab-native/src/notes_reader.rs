@@ -29,6 +29,11 @@ struct Job {
     fingerprint: Value,
     scan_id: String,
 }
+#[must_use]
+pub fn store_generation(database: &Path) -> Option<String> {
+    crate::notes_store::generation(database).ok()
+}
+
 #[derive(Debug)]
 pub struct Reader {
     database: PathBuf,
@@ -119,6 +124,140 @@ pub fn pre_state(database: &Path, collection: &str, key: &str) -> Result<Option<
         return Err(Error::Corrupt);
     }
     Ok(Some(json!({"native_fingerprint": fingerprint})))
+}
+pub fn read_record(
+    database: &Path,
+    collection: &str,
+    key: &str,
+    facts: &Facts,
+) -> Result<Option<Value>> {
+    if !matches!(collection, "notes.note" | "notes.folder") {
+        return Err(Error::Unsupported);
+    }
+    let db = Database::open(database)?;
+    let keys = BTreeSet::from([key.to_owned()]);
+    let snapshot = notes_store::read(&db, database, Some(&keys), false, facts, &record_context())?;
+    db.finish()?;
+    snapshot
+        .observations
+        .iter()
+        .find(|row| row.collection == collection && row.native_key == key)
+        .map(described)
+        .transpose()
+}
+fn record_context() -> capture::Context {
+    capture::Context {
+        observed_at: "1970-01-01T00:00:00Z".into(),
+        checkpoint: "command-read".into(),
+        scan_id: "command-read".into(),
+    }
+}
+fn described(row: &Observation) -> Result<Value> {
+    let fresh = data(row)?;
+    let fingerprint = if row.collection == "notes.folder" {
+        Value::String(crate::body_digest(&native_json::foundation_data(&fresh)?))
+    } else {
+        Value::Null
+    };
+    Ok(json!({
+        "exists": true,
+        "native_key": row.native_key,
+        "scoped_alias": row.scoped_alias,
+        "data": fresh,
+        "folder_fingerprint": fingerprint,
+    }))
+}
+pub fn read_script_id(database: &Path, script_id: &str, facts: &Facts) -> Result<Option<Value>> {
+    let number = script_id
+        .rsplit('/')
+        .next()
+        .and_then(|tail| tail.strip_prefix('p'))
+        .and_then(|digits| digits.parse::<u64>().ok())
+        .ok_or(Error::Conflict)?;
+    let db = Database::open(database)?;
+    let rows = db.query(
+        "SELECT ZIDENTIFIER FROM ZICCLOUDSYNCINGOBJECT WHERE Z_PK=?",
+        &[number.to_string()],
+    )?;
+    let keys: BTreeSet<String> = rows
+        .first()
+        .map(|row| notes_store::text(row, "ZIDENTIFIER").to_owned())
+        .filter(|key| !key.is_empty())
+        .into_iter()
+        .collect();
+    let snapshot = notes_store::read(&db, database, Some(&keys), false, facts, &record_context())?;
+    db.finish()?;
+    snapshot
+        .observations
+        .iter()
+        .find(|row| row.scoped_alias.as_deref() == Some(script_id))
+        .map(described)
+        .transpose()
+}
+pub fn deletion_state(database: &Path, key: &str, collection: &str) -> Result<String> {
+    let (entity, start) = match collection {
+        "notes.note" => ("ICNote", "ZFOLDER"),
+        "notes.folder" => ("ICFolder", "Z_PK"),
+        _ => return Err(Error::Unsupported),
+    };
+    let db = Database::open(database)?;
+    let sql = format!(
+        "WITH RECURSIVE target AS (
+           SELECT Z_PK,ZMARKEDFORDELETION,ZFOLDER FROM ZICCLOUDSYNCINGOBJECT
+           WHERE ZIDENTIFIER=? AND Z_ENT=(SELECT Z_ENT FROM Z_PRIMARYKEY WHERE Z_NAME='{entity}')
+         ), ancestors(pk,depth) AS (
+           SELECT {start},0 FROM target
+           UNION ALL SELECT f.ZPARENT,a.depth+1 FROM ZICCLOUDSYNCINGOBJECT f JOIN ancestors a ON f.Z_PK=a.pk WHERE a.depth<128
+         )
+         SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM Z_PRIMARYKEY WHERE Z_NAME='{entity}') THEN 'unknown'
+           WHEN NOT EXISTS(SELECT 1 FROM target) THEN 'gone'
+           WHEN EXISTS(SELECT 1 FROM target WHERE COALESCE(ZMARKEDFORDELETION,0)<>0) THEN 'marked'
+           WHEN EXISTS(SELECT 1 FROM ancestors a JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK=a.pk WHERE f.ZFOLDERTYPE=1 OR COALESCE(f.ZMARKEDFORDELETION,0)<>0) THEN 'trashed'
+           ELSE 'active' END AS state"
+    );
+    let rows = db.query(&sql, &[key.to_owned()])?;
+    rows.first()
+        .map(|row| notes_store::text(row, "state").to_owned())
+        .filter(|state| !state.is_empty())
+        .ok_or(Error::Corrupt)
+}
+pub fn trash_folder(database: &Path, folder_key: &str, facts: &Facts) -> Result<Option<String>> {
+    let db = Database::open(database)?;
+    let snapshot = notes_store::read(
+        &db,
+        database,
+        Some(&BTreeSet::new()),
+        true,
+        facts,
+        &record_context(),
+    )?;
+    db.finish()?;
+    let folders: Vec<(&Observation, Value)> = snapshot
+        .observations
+        .iter()
+        .filter(|row| row.collection == "notes.folder")
+        .map(|row| Ok((row, data(row)?)))
+        .collect::<Result<_>>()?;
+    let (_, folder) = folders
+        .iter()
+        .find(|(row, _)| row.native_key == folder_key)
+        .ok_or(Error::Conflict)?;
+    let account = folder["account"].as_str().unwrap_or_default();
+    if account.is_empty() {
+        return Ok(None);
+    }
+    let matches: Vec<_> = folders
+        .iter()
+        .filter(|(_, value)| {
+            value["account"] == account
+                && value["recently_deleted"] == true
+                && value["parent_id"].is_null()
+        })
+        .collect();
+    Ok(match matches.as_slice() {
+        [(row, _)] => row.scoped_alias.clone(),
+        _ => None,
+    })
 }
 fn replace_data(row: &mut Observation, value: &Value) -> Result<()> {
     row.data = Some(serde_json::from_slice(&native_json::record_data(value)?)?);

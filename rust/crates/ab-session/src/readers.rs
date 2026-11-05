@@ -1,13 +1,17 @@
 use crate::{Error, native_facts};
 
 mod agenda;
+mod background;
 mod config;
 mod files;
+mod focus;
 mod mac;
 mod mail;
 mod messages;
 mod notes;
+mod pdf;
 mod safari;
+mod shortcuts;
 mod telephony;
 mod usage;
 mod voice_memos;
@@ -15,13 +19,16 @@ use ab_native::capture;
 pub use agenda::AgendaReader;
 pub use config::{confine_staging, from_config, from_config_linked, wants_inherited_facts};
 pub use files::FilesReader;
+pub use focus::FocusReader;
 pub use mac::MacReader;
 pub use mail::MailReader;
 pub use messages::MessagesReader;
 pub use notes::NotesReader;
+pub use pdf::PdfReader;
 pub use safari::SafariReader;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+pub use shortcuts::ShortcutsReader;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Debug,
@@ -49,6 +56,42 @@ pub struct ScanContext {
 impl ScanContext {
     fn observed_at(&self) -> Result<String, Error> {
         capture::timestamp(self.now).map_err(reader_error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Readiness {
+    pub state: &'static str,
+    pub coverage: Value,
+    pub capabilities: Vec<String>,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReadinessContext<'a> {
+    pub fence: u64,
+    pub os_build: &'a str,
+}
+
+impl Readiness {
+    #[must_use]
+    pub fn ready(coverage: Value, capabilities: &[&str]) -> Self {
+        Self {
+            state: "ready",
+            coverage,
+            capabilities: capabilities.iter().map(|text| (*text).to_owned()).collect(),
+            reason: String::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn not(state: &'static str, coverage: Value, reason: &str) -> Self {
+        Self {
+            state,
+            coverage,
+            capabilities: Vec::new(),
+            reason: reason.to_owned(),
+        }
     }
 }
 
@@ -85,11 +128,14 @@ pub trait CaptureReader: Send + Debug {
     fn blob(&mut self, _handle: &str, _offset: u64, _length: usize) -> Result<Value, Error> {
         Err(Error::Invalid)
     }
-    fn ingest(&mut self, _capture: &Value) -> Result<bool, Error> {
-        Ok(false)
-    }
     fn refresh(&mut self) -> bool {
         false
+    }
+    fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
+        None
+    }
+    fn answer(&mut self, _operation: &str, _args: &Value) -> Option<Result<Value, String>> {
+        None
     }
 }
 

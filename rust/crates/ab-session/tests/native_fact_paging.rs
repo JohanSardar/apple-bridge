@@ -192,6 +192,7 @@ fn wire(sources: BTreeMap<String, Box<dyn readers::CaptureReader>>) -> Fallible<
         watch: false,
         state: None,
         queries: ab_session::queries::NativeQueries::default(),
+        ..Options::default()
     };
     let support::Wire {
         gateway,
@@ -370,88 +371,6 @@ fn incomplete_or_failed_native_pages_never_delete_or_emit() -> Fallible<()> {
     assert_eq!(names(&third, "upsert"), ["c"]);
     assert_eq!(names(&third, "absent"), Vec::<String>::new());
     assert_eq!(names(&third, "evict"), Vec::<String>::new());
-    drop((f.wire.gateway, f.wire.helper));
-    let _ = f.wire.worker.join();
-    Ok(())
-}
-
-#[test]
-fn helper_capture_is_only_a_hint_and_its_committed_waits_for_the_rust_commit() -> Fallible<()> {
-    let mut f = fixture(Duration::from_secs(3600), 50)?;
-    set(
-        &f.facts,
-        "agenda.calendars",
-        operation(vec![row("calendar.calendar", "cal-1", "Home")]),
-    )?;
-    set(
-        &f.facts,
-        "agenda.events",
-        operation(vec![row("calendar.event", "a", "A")]),
-    )?;
-    let (size, first) = receive(&mut f.wire.gateway)?;
-    commit(&mut f.wire, "calendar", &first, size)?;
-    expect_silence(&mut f.wire.gateway)?;
-
-    set(
-        &f.facts,
-        "agenda.events",
-        operation(vec![
-            row("calendar.event", "a", "A"),
-            row("calendar.event", "b", "B"),
-        ]),
-    )?;
-    send(
-        &mut f.wire.helper,
-        &json!({"t":"Scan","id":"h1","source":"calendar","generation":"swift-g","observations":[row("calendar.event","zzz","ignored")]}),
-    )?;
-    expect_silence(&mut f.wire.helper)?;
-    let (size, second) = receive(&mut f.wire.gateway)?;
-    assert_eq!(names(&second, "upsert"), ["b"]);
-    commit(&mut f.wire, "calendar", &second, size)?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "h1");
-    drop((f.wire.gateway, f.wire.helper));
-    let _ = f.wire.worker.join();
-    Ok(())
-}
-
-#[test]
-fn partial_helper_parts_release_at_once_and_only_the_final_part_pulls() -> Fallible<()> {
-    let mut f = fixture(Duration::from_secs(3600), 50)?;
-    set(
-        &f.facts,
-        "agenda.calendars",
-        operation(vec![row("calendar.calendar", "cal-1", "Home")]),
-    )?;
-    set(
-        &f.facts,
-        "agenda.events",
-        operation(vec![row("calendar.event", "a", "A")]),
-    )?;
-    let (size, first) = receive(&mut f.wire.gateway)?;
-    commit(&mut f.wire, "calendar", &first, size)?;
-    expect_silence(&mut f.wire.gateway)?;
-    set(
-        &f.facts,
-        "agenda.events",
-        operation(vec![
-            row("calendar.event", "a", "A"),
-            row("calendar.event", "b", "B"),
-        ]),
-    )?;
-    send(
-        &mut f.wire.helper,
-        &json!({"t":"Scan","id":"p1","source":"calendar","generation":"swift-g","scan_id":"s1","observations":[]}),
-    )?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "p1");
-    expect_silence(&mut f.wire.gateway)?;
-    send(
-        &mut f.wire.helper,
-        &json!({"t":"Scan","id":"p2","source":"calendar","generation":"swift-g","scan_id":"s1","completion_evidence":"complete","observations":[]}),
-    )?;
-    let (size, second) = receive(&mut f.wire.gateway)?;
-    assert_eq!(names(&second, "upsert"), ["b"]);
-    commit(&mut f.wire, "calendar", &second, size)?;
-    assert_eq!(receive(&mut f.wire.helper)?.1["id"], "p2");
     drop((f.wire.gateway, f.wire.helper));
     let _ = f.wire.worker.join();
     Ok(())

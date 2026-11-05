@@ -45,8 +45,6 @@ struct Checks {
             let evidence = try await run(op, ["parent": .string(parent), "name": .string("[ab-test] a.txt"), "content_base64": .string(data.base64EncodedString()), "digest": .string(digest)])
             guard evidence["digest"].string == digest, try Data(contentsOf: folder.appendingPathComponent("[ab-test] a.txt")) == data else { throw SourceFailure.corrupt }
         }
-        let sink = CommandSink()
-        try await source.reconcile(into: sink)
         let link = folder.appendingPathComponent("link")
         try fm.createSymbolicLink(at: link, withDestinationURL: fm.temporaryDirectory)
         for path in ["../escape", parent + "/link/escape"] {
@@ -59,9 +57,6 @@ struct Checks {
         let target = folder.appendingPathComponent("target")
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
         _ = try await run("files.move", ["path": .string(parent + "/[ab-test] b.txt"), "parent": .string(parent + "/target"), "name": .string("[ab-test] c.txt")])
-        try await source.reconcile(into: sink)
-        let captured = await sink.rows
-        guard captured.contains(where: { $0["kind"].string == "absent" && $0["native_key"].string.hasSuffix("/" + parent + "/[ab-test] a.txt") }), captured.contains(where: { $0["kind"].string == "upsert" && $0["native_key"].string.hasSuffix("/" + parent + "/target/[ab-test] c.txt") }) else { throw SourceFailure.corrupt }
         let file = target.appendingPathComponent("[ab-test] c.txt")
         guard fm.fileExists(atPath: file.path), !fm.fileExists(atPath: folder.appendingPathComponent("[ab-test] b.txt").path) else { throw SourceFailure.corrupt }
         _ = try await run("files.set_tags", ["path": .string(parent + "/target/[ab-test] c.txt"), "tags": .array([.string("Bridge Test")])])
@@ -200,8 +195,6 @@ struct Checks {
         let file = folder.appendingPathComponent("[ab-test] synthetic.txt")
         let token = "abtest" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         try Data(token.utf8).write(to: file)
-        let (rows, complete) = try await source.snapshot(root)
-        guard complete, rows.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
         let args: JSON = .object(["root": .string(root.path), "path": .string(folder.lastPathComponent + "/[ab-test] synthetic.txt")])
         let result = try await source.read(args)
         guard result["size"].number == Double(token.utf8.count), result["digest"].string.count == 64 else { throw SourceFailure.corrupt }
@@ -227,38 +220,8 @@ struct Checks {
             guard evicted["downloaded"] == .bool(false) else { throw SourceFailure.corrupt }
             let reread = try await source.read(args)
             guard reread == result else { throw SourceFailure.corrupt }
-        } else if scenario == "FILE-IDLE" {
-            let guardValue = FileScanGuard()
-            var scanGuard = guardValue
-            _ = scanGuard.finish(root: root.path, keys: ["one"], complete: true)
-            guard scanGuard.finish(root: root.path, keys: [], complete: false).isEmpty,
-                  scanGuard.finish(root: root.path, keys: [], complete: true) == ["one"] else { throw SourceFailure.corrupt }
-        }
-        if CommandLine.arguments.contains("--real-idle") {
-            let capture = Task { try await source.capture(.null, into: IdleSink()) }
-            defer { capture.cancel() }
-            let start = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)
-            let wall = Date()
-            try await Task.sleep(for: .seconds(300))
-            let cpu = Double(clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID) - start) / 1e9
-            let percent = cpu / Date().timeIntervalSince(wall) * 100
-            print("idle_cpu_percent=\(percent)")
-            guard percent < 2 else { throw SourceFailure.capabilityUnproven }
         }
         try FileManager.default.removeItem(at: file)
-        let (after, _) = try await source.snapshot(root)
-        guard !after.contains(where: { $0["native_key"].string == file.path }) else { throw SourceFailure.corrupt }
 
     }
-}
-
-struct IdleSink: ObservationSink {
-    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
-    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws {}
-}
-
-actor CommandSink: ObservationSink {
-    var rows: [JSON] = []
-    func sourceState(source: String, state: String, coverage: JSON, capabilities: [String], reason: String) async throws {}
-    func emit(source: String, generation: String, observations: [JSON], scanID: String, scanStartedAt: String, scope: [String], completionEvidence: String, blobHandles: [String: String], live: Bool) async throws { rows += observations }
 }

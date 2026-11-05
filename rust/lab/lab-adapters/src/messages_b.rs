@@ -10,7 +10,6 @@ use crate::{
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
-use std::process::Command;
 
 pub const SCOPE: &str = "messages:read,messages:write,system:read";
 pub const COMMANDS: [&str; 13] = [
@@ -129,22 +128,11 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
             action(world, "watcher-poll", "", 0) && await_until(15, || converged(world, &observed)),
             "poll fallback delivered the disarmed insert",
         );
-        let output = Command::new("bash")
-            .arg("packaging/dev/check-messages-capture.sh")
-            .output();
-        let passed = output.as_ref().is_ok_and(|o| {
-            o.status.success()
-                && String::from_utf8_lossy(&o.stdout).trim() == "all Messages capture checks passed"
-        });
-        if let Ok(output) = &output
-            && !output.status.success()
-        {
-            eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        }
-        evidence.check(
+        crate::native_core::rust_tests(
+            evidence,
             "production_native_watcher_fault_checks",
-            passed,
-            "native Messages capture checks",
+            "ab-session",
+            &["--test", "messages_live_first"],
         );
     }
     history::tail(world, &observed, &observers, evidence)

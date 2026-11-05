@@ -173,7 +173,7 @@ without Swift. A source that takes framework facts uses the separate facts strea
 `Hello`/`Welcome`, `Facts`, `Revalidate`, `Changed`), served by a `factsOnly` NativeServer for the life of the session; the
 session ends when that stream is gone for good, and the Helper starts a new one.
 
-Swift sends observations only. ab-session owns the byte credit (a whole frame including its 4-byte header
+Swift sends no observations: ab-session reads every source itself, and `Scan` remains only for the lab's simulated Helper. For a `Scan`, ab-session owns the byte credit (a whole frame including its 4-byte header
 is the cost; one pool for all sources), one flight per source, chunking (16000 bytes of observations per
 frame, 64000 when `live`, 240000 for live Calendar, absences last), checkpoints (a fresh session checkpoint
 per scan, derived `-N` checkpoints for intermediate frames), predecessor (the committed checkpoint of the

@@ -934,6 +934,24 @@ fn range_perf(world: &World, observed: &Observed, evidence: &mut Evidence) -> Re
 }
 
 pub fn native_checks(scenario: &str, evidence: &mut Evidence) {
+    if scenario == "CAL-STORE-NATIVE" {
+        crate::native_core::rust_tests(
+            evidence,
+            "store_reader_fields_and_blobs",
+            "ab-native",
+            &["--test", "calendar_store_oracle"],
+        );
+        return;
+    }
+    if scenario == "CAL-HINT-COVERAGE" {
+        crate::native_core::rust_tests(
+            evidence,
+            "changed_push_survives_a_failed_pull",
+            "ab-session",
+            &["--test", "native_revalidation"],
+        );
+        return;
+    }
     let built = Command::new("packaging/dev/build-native.sh")
         .env("APPLE_BRIDGE_NATIVE_TARGET", "CalendarChecks")
         .env("APPLE_BRIDGE_NATIVE_LAB", "1")
@@ -957,54 +975,12 @@ pub fn native_checks(scenario: &str, evidence: &mut Evidence) {
     };
     let flag = match scenario {
         "CAL-FUTURE-COUNT-MATH" => "--recurrence-bounds",
-        "CAL-HINT-COVERAGE" => "--hint-coverage",
-        "CAL-STORE-NATIVE" => "--store-reader",
         _ => "--invalidated-event",
     };
     let output = Command::new(directory.join("CalendarChecks"))
         .arg(flag)
         .output();
     let success = output.as_ref().is_ok_and(|o| o.status.success());
-    let combined = output.map_or_else(
-        |_| String::new(),
-        |o| {
-            let mut text = String::from_utf8_lossy(&o.stdout).into_owned();
-            text.push_str(&String::from_utf8_lossy(&o.stderr));
-            text
-        },
-    );
-    if matches!(scenario, "CAL-HINT-COVERAGE" | "CAL-STORE-NATIVE") {
-        let checks: Option<Value> = serde_json::from_str(&combined).ok();
-        evidence.check(
-            "native_hint_fixture_decoded",
-            checks.as_ref().is_some_and(Value::is_object),
-            "native fixture decoded",
-        );
-        let names: &[&str] = if scenario == "CAL-STORE-NATIVE" {
-            &[
-                "store_blob_digest_and_bytes",
-                "store_blob_scope_cannot_escape_calendar_root",
-                "store_unverified_units_stay_hidden",
-                "store_unique_identifier_join",
-                "store_uuid_join",
-                "store_external_identity_is_calendar_scoped",
-                "store_unknown_calendar_rejects",
-                "store_detached_identity_is_not_guessed",
-                "store_fields_decoded_without_unit_guessing",
-            ]
-        } else {
-            &[
-                "late_coalesced_hint_requires_followup",
-                "all_hints_before_scan_are_skipped",
-                "hint_at_scan_start_requires_followup",
-            ]
-        };
-        for name in names {
-            let ok = checks.as_ref().is_some_and(|c| c[*name] == true);
-            evidence.check(name, ok, "native check");
-        }
-        return;
-    }
     let name = if scenario == "CAL-FUTURE-COUNT-MATH" {
         "native_recurrence_bounds_and_postconditions"
     } else {

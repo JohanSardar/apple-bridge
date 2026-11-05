@@ -230,7 +230,7 @@ features:
     notes: Reconciliation consumes wake requests before short-circuiting, skips unchanged database versions and maximum ROWID, and batches row and absence lookups; file hints debounce for 100 ms. Media scheduling shares a one-second power and thermal cache. Repeated capture failures back off to thirty seconds; explicit permission errors also back off to thirty seconds. The native session run limit is one second, avoiding 20 idle timer wakes per second.
     requirements: [R-FULL, R-LIVE, R-MSG-DEPTH, R-ATTACH, R-NO-FALSE-DELETE]
     milestone: M1
-    modules: [native/MessagesSource, native/Decoders]
+    modules: [native/MessagesSource, rust/crates/ab-native]
     depends_on: [helper.session, core.blobs]
     status: done
     scenarios:
@@ -414,7 +414,7 @@ features:
     title: Notes folders and notes, protobuf decoding, locked notes
     requirements: [R-FULL, R-LIVE, R-NOTES]
     milestone: M3
-    modules: [native/NotesSource, native/Decoders]
+    modules: [native/NotesSource, rust/crates/ab-native]
     depends_on: [helper.session]
     status: done
     scenarios:
@@ -449,7 +449,7 @@ features:
     notes: Input fingerprinting reuses immutable metadata key sets without changing its fields or polling cadence.
     requirements: [R-USAGE, R-FULL]
     milestone: M4
-    modules: [native/UsageSource, native/Decoders]
+    modules: [rust/crates/ab-native]
     depends_on: [helper.session]
     status: done
     scenarios:
@@ -733,7 +733,7 @@ features:
     title: Local call history capture
     requirements: [R-API, R-SCOPE]
     milestone: G4
-    modules: [native/Sources/CallsSource, rust/crates/ab-domain, rust/lab/lab-simapple]
+    modules: [rust/crates/ab-native, rust/crates/ab-domain, rust/lab/lab-simapple]
     depends_on: []
     status: done
     scenarios:
@@ -759,7 +759,7 @@ features:
     title: Voice Memos assets and voicemail metadata
     requirements: [R-API, R-SCOPE]
     milestone: G4
-    modules: [native/Sources/VoiceMemosSource, native/Sources/VoicemailSource, rust/crates/ab-domain]
+    modules: [rust/crates/ab-native, rust/crates/ab-domain]
     depends_on: []
     status: done
     scenarios:

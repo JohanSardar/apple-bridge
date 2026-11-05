@@ -22,7 +22,7 @@ PLAN="$(mktemp)"
 for s in $SOURCES; do
   root="$(source_root "$s")"; probe="$(root_probe "$s")"
   case "$s" in
-    calendar|contacts|reminders|mac) mkdir -p "$root" ;;
+    calendar|contacts|reminders|mac|focus|shortcuts|pdf) mkdir -p "$root" ;;
     *) [ -d "$root" ] || die "$s: root not found: $root"
        [ -z "$probe" ] || [ -e "$root/$probe" ] || die "$s: $probe not found under $root" ;;
   esac
@@ -41,9 +41,9 @@ cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
     entry = {"root": root}
-    if name in ("calendar", "contacts", "reminders", "files", "mac", "messages"):
+    if name in ("calendar", "contacts", "reminders", "files", "mac", "messages", "focus", "pdf"):
         entry["facts"] = "native"
-    if name == "files":
+    if name in ("files", "focus"):
         entry["home"] = base
     cfg["sources"][name] = entry
 print(json.dumps(cfg, indent=2, sort_keys=True))
@@ -66,7 +66,7 @@ verify:
   python3 -m json.tool "$CONFIG"
   ps -ax -o pid,command | grep '[a]b-session'
   ls "$HELPER_HOME/session/capture-state/"     (one <source>.json per flipped source after its first Rust commit)
-  gateway: a Ready frame lists the source and its first Rust capture arrives under the generation the gateway already committed for the source (record ids are kept)
+  gateway: a Ready frame lists the source and its first Rust capture arrives under the generation the gateway already saved for the source (record ids are kept)
 rollback (instant, no data loss):
   $(dirname "$0")/unflip-capture.sh ${ARGS[0]} --home "$HOME_DIR" --restart-helper
 V

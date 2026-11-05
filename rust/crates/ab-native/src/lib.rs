@@ -18,6 +18,7 @@ pub fn body_digest(data: &[u8]) -> String {
     format!("{:x}", Sha256::digest(data))
 }
 pub mod capture;
+pub mod focus;
 pub mod messages;
 pub mod native_json;
 pub mod notes;
@@ -25,6 +26,7 @@ pub mod plist;
 pub mod rich;
 pub mod safari;
 pub mod shortcut_actions;
+pub mod shortcuts;
 pub mod summary;
 pub mod usage;
 

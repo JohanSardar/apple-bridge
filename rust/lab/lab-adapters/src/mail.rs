@@ -77,31 +77,71 @@ pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
     if !NATIVE.contains(&id.as_str()) {
         return Err(Error::Invalid(format!("mail not ported for {id}")));
     }
-    let Some((binary, _)) = mail_checks() else {
-        add(evidence, "native_mail_build", false);
-        return Ok(());
-    };
-    add(evidence, "native_mail_build", true);
-    let output = Command::new(&binary).arg(&id).output();
-    let ok = output.as_ref().is_ok_and(|o| o.status.success());
-    let name = if id == "MAIL-IDLE" {
-        "bounded_fixture_idle_no_checkpoints_and_watcher_resumes"
-    } else {
-        "native_mail_fixture"
-    };
-    add(evidence, name, ok);
-    if !ok || !matches!(id.as_str(), "MAIL-CAPTURE" | "MAIL-BODY") {
+    if id == "MAIL-COMMANDS" {
+        let Some((binary, _)) = mail_checks() else {
+            add(evidence, "native_mail_build", false);
+            return Ok(());
+        };
+        add(evidence, "native_mail_build", true);
+        let ok = Command::new(&binary)
+            .output()
+            .is_ok_and(|o| o.status.success());
+        add(evidence, "native_mail_fixture", ok);
         return Ok(());
     }
-    let fixture: Value = serde_json::from_slice(&output.map(|o| o.stdout).unwrap_or_default())
-        .unwrap_or(Value::Null);
-    let observations = fixture["observations"].clone();
-    let mut passed = capture_world(world, &observations);
-    if passed && id == "MAIL-BODY" {
-        passed = body_world(world);
+    let (check, package, tests): (&str, &str, &[&str]) = match id.as_str() {
+        "MAIL-IDLE" => (
+            "bounded_fixture_idle_no_checkpoints_and_watcher_resumes",
+            "ab-session",
+            &["--test", "capture_producer", "rust_mail"],
+        ),
+        "MAIL-BODY" => ("native_mail_fixture", "ab-native", &["--test", "mail"]),
+        _ => (
+            "native_mail_fixture",
+            "ab-session",
+            &["--test", "capture_producer", "rust_mail"],
+        ),
+    };
+    crate::native_core::rust_tests(evidence, check, package, tests);
+    if id == "MAIL-CAPTURE" {
+        let passed = capture_world(world, &synthetic_mailbox());
+        add(evidence, "mail_gateway_capture_and_subject_fts", passed);
     }
-    add(evidence, "mail_gateway_capture_and_subject_fts", passed);
     Ok(())
+}
+fn synthetic_mailbox() -> Value {
+    let mut rows = Vec::new();
+    let mut row = |collection: &str, key: String, data: Value| {
+        rows.push(json!({
+            "kind": "upsert", "collection": collection, "native_key": key,
+            "observed_at": jiff::Timestamp::now().to_string(), "data": data,
+        }));
+    };
+    for index in 0..3 {
+        let account = format!("synthetic{index}@example.com");
+        row(
+            "mail.account",
+            account.clone(),
+            json!({"name": account, "kind": "IMAP", "addresses": [account]}),
+        );
+        row(
+            "mail.mailbox",
+            format!("mailbox/{index}"),
+            json!({"account_id": account, "name": "INBOX", "path": "/INBOX", "role": "inbox", "unread_count": 0, "message_count": 0}),
+        );
+    }
+    for index in 0..1000 {
+        row(
+            "mail.message",
+            index.to_string(),
+            json!({
+                "subject": format!("synthetic subject {index}"), "from": "sender@example.com",
+                "received_at": "2026-01-01T00:00:00Z", "read": false, "flagged": false,
+                "mailbox_id": "mailbox/0", "account_id": "synthetic0@example.com",
+            }),
+        );
+    }
+    Value::Array(rows)
 }
 fn capture_world(world: &mut World, observations: &Value) -> bool {
     if replicas::start_with(world, 1, SCOPE, 0).is_err() {
@@ -139,40 +179,6 @@ fn capture_world(world: &mut World, observations: &Value) -> bool {
             .ok()
             .flatten()
             .is_some_and(|p| p["records"].as_array().is_some_and(|r| r.len() == 1000))
-    })
-}
-fn body_world(world: &World) -> bool {
-    let Ok(gateway) = Client::new(world, SCOPE) else {
-        return false;
-    };
-    await_until(10, || {
-        let Ok(read) = crate::assertions::read_all(&gateway, false, false) else {
-            return false;
-        };
-        let Some(message) = read
-            .records
-            .iter()
-            .find(|r| r["collection"] == "mail.message")
-        else {
-            return false;
-        };
-        let reply = gateway
-            .call(
-                "mail.body",
-                &json!({"args": {"message_id": message["id"]}}),
-                20,
-            )
-            .ok()
-            .flatten();
-        reply.is_some_and(|result| {
-            let body = if result["result_json"].is_object() {
-                result["result_json"].clone()
-            } else {
-                serde_json::from_str(result["result_json"].as_str().unwrap_or("null"))
-                    .unwrap_or(Value::Null)
-            };
-            body["state"] == "downloaded" && body["plain_text"] == "Hello fixture"
-        })
     })
 }
 fn replica(world: &mut World, evidence: &mut Evidence) -> Result<()> {

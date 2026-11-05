@@ -2,8 +2,9 @@ use crate::media_facts::MediaFacts;
 
 use super::{
     AgendaReader, Arc, BTreeMap, CaptureReader, Debug, Deserialize, Duration, Error, FilesReader,
-    MacReader, MailReader, MessagesReader, NotesReader, Path, PathBuf, SafariReader,
-    TelephonyReader, UsageReader, VoiceMemosReader, native_facts,
+    FocusReader, MacReader, MailReader, MessagesReader, NotesReader, Path, PathBuf, PdfReader,
+    SafariReader, ShortcutsReader, TelephonyReader, UsageReader, VoiceMemosReader, native_facts,
+    shortcuts,
 };
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,10 @@ struct SourceConfig {
     roots: Vec<PathBuf>,
     #[serde(default = "default_media_retry")]
     media_retry_ms: u64,
+    #[serde(default = "default_tabs_poll")]
+    tabs_poll_ms: u64,
+    #[serde(default)]
+    executable: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,6 +58,10 @@ enum NativeMarker {
 
 fn default_media_retry() -> u64 {
     60_000
+}
+
+fn default_tabs_poll() -> u64 {
+    5_000
 }
 
 fn default_facts_poll() -> u64 {
@@ -142,6 +151,7 @@ fn linked_client(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn from_config_linked(
     config: &str,
     inherited: Option<&Arc<native_facts::Client>>,
@@ -150,7 +160,41 @@ pub fn from_config_linked(
     let mut readers: BTreeMap<String, Box<dyn CaptureReader>> = BTreeMap::new();
     for (source, config) in sources {
         let reader: Box<dyn CaptureReader> = match source.as_str() {
-            "safari" => Box::new(SafariReader::new(config.root, config.generation)),
+            "safari" => {
+                let client = linked_client(config.facts.as_ref(), inherited)?;
+                Box::new(
+                    SafariReader::new(config.root, config.generation)
+                        .with_tabs(client, Duration::from_millis(config.tabs_poll_ms.max(1))),
+                )
+            }
+            "focus" => {
+                let client =
+                    linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
+                let home = config.home.clone().ok_or(Error::Invalid)?;
+                Box::new(FocusReader::new(
+                    config.root,
+                    &home,
+                    client,
+                    Duration::from_millis(config.facts_poll_ms.max(1)),
+                ))
+            }
+            "pdf" => {
+                let client =
+                    linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
+                Box::new(PdfReader::new(
+                    config.root,
+                    client,
+                    Duration::from_millis(config.facts_poll_ms.max(1)),
+                ))
+            }
+            "shortcuts" => Box::new(ShortcutsReader::new(
+                config.root,
+                config
+                    .executable
+                    .clone()
+                    .unwrap_or_else(|| PathBuf::from(shortcuts::EXECUTABLE)),
+                Duration::from_millis(config.facts_poll_ms.max(1)),
+            )),
             "mail" => Box::new(MailReader::new(config.root)),
             "usage" => Box::new(UsageReader::new(
                 config.root,
@@ -170,10 +214,12 @@ pub fn from_config_linked(
                     .media_root
                     .clone()
                     .and_then(|root| MediaFacts::locate(config.media_helper.clone(), root));
+                let client = linked_client(config.facts.as_ref(), inherited)?;
                 Box::new(
                     NotesReader::new(config.root, &staging)?
                         .holding(config.hydration_hold)
-                        .with_media(media),
+                        .with_media(media)
+                        .with_status(client, config.home.clone()),
                 )
             }
             "messages" => {

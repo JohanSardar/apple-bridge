@@ -3,39 +3,23 @@ import glob, json, os, random, secrets, signal, sqlite3, subprocess, sys, time, 
 app, bridge, source = sys.argv[1], sys.argv[2], sys.argv[3]
 label = sys.argv[4] if len(sys.argv) > 4 else "run"
 base_dir = os.environ.get("REAL_WORLD_ROOT", "/tmp/ab-real-native")
+attach = os.environ.get("REAL_ATTACH_HOME", "")
 world = "%s/w-%s-%s-%s" % (base_dir, source, label, secrets.token_hex(4))
 os.makedirs(world, mode=0o700)
-gateway_home = world + "/gateway"
-os.makedirs(gateway_home + "/helper", mode=0o700)
-with open(gateway_home + "/helper/lab-capture-source", "w") as handle:
-    handle.write(source)
 report_dir = os.path.expanduser("~/Library/Application Support/AppleBridgeDev")
 env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE="file")
 HOME = os.path.expanduser("~")
-RUST_ROOTS = {
-    "safari": HOME + "/Library/Safari",
-    "phone": HOME + "/Library/Application Support/CallHistoryDB",
-    "mail": HOME + "/Library/Mail/V10/MailData",
-    "usage": HOME + "/Library/Biome",
-    "notes": HOME + "/Library/Group Containers/group.com.apple.notes",
-}
-FACTS_SOURCES = ("calendar", "contacts", "reminders")
-# Live capture owners: REAL_RUST_SOURCES lists what ab-session captures, the way the live switch file does. Empty keeps the Swift path.
-rust_sources = [name for name in os.environ.get("REAL_RUST_SOURCES", "").split(",") if name]
-if rust_sources:
+if attach:
+    gateway_home = attach
+    proc = None
+else:
+    gateway_home = world + "/gateway"
     os.makedirs(gateway_home + "/helper/session", mode=0o700)
-    switch = {"poll_ms": 5000, "watch": True, "sources": {}}
-    for name in rust_sources:
-        if name in FACTS_SOURCES:
-            root = gateway_home + "/helper/session/facts/" + name
-            os.makedirs(root, mode=0o700)
-            switch["sources"][name] = {"facts": "native", "root": root}
-        else:
-            switch["sources"][name] = {"root": RUST_ROOTS[name]}
-    with open(gateway_home + "/helper/session/rust-capture.json", "w") as handle:
-        json.dump(switch, handle)
-log = open(world + "/gateway.log", "ab")
-proc = subprocess.Popen([bridge, "start", "--role", "gateway", "--home", gateway_home, "--peer-addr", "127.0.0.1:0", "--api-addr", "127.0.0.1:0", "--helper-app", app, "--helper-lab-commands"], env=env, stdout=log, stderr=log, start_new_session=True)
+    if not os.environ.get("REAL_ALL_SOURCES"):
+        with open(gateway_home + "/helper/session/rust-capture.json", "w") as handle:
+            json.dump({"exclusive": True, "sources": {source: {}}, "poll_ms": 5000, "watch": True}, handle)
+    log = open(world + "/gateway.log", "ab")
+    proc = subprocess.Popen([bridge, "start", "--role", "gateway", "--home", gateway_home, "--peer-addr", "127.0.0.1:0", "--api-addr", "127.0.0.1:0", "--helper-app", app, "--helper-lab-commands"], env=env, stdout=log, stderr=log, start_new_session=True)
 results = []
 latencies = []
 created = []
@@ -43,10 +27,11 @@ externals = []
 safari_windows = []
 mail_subjects = []
 launched = []
+made = []
 EXTERNAL_BOUND = float(os.environ.get("REAL_EXTERNAL_BOUND", "45"))
 OPS_TIMEOUT = 60
 
-SCOPES = "reminders:read,reminders:write,calendar:read,calendar:write,contacts:read,contacts:write,notes:read,notes:write,system:read,safari:read,mail:read,phone:read,usage:read"
+SCOPES = "reminders:read,reminders:write,calendar:read,calendar:write,contacts:read,contacts:write,notes:read,notes:write,system:read,safari:read,mail:read,phone:read,usage:read,files:read,mac:read,focus:read,shortcuts:read,voicemail:read,voice_memos:read"
 COLLECTIONS = {
     "reminders": ["reminders.list", "reminders.reminder"],
     "calendar": ["calendar.calendar", "calendar.event"],
@@ -56,8 +41,14 @@ COLLECTIONS = {
     "mail": ["mail.account", "mail.mailbox"],
     "phone": ["phone.call"],
     "usage": ["usage.app_day", "usage.device"],
+    "files": ["files.item"],
+    "focus": ["focus.status"],
+    "shortcuts": ["shortcuts.shortcut", "shortcuts.folder"],
+    "voicemail": ["voicemail.message"],
+    "voice_memos": ["voice_memos.recording"],
+    "mac": ["mac.power", "mac.display"],
 }
-ANCHOR = {"reminders": "reminders.list", "calendar": "calendar.calendar", "contacts": "contacts.contact", "notes": "notes.folder", "safari": "safari.history", "mail": "mail.mailbox", "phone": "phone.call", "usage": "usage.app_day"}
+ANCHOR = {"reminders": "reminders.list", "calendar": "calendar.calendar", "contacts": "contacts.contact", "notes": "notes.folder", "safari": "safari.history", "mail": "mail.mailbox", "phone": "phone.call", "usage": "usage.app_day", "files": "files.item", "focus": "focus.status", "shortcuts": "shortcuts.shortcut", "mac": "mac.app"}
 APP = {"notes": "Notes", "safari": "Safari", "mail": "Mail"}
 
 
@@ -83,6 +74,8 @@ def brief(reply):
 
 
 def stop_gateway():
+    if proc is None:
+        return
     try:
         os.killpg(proc.pid, signal.SIGTERM)
     except OSError:
@@ -302,7 +295,7 @@ def started_app(name):
 
 def note_store_state(title):
     """Notes' own store, read-only: the live folder, Recently Deleted, or not written yet."""
-    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % RUST_ROOTS["notes"].replace(" ", "%20"), uri=True)
+    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % NOTES_ROOT.replace(" ", "%20"), uri=True)
     try:
         row = store.execute("SELECT f.ZFOLDERTYPE, o.ZMARKEDFORDELETION FROM ZICCLOUDSYNCINGOBJECT o LEFT JOIN ZICCLOUDSYNCINGOBJECT f ON f.Z_PK = o.ZFOLDER WHERE o.ZTITLE1 = ? ORDER BY o.Z_PK DESC LIMIT 1", (title,)).fetchone()
     finally:
@@ -313,7 +306,7 @@ def note_store_state(title):
 
 
 def note_trash_folder():
-    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % RUST_ROOTS["notes"].replace(" ", "%20"), uri=True)
+    store = sqlite3.connect("file:%s/NoteStore.sqlite?mode=ro" % NOTES_ROOT.replace(" ", "%20"), uri=True)
     try:
         uuid = store.execute("SELECT Z_UUID FROM Z_METADATA").fetchone()[0]
         rows = store.execute("SELECT Z_PK FROM ZICCLOUDSYNCINGOBJECT WHERE ZFOLDERTYPE = 1 AND COALESCE(ZMARKEDFORDELETION, 0) = 0 AND ZPARENT IS NULL").fetchall()
@@ -460,8 +453,97 @@ def run_usage(tag):
     note("usage %s today after=%s" % (bundle, seconds()))
 
 
+NOTES_ROOT = HOME + "/Library/Group Containers/group.com.apple.notes"
+FILES_ROOT = HOME + "/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test"
+
+
+def file_record(name):
+    for record in records("files.item"):
+        if live(record) and record.get("data", {}).get("name") == name:
+            return record
+    return None
+
+
+def run_files(tag):
+    name = tag.replace(" ", "-") + ".txt"
+    path = os.path.join(FILES_ROOT, name)
+    made.append(path)
+    with open(path, "w") as handle:
+        handle.write("one")
+    created_record = timed("external_create", lambda: file_record(name), EXTERNAL_BOUND)
+    if not check("external_create_reached_gateway", created_record):
+        return
+    with open(path, "a") as handle:
+        handle.write(" two")
+    check("external_update_reached_gateway", timed("external_update", lambda: (file_record(name) or {}).get("data", {}).get("size") == 7, EXTERNAL_BOUND))
+    os.remove(path)
+    made.remove(path)
+    check("external_delete_reached_gateway", timed("external_delete", lambda: gone("files.item", created_record["id"]), EXTERNAL_BOUND))
+
+
+def app_records(bundle):
+    return [r for r in records("mac.app") if live(r) and r.get("data", {}).get("bundle_id") == bundle]
+
+
+def run_mac(tag):
+    bundle, name = "com.apple.calculator", "Calculator"
+    if subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0:
+        note("Calculator already running; not touching it")
+        return
+    subprocess.run(["open", "-g", "-a", name], check=False, timeout=30)
+    launched.append(name)
+    found = timed("external_app_launch", lambda: app_records(bundle), EXTERNAL_BOUND)
+    if not check("external_app_launch_reached_gateway", found):
+        return
+    subprocess.run(["pkill", "-TERM", "-x", name], check=False, timeout=30)
+    launched.remove(name)
+    check("external_app_quit_reached_gateway", timed("external_app_quit", lambda: not app_records(bundle), EXTERNAL_BOUND))
+
+
+def focus_state():
+    rows = [r for r in records("focus.status") if live(r)]
+    return rows[0].get("data", {}) if rows else {}
+
+
+def run_focus(tag):
+    state = focus_state()
+    check("focus_status_authorized", state.get("authorization") == "authorized", state.get("authorization"))
+    if state.get("focused") is not False:
+        note("a Focus is on or unknown; not touching it")
+        return
+    listing = subprocess.run(["shortcuts", "list"], capture_output=True, text=True, timeout=30).stdout.splitlines()
+    if "AB Focus" not in listing:
+        note("AB Focus is not installed: no way to change Focus from outside without the UI")
+        return
+    def turn(on):
+        input_path = "%s/focus-%d.json" % (world, on)
+        with open(input_path, "w") as handle:
+            json.dump({"mode": "Do Not Disturb", "on": on, "until": ""}, handle)
+        subprocess.run(["shortcuts", "run", "AB Focus", "--input-path", input_path], check=False, timeout=30, capture_output=True)
+    turn(True)
+    try:
+        check("external_focus_on_reached_gateway", timed("external_focus_on", lambda: focus_state().get("focused") is True, EXTERNAL_BOUND))
+    finally:
+        turn(False)
+    check("external_focus_off_reached_gateway", timed("external_focus_off", lambda: focus_state().get("focused") is False, EXTERNAL_BOUND))
+
+
+def run_shortcuts(tag):
+    listing = subprocess.run(["shortcuts", "list", "--show-identifiers"], capture_output=True, text=True, timeout=30).stdout.splitlines()
+    identifiers = {line.rsplit(" (", 1)[1].rstrip(")") for line in listing if " (" in line}
+    captured = {r["data"]["identifier"] for r in records("shortcuts.shortcut") if live(r)}
+    check("inventory_equals_the_cli", identifiers == captured, "%d cli, %d gateway" % (len(identifiers), len(captured)))
+    note("no outside change: the shortcuts CLI cannot create or delete one without the UI")
+
+
+def run_recordings(tag):
+    readiness = [r for r in records("system.source") if r.get("data", {}).get("source") == source]
+    check("readiness_reported", readiness, "no system.source")
+    note("no outside change: there is no way to make a %s record without a device or the UI" % source)
+
+
 def run_phone(tag):
-    store = sqlite3.connect("file:%s/CallHistory.storedata?mode=ro" % RUST_ROOTS["phone"].replace(" ", "%20"), uri=True)
+    store = sqlite3.connect("file:%s/CallHistory.storedata?mode=ro" % (HOME + "/Library/Application Support/CallHistoryDB").replace(" ", "%20"), uri=True)
     in_store = store.execute("SELECT COUNT(*), MAX(ZDATE) FROM ZCALLRECORD").fetchone()
     store.close()
     calls = [r for r in records("phone.call") if live(r)]
@@ -648,15 +730,20 @@ def cleanup_created():
         note("cleanup mail draft: %s" % helper_change("delete", title=subject).get("state"))
     for name in launched:
         subprocess.run(["pkill", "-TERM", "-x", name], check=False, timeout=30)
+    for path in list(made):
+        if os.path.exists(path):
+            os.remove(path)
 
 
-ready = wait_for(lambda: any(r.get("data", {}).get("source") == source and r.get("data", {}).get("state") == "ready" for r in records("system.source")), 240, 1)
+recordings = source in ("voicemail", "voice_memos")
+ready = recordings or wait_for(lambda: any(r.get("data", {}).get("source") == source and r.get("data", {}).get("state") == "ready" for r in records("system.source")), 60, 1)
 check("%s_source_ready" % source, ready)
 if not ready:
     finish(1)
-check("capture_has_%s" % ANCHOR[source], wait_for(lambda: len(records(ANCHOR[source])) > 0, 300, 2))
+if not recordings:
+    check("capture_has_%s" % ANCHOR[source], wait_for(lambda: len(records(ANCHOR[source])) > 0, 300, 2))
 def settled():
-    """The first capture arrives in batches. Commands and baselines wait until the counts stop growing."""
+    """The first capture arrives in batches. Commands and comparisons wait until the counts stop growing."""
     last = None
     quiet_since = time.time()
     deadline = time.time() + float(os.environ.get("REAL_SETTLE_BOUND", "300"))
@@ -680,7 +767,7 @@ try:
     if source == "notes":
         started_app("Notes")
         started_app("System Events")
-    {"reminders": run_reminders, "calendar": run_calendar, "contacts": run_contacts, "notes": run_notes, "safari": run_safari, "mail": run_mail, "usage": run_usage, "phone": run_phone}[source](tag)
+    {"reminders": run_reminders, "calendar": run_calendar, "contacts": run_contacts, "notes": run_notes, "safari": run_safari, "mail": run_mail, "files": run_files, "mac": run_mac, "focus": run_focus, "shortcuts": run_shortcuts, "voicemail": run_recordings, "voice_memos": run_recordings, "usage": run_usage, "phone": run_phone}[source](tag)
 except Exception as error:
     check("driver_exception", False, type(error).__name__ + ":" + str(error)[:120])
 finally:
@@ -690,6 +777,11 @@ after = snapshot()
 for collection, ids in before.items():
     missing = ids - after.get(collection, set())
     check("preexisting_%s_untouched" % collection, not missing, "%d missing" % len(missing))
-leftover = [r for collection in COLLECTIONS[source] for r in records(collection) if live(r) and tag in blob(r)]
+def tagged_left():
+    return [r for collection in COLLECTIONS[source] for r in records(collection) if live(r) and tag in blob(r)]
+
+
+wait_for(lambda: not tagged_left(), 30)
+leftover = tagged_left()
 check("no_leftover_test_records", not leftover, "%d left" % len(leftover))
 finish(0)

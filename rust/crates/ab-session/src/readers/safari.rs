@@ -1,6 +1,7 @@
 use super::{
-    BTreeSet, CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Signature, Value,
-    capture_value, decode, encode, json, reader_error, signature,
+    Arc, BTreeSet, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Signature,
+    Value, background::Background, capture_value, decode, encode, native_facts, reader_error,
+    signature,
 };
 use ab_native::{capture, safari};
 
@@ -11,26 +12,24 @@ pub struct SafariReader {
     reader: safari::Reader,
     pending: Option<safari::Pending>,
     settled: Option<Signature>,
-    tabs: Option<Vec<safari::Tab>>,
+    live_tabs: Option<LiveTabs>,
 }
 
-fn tab_facts(capture: &Value) -> Result<Option<Vec<safari::Tab>>, Error> {
-    if capture["scope"] != json!(["safari.tab"]) {
-        return Ok(None);
-    }
-    if capture["completion_evidence"].as_str() != Some("complete") {
-        return Err(Error::Invalid);
-    }
+const TABS: &str = "safari.tabs";
+const TAB_PATIENCE: Duration = Duration::from_millis(500);
+
+#[derive(Debug)]
+struct LiveTabs {
+    client: Arc<native_facts::Client>,
+    work: Background<native_facts::FactSet>,
+}
+
+fn tab_rows(rows: &[Value]) -> Result<Vec<safari::Tab>, Error> {
     let mut tabs = Vec::new();
     let mut seen = BTreeSet::new();
-    for row in capture["observations"].as_array().ok_or(Error::Invalid)? {
+    for row in rows {
         if row["collection"].as_str() != Some("safari.tab") {
             return Err(Error::Invalid);
-        }
-        match row["kind"].as_str() {
-            Some("absent") => continue,
-            Some("upsert") => {}
-            _ => return Err(Error::Invalid),
         }
         let data = &row["data"];
         let tab = safari::Tab {
@@ -47,7 +46,7 @@ fn tab_facts(capture: &Value) -> Result<Option<Vec<safari::Tab>>, Error> {
         }
         tabs.push(tab);
     }
-    Ok(Some(tabs))
+    Ok(tabs)
 }
 
 impl SafariReader {
@@ -59,7 +58,27 @@ impl SafariReader {
             reader: safari::Reader::default(),
             pending: None,
             settled: None,
-            tabs: None,
+            live_tabs: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_tabs(mut self, client: Option<Arc<native_facts::Client>>, every: Duration) -> Self {
+        self.live_tabs = client.map(|client| LiveTabs {
+            client,
+            work: Background::new(every),
+        });
+        self
+    }
+
+    fn tabs_answer(&mut self, fence: u64) -> Option<Vec<safari::Tab>> {
+        let live = self.live_tabs.as_mut()?;
+        let client = Arc::clone(&live.client);
+        live.work.start_if_due(move || client.fetch(fence, TABS));
+        live.work.wait(TAB_PATIENCE);
+        match live.work.take()? {
+            Ok(set) if set.complete => tab_rows(&set.items).ok(),
+            Ok(_) | Err(_) => None,
         }
     }
 
@@ -114,18 +133,11 @@ impl CaptureReader for SafariReader {
         self.settled.is_some()
     }
 
-    fn ingest(&mut self, capture: &Value) -> Result<bool, Error> {
-        if let Some(tabs) = tab_facts(capture)? {
-            self.tabs = Some(tabs);
-        }
-        Ok(false)
-    }
-
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        if let Some(tabs) = self.tabs.take() {
+        if let Some(tabs) = self.tabs_answer(context.fence) {
             let read = self.read_context(context)?;
             if let Some(pending) = self.reader.tabs(&tabs, &read).map_err(reader_error)? {
                 let value = capture_value(&pending.batch)?;

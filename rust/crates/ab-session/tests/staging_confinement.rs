@@ -160,7 +160,7 @@ fn production_defaults_staging_into_the_bridge_home() -> Fallible<()> {
             .to_string(),
     )?;
     let before = (tree(&root)?, tree(&notes)?, names(&parent)?);
-    let loaded = production::load(&home)?.ok_or("loaded")?;
+    let loaded = production::load(&home, None)?.ok_or("loaded")?;
     let mut readers = loaded.readers()?;
     for reader in readers.values_mut() {
         drive(reader.as_mut())?;

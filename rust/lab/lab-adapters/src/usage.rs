@@ -9,7 +9,6 @@ use lab_world::{Result, World};
 use serde_json::{Value, json};
 use std::{
     env, fs,
-    path::PathBuf,
     process::{Command, Stdio},
     time::Instant,
 };
@@ -73,35 +72,12 @@ fn totals(client: &Client, device: &str) -> (f64, f64) {
 fn near(left: f64, right: f64) -> bool {
     (left - right).abs() < 1e-9
 }
-fn native_tool(name: &str) -> Option<PathBuf> {
-    let directory = env::var("AB_LAB_NATIVE_OUTPUT").ok().or_else(|| {
-        fs::read_to_string("native/.build/native-output-1")
-            .ok()
-            .map(|s| s.trim().to_owned())
-    })?;
-    let path = PathBuf::from(directory).join(name);
-    path.is_file().then_some(path)
-}
-fn fixture_directory() -> PathBuf {
-    PathBuf::from("lab/fixtures/usage")
-}
 pub fn decode(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
-    let Some(binary) = native_tool("UsageChecks") else {
-        evidence.check(
-            "native_decoder_built",
-            false,
-            "UsageChecks binary unavailable on this host",
-        );
-        return Ok(());
-    };
-    let output = Command::new(binary)
-        .arg(fixture_directory())
-        .stdout(Stdio::null())
-        .status();
-    evidence.check(
+    crate::native_core::rust_tests(
+        evidence,
         "scrubbed_segb_and_day_math",
-        output.is_ok_and(|status| status.success()),
-        "scrubbed SEGB decode and day math checks",
+        "ab-native",
+        &["--test", "usage"],
     );
     Ok(())
 }

@@ -1,6 +1,5 @@
 import Foundation
 import CryptoKit
-import SQLite3
 import AppKit
 import ApplicationServices
 
@@ -32,46 +31,6 @@ public enum PrivateReport {
 
     public static func redact(_ text: String) -> [String: Any] {
         ["length": text.count, "sha256": SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()]
-    }
-}
-
-public final class MessagesDatabase {
-    private var connection: OpaquePointer?
-
-    public init() throws {
-        let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Messages/chat.db").path
-        guard sqlite3_open_v2(path, &connection, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
-            if let connection { sqlite3_close(connection) }
-            connection = nil
-            throw ProbeFailure.unavailable
-        }
-        sqlite3_busy_timeout(connection, 200)
-        _ = try rows("SELECT ROWID FROM message LIMIT 1")
-    }
-
-    deinit { sqlite3_close(connection) }
-
-    public func rows(_ sql: String, bindings: [String] = []) throws -> [[String: String]] {
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(connection, sql, -1, &statement, nil) == SQLITE_OK else { throw ProbeFailure.unavailable }
-        defer { sqlite3_finalize(statement) }
-        for (index, value) in bindings.enumerated() {
-            let result = value.withCString { sqlite3_bind_text(statement, Int32(index + 1), $0, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) }
-            guard result == SQLITE_OK else { throw ProbeFailure.unavailable }
-        }
-        var result: [[String: String]] = []
-        while true {
-            let status = sqlite3_step(statement)
-            if status == SQLITE_DONE { return result }
-            guard status == SQLITE_ROW else { throw ProbeFailure.unavailable }
-            var row: [String: String] = [:]
-            for index in 0..<sqlite3_column_count(statement) {
-                if let value = sqlite3_column_text(statement, index) {
-                    row[String(cString: sqlite3_column_name(statement, index))] = String(cString: value)
-                }
-            }
-            result.append(row)
-        }
     }
 }
 

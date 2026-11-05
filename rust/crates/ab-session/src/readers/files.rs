@@ -1,12 +1,26 @@
 use super::{
-    Arc, BTreeMap, CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Value, capture_value,
-    context_for, native_facts, reader_error,
+    Arc, BTreeMap, CaptureReader, Debug, Error, Path, PathBuf, Readiness, ReadinessContext,
+    ScanContext, Value, capture_value, context_for, native_facts, reader_error,
 };
 use ab_native::files;
 use serde_json::json;
+use std::time::{Duration, Instant};
 
 const UBIQUITY: &str = "files.ubiquity";
 const ROOTS_FILE: &str = "Library/Application Support/AppleBridge/files-roots.json";
+const CAPABILITIES: [&str; 11] = [
+    "files.search",
+    "files.read",
+    "files.transform",
+    "files.create",
+    "files.write",
+    "files.move",
+    "files.rename",
+    "files.trash",
+    "files.set_tags",
+    "files.download",
+    "files.evict",
+];
 
 #[derive(Debug)]
 pub struct FilesReader {
@@ -14,7 +28,10 @@ pub struct FilesReader {
     client: Arc<native_facts::Client>,
     reader: files::Reader,
     pending: Option<files::Pending>,
+    seen: BTreeMap<String, (files::Walk, Instant)>,
 }
+
+const UBIQUITY_EVERY: Duration = Duration::from_mins(1);
 
 fn configured(home: &Path) -> Result<Vec<PathBuf>, Error> {
     let bytes = match std::fs::read(home.join(ROOTS_FILE)) {
@@ -55,6 +72,7 @@ impl FilesReader {
             client,
             reader: files::Reader::default(),
             pending: None,
+            seen: BTreeMap::new(),
         })
     }
 
@@ -113,6 +131,13 @@ impl CaptureReader for FilesReader {
         }
     }
 
+    fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
+        Some(Readiness::ready(
+            json!({"roots": self.roots.len(), "max_items": files::MAX_ITEMS, "max_depth": files::MAX_DEPTH}),
+            &CAPABILITIES,
+        ))
+    }
+
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {
         if self.pending.is_some() {
             return Err(Error::Conflict);
@@ -124,14 +149,23 @@ impl CaptureReader for FilesReader {
             }) else {
                 continue;
             };
+            let unchanged = self
+                .seen
+                .get(&walk.root)
+                .is_some_and(|(last, at)| *last == walk && at.elapsed() < UBIQUITY_EVERY);
+            if unchanged {
+                continue;
+            }
             let statuses = self.statuses(context.fence, &walk)?;
             let pending = self
                 .reader
                 .prepare(&walk, &statuses, &read)
                 .map_err(reader_error)?;
             if pending.batch.batch.observations.is_empty() {
+                self.seen.insert(walk.root.clone(), (walk, Instant::now()));
                 continue;
             }
+            self.seen.remove(&walk.root);
             let value = capture_value(&pending.batch)?;
             self.pending = Some(pending);
             return Ok(Some(value));

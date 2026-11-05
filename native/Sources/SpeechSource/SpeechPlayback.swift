@@ -9,9 +9,6 @@ public actor SpeechPlayback: Source {
     public func open() async -> SourceReadiness {
         SourceReadiness(state: "ready", coverage: .object(["fields": .string("complete")]), capabilities: [name == "speech" ? "speech.say" : "capture.play_sound"])
     }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        try await Task.sleep(for: .seconds(86400))
-    }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
         let args = action["args"]

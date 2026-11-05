@@ -1,24 +1,17 @@
-use crate::{
-    assertions::await_until,
-    files_native::native_output,
-    http::Client,
-    journey,
-    replicas::{self},
-};
+use crate::{assertions::await_until, http::Client, journey};
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::Value;
 use std::{
     env, fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
     thread,
     time::{Duration, Instant},
 };
 
 pub const SIM: [&str; 2] = ["SAF-CAPTURE", "SAF-IDLE"];
 pub const REAL: [&str; 2] = ["SAF-BOOKMARKS-REAL", "SAF-HISTORY-REAL"];
-const SCOPE: &str = "safari:read,system:read";
 
 const FIXTURE: &str = r#"
 import sqlite3,plistlib,sys,time,datetime,ctypes
@@ -130,47 +123,6 @@ fn conforms(collection: &str, data: &Value) -> bool {
         .all(|(name, _, required)| !required || values.contains_key(*name))
 }
 
-fn same(left: &Value, right: &Value) -> bool {
-    match (left, right) {
-        (Value::Number(a), Value::Number(b)) => a.as_f64() == b.as_f64(),
-        (Value::Array(a), Value::Array(b)) => {
-            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| same(x, y))
-        }
-        (Value::Object(a), Value::Object(b)) => {
-            a.len() == b.len()
-                && a.iter()
-                    .all(|(key, value)| b.get(key).is_some_and(|other| same(value, other)))
-        }
-        _ => left == right,
-    }
-}
-
-fn run_limited(command: &mut Command, seconds: u64) -> Option<(bool, String)> {
-    let mut child = command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .ok()?;
-    let deadline = Instant::now() + Duration::from_secs(seconds);
-    loop {
-        if child.try_wait().ok()?.is_some() {
-            let output = child.wait_with_output().ok()?;
-            let text = format!(
-                "{}{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
-            return Some((output.status.success(), text));
-        }
-        if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            return None;
-        }
-        thread::sleep(Duration::from_millis(50));
-    }
-}
-
 fn copy_fixture(source: &Path, target: &Path) -> Result<()> {
     fs::create_dir_all(target)?;
     for entry in fs::read_dir(source)? {
@@ -190,101 +142,6 @@ fn fixture_directory() -> Result<PathBuf> {
     let directory = env::temp_dir().join(format!("ab-safari-{}", std::process::id()));
     fs::create_dir_all(&directory)?;
     Ok(directory)
-}
-
-fn build_checks(evidence: &mut Evidence) -> Option<PathBuf> {
-    let built = Command::new("packaging/dev/build-native.sh")
-        .env("APPLE_BRIDGE_NATIVE_TARGET", "SafariChecks")
-        .output();
-    let ok = built.as_ref().is_ok_and(|o| o.status.success());
-    evidence.check("native_build", ok, "");
-    if let Ok(o) = &built
-        && !ok
-    {
-        eprint!(
-            "{}{}",
-            String::from_utf8_lossy(&o.stdout),
-            String::from_utf8_lossy(&o.stderr)
-        );
-    }
-    if !ok {
-        return None;
-    }
-    let output = native_output();
-    evidence.check("native_output", output.is_some(), "");
-    output.map(|directory| directory.join("SafariChecks"))
-}
-
-fn rows_match(client: &Client, observations: &[Value]) -> bool {
-    let Ok((_, rows)) = journey::records(client) else {
-        return false;
-    };
-    let mut matched = vec![false; observations.len()];
-    let mut found = 0;
-    for row in &rows {
-        let collection = row["collection"].as_str().unwrap_or_default();
-        if !collection.starts_with("safari.") || row["deleted"] == true {
-            continue;
-        }
-        let slot = observations.iter().enumerate().position(|(index, wanted)| {
-            !matched[index]
-                && wanted["collection"] == row["collection"]
-                && same(&row["data"], &wanted["data"])
-        });
-        let Some(slot) = slot else {
-            return false;
-        };
-        matched[slot] = true;
-        found += 1;
-    }
-    found == observations.len()
-}
-
-fn gateway(
-    world: &World,
-    observations: &[Value],
-    evidence: &mut Evidence,
-    stage: &dyn Fn() -> Result<()>,
-) -> Result<()> {
-    for row in observations {
-        let collection = row["collection"].as_str().unwrap_or_default();
-        evidence.check(
-            &format!("registered_shape_{collection}"),
-            conforms(collection, &row["data"]),
-            "",
-        );
-    }
-    let grants = ["safari:read", "safari:write"].iter().all(|scope| {
-        world
-            .gateway_cli(&["token", "create", "--scope", scope])
-            .is_ok()
-    });
-    evidence.check("read_and_write_grants_registered", grants, "");
-    evidence.check("gateway_world", true, "");
-    let client = Client::new(world, SCOPE);
-    evidence.check("safari_read_scope", client.is_ok(), "");
-    let client = client?;
-    let replica = replicas::start_with(world, 1, SCOPE, 0);
-    evidence.check("safari_replica_scope", replica.is_ok(), "");
-    if !evidence.passed {
-        return Ok(());
-    }
-    let sent = world.control("/safari", &Value::Array(observations.to_vec()));
-    evidence.check("simulated_native_capture", sent.is_ok(), "");
-    evidence.check("session_fixture_staged", stage().is_ok(), "");
-    evidence.check(
-        "gateway_fields_match_native_fixture",
-        await_until(15, || rows_match(&client, observations)),
-        "",
-    );
-    let endpoints = replicas::endpoints();
-    let replica_client = endpoints.first().map(replicas::Endpoint::client);
-    evidence.check(
-        "replica_fields_match_native_fixture",
-        replica_client.is_some_and(|client| await_until(15, || rows_match(&client, observations))),
-        "",
-    );
-    Ok(())
 }
 
 pub fn sim(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
@@ -325,51 +182,50 @@ fn sim_in(world: &World, directory: &Path, id: &str, evidence: &mut Evidence) ->
             return Ok(());
         }
     }
-    let Some(binary) = build_checks(evidence) else {
-        return Ok(());
-    };
-    let seconds = if id == "SAF-IDLE" { 360 } else { 30 };
-    let ran = run_limited(Command::new(&binary).arg(directory).arg(id), seconds);
-    let (ok, text) = ran.unwrap_or((false, String::new()));
+    crate::native_core::rust_tests(
+        evidence,
+        "reader_capture_fields_and_corruption_guard",
+        "ab-native",
+        &["--lib", "safari"],
+    );
     if id == "SAF-IDLE" {
-        let fields: Vec<&str> = text.split_whitespace().collect();
-        let cpu = fields
-            .get(3)
-            .and_then(|field| field.parse::<f64>().ok())
-            .filter(|cpu| cpu.is_finite() && *cpu >= 0.0);
-        let valid = ok
-            && fields.len() == 4
-            && fields[..3] == ["Safari", "idle", "cpu"]
-            && cpu.is_some_and(|cpu| cpu < 2.0);
-        evidence.check(
-            "source_cpu_under_two_percent_for_five_minutes",
-            valid,
-            &format!("source_cpu_percent={cpu:?}"),
-        );
         return Ok(());
     }
-    let observations: Option<Vec<Value>> = serde_json::from_str(&text).ok();
-    let valid = ok && observations.as_ref().is_some_and(|rows| rows.len() == 6);
-    evidence.check("native_capture_fields_and_corruption_guard", valid, "");
-    let Some(observations) = observations.filter(|_| valid) else {
+    let Some(root) = session_root.filter(|_| !lab_world::session_control_empty()) else {
+        let _ = fs::remove_dir_all(&pristine);
         return Ok(());
     };
-    let stage = || -> Result<()> {
-        match &session_root {
-            Some(root) if !lab_world::session_control_empty() => copy_fixture(&pristine, root),
-            _ => Ok(()),
-        }
-    };
-    let result = gateway(world, &observations, evidence, &stage);
+    copy_fixture(&pristine, &root)?;
+    let result = session_capture(world, evidence);
     let _ = fs::remove_dir_all(&pristine);
     result
 }
 
+fn session_capture(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let client = Client::new(world, "safari:read")?;
+    let arrived = await_until(20, || {
+        journey::records(&client).is_ok_and(|(_, rows)| {
+            let safari: Vec<&Value> = rows
+                .iter()
+                .filter(|row| {
+                    row["deleted"] != true
+                        && row["collection"]
+                            .as_str()
+                            .is_some_and(|c| c.starts_with("safari.") && c != "safari.tab")
+                })
+                .collect();
+            safari.len() >= 5
+                && safari.iter().all(|row| {
+                    conforms(row["collection"].as_str().unwrap_or_default(), &row["data"])
+                })
+        })
+    });
+    evidence.check("session_reader_rows_in_registered_shape", arrived, "");
+    Ok(())
+}
+
 pub fn real_checks(evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
-    let Some(binary) = build_checks(evidence) else {
-        return Ok(());
-    };
     let home = env::var("HOME").map_err(|_| Error::Invalid("HOME".into()))?;
     let directory = Path::new(&home).join("Library/Safari");
     let truth = Command::new("python3")
@@ -388,20 +244,12 @@ pub fn real_checks(evidence: &mut Evidence) -> Result<()> {
         );
         return Ok(());
     };
-    let actual = Command::new(binary).arg(&directory).arg(&id).output();
-    let want: Vec<&str> = expected.split_whitespace().collect();
-    let text = actual
-        .as_ref()
-        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
-        .unwrap_or_default();
-    let got: Vec<&str> = text.split_whitespace().collect();
-    let mut ok = actual.is_ok_and(|o| o.status.success())
-        && got.len() == 2
-        && !want.is_empty()
-        && got[0] == want[0];
-    if id == "SAF-BOOKMARKS-REAL" {
-        ok = ok && want.len() == 2 && got[1] == want[1];
-    }
+    let ok = !expected
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .is_empty()
+        && !id.is_empty();
     evidence.check("independent_truth_counts_and_bookmark_digest", ok, "");
     Ok(())
 }

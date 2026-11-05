@@ -55,9 +55,7 @@ private final class Invocation: @unchecked Sendable {
 
 public actor ShortcutsSource: Source {
     public nonisolated let name = "shortcuts"
-    public static let coverage: JSON = .object(["fields": .string("partial"), "missing": .array([.string("accepts input unavailable from CLI"), .string("installed pack version unverified"), .string("file blob input/output not qualified")])])
     private let executable: URL
-    private var generation = UUID().uuidString
     public init(executable: URL = URL(fileURLWithPath: "/usr/bin/shortcuts")) { self.executable = executable }
     private func invoke(_ arguments: [String], timeout: Double, input: Data? = nil, running: Bool = false) async throws -> (Data, Int32, Bool) {
         let executable = executable
@@ -108,70 +106,7 @@ public actor ShortcutsSource: Source {
         }
         return try await withTaskCancellationHandler { try await task.value } onCancel: { invocation.killIfRunning() }
     }
-    private func inventory(_ arguments: [String]) async throws -> [(String, String)] {
-        let (data, status, _) = try await invoke(["list", "--show-identifiers"] + arguments, timeout: 15)
-        guard status == 0, let text = String(data: data, encoding: .utf8) else { throw SourceFailure.unavailable }
-        var seen = Set<String>()
-        return try text.split(separator: "\n").map { line in
-            guard line.hasSuffix(")"), let delimiter = line.range(of: " (", options: .backwards) else { throw SourceFailure.corrupt }
-            let name = String(line[..<delimiter.lowerBound])
-            let identifier = String(line[delimiter.upperBound...].dropLast())
-            guard !name.isEmpty, UUID(uuidString: identifier) != nil, seen.insert(identifier.lowercased()).inserted else { throw SourceFailure.corrupt }
-            return (name, identifier)
-        }
-    }
-    public func open() async -> SourceReadiness {
-        var coverage = Self.coverage.object
-        do {
-            let entries = try await inventory([])
-            let names = entries.map { $0.0 }
-            let required = ["AB Echo", "AB Clock", "AB Focus", "AB Pack v1"]
-            if required.allSatisfy({ name in names.filter { $0 == name }.count == 1 }) {
-                coverage["pack_version"] = .string("1")
-                coverage["missing"] = .array([.string("accepts input unavailable from CLI"), .string("file blob input/output not qualified")])
-            }
-        } catch {
-            coverage["missing"] = .array([.string("installed inventory unavailable"), .string("installed pack version unverified")])
-        }
-        return SourceReadiness(state: "ready", coverage: .object(coverage), capabilities: ["shortcuts.run"])
-    }
-    public func capture(_ resume: JSON, into sink: any ObservationSink) async throws {
-        if !resume["generation"].string.isEmpty { generation = resume["generation"].string }
-        var previous: [JSON]?
-        while !Task.isCancelled {
-            let started = timestamp()
-            let shortcuts = try await inventory([])
-            let folders = try await inventory(["--folders"])
-            var membership: [String: String] = [:]
-            for (folder, identifier) in folders {
-                for (_, shortcut) in try await inventory(["--folder-name", folder]) {
-                    guard membership[shortcut] == nil else { throw SourceFailure.corrupt }
-                    membership[shortcut] = identifier
-                }
-            }
-            var observations: [JSON] = []
-            for (collection, entries) in [("shortcuts.folder", folders), ("shortcuts.shortcut", shortcuts)] {
-                for (title, identifier) in entries {
-                    var data: [String: JSON] = ["name": .string(title), "identifier": .string(identifier)]
-                    if collection == "shortcuts.shortcut" {
-                        data["accepts_input"] = .null
-                        data["folder_id"] = membership[identifier].map { .object(["$ref": .object(["collection": .string("shortcuts.folder"), "native_key": .string($0)])]) } ?? .null
-                    }
-                    observations.append(.object(["kind": .string("upsert"), "collection": .string(collection), "native_key": .string(identifier), "scoped_alias": .string(name + "/" + collection + "/" + identifier), "data": .object(data)]))
-                }
-            }
-            if previous != observations {
-                let stamped = observations.map { observation -> JSON in
-                    var value = observation.object
-                    value["observed_at"] = .string(started)
-                    return .object(value)
-                }
-                try await sink.emitCheckpoint(source: name, generation: generation, checkpoint: UUID().uuidString, observations: stamped, scanID: UUID().uuidString, scanStartedAt: started, scope: ["shortcuts.folder", "shortcuts.shortcut"], completionEvidence: "complete", blobHandles: [:], live: false)
-                previous = observations
-            }
-            try await Task.sleep(for: .seconds(30))
-        }
-    }
+    public func open() async -> SourceReadiness { SourceReadiness(state: "ready", coverage: .object([:]), capabilities: ["shortcuts.run"]) }
     public func prepare(_ command: JSON) async throws -> Prepared {
         let action = command["action"]
         let args = action["args"]
