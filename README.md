@@ -27,7 +27,7 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 
 To try things yourself, use `bridge read reminders`, `bridge read chats` or `bridge search "dinner"`. To teach an agent, tell it to run `bridge skills get core`. [Setting up your Mac](docs/local-setup.md) covers every command, and `bridge --help` lists them.
 
-**What has been tested.** On a test copy of real data, a fresh home reached a real Claude Code read in about 14 seconds through the local MCP address and sign-in, and Codex completed sign-in the same way. A script played the browser and the approval. The Apple Bridge window, real macOS permission prompts and a real first sync from Apple's apps were not part of that test. See [what was proven](docs/local-setup.md#what-has-been-proven).
+**What has been tested.** On a test copy of real data, a fresh home reached a real Claude Code read in about 10 seconds through the local MCP address and sign-in, and Codex completed sign-in the same way. A script played the browser and the approval. The Apple Bridge window, real macOS permission prompts and a real first sync from Apple's apps were not part of that test. See [what was proven](docs/local-setup.md#what-has-been-proven).
 
 ## Level 2: other apps and bots on this Mac
 

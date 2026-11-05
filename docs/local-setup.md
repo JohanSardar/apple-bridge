@@ -41,7 +41,7 @@ bridge connector allow --request <id> --code <code>
 
 | Option | What it does |
 |---|---|
-| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step |
+| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step. This two-step path was checked by hand on an earlier build |
 | `--name NAME` | Use another name in the agent |
 | `--no-login` | Add the server now and sign in later with `claude mcp login apple-bridge` |
 | `--no-browser` | Claude Code only, for a session without a browser: prints the address, then you paste the final address back |
@@ -142,24 +142,23 @@ So expect minutes, not hours, for a Mac of this size, and treat that as an estim
 
 ## What has been proven
 
-Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setup-proof.py) on an 8 GB MacBook Air, with a release build, Claude Code 2.1.318 and `--scope project` in a scratch folder.
+Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setup-proof.py) on an 8 GB MacBook Air, with a release build and Claude Code 2.1.318, running the default `bridge link claude`.
 
 | Step | Fresh, empty home | Fresh home, test copy of data (195,243 records) |
 |---|---|---|
-| `bridge up` | 0.8 s | 0.2 s |
-| `bridge stats` | 0.8 s | 1.4 s |
-| `bridge link`, server registered | 2.2 s | 2.4 s |
-| Signed in | 7.3 s | 7.7 s |
-| First real read by Claude Code | 12.8 s | 13.8 s |
-| Claude Code ran `bridge stats` and read the total | 17.8 s | 18.6 s |
+| `bridge up` | 0.6 s | 0.3 s |
+| `bridge stats` | 0.6 s | 1.5 s |
+| Claude Code signed in through `bridge link claude` | 3.6 s | 4.4 s |
+| First real read by Claude Code | 8.5 s | 10.3 s |
+| Claude Code ran `bridge stats` and read the total | 13.7 s | 14.2 s |
 
-Times are cumulative from the start of `bridge up`, from one run each. On the test copy, `bridge stats` matched the source on all 32 collections, and Claude Code's read returned the right count through the local MCP route and sign-in. Only counts were checked.
+Times are cumulative from the start of `bridge up`, from one run each. On the test copy, `bridge stats` matched the source on all 32 collections, and Claude Code's read through the local MCP route returned the right count. Only counts were checked.
 
 Limits of this proof:
 
 - A script played the browser, using the same requests as the sign-in page, and allowed the request with `bridge connector allow`. So a person's time to read and approve is not included, and the Apple Bridge approval window was not exercised.
-- `--scope project` needs one approval in Claude Code. It took about 6 s under script and is left out of the times, because the default scope does not need it. The default `--scope user` flow itself was not run, to keep the real Claude Code configuration unchanged.
 - The data home was a clone of `state.db` and `ledger.db` from a frozen test copy, with no Helper running. Live data was not used.
-- Codex: `bridge link codex` completed real sign-in in about 7 s and `codex mcp list` showed it signed in. No real read was made through Codex.
+- Claude Code ran under a throwaway `HOME`, with only the login Keychain linked in, so its real configuration was not written. A person's first run also passes Claude Code's own onboarding.
+- Codex: `bridge link codex` completed real sign-in in about 2 s under a throwaway `CODEX_HOME`, and `codex mcp list` showed it signed in. No real read was made through Codex.
 - `bridge permissions guide` was tested through a fixture only, because a real run would show real macOS prompts. Its Helper call has not run against a real Helper.
 - A gateway started by `bridge up` from inside the packaged app has not been tested.
