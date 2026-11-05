@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Apple Bridge: design draft v0
 
 Status: draft for critique (2026-10-16). Working name "Apple Bridge" (binary names `applebridge-server`, `applebridge`). Author: Claude Opus 5.5. Reviewers: Astra (critique), Fable (tiebreak only).

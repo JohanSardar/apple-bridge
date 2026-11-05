@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Source registration
 
 Operation descriptors live in `<source>_descriptors.go` and register their descriptor function from that file. `operations.go` aggregates the registered functions. SimApple source files register route methods in `sourceRoutes`; the shared server loops over the registry. Source command handlers register in `sourceCommands` in the same source file, including ticket lookup and capture adapters. New source routes must not be added to the server bootstrap.

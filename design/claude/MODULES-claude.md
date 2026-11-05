@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Apple Bridge module architecture (Claude, independent of Astra's)
 
 Vocabulary from Matt Pocock's codebase-design: module, interface, implementation, depth, seam, adapter, leverage, locality.
