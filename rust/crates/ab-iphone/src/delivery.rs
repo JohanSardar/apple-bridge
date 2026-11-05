@@ -18,6 +18,38 @@ pub struct QueuedCommand {
     pub state: CommandState,
     pub created_at: String,
     pub expires_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review: Option<PhoneReview>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PhoneReview {
+    pub hash: String,
+    pub arguments: String,
+    pub lines: Vec<String>,
+}
+fn approval_prompt(row: &QueuedCommand, fields: &Value) -> Result<(String, String), Error> {
+    let (hash, arguments, lines) = match &row.review {
+        Some(review) => (
+            review.hash.clone(),
+            review.arguments.clone(),
+            review.lines.clone(),
+        ),
+        None => (
+            row.request_hash.clone(),
+            raw(&fields["args"])?.get().to_owned(),
+            Vec::new(),
+        ),
+    };
+    let mut body = format!(
+        "{}\nAgent: {}\n{arguments}",
+        fields["op"].as_str().unwrap_or_default(),
+        row.principal,
+    );
+    for line in lines {
+        body.push('\n');
+        body.push_str(&line);
+    }
+    Ok((hash, body))
 }
 impl QueuedCommand {
     fn fields(&self) -> Result<Value, Error> {
@@ -92,8 +124,18 @@ pub struct ConnectorApproval {
     pub id: String,
     pub code: String,
     pub name: String,
+    pub host: String,
     pub scopes: String,
     pub expires: i64,
+}
+fn connector_prompt(approval: &ConnectorApproval) -> String {
+    format!(
+        "{}\nApp calls itself: {}\nCode {}\n{}",
+        ab_trust::oauth::callback_label(&approval.host),
+        approval.name,
+        approval.code,
+        approval.scopes
+    )
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Job {
@@ -326,10 +368,7 @@ impl<G: Gateway> Delivery<G> {
                 &phone,
                 &approval.id,
                 &approval.code,
-                &format!(
-                    "{}\nCode {}\n{}",
-                    approval.name, approval.code, approval.scopes
-                ),
+                &connector_prompt(&approval),
                 None,
                 approval.expires,
             )?);
@@ -337,17 +376,11 @@ impl<G: Gateway> Delivery<G> {
         for mut row in rows {
             if row.state == CommandState::AwaitingApproval && now < row.expires()? {
                 let fields = row.fields()?;
-                let args = raw(&fields["args"])?;
-                let body = format!(
-                    "{}\nAgent: {}\n{}",
-                    fields["op"].as_str().unwrap_or_default(),
-                    row.principal,
-                    args.get()
-                );
+                let (hash, body) = approval_prompt(&row, &fields)?;
                 packets.push(self.approval(
                     &phone,
                     &row.id()?,
-                    &row.request_hash,
+                    &hash,
                     &body,
                     Some("Apple Bridge approval"),
                     row.expires()?,
@@ -969,4 +1002,88 @@ fn serialize_time<S: serde::Serializer>(value: &str, serializer: S) -> Result<S:
 pub struct HealthCursor {
     pub sequence: u64,
     pub digest: String,
+}
+
+#[cfg(test)]
+mod approval_prompt_tests {
+    #![allow(clippy::unwrap_used)]
+    use super::{CommandState, PhoneReview, QueuedCommand, approval_prompt};
+    use serde_json::json;
+
+    fn row(review: Option<PhoneReview>) -> QueuedCommand {
+        QueuedCommand {
+            command: serde_json::value::to_raw_value(&json!({"command_id":"cmd_x","op":"messages.send","args":{"files":[{"name":"harmless.pdf","data":"c2VjcmV0"}]}})).unwrap(),
+            principal: "agent:x".into(),
+            source: "messages".into(),
+            request_hash: "request".into(),
+            state: CommandState::AwaitingApproval,
+            created_at: String::new(),
+            expires_at: String::new(),
+            review,
+        }
+    }
+
+    #[test]
+    fn a_reviewed_attachment_replaces_raw_bytes_and_binds_the_decision() {
+        let row = row(Some(PhoneReview {
+            hash: "bound".into(),
+            arguments: "{\"files\":\"<attachment 1>\"}".into(),
+            lines: vec!["Detected text/plain, 6 bytes".into()],
+        }));
+        let (hash, body) = approval_prompt(&row, &row.fields().unwrap()).unwrap();
+        assert_eq!(hash, "bound");
+        assert!(body.contains("Detected text/plain, 6 bytes"), "{body}");
+        assert!(body.contains("Agent: agent:x"), "{body}");
+        assert!(!body.contains("c2VjcmV0"), "{body}");
+    }
+
+    #[test]
+    fn a_command_without_attachments_keeps_its_prompt_and_hash() {
+        let row = row(None);
+        let (hash, body) = approval_prompt(&row, &row.fields().unwrap()).unwrap();
+        assert_eq!(hash, "request");
+        assert!(
+            body.starts_with("messages.send\nAgent: agent:x\n{"),
+            "{body}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod connector_prompt_tests {
+    use super::{ConnectorApproval, connector_prompt};
+
+    fn approval(host: &str) -> ConnectorApproval {
+        ConnectorApproval {
+            id: "connector:synthetic".into(),
+            code: "1234".into(),
+            name: "Claude".into(),
+            host: host.into(),
+            scopes: "Read: Messages".into(),
+            expires: 0,
+        }
+    }
+
+    #[test]
+    fn the_phone_shows_where_a_connector_returns() {
+        let body = connector_prompt(&approval("evil.example.invalid"));
+        assert!(
+            body.starts_with("Returns to evil.example.invalid\n"),
+            "{body}"
+        );
+        assert!(body.contains("App calls itself: Claude"), "{body}");
+        assert!(body.contains("Code 1234"), "{body}");
+        assert!(body.contains("Read: Messages"), "{body}");
+    }
+
+    #[test]
+    fn a_local_callback_is_called_out() {
+        for host in ["localhost:3118", "127.0.0.1:49152", "[::1]:49152"] {
+            let body = connector_prompt(&approval(host));
+            assert!(
+                body.starts_with("Returns to an app on this computer"),
+                "{body}"
+            );
+        }
+    }
 }

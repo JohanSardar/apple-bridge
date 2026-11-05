@@ -20,7 +20,25 @@ pub struct SecureTransport;
 pub trait Approvals: std::fmt::Debug + Send + Sync {
     fn pending(&self) -> Result<Vec<Value>, ab_trust::Error>;
     fn command(&self, id: &str) -> Result<Value, ab_trust::Error>;
-    fn decide(&self, owner: &Principal, id: &str, approve: bool) -> Result<Value, ab_trust::Error>;
+    fn attachment(&self, id: &str, index: usize) -> Result<AttachmentFile, ab_trust::Error>;
+    fn decide(
+        &self,
+        owner: &Principal,
+        id: &str,
+        approve: bool,
+        reviewed: &Reviewed<'_>,
+    ) -> Result<Value, ab_trust::Error>;
+}
+#[derive(Debug, Clone)]
+pub struct AttachmentFile {
+    pub media_type: String,
+    pub preview: String,
+    pub bytes: Vec<u8>,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct Reviewed<'a> {
+    pub binding: &'a str,
+    pub accepted_unpreviewable: bool,
 }
 #[derive(Debug)]
 struct Ceremony {
@@ -250,8 +268,16 @@ async fn handle(State(web): State<Arc<Web>>, request: Request) -> Response {
             axum::http::HeaderValue::from_static(if auth_rate { "60" } else { "1" }),
         );
     }
+    if !response
+        .headers()
+        .contains_key(header::CONTENT_SECURITY_POLICY)
+    {
+        response.headers_mut().insert(
+            header::CONTENT_SECURITY_POLICY,
+            axum::http::HeaderValue::from_static(CSP),
+        );
+    }
     for (k, v) in [
-        ("content-security-policy", CSP),
         ("referrer-policy", "no-referrer"),
         ("x-content-type-options", "nosniff"),
         (
@@ -589,6 +615,15 @@ fn approval(
     let Some(id) = path.strip_prefix("/approvals/") else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    if let Some((id, index)) = id.split_once("/attachments/") {
+        return match (method, index.parse::<usize>()) {
+            ("GET", Ok(index)) => a.attachment(id, index).map_or_else(
+                |_| StatusCode::NOT_FOUND.into_response(),
+                |file| web_pages::attachment_file(index, file),
+            ),
+            _ => StatusCode::NOT_FOUND.into_response(),
+        };
+    }
     let record = if method == "GET" {
         a.command(id)
     } else {
@@ -600,7 +635,15 @@ fn approval(
         let Some((p, _)) = identity else {
             return reject(401, "unauthorized");
         };
-        a.decide(p, id, decision == "approve")
+        a.decide(
+            p,
+            id,
+            decision == "approve",
+            &Reviewed {
+                binding: field(&f, "attachments"),
+                accepted_unpreviewable: field(&f, "accept_unpreviewable") == "1",
+            },
+        )
     };
     record.map_or_else(
         |_| {

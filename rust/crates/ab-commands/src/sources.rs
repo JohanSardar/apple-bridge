@@ -83,23 +83,30 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
     }
     Ok(a)
 }
+fn document_input(a: &Args) -> Result<(), Error> {
+    check(!a.contains_key("file"))?;
+    let inputs = usize::from(!s(a, "data_base64").is_empty()) + usize::from(p(a, "blob"));
+    check(inputs == 1)?;
+    if !s(a, "data_base64").is_empty() {
+        let data = base64(s(a, "data_base64"))?;
+        check(!data.is_empty() && data.len() <= 8 << 20)?;
+    }
+    if p(a, "blob") {
+        let reference = a["blob"].as_object().ok_or(Error::Invalid)?;
+        let query = !s(reference, "query_id").is_empty();
+        let record =
+            !s(reference, "record_id").is_empty() && !s(reference, "collection").is_empty();
+        check(digest(s(reference, "digest")) && query != record)?;
+    }
+    Ok(())
+}
 fn pdf(c: &Command, a: &Args) -> Result<(), Error> {
     check(
         c.expected_version == 0
             && !arr(a, "annotations").is_empty()
             && arr(a, "annotations").len() <= 100,
     )?;
-    let inputs = usize::from(!s(a, "data_base64").is_empty())
-        + usize::from(!s(a, "file").is_empty())
-        + usize::from(p(a, "blob"));
-    check(inputs == 1)?;
-    if !s(a, "data_base64").is_empty() {
-        let data = base64(s(a, "data_base64"))?;
-        check(!data.is_empty() && data.len() <= 8 << 20)?;
-    }
-    if !s(a, "file").is_empty() {
-        check(b(a, "allow_file") && s(a, "file").starts_with('/'))?;
-    }
+    document_input(a)?;
     for annotation in arr(a, "annotations") {
         let a = annotation.as_object().ok_or(Error::Invalid)?;
         check(
@@ -565,7 +572,11 @@ fn mac(c: &Command, a: &Args) -> Result<(), Error> {
     })
 }
 fn capture(op: &str, a: &Args) -> Result<(), Error> {
-    check(op == "print.document" || s(a, "blob").is_empty() && s(a, "blob_id").is_empty())?;
+    if op == "print.document" {
+        document_input(a)?;
+    } else {
+        check(!p(a, "blob") && s(a, "data_base64").is_empty())?;
+    }
     check(match op {
         "capture.screenshot" => {
             !(p(a, "display") && p(a, "window"))
@@ -579,9 +590,7 @@ fn capture(op: &str, a: &Args) -> Result<(), Error> {
             !p(a, "display")
                 && !p(a, "window")
                 && n(a, "seconds") == 0.0
-                && ["blob", "blob_id", "file", "printer"]
-                    .iter()
-                    .all(|k| s(a, k).is_empty())
+                && ["file", "printer"].iter().all(|k| s(a, k).is_empty())
         }
         "capture.record_audio" | "mac.screen_record" => {
             (1.0..=if op == "mac.screen_record" {
@@ -596,11 +605,7 @@ fn capture(op: &str, a: &Args) -> Result<(), Error> {
                 && s(a, "printer").is_empty()
         }
         "print.document" => {
-            (!s(a, "file").trim().is_empty()
-                || digest(s(a, "blob")) && s(a, "blob_id").starts_with("qry_"))
-                && (s(a, "file").is_empty()
-                    || s(a, "blob").is_empty() && s(a, "blob_id").is_empty())
-                && !s(a, "printer").trim().is_empty()
+            !s(a, "printer").trim().is_empty()
                 && !p(a, "display")
                 && !p(a, "window")
                 && n(a, "seconds") == 0.0

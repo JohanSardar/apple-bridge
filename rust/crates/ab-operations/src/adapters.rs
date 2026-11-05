@@ -332,7 +332,17 @@ fn principal(value: ab_trust::Principal) -> Principal {
             .unwrap_or_default()
             .into(),
         remote: value.remote,
+        expires_at: credential_expiry(&value.extra),
     }
+}
+fn credential_expiry(
+    extra: &std::collections::BTreeMap<String, serde_json::Value>,
+) -> Option<jiff::Timestamp> {
+    extra
+        .get("expires_at")
+        .and_then(serde_json::Value::as_str)
+        .filter(|at| *at != "0001-01-01T00:00:00Z")
+        .and_then(|at| at.parse().ok())
 }
 fn trust_error(error: &ab_trust::Error) -> Error {
     match error {
@@ -448,4 +458,20 @@ impl Identity for TrustIdentity {
 }
 pub fn empty_command() -> Result<Command, Error> {
     serde_json::from_str("{\"args\":null}").map_err(|_| Code::Corrupt.into())
+}
+#[cfg(test)]
+mod credential_expiry_tests {
+    use super::credential_expiry;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn an_access_token_expiry_reaches_the_operations_principal() {
+        let extra = |at: &str| BTreeMap::from([("expires_at".to_owned(), at.into())]);
+        assert_eq!(
+            credential_expiry(&extra("2030-01-02T03:04:05Z")),
+            "2030-01-02T03:04:05Z".parse().ok()
+        );
+        assert_eq!(credential_expiry(&extra("0001-01-01T00:00:00Z")), None);
+        assert_eq!(credential_expiry(&BTreeMap::new()), None);
+    }
 }

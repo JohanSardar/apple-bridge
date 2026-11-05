@@ -2,11 +2,12 @@ use ab_iphone::{
     Error,
     delivery::{
         CaptureReceipt, CaptureUpload, ConnectorApproval, Gateway, HealthBatch, LocationRecord,
-        QueuedCommand,
+        PhoneReview, QueuedCommand,
     },
 };
 use ab_operations::{
     Code, GatewayStore,
+    approval_review::{display_arguments, has_attachments, phone_decision_hash, phone_summary},
     local::{CommandRecord, GatewayState, LocalGateway},
 };
 use ab_trust::{
@@ -48,12 +49,46 @@ fn queued(row: CommandRecord) -> Result<QueuedCommand, Error> {
         request_hash: row.request_hash,
         state: row.state,
         created_at: row.created_at,
+        review: None,
         expires_at: row.expires_at,
     })
 }
 fn id(row: &QueuedCommand) -> Result<String, Error> {
     let command: ab_operations::Command = serde_json::from_str(row.command.get())?;
     Ok(command.id)
+}
+impl PhoneGateway {
+    fn phone_review(&self, row: &CommandRecord) -> Result<PhoneReview, Error> {
+        let arguments = display_arguments(row).map_err(|error_value| error(&error_value))?;
+        let review = self
+            .local
+            .upgrade()
+            .map(|local| tokio::runtime::Handle::current().block_on(local.approval_review(row)));
+        Ok(match review {
+            Some(Ok(review)) => PhoneReview {
+                hash: phone_decision_hash(&row.request_hash, &review.binding),
+                arguments,
+                lines: phone_summary(&review),
+            },
+            _ => PhoneReview {
+                hash: row.request_hash.clone(),
+                arguments,
+                lines: vec![
+                    "An attachment can't be read right now, so this can't be approved.".to_owned(),
+                ],
+            },
+        })
+    }
+    fn reviewed(&self, row: CommandRecord) -> Result<QueuedCommand, Error> {
+        let review = if row.state == CommandState::AwaitingApproval && has_attachments(&row) {
+            Some(self.phone_review(&row)?)
+        } else {
+            None
+        };
+        let mut queued = queued(row)?;
+        queued.review = review;
+        Ok(queued)
+    }
 }
 impl Gateway for PhoneGateway {
     fn connector_pending(&mut self) -> Result<Vec<ConnectorApproval>, Error> {
@@ -68,6 +103,7 @@ impl Gateway for PhoneGateway {
                 id: summary.id,
                 code: summary.code,
                 name: summary.client_name,
+                host: summary.redirect_host,
                 scopes: summary.access,
             })
             .collect())
@@ -82,7 +118,7 @@ impl Gateway for PhoneGateway {
             .commands()
             .map_err(|error_value| error(&error_value))?
             .into_iter()
-            .map(queued)
+            .map(|row| self.reviewed(row))
             .collect()
     }
     fn command(&mut self, command_id: &str) -> Result<QueuedCommand, Error> {

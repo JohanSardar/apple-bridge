@@ -587,9 +587,23 @@ fn oauth(world: &World, site: &Site, owner: &Owner, e: &mut Evidence) {
         reply.status == 200 && request(&rotated_access, "messages.chat") == 200,
         "",
     );
+    let (retried_access, retried_refresh) = tokens(&refresh(&refresh_token));
+    e.check(
+        "refresh_retry_returns_saved_successor",
+        retried_access == rotated_access && retried_refresh == rotated_refresh,
+        "",
+    );
+    let aged = edit_credentials(&site.home, |data| {
+        for row in data["oauth_refresh"].as_array_mut().into_iter().flatten() {
+            if row["used"] == true {
+                row["rotated_at"] = json!(1);
+            }
+        }
+    });
     e.check(
         "replayed_refresh_refused_and_family_revoked",
-        refresh(&refresh_token).status == 400 && request(&rotated_access, "messages.chat") == 401,
+        aged && refresh(&refresh_token).status == 400
+            && request(&rotated_access, "messages.chat") == 401,
         "",
     );
     let raw = issue(e);
@@ -802,8 +816,13 @@ fn trust_boundaries(
 }
 
 fn replica_boundaries(world: &mut World, site: &Site, exposed: Result<Exposed>, e: &mut Evidence) {
-    let started =
-        replicas::start_with(world, 1, "messages:read,contacts:read,contacts:write", 0).is_ok();
+    let started = replicas::start_with(
+        world,
+        1,
+        "messages:read,contacts:read,contacts:write,system:read",
+        0,
+    )
+    .is_ok();
     let endpoint = replicas::endpoints().into_iter().next();
     let (Some(endpoint), true) = (endpoint, started) else {
         e.check("replica_fixture", false, "replicas did not start");

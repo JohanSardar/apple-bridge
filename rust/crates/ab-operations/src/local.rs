@@ -462,9 +462,14 @@ impl LocalGateway {
         let Ok(_guard) = tokio::time::timeout_at(deadline, lock.lock()).await else {
             return self.transition(r, State::Expired, Some(Disposition::Expired), None, None);
         };
-        let document = if r.command.op == "pdf.annotate" {
+        let document = if matches!(r.command.op.as_str(), "pdf.annotate" | "print.document") {
             let store = self.query_store.as_ref().ok_or(Code::Unavailable)?;
-            match store.document_input(&p, &r.command.args).await {
+            let input = if r.command.op == "print.document" {
+                store.document_file(&p, &r.command.args).await
+            } else {
+                store.document_input(&p, &r.command.args).await
+            };
+            match input {
                 Ok(document) => Some(document),
                 Err(error) => {
                     return self.transition(
@@ -960,12 +965,14 @@ impl LocalGateway {
         owner: &Principal,
         id: &str,
         approve: bool,
+        review: &crate::approval_review::OwnerReview<'_>,
     ) -> Result<Box<RawValue>, Error> {
         if owner.kind != "device" {
             return Err(Code::Unauthorized.into());
         }
         self.identity.current(owner)?.authorize("admin")?;
-        self.decide_inner(id, approve, None).await
+        self.decide_inner(id, approve, crate::approval_review::Decider::Owner(review))
+            .await
     }
     pub async fn decide_phone(
         self: &Arc<Self>,
@@ -976,20 +983,19 @@ impl LocalGateway {
         if hash.is_empty() {
             return Err(Code::Invalid.into());
         }
-        self.decide_inner(id, approve, Some(hash)).await
+        self.decide_inner(id, approve, crate::approval_review::Decider::Phone(hash))
+            .await
     }
     async fn decide_inner(
         self: &Arc<Self>,
         id: &str,
         approve: bool,
-        hash: Option<&str>,
+        decider: crate::approval_review::Decider<'_>,
     ) -> Result<Box<RawValue>, Error> {
         let lock = self.lock(format!("command:{id}"))?;
         let _guard = lock.lock().await;
         let row = self.state.command(id)?;
-        if hash.is_some_and(|hash| hash != row.request_hash) {
-            return Err(Code::Unauthorized.into());
-        }
+        self.verify_decider(&row, approve, decider).await?;
         let mut r = self.expire(row)?;
         if r.state != State::AwaitingApproval {
             return raw(&r);
@@ -1024,6 +1030,7 @@ impl LocalGateway {
                     grants: p.grants.iter().map(|g| g.as_str().to_owned()).collect(),
                     resource: String::new(),
                     remote: p.remote,
+                    expires_at: None,
                 })
                 .map_err(|e| {
                     Error::from(if matches!(e, ab_trust::Error::Unauthorized) {
@@ -1168,7 +1175,10 @@ impl LocalGateway {
         audit: &mut crate::QueryAudit,
     ) -> Result<Box<RawValue>, Error> {
         let args: Value = serde_json::from_str(q.args.get()).map_err(|_| Code::Invalid)?;
-        let document = if matches!(q.op.as_str(), "vision.ocr" | "pdf.text" | "pdf.search") {
+        let document = if matches!(
+            q.op.as_str(),
+            "vision.ocr" | "pdf.text" | "pdf.search" | "audio.transcribe"
+        ) {
             audit.argument_bytes = 0;
             let store = self.query_store.as_ref().ok_or(Code::Unavailable)?;
             Some(
@@ -1496,3 +1506,6 @@ mod evidence;
 #[cfg(test)]
 #[path = "local_races.rs"]
 mod races;
+#[cfg(test)]
+#[path = "local_security.rs"]
+mod security;

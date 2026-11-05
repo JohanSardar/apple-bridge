@@ -424,9 +424,23 @@ pub fn oauth(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resul
             && text(&rotated, "access_token") != access,
         "",
     );
+    let retried = token_reply(&token(&refresh_form(&refresh_token)));
+    evidence.check(
+        "refresh_retry_returns_saved_successor",
+        text(&retried, "refresh_token") == text(&rotated, "refresh_token")
+            && text(&retried, "access_token") == text(&rotated, "access_token"),
+        "",
+    );
+    let aged = edit_credentials(world, |data| {
+        for row in data["oauth_refresh"].as_array_mut().into_iter().flatten() {
+            if row["used"] == true {
+                row["rotated_at"] = json!(1);
+            }
+        }
+    });
     evidence.check(
         "refresh_reuse_detected",
-        token(&refresh_form(&refresh_token)).status == 400,
+        aged.is_ok() && token(&refresh_form(&refresh_token)).status == 400,
         "",
     );
     evidence.check(

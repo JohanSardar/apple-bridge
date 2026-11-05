@@ -48,13 +48,16 @@ pub(crate) fn authorization_server(origin: &str) -> Value {
 }
 
 pub(crate) fn register(web: &Web, body: &[u8]) -> Response {
-    serde_json::from_slice::<Client>(body)
-        .ok()
-        .and_then(|client| web.authority.register_oauth(client).ok())
-        .map_or_else(
-            || respond(400, &json!({"error": "invalid_client_metadata"})),
-            |client| respond(201, &client),
-        )
+    let Ok(client) = serde_json::from_slice::<Client>(body) else {
+        return respond(400, &json!({"error": "invalid_client_metadata"}));
+    };
+    match web.authority.register_oauth(client) {
+        Ok(client) => respond(201, &client),
+        Err(ab_trust::Error::Unavailable) => {
+            respond(503, &json!({"error": "temporarily_unavailable"}))
+        }
+        Err(_) => respond(400, &json!({"error": "invalid_client_metadata"})),
+    }
 }
 
 fn resource_of(given: &str, origin: &str) -> Option<String> {

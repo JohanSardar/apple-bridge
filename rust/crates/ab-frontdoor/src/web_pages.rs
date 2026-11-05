@@ -97,7 +97,8 @@ fn ranked(sources: &mut Vec<&str>) -> Vec<String> {
             .position(|(id, _)| *id == source)
             .unwrap_or(SOURCES.len())
     };
-    sources.sort_by_key(|source| rank(source));
+    sources.sort_by_key(|source| (rank(source), *source));
+    sources.dedup();
     sources
         .iter()
         .map(|source| {
@@ -120,9 +121,8 @@ pub(crate) fn access(scopes: &[Grant]) -> Access {
     let mut change = Vec::new();
     for grant in scopes {
         if let Some((source, action)) = grant.as_str().split_once(':') {
-            if action == "read" {
-                read.push(source);
-            } else {
+            read.push(source);
+            if action != "read" {
                 change.push(source);
             }
         }
@@ -193,16 +193,11 @@ fn request_header(client: &Client, redirect_host: &str) -> String {
         .chars()
         .find(|c| c.is_alphanumeric())
         .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string());
-    let host = redirect_host.split(':').next().unwrap_or_default();
-    let returns = if ["localhost", "127.0.0.1", "[", "::1"].contains(&host) {
-        "Returns to an app on this computer. Allow it only if you just started this.".to_owned()
-    } else {
-        format!("Returns to {}", escape(redirect_host))
-    };
     format!(
-        "<header class=\"request\"><div class=\"tile\" aria-hidden=\"true\">{}</div><div><h1>{} wants to connect to your Mac</h1><p class=\"lede\">{returns}</p></div></header>",
+        "<header class=\"request\"><div class=\"tile\" aria-hidden=\"true\">{}</div><div><h1>{} wants to connect to your Mac</h1><p class=\"lede\">{}</p></div></header>",
         escape(&initial),
-        escape(name)
+        escape(name),
+        escape(&ab_trust::oauth::callback_label(redirect_host))
     )
 }
 
@@ -281,6 +276,75 @@ pub(crate) fn connector_redirect(destination: &str) -> Response {
     )
 }
 
+const UNPREVIEWABLE_CONSENT: &str = "<label class=\"choice\"><input type=\"checkbox\" name=\"accept_unpreviewable\" value=\"1\" required><span><strong>Send it anyway</strong><span class=\"muted small\">I've inspected what I can of these attachments, and I accept sending these exact bytes.</span></span></label>";
+
+fn attachment_rows(id: &str, row: &Value) -> String {
+    let mut rows = String::new();
+    if row["attachment_error"] == true {
+        rows.push_str("<p class=\"small\">An attachment can't be read right now, so this can't be approved. You can reject it.</p>");
+    }
+    for attachment in row["attachments"].as_array().into_iter().flatten() {
+        let index = attachment["index"].as_u64().unwrap_or_default();
+        let preview = attachment["preview"].as_str().unwrap_or_default();
+        let (action, note) = match preview {
+            "text" => ("Preview", ""),
+            "image" => (
+                "Preview",
+                "<p class=\"small\">A preview shows only what your browser can draw. If nothing appears, or the file has more in it than the picture, you can't see that part.</p>",
+            ),
+            "too_large" => (
+                "",
+                "<p class=\"small\">This file can't be previewed: it is too large to inspect here.</p>",
+            ),
+            _ => (
+                "Download",
+                "<p class=\"small\">This file can't be previewed here. Download it to inspect it somewhere safe.</p>",
+            ),
+        };
+        let link = if action.is_empty() {
+            String::new()
+        } else {
+            format!("<a href=\"/approvals/{id}/attachments/{index}\">{action}</a>")
+        };
+        let _ = write!(
+            rows,
+            "<section class=\"section\"><h3>Attachment {}: {}</h3><p class=\"small\">Detected {}, {} bytes</p><p class=\"small\">SHA-256 {}</p>{note}{link}</section>",
+            index + 1,
+            escape(attachment["name"].as_str().unwrap_or_default()),
+            escape(attachment["media_type"].as_str().unwrap_or_default()),
+            attachment["size"].as_u64().unwrap_or_default(),
+            escape(attachment["digest"].as_str().unwrap_or_default()),
+        );
+    }
+    rows
+}
+
+pub(crate) fn attachment_file(index: usize, file: crate::web::AttachmentFile) -> Response {
+    const IMAGES: [&str; 4] = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+    let (media_type, disposition) = match file.preview.as_str() {
+        "text" => ("text/plain; charset=utf-8".to_owned(), "inline".to_owned()),
+        "image" if IMAGES.contains(&file.media_type.as_str()) => {
+            (file.media_type, "inline".to_owned())
+        }
+        _ => (
+            "application/octet-stream".to_owned(),
+            format!("attachment; filename=\"attachment-{}.bin\"", index + 1),
+        ),
+    };
+    (
+        [
+            (header::CONTENT_TYPE, media_type),
+            (header::CONTENT_DISPOSITION, disposition),
+            (
+                header::CONTENT_SECURITY_POLICY,
+                "default-src 'none'; sandbox".to_owned(),
+            ),
+        ],
+        file.bytes,
+    )
+        .into_response()
+}
+
 pub(crate) fn approvals(rows: &[Value]) -> Response {
     let mut body = String::from("<h1>Pending approvals</h1>");
     if rows.is_empty() {
@@ -288,13 +352,26 @@ pub(crate) fn approvals(rows: &[Value]) -> Response {
     }
     for row in rows {
         let id = escape(row["command_id"].as_str().unwrap_or_default());
+        let unreadable = row["attachment_error"] == true;
+        let approve = if unreadable {
+            ""
+        } else {
+            "<button name=\"decision\" value=\"approve\" class=\"primary\">Approve</button>"
+        };
         let _ = write!(
             body,
-            "<article class=\"item\"><div class=\"item-head\"><h2>{}</h2><span class=\"tag\">{}</span></div><pre class=\"data\">{}</pre><details><summary class=\"small\">Technical details</summary><pre class=\"data\">{}</pre></details><form method=\"post\" action=\"/approvals/{id}\"><div class=\"actions end\"><button name=\"decision\" value=\"reject\">Reject</button><button name=\"decision\" value=\"approve\" class=\"primary\">Approve</button></div></form></article>",
+            "<article class=\"item\"><div class=\"item-head\"><h2>{}</h2><span class=\"tag\">{}</span></div><pre class=\"data\">{}</pre>{}<details><summary class=\"small\">Technical details</summary><pre class=\"data\">{}</pre></details><form method=\"post\" action=\"/approvals/{id}\"><input type=\"hidden\" name=\"attachments\" value=\"{}\">{}<div class=\"actions end\"><button name=\"decision\" value=\"reject\" formnovalidate>Reject</button>{approve}</div></form></article>",
             escape(row["operation"].as_str().unwrap_or_default()),
             escape(row["principal"].as_str().unwrap_or_default()),
             escape(row["owner_arguments"].as_str().unwrap_or_default()),
+            attachment_rows(&id, row),
             escape(row["arguments"].as_str().unwrap_or_default()),
+            escape(row["binding"].as_str().unwrap_or_default()),
+            if row["requires_consent"] == true {
+                UNPREVIEWABLE_CONSENT
+            } else {
+                ""
+            },
         );
     }
     document(
@@ -329,6 +406,27 @@ pub(crate) fn command_status(record: &Value) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_write_grant_also_shows_that_it_reads() {
+        let grants: Vec<Grant> = Grant::parse("messages:write").into_iter().collect();
+        assert_eq!(
+            access(&grants),
+            Access {
+                read: vec!["Messages".into()],
+                change: vec!["Messages".into()],
+            }
+        );
+        assert_eq!(
+            access_sentence(&grants),
+            "Read: Messages\nAsk to change (each change needs your approval): Messages"
+        );
+        let section = access_section(&grants);
+        assert!(
+            section.contains("Can read, and ask to make changes"),
+            "{section}"
+        );
+    }
 
     #[test]
     fn scopes_become_product_words() {

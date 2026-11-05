@@ -304,7 +304,9 @@ impl<Role> State<Role> {
                         record["data"]["reason"] = "capacity".into();
                     }
                 }
-                if let Some(status) = self.project_replica_status(visibility)? {
+                if crate::scope::sees_replica_status(visibility)
+                    && let Some(status) = self.project_replica_status(visibility)?
+                {
                     result["replica"] = status;
                 }
                 result

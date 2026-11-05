@@ -19,6 +19,7 @@ impl Drop for DocumentInput {
         }
     }
 }
+const INLINE_DOCUMENT_BYTES: usize = 128 << 10;
 fn raw(value: &Value) -> Result<Box<RawValue>, Error> {
     serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
 }
@@ -53,7 +54,12 @@ impl LocalQueryStore {
         }
         self.read_blob(digest, offset, length).await
     }
-    async fn read_blob(&self, digest: &str, offset: u64, length: u64) -> Result<Vec<u8>, Error> {
+    pub(crate) async fn read_blob(
+        &self,
+        digest: &str,
+        offset: u64,
+        length: u64,
+    ) -> Result<Vec<u8>, Error> {
         let d = ab_blobs::Digest::try_from(digest.to_owned()).map_err(|_| Code::Invalid)?;
         let file = self
             .blobs
@@ -79,13 +85,32 @@ impl LocalQueryStore {
         p: &Principal,
         input: &RawValue,
     ) -> Result<DocumentInput, Error> {
+        let args = self.resolve_document(p, input).await?;
+        Self::stage_document(args, INLINE_DOCUMENT_BYTES).await
+    }
+    pub async fn document_file(
+        &self,
+        p: &Principal,
+        input: &RawValue,
+    ) -> Result<DocumentInput, Error> {
+        let args = self.resolve_document(p, input).await?;
+        let document = Self::stage_document(args, 0).await?;
+        if document.directory.is_none() {
+            return Err(Code::Invalid.into());
+        }
+        Ok(document)
+    }
+    async fn resolve_document(&self, p: &Principal, input: &RawValue) -> Result<Value, Error> {
         let mut args: Value = serde_json::from_str(input.get()).map_err(|_| Code::Invalid)?;
         let object = args.as_object().ok_or(Code::Invalid)?;
+        if object
+            .keys()
+            .any(|k| k.eq_ignore_ascii_case("file") || k.eq_ignore_ascii_case("allow_file"))
+        {
+            return Err(Code::Invalid.into());
+        }
         if let Some(reference) = object.get("blob") {
-            if object.contains_key("file")
-                || object.contains_key("data_base64")
-                || object.contains_key("allow_file")
-            {
+            if object.contains_key("data_base64") {
                 return Err(Code::Invalid.into());
             }
             let reference = reference.as_object().ok_or(Code::Invalid)?;
@@ -139,24 +164,15 @@ impl LocalQueryStore {
             let object = args.as_object_mut().ok_or(Code::Invalid)?;
             object.remove("blob");
             object.insert("data_base64".into(), Value::String(STANDARD.encode(data)));
-        } else {
-            if object.contains_key("file") && object.contains_key("data_base64") {
-                return Err(Code::Invalid.into());
-            }
-            if object.contains_key("file") {
-                if object.get("allow_file") != Some(&Value::Bool(true)) {
-                    return Err(Code::Invalid.into());
-                }
-                args.as_object_mut()
-                    .ok_or(Code::Invalid)?
-                    .remove("allow_file");
-            }
         }
-        Self::stage_document(args).await
+        Ok(args)
     }
-    async fn stage_document(mut args: Value) -> Result<DocumentInput, Error> {
-        if let Some(encoded) = args["data_base64"].as_str().filter(|s| s.len() > 128 << 10) {
-            if args.get("file").is_some() || encoded.len() > (8_usize << 20).div_ceil(3) * 4 {
+    async fn stage_document(mut args: Value, inline_limit: usize) -> Result<DocumentInput, Error> {
+        if let Some(encoded) = args["data_base64"]
+            .as_str()
+            .filter(|s| s.len() > inline_limit)
+        {
+            if encoded.len() > (8_usize << 20).div_ceil(3) * 4 {
                 return Err(Code::Invalid.into());
             }
             let data = STANDARD
