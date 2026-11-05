@@ -15,6 +15,7 @@ const RETRY_INTERVAL: Duration = Duration::from_mins(15);
 const STALE_AFTER: u64 = 7200;
 const OWNER_UNAVAILABLE_AFTER: u64 = 86400;
 const PARSED_CACHE_LIMIT: usize = 4096;
+const NOT_COMPLETING: &str = "The certificate check has not completed for over a day, so a certificate this Mac did not request could go unnoticed.";
 pub const LAG_NOTE: &str = "Public CT aggregation can lag; absence is not an all clear";
 
 pub type CtFuture<'a> = Pin<Box<dyn Future<Output = Result<Vec<Certificate>>> + Send + 'a>>;
@@ -247,10 +248,9 @@ impl Report {
         let covered_since = self.last_success.max(self.first_checked);
         if relay
             && covered_since != 0
-            && now.saturating_sub(self.checked_at) <= STALE_AFTER
             && now.saturating_sub(covered_since) > OWNER_UNAVAILABLE_AFTER
         {
-            return "The certificate check has not completed for over a day, so a certificate this Mac did not request could go unnoticed.".into();
+            return NOT_COMPLETING.into();
         }
         String::new()
     }
@@ -293,9 +293,21 @@ fn relay_selected(home: &Path) -> bool {
     state::read::<BTreeMap<String, bool>>(home, "ingresses")
         .is_ok_and(|selected| selected.get("relay") == Some(&true))
 }
+fn monitor_never_reported(home: &Path, time: u64) -> bool {
+    let selected_at = std::fs::metadata(home.join("remote/ingresses.json"))
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map_or(time, |age| age.as_secs());
+    relay_selected(home) && time.saturating_sub(selected_at) > OWNER_UNAVAILABLE_AFTER
+}
 pub fn doctor(home: &Path, time: u64) -> Vec<String> {
     let Ok(report) = state::read::<Report>(home, "ct-monitor") else {
-        return Vec::new();
+        return if monitor_never_reported(home, time) {
+            vec![NOT_COMPLETING.into()]
+        } else {
+            Vec::new()
+        };
     };
     if relay_selected(home) {
         report.warnings(time)
@@ -305,9 +317,11 @@ pub fn doctor(home: &Path, time: u64) -> Vec<String> {
 }
 #[must_use]
 pub fn owner_warning(home: &Path, time: u64) -> String {
-    state::read::<Report>(home, "ct-monitor")
-        .map(|report| report.owner_warning(time, relay_selected(home)))
-        .unwrap_or_default()
+    match state::read::<Report>(home, "ct-monitor") {
+        Ok(report) => report.owner_warning(time, relay_selected(home)),
+        Err(_) if monitor_never_reported(home, time) => NOT_COMPLETING.into(),
+        Err(_) => String::new(),
+    }
 }
 pub fn accept(home: &Path, fingerprint: &str) -> Result<()> {
     if fingerprint.len() != 64

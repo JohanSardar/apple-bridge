@@ -238,7 +238,9 @@ def helper_attacks(helper, signing, trusted, other, fixture, failures):
     secret.write_text("synthetic")
     secret.chmod(0o600)
 
-    check("override text absent from release Helper", b"AB_SESSION_BINARY" in binary.read_bytes(), False, failures)
+    contents = binary.read_bytes()
+    check("override text in the release Helper", b"AB_SESSION_BINARY" in contents, False, failures)
+    check("Contacts self-test in the release Helper", b"contacts-groups" in contents, False, failures)
 
     facts = subprocess.run([str(binary), "media-facts"], input='{"kind":"mime","uti":"public.jpeg"}', capture_output=True, text=True, timeout=30)
     check("media facts refused for an unverified parent", facts.returncode, 1, failures)

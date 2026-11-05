@@ -213,3 +213,48 @@ fn the_recorded_key_matches_the_key_read_from_a_certificate() -> Check {
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn a_monitor_that_stopped_running_is_shown_while_remote_is_on() -> Check {
+    let home = tempfile::tempdir()?;
+    let log = Log::default();
+    one_scan(home.path(), &log).await;
+    let report: ct::Report = state::read(home.path(), "ct-monitor")?;
+    let later = report.checked_at + 3 * 86_400;
+    assert_eq!(ct::owner_warning(home.path(), later), "", "Remote is off");
+    state::write(
+        home.path(),
+        "ingresses",
+        &BTreeMap::from([("relay".to_owned(), true)]),
+    )?;
+    assert_eq!(ct::owner_warning(home.path(), report.checked_at), "");
+    assert!(ct::owner_warning(home.path(), later).contains("over a day"));
+    Ok(())
+}
+
+#[test]
+fn a_monitor_that_never_reported_is_shown_after_a_day_of_remote_being_on() -> Check {
+    let home = tempfile::tempdir()?;
+    state::write(
+        home.path(),
+        "ingresses",
+        &BTreeMap::from([("relay".to_owned(), true)]),
+    )?;
+    let now = ct::now();
+    assert_eq!(ct::owner_warning(home.path(), now), "");
+    assert_eq!(ct::doctor(home.path(), now).len(), 0);
+    let later = now + 2 * 86_400;
+    assert!(ct::owner_warning(home.path(), later).contains("over a day"));
+    assert!(
+        ct::doctor(home.path(), later)
+            .iter()
+            .any(|w| w.contains("over a day"))
+    );
+    state::write(
+        home.path(),
+        "ingresses",
+        &BTreeMap::from([("relay".to_owned(), false)]),
+    )?;
+    assert_eq!(ct::owner_warning(home.path(), later + 2 * 86_400), "");
+    Ok(())
+}

@@ -103,7 +103,7 @@ The first complete scan of each name is a baseline: everything then public moves
 
 ## Owner surfaces
 
-`ct::owner_warning` is the single owner-facing text. It is non-empty for any unexpected certificate, whether or not Remote is on, and when an enabled, running monitor has lacked a complete scan for over a day. `ingress::publish` writes it to `Status.ct_warning`, omitting the field when empty. `Notifications` wakes that publisher after every scan. `bridge remote status`, the Setup window, the connector approval window and `bridge pair --iphone` read it. `ct::doctor`, used by `bridge doctor`, reports details immediately, including a single failed query. CT is delayed detection, not prevention.
+`ct::owner_warning` is the single owner-facing text. It is non-empty for any unexpected certificate, whether or not Remote is on, and when Remote is on and no scan has completed for over a day, including a monitor that stopped or never reported. `ingress::publish` writes it to `Status.ct_warning`, omitting the field when empty. `Notifications` wakes that publisher after every scan. `bridge remote status`, the Setup window, the connector approval window and `bridge pair --iphone` read it. `ct::doctor`, used by `bridge doctor`, reports details immediately, including a single failed query. CT is delayed detection, not prevention.
 
 `IphonePush::alert` remains the hook for phone delivery. The default `Notifications` persists `remote/ct-alert.json`, logs and refreshes status; it does not send to the phone. An old phone app has no handler for a new notice type, so sending one needs an app version check first. No CT result is allowed to clear relay warnings.
 

@@ -140,7 +140,7 @@ async fn relay_ct_independent() {
     assert!(running.names.contains("custom.other.test"));
     assert!(running.names.contains("*.extra.test"));
     println!("R2_ASSERT\tall_owned_names");
-    assert_eq!(running.adopted, running_adopted(&running));
+    assert!(running.adopted > 0);
     assert!(
         running.unexpected.is_empty(),
         "the first scan is a baseline"
@@ -165,9 +165,6 @@ async fn relay_ct_independent() {
             .iter()
             .all(|warning| warning.contains("unexpected"))
     );
-}
-fn running_adopted(report: &Report) -> usize {
-    report.adopted
 }
 
 #[test]

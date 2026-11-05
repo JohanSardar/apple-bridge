@@ -22,14 +22,14 @@ const SLOT_WAIT: Duration = Duration::from_secs(15);
 
 #[derive(Debug)]
 pub(crate) struct Admission {
-    verifying: Semaphore,
+    verifying: Arc<Semaphore>,
     anonymous: Semaphore,
     authenticated: Semaphore,
 }
 impl Default for Admission {
     fn default() -> Self {
         Self {
-            verifying: Semaphore::new(8),
+            verifying: Arc::new(Semaphore::new(8)),
             anonymous: Semaphore::new(2),
             authenticated: Semaphore::new(2),
         }
@@ -72,9 +72,6 @@ async fn authenticate<G: Gateway + 'static>(
     path: &str,
     header: &axum::http::HeaderValue,
 ) -> Result<UploadAuthorization, StatusCode> {
-    let Ok(_slot) = delivery.uploads.verifying.try_acquire() else {
-        return Err(StatusCode::SERVICE_UNAVAILABLE);
-    };
     if header.len() > UPLOAD_HEADER_LIMIT {
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -82,11 +79,30 @@ async fn authenticate<G: Gateway + 'static>(
         .to_str()
         .map_err(|_| StatusCode::UNAUTHORIZED)?
         .to_owned();
-    let (delivery, path) = (delivery.clone(), path.to_owned());
-    tokio::task::spawn_blocking(move || delivery.authority.verify_iphone_upload(&path, &header))
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .map_err(|_| StatusCode::UNAUTHORIZED)
+    let (slots, delivery, path) = (
+        delivery.uploads.verifying.clone(),
+        delivery.clone(),
+        path.to_owned(),
+    );
+    verify_holding_slot(&slots, move || {
+        delivery.authority.verify_iphone_upload(&path, &header)
+    })
+    .await?
+    .map_err(|_| StatusCode::UNAUTHORIZED)
+}
+async fn verify_holding_slot<T: Send + 'static>(
+    slots: &Arc<Semaphore>,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, StatusCode> {
+    let Ok(slot) = slots.clone().try_acquire_owned() else {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    };
+    tokio::task::spawn_blocking(move || {
+        let _slot = slot;
+        work()
+    })
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 async fn upload_slot<G: Gateway>(
     delivery: &Delivery<G>,
@@ -198,6 +214,38 @@ async fn respond<G: Gateway + 'static>(
             .into_response()
     } else {
         (status, text).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_cancelled_request_keeps_its_slot_until_verification_ends() {
+        let slots = Arc::new(Semaphore::new(1));
+        let (started_sender, started) = std::sync::mpsc::channel();
+        let (release, released) = std::sync::mpsc::channel::<()>();
+        let held = slots.clone();
+        let request = tokio::spawn(async move {
+            verify_holding_slot(&held, move || {
+                let _ = started_sender.send(());
+                let _ = released.recv();
+            })
+            .await
+        });
+        let _ = tokio::task::spawn_blocking(move || started.recv()).await;
+        request.abort();
+        let _ = request.await;
+        assert_eq!(slots.available_permits(), 0);
+        let _ = release.send(());
+        for _ in 0..200 {
+            if slots.available_permits() == 1 {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(slots.available_permits(), 1);
     }
 }
 

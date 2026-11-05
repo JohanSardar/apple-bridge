@@ -115,7 +115,7 @@ This is delayed detection, not prevention:
 - Public logs can take hours to show a certificate, and the Mac has to be on and online to check.
 - The first check treats whatever is already public as yours, because it can't tell old certificates apart. It proves nothing about the time before it ran.
 - A certificate that never reaches a public log isn't seen. Connector apps and browsers normally reject those.
-- If `crt.sh` can't be reached, `bridge doctor` says so at once. The other places say so after a day.
+- If `crt.sh` can't be reached, `bridge doctor` says so at once. If no check has completed for over a day while Remote is on, the other places say so too.
 
 Each check tells `crt.sh` your Mac's address, which public logs already list.
 
