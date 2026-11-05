@@ -16,7 +16,7 @@ keys=/etc/ab-relay/owner-keys
 accounts() {
   [ -f /etc/ab-relay/accounts.env ] || { echo "This relay runs without accounts. Reinstall with --accounts to add them." >&2; exit 1; }
   set -a; . /etc/ab-relay/accounts.env; set +a
-  runuser -u ab-relay --preserve-environment -- \
+  runuser -u ab-accounts --preserve-environment -- \
     /usr/local/lib/ab-relay/node/bin/node --disable-warning=ExperimentalWarning /usr/local/lib/ab-relay/accounts.mjs "$@"
 }
 case "${1:-}" in

@@ -4,6 +4,18 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Changed
+
+- Self-hosted relays run accounts, control and relay as separate system users. Run the installer again to upgrade. Upgrade the relay before or together with the control service, because the control service now sends a policy version an older relay refuses. To go back, run the previous release's installer.
+
+### Security
+
+- Abrupt visitor closes, stalled streams and silent connections can no longer use up a Mac's connections, a tunnel or shared relay capacity.
+- Login and connector rate limits use the address the relay accepted, with a wider shared budget and no daily lockout when a transport has no source, plus an enrollment link as the owner's way back in.
+- Concurrent links can no longer pass an account's Mac limit, retried policy changes apply in order, and account deletion is off until it can revoke the account's Macs.
+- The post-login redirect stays on this site, and the link page warns plainly about codes someone else sent.
+- Unauthenticated relay routes have per-source budgets, a full nonce pool evicts the oldest entry, and the installer pins the Node.js archive by a checksum verified against its signature.
+
 ## [0.1.2] - 2026-11-05
 
 ### Added

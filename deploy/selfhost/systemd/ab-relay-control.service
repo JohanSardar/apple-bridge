@@ -4,13 +4,14 @@ After=network-online.target ab-relay.service ab-accounts.service
 Wants=network-online.target
 
 [Service]
-User=ab-relay
-Group=ab-relay
+User=ab-control
+Group=ab-control
 EnvironmentFile=/etc/ab-relay/control.env
 ExecStart=/usr/local/lib/ab-relay/bin/ab-relay-control
 Restart=on-failure
 RestartSec=5
 StateDirectory=ab-relay-control
+StateDirectoryMode=0750
 UMask=0077
 NoNewPrivileges=true
 ProtectSystem=strict
