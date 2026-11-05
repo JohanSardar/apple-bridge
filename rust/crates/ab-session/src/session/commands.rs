@@ -207,6 +207,10 @@ fn source_of(operation: &str) -> &str {
 }
 
 impl Probe for Hub {
+    fn lookups(&self) -> Option<std::sync::Arc<crate::calendar_lookup::Lookups>> {
+        self.capture_lookups()
+    }
+
     fn staged(&self, prefix: &str) -> Option<std::sync::Arc<crate::staged::StagedBlobs>> {
         self.capture_staged(prefix)
     }

@@ -37,6 +37,7 @@ pub const STATE_DIRECTORY: &str = "session/capture-state";
 pub const STAGING_DIRECTORY: &str = "session/staging";
 const STAGED: &[&str] = &["notes", "voice_memos"];
 const FACTS_ROOT: &str = "session/facts";
+const CALENDAR_LOOKUPS: &str = "calendar-lookups.json";
 pub const FILES_BLOB: &str = "files-blob:";
 pub const CAPTURE_BLOB: &str = "capture-artifact:";
 pub const PDF_BLOB: &str = "pdf:";
@@ -224,6 +225,7 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
                 "root": facts_root("calendar")?,
                 "facts": "native",
                 "store": text(&containers.join("group.com.apple.calendar"))?,
+                "lookups": text(&home.join(CALENDAR_LOOKUPS))?,
             }),
         ),
         (

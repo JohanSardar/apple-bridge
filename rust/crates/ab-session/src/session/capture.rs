@@ -83,6 +83,7 @@ pub(super) struct Capture {
     poll: Duration,
     watch: bool,
     queries: NativeQueries,
+    lookups: Option<Arc<crate::calendar_lookup::Lookups>>,
     told: Mutex<BTreeMap<String, Readiness>>,
     readiness: bool,
 }
@@ -272,7 +273,9 @@ impl Capture {
             return Ok(None);
         };
         let queries = options.queries.clone();
+        let lookups = readers.values().find_map(|reader| reader.lookups());
         Ok(Some(Self {
+            lookups,
             targets: readers
                 .iter()
                 .map(|(source, reader)| (source.clone(), reader.watch_paths()))
@@ -540,6 +543,10 @@ impl Hub {
         self.capture
             .as_ref()
             .is_some_and(|capture| capture.queries.handles_operation(operation))
+    }
+
+    pub(super) fn capture_lookups(&self) -> Option<Arc<crate::calendar_lookup::Lookups>> {
+        self.capture.as_ref()?.lookups.clone()
     }
 
     pub(super) fn capture_staged(&self, prefix: &str) -> Option<Arc<crate::staged::StagedBlobs>> {

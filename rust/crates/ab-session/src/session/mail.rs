@@ -491,7 +491,9 @@ mod tests {
         let script = composed("mail.create_draft", &draft()["args"]);
         let saved = script.find("save m").expect("save");
         let waited = script.find("messages of drafts mailbox").expect("wait");
-        let closed = script.find("close m saving yes").expect("close");
+        let closed = script
+            .find("if saved then close m saving yes")
+            .expect("close");
         assert!(saved < waited && waited < closed);
         assert!(script.contains(
             "to recipient at end of to recipients with properties {address:\"a@example.com\"}"

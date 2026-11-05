@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod calendar_lookup;
 pub mod flight;
 mod frame;
 pub mod guard;

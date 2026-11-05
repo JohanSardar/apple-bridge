@@ -1,6 +1,7 @@
 use super::owned::{
     Driver, Probe, Refusal, Settled, conflict, equal, native_failure, refuse, text,
 };
+use crate::calendar_lookup::{self, Candidates, Query};
 use serde_json::{Map, Value, json};
 
 const OPERATIONS: [&str; 4] = [
@@ -42,6 +43,70 @@ fn read(probe: &dyn Probe, operation: &str, key: &str) -> Result<Value, Refusal>
         .map_err(|code| native_failure(&code))
 }
 
+struct ProbeCandidates<'a>(&'a dyn Probe);
+
+impl Candidates for ProbeCandidates<'_> {
+    fn candidates(&self, query: &Query) -> Result<Vec<Value>, String> {
+        let answer = self
+            .0
+            .call("calendar.candidates", &json!({"query": query.encode()}))?;
+        Ok(answer["items"].as_array().cloned().unwrap_or_default())
+    }
+
+    fn calendar_account(&self, calendar: &str) -> Result<Option<String>, String> {
+        let answer = self
+            .0
+            .call("calendar.account", &json!({"calendar": calendar}))?;
+        Ok(answer["account"].as_str().map(str::to_owned))
+    }
+}
+
+enum Located {
+    Direct,
+    Selected(Value),
+    Absent(bool),
+}
+
+fn locate(probe: &dyn Probe, key: &str) -> Result<Located, String> {
+    let Some(lookups) = probe.lookups() else {
+        return Ok(Located::Direct);
+    };
+    let source = ProbeCandidates(probe);
+    let found = calendar_lookup::fresh(&source, &lookups, key)?;
+    lookups.save().map_err(|_| "unavailable".to_owned())?;
+    Ok(match found {
+        Some(found) => Located::Selected(found.selector),
+        None => Located::Absent(calendar_lookup::known_absent(&source, &lookups, key)),
+    })
+}
+
+fn read_event(probe: &dyn Probe, key: &str) -> Result<Value, String> {
+    if key.is_empty() {
+        return Ok(json!({"exists": false, "known_absent": false}));
+    }
+    match locate(probe, key)? {
+        Located::Direct => probe.call("calendar.read_event", &json!({"native_key": key})),
+        Located::Selected(selector) => {
+            probe.call("calendar.read_event", &json!({"selector": selector}))
+        }
+        Located::Absent(known) => Ok(json!({"exists": false, "known_absent": known})),
+    }
+}
+
+fn with_selector(probe: &dyn Probe, key: &str, args: &mut Value) -> Result<(), String> {
+    if key.is_empty() {
+        return Ok(());
+    }
+    match locate(probe, key)? {
+        Located::Direct => Ok(()),
+        Located::Selected(selector) => {
+            args["selector"] = selector;
+            Ok(())
+        }
+        Located::Absent(_) => Err("conflict".to_owned()),
+    }
+}
+
 fn fields_without(data: &Value, removed: &[&str]) -> Value {
     let fields: Map<String, Value> = data
         .as_object()
@@ -66,21 +131,21 @@ fn writable_calendar(probe: &dyn Probe, key: &str) -> Result<(), Refusal> {
 }
 
 fn goal(probe: &dyn Probe, action: &Value, prior: &Value) -> Result<Value, Refusal> {
+    let mut args = json!({
+        "native_key": action["native_key"],
+        "list_key": action["list_key"],
+        "calendar_args": request(action),
+        "prior": prior,
+    });
+    with_selector(probe, text(action, "native_key"), &mut args)
+        .map_err(|code| native_failure(&code))?;
     probe
-        .call(
-            "calendar.goal",
-            &json!({
-                "native_key": action["native_key"],
-                "list_key": action["list_key"],
-                "calendar_args": request(action),
-                "prior": prior,
-            }),
-        )
+        .call("calendar.goal", &args)
         .map_err(|code| native_failure(&code))
 }
 
 fn event_read(probe: &dyn Probe, key: &str) -> Result<Value, Refusal> {
-    let event = read(probe, "calendar.read_event", key)?;
+    let event = read_event(probe, key).map_err(|code| native_failure(&code))?;
     if present(&event) {
         Ok(event)
     } else {
@@ -167,16 +232,43 @@ pub(super) fn write(
     action: &Value,
     _state: &Value,
 ) -> Result<Value, String> {
-    probe.call(
-        "calendar.write",
-        &json!({
-            "op": action["op"],
-            "native_key": action["native_key"],
-            "list_key": action["list_key"],
-            "calendar_args": request(action),
-            "command_id": command_id,
-        }),
-    )
+    let key = text(action, "native_key");
+    let mut args = json!({
+        "op": action["op"],
+        "native_key": action["native_key"],
+        "list_key": action["list_key"],
+        "calendar_args": request(action),
+        "command_id": command_id,
+    });
+    with_selector(probe, key, &mut args)?;
+    let mut written = probe.call("calendar.write", &args)?;
+    let operation = text(action, "op");
+    let Some(lookups) = probe.lookups() else {
+        return Ok(written);
+    };
+    if operation == "calendar.create_calendar" {
+        return Ok(written);
+    }
+    let saved = match text(&written, "native_key") {
+        "" => key.to_owned(),
+        saved => saved.to_owned(),
+    };
+    lookups
+        .remember(&saved, &written["locator"])
+        .map_err(|_| "unavailable".to_owned())?;
+    let after = read_event(probe, &saved)?;
+    let exists = present(&after);
+    written["exists_after"] = json!(exists);
+    if operation != "calendar.delete_event" {
+        written["actual"] = after["native_result"].clone();
+        if exists {
+            written["native_key"] = after["key"].clone();
+        }
+    }
+    written
+        .as_object_mut()
+        .map(|fields| fields.remove("locator"));
+    Ok(written)
 }
 
 fn blank(value: &Value) -> bool {
@@ -316,13 +408,13 @@ pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
             }
         }
         "calendar.delete_event" => {
-            let event = read(probe, "calendar.read_event", key).ok()?;
+            let event = read_event(probe, key).ok()?;
             if present(&event) || event["known_absent"] != true {
                 return None;
             }
         }
         _ => {
-            let current = read(probe, "calendar.read_event", key).ok()?;
+            let current = read_event(probe, key).ok()?;
             if !present(&current) {
                 return None;
             }
