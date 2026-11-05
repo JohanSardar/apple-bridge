@@ -119,6 +119,7 @@ def main():
     parser.add_argument("--fresh", action="store_true", help="start from an empty home")
     parser.add_argument("--sources", default="safari,usage,notes,voice_memos,mail,phone,voicemail,calendar,contacts,reminders,messages,files,mac,focus,shortcuts,pdf")
     parser.add_argument("--hold", action="store_true", help="leave the gateway running and write hold.json")
+    parser.add_argument("--exclusive", action="store_true", help="read only --sources in the copy, to keep a command run light")
     options = parser.parse_args()
     want = requirement(REFERENCE)
     if not want or requirement(options.app) != want:
@@ -137,6 +138,9 @@ def main():
         seed(home, not options.no_switch)
         shutil.copy2(home + "/state.db", work + "/seed.db")
         before = load(work + "/seed.db", sources)
+    if options.exclusive:
+        with open(home + "/helper/session/rust-capture.json", "w") as handle:
+            json.dump({"exclusive": True, "sources": {name: {} for name in sources}}, handle)
     env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE="file")
     log = open(work + "/gateway.log", "ab")
     gateway = subprocess.Popen([options.bridge, "start", "--role", "gateway", "--home", home, "--api-addr", "127.0.0.1:%d" % options.port, "--peer-addr", "127.0.0.1:%d" % (options.port + 1), "--helper-app", options.app], env=env, stdout=log, stderr=log, start_new_session=True, cwd=home)

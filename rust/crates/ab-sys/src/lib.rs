@@ -127,3 +127,33 @@ pub fn reset_signals() {
         libc::pthread_sigmask(libc::SIG_SETMASK, &raw const empty, std::ptr::null_mut());
     }
 }
+
+pub const O_NOFOLLOW: i32 = libc::O_NOFOLLOW;
+pub const O_NONBLOCK: i32 = libc::O_NONBLOCK;
+
+#[allow(unsafe_code)]
+pub fn rename_exclusive(from: &std::path::Path, to: &std::path::Path) -> io::Result<()> {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let from =
+        CString::new(from.as_os_str().as_bytes()).map_err(|_| io::ErrorKind::InvalidInput)?;
+    let to = CString::new(to.as_os_str().as_bytes()).map_err(|_| io::ErrorKind::InvalidInput)?;
+    // SAFETY: both paths are valid NUL-terminated strings for the duration of the call.
+    #[cfg(target_os = "macos")]
+    let result = unsafe { libc::renamex_np(from.as_ptr(), to.as_ptr(), libc::RENAME_EXCL) };
+    // SAFETY: both paths are valid NUL-terminated strings for the duration of the call.
+    #[cfg(not(target_os = "macos"))]
+    let result = unsafe {
+        libc::renameat2(
+            libc::AT_FDCWD,
+            from.as_ptr(),
+            libc::AT_FDCWD,
+            to.as_ptr(),
+            libc::RENAME_NOREPLACE,
+        )
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}

@@ -332,36 +332,43 @@ fn a_broken_shortcuts_listing_removes_nothing() -> Fallible<()> {
 #[test]
 fn pdf_artifacts_are_added_and_never_inferred_deleted() -> Fallible<()> {
     let root = temporary("pdf-root")?;
-    let sockets = temporary("pdf-sock")?;
-    let facts: Facts = Facts::default();
-    let artifact = |key: &str| json!({"kind":"upsert","collection":"pdf.artifact","native_key":key,"data":{"annotation_count":1}});
-    set(&facts, "pdf.artifacts", Vec::new())?;
-    let socket = fact_server(&sockets, &facts)?;
-    let config = json!({"pdf":{"root":root,"facts":{"socket":socket},"facts_poll_ms":20}});
-    let mut session = support::wire(
-        readers::from_config(&config.to_string())?,
-        production::Options {
-            poll: Duration::from_millis(20),
-            ..production::Options::default()
-        },
-        json!({}),
-    )?;
-    expect_silence(&mut session.gateway)?;
-    set(
-        &facts,
-        "pdf.artifacts",
-        vec![
-            artifact("a1"),
-            json!({"kind":"blob_handle","digest":"d1","handle":"pdf:d1"}),
-        ],
-    )?;
-    let (size, first) = receive(&mut session.gateway)?;
-    assert_eq!(keys(&first), [("upsert".to_owned(), "a1".to_owned())]);
+    let config = json!({"pdf":{"root":root}}).to_string();
+    let mut reader = readers::from_config(&config)?.remove("pdf").ok_or("pdf")?;
+    let context = |checkpoint: &str| readers::ScanContext {
+        checkpoint: checkpoint.into(),
+        scan_id: "s".into(),
+        now: 1_800_000_000.0,
+        fence: 7,
+    };
+    assert!(reader.next(&context("c0"))?.is_none());
+    let add = |key: &str| json!({"native_key": key, "digest": "d1", "handle": "pdf:d1", "data": {"annotation_count": 1}});
+    assert!(
+        reader
+            .answer("pdf.add_artifact", &add("one"))
+            .ok_or("answer")?
+            .is_ok()
+    );
+    let first = reader.next(&context("c1"))?.ok_or("first")?;
     assert_eq!(first["blob_handles"]["d1"], "pdf:d1");
-    session.commit("pdf", &first, size)?;
-    set(&facts, "pdf.artifacts", Vec::new())?;
-    expect_silence(&mut session.gateway)?;
-    session.finish()?;
+    assert_eq!(keys(&first), [("upsert".to_owned(), "one".to_owned())]);
+    reader.commit()?;
+    assert!(reader.next(&context("c2"))?.is_none());
+    assert!(
+        reader
+            .answer("pdf.add_artifact", &add("two"))
+            .ok_or("answer")?
+            .is_ok()
+    );
+    let second = reader.next(&context("c3"))?.ok_or("second")?;
+    assert_eq!(keys(&second), [("upsert".to_owned(), "two".to_owned())]);
+    reader.commit()?;
+    assert!(reader.answer("pdf.other", &json!({})).is_none());
+    assert!(
+        reader
+            .answer("pdf.add_artifact", &json!({}))
+            .ok_or("answer")?
+            .is_err()
+    );
     Ok(())
 }
 

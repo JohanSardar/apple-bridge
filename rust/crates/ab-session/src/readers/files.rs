@@ -53,6 +53,9 @@ impl FilesReader {
         home: Option<&Path>,
         client: Arc<native_facts::Client>,
     ) -> Result<Self, Error> {
+        if home.is_some() {
+            let _ = std::fs::create_dir_all(&root);
+        }
         let mut roots: Vec<PathBuf> = Vec::new();
         let listed = match home {
             Some(home) => configured(home)?,
@@ -136,6 +139,17 @@ impl CaptureReader for FilesReader {
             json!({"roots": self.roots.len(), "max_items": files::MAX_ITEMS, "max_depth": files::MAX_DEPTH}),
             &CAPABILITIES,
         ))
+    }
+
+    fn answer(&mut self, operation: &str, _args: &Value) -> Option<Result<Value, String>> {
+        (operation == "files.roots").then(|| {
+            let roots: Vec<String> = self
+                .roots
+                .iter()
+                .map(|root| root.to_string_lossy().into_owned())
+                .collect();
+            Ok(json!({"roots": roots}))
+        })
     }
 
     fn next(&mut self, context: &ScanContext) -> Result<Option<Value>, Error> {

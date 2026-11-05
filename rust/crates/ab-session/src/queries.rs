@@ -1,4 +1,4 @@
-use crate::{Error, readers::BlobServer};
+use crate::{Error, readers::BlobServer, staged::StagedBlobs};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -23,6 +23,7 @@ const HANDLE: &str = "query-body:";
 pub struct NativeQueries {
     pub mail_bodies: Option<Arc<MailBodies>>,
     pub shortcut_roots: Option<Vec<PathBuf>>,
+    pub staged: Vec<(&'static str, Arc<StagedBlobs>)>,
 }
 
 impl NativeQueries {
@@ -49,10 +50,24 @@ impl NativeQueries {
     }
 
     #[must_use]
-    pub fn blob_server(&self) -> Option<Arc<dyn BlobServer>> {
+    pub fn blob_servers(&self) -> Vec<Arc<dyn BlobServer>> {
         self.mail_bodies
-            .as_ref()
+            .iter()
             .map(|bodies| Arc::clone(bodies) as Arc<dyn BlobServer>)
+            .chain(
+                self.staged
+                    .iter()
+                    .map(|(_, blobs)| Arc::clone(blobs) as Arc<dyn BlobServer>),
+            )
+            .collect()
+    }
+
+    #[must_use]
+    pub fn staged(&self, prefix: &str) -> Option<Arc<StagedBlobs>> {
+        self.staged
+            .iter()
+            .find(|(name, _)| *name == prefix)
+            .map(|(_, blobs)| Arc::clone(blobs))
     }
 }
 

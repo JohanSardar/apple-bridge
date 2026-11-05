@@ -1,2 +1,1 @@
 sqlite native/Sources/AppleBridgeHelper/SetupPermissions.swift opens-protected-stores-only-to-ask-tcc-whether-full-disk-access-is-held
-sqlite native/Sources/ShortcutsSource/ClockTimers.swift accessibility-driven-clock-timers-read-back-from-the-clock-store-moves-with-the-clock-driver

@@ -1,6 +1,5 @@
 use crate::{
     assertions::await_until,
-    files_native,
     http::{Client, random_id},
     journey,
 };
@@ -194,7 +193,8 @@ pub fn commands(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result
 }
 
 pub fn real(evidence: &mut Evidence) -> Result<()> {
-    let id = evidence.scenario.clone();
-    files_native::checks(evidence, &[&id]);
-    Ok(())
+    Err(Error::Invalid(format!(
+        "{}: Rust owns these commands; packaging/dev/real-commands.py runs them on a real gateway",
+        evidence.scenario
+    )))
 }

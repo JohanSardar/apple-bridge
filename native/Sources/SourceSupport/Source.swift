@@ -74,27 +74,15 @@ public struct SourceReadiness: Sendable {
     }
 }
 
-public struct Prepared: Sendable {
-    public let nativeState: JSON
-    public let fingerprint: String
-    public let action: JSON
-    public init(nativeState: JSON, fingerprint: String, action: JSON) {
-        self.nativeState = nativeState; self.fingerprint = fingerprint; self.action = action
-    }
-}
-
 public protocol Source: Sendable {
     var name: String { get }
     func open() async -> SourceReadiness
-    func prepare(_ command: JSON) async throws -> Prepared
-    func dispatch(_ prepared: Prepared) async throws -> JSON
-    func resolve(_ command: String, evidence: JSON) async -> JSON
+    func primitive(_ operation: String, args: JSON) async throws -> JSON
 }
 
 public extension Source {
-    func prepare(_ command: JSON) async throws -> Prepared { throw SourceFailure.unsupported }
-    func dispatch(_ prepared: Prepared) async throws -> JSON { throw SourceFailure.unsupported }
-    func resolve(_ command: String, evidence: JSON) async -> JSON { .null }
+    func primitive(_ operation: String, args: JSON) async throws -> JSON { throw SourceFailure.unsupported }
+    func open() async -> SourceReadiness { SourceReadiness(state: "ready", coverage: .object([:])) }
 }
 
 @globalActor

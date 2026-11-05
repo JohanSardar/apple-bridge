@@ -1,10 +1,10 @@
 use super::{
-    Arc, BTreeMap, CaptureReader, Debug, Duration, Error, Path, PathBuf, ScanContext, Value,
-    context_for, native_facts, reader_error,
+    BTreeMap, CaptureReader, Debug, Error, Path, PathBuf, ScanContext, Value, context_for,
+    reader_error,
 };
 use ab_native::capture;
 
-const OPERATIONS: &[&str] = &["pdf.artifacts"];
+const ADD: &str = "pdf.add_artifact";
 const SOURCE: &str = "pdf";
 const COLLECTION: &str = "pdf.artifact";
 const GENERATION: &str = "native/1";
@@ -12,17 +12,21 @@ const GENERATION: &str = "native/1";
 #[derive(Debug)]
 pub struct PdfReader {
     root: PathBuf,
-    pull: native_facts::Pull,
+    artifacts: BTreeMap<String, Value>,
+    handles: BTreeMap<String, String>,
+    changed: bool,
     state: capture::State,
     pending: Option<capture::Pending>,
 }
 
 impl PdfReader {
     #[must_use]
-    pub fn new(root: PathBuf, client: Arc<native_facts::Client>, interval: Duration) -> Self {
+    pub fn new(root: PathBuf) -> Self {
         Self {
             root,
-            pull: native_facts::Pull::new(client, SOURCE, OPERATIONS, interval),
+            artifacts: BTreeMap::new(),
+            handles: BTreeMap::new(),
+            changed: false,
             state: capture::State::default(),
             pending: None,
         }
@@ -54,20 +58,15 @@ impl CaptureReader for PdfReader {
         if self.pending.is_some() {
             return Err(Error::Conflict);
         }
-        if !self.pull.due() {
+        if !self.changed {
             return Ok(None);
         }
-        let Some(collected) = self.pull.collect(context.fence)? else {
-            return Ok(None);
-        };
         let read = context_for(context)?;
-        let records = collected
-            .rows
+        let records = self
+            .artifacts
             .iter()
-            .map(|row| {
-                let key = row["native_key"].as_str().ok_or(Error::Invalid)?;
-                capture::upsert(COLLECTION, key, None, row["data"].clone(), &read)
-                    .map_err(reader_error)
+            .map(|(key, data)| {
+                capture::upsert(COLLECTION, key, None, data.clone(), &read).map_err(reader_error)
             })
             .collect::<Result<Vec<_>, Error>>()?;
         let mut pending = self
@@ -83,13 +82,10 @@ impl CaptureReader for PdfReader {
             })
             .map_err(reader_error)?;
         if pending.batch.observations.is_empty() {
+            self.changed = false;
             return Ok(None);
         }
-        pending.batch.blob_handles = collected
-            .handles
-            .into_iter()
-            .filter_map(|(digest, handle)| Some((digest, handle.as_str()?.to_owned())))
-            .collect::<BTreeMap<_, _>>();
+        pending.batch.blob_handles = self.handles.clone();
         let value = super::capture_value(&pending)?;
         self.pending = Some(pending);
         Ok(Some(value))
@@ -97,6 +93,22 @@ impl CaptureReader for PdfReader {
 
     fn commit(&mut self) -> Result<(), Error> {
         let pending = self.pending.take().ok_or(Error::Conflict)?;
+        self.changed = false;
         self.state.commit(pending).map_err(reader_error)
+    }
+
+    fn answer(&mut self, operation: &str, args: &Value) -> Option<Result<Value, String>> {
+        (operation == ADD).then(|| {
+            let key = args["native_key"].as_str().filter(|key| !key.is_empty());
+            let digest = args["digest"].as_str().filter(|digest| !digest.is_empty());
+            let handle = args["handle"].as_str().filter(|handle| !handle.is_empty());
+            let (Some(key), Some(digest), Some(handle)) = (key, digest, handle) else {
+                return Err("invalid".to_owned());
+            };
+            self.artifacts.insert(key.to_owned(), args["data"].clone());
+            self.handles.insert(digest.to_owned(), handle.to_owned());
+            self.changed = true;
+            Ok(Value::Null)
+        })
     }
 }

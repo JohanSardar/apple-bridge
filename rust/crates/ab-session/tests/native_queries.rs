@@ -63,6 +63,7 @@ fn session(bodies: bool, shortcuts: bool) -> Fallible<Session> {
         queries: NativeQueries {
             mail_bodies: bodies.then(|| Arc::new(MailBodies::new(root.clone()))),
             shortcut_roots: shortcuts.then(|| vec![root.clone()]),
+            ..NativeQueries::default()
         },
         ..Options::default()
     };

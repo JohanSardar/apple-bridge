@@ -320,37 +320,6 @@ pub(crate) fn checks_binary() -> Result<PathBuf> {
     }
 }
 
-pub(crate) fn native_target(
-    evidence: &mut Evidence,
-    target: &str,
-    inputs: &[&str],
-    names: (&str, &str),
-) -> Option<PathBuf> {
-    let existing = native_directory().map(|d| d.join(target));
-    if let Some(binary) = existing.filter(|b| !inputs.is_empty() && fresh(b, inputs)) {
-        evidence.check(names.1, true, "native output directory");
-        return Some(binary);
-    }
-    let built = Command::new("packaging/dev/build-native.sh")
-        .env("APPLE_BRIDGE_NATIVE_TARGET", target)
-        .output();
-    let ok = built.as_ref().is_ok_and(|o| o.status.success());
-    evidence.check(names.0, ok, "native checks build");
-    if !ok {
-        return None;
-    }
-    let directory = native_directory();
-    evidence.check(names.1, directory.is_some(), "native output directory");
-    directory.map(|d| d.join(target))
-}
-
-pub(crate) const SHORTCUTS_NATIVE_INPUTS: [&str; 4] = [
-    "native/Package.swift",
-    "native/Sources/ShortcutsChecks",
-    "native/Sources/ShortcutsSource",
-    "native/Sources/SourceSupport",
-];
-
 pub(crate) fn scratch_directory(id: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -399,27 +368,6 @@ pub fn shortcuts_checks(world: &mut World, _: &Value, evidence: &mut Evidence) -
             "ab-session",
             &["--test", "framework_sources", "shortcuts"],
         );
-    }
-    if id == "CLK-TIMER-REAL" {
-        let binary = native_target(
-            evidence,
-            "ShortcutsChecks",
-            &[],
-            (
-                "native_timer_snapshot_build",
-                "native_timer_snapshot_output",
-            ),
-        );
-        let Some(binary) = binary else { return Ok(()) };
-        let (ok, _) = run_native(&binary, &["synthetic", "CLK-TIMER-REAL"]);
-        for name in [
-            "native_timer_snapshot_states_and_readonly",
-            "native_timer_duration_adjustment_verified",
-            "native_timer_localized_component_values",
-            "native_timer_recent_snapshot_readonly",
-        ] {
-            evidence.check(name, ok, "native timer snapshot checks");
-        }
     }
     let report = run_checks(
         &checks,

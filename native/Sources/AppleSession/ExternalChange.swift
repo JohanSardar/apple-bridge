@@ -233,7 +233,7 @@ enum ExternalChange {
         let found = "set found to (messages of drafts mailbox whose subject is \(quoted))\nif (count of found) is not 1 then error \"target\" number 9001\nset m to item 1 of found\n"
         switch action {
         case "create":
-            _ = try script("com.apple.mail", "set m to make new outgoing message with properties {subject:\(quoted), content:\"external\", visible:true}\nsave m\nclose m saving yes\nreturn \"ok\"")
+            _ = try script("com.apple.mail", "set m to make new outgoing message with properties {subject:\(quoted), content:\"external\", visible:true}\nsave m\nrepeat 40 times\nif (count of (messages of drafts mailbox whose subject is \(quoted))) > 0 then exit repeat\ndelay 0.25\nend repeat\nclose m saving yes\nreturn \"ok\"")
             return done(subject)
         case "update":
             let id = try script("com.apple.mail", found + "set flagged status of m to true\nreturn (id of m) as text")
