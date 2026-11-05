@@ -1,21 +1,72 @@
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, VecDeque},
+    net::IpAddr,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, DuplexStream},
-    sync::{OwnedSemaphorePermit, Semaphore, mpsc, oneshot, watch},
+    sync::{Notify, Semaphore, mpsc, oneshot, watch},
     time::Instant,
 };
 use tokio_util::sync::CancellationToken;
 
+const STREAM_WINDOW: usize = 262_144;
+const WRITE_CHUNK: usize = 16_384;
+const CONTROL_QUEUE: usize = 1024;
+
 #[derive(Debug)]
 pub struct Open {
+    pub source: IpAddr,
     pub reply: oneshot::Sender<DuplexStream>,
 }
-#[derive(Debug)]
-struct Incoming {
-    data: Vec<u8>,
-    _permit: OwnedSemaphorePermit,
+
+#[derive(Debug, Default)]
+struct InboxQueue {
+    bytes: VecDeque<u8>,
+    closed: bool,
+}
+#[derive(Debug, Default)]
+struct Inbox {
+    queue: Mutex<InboxQueue>,
+    ready: Notify,
+}
+impl Inbox {
+    fn push(&self, data: &[u8]) -> bool {
+        let Ok(mut queue) = self.queue.lock() else {
+            return false;
+        };
+        if queue.bytes.len() + data.len() > STREAM_WINDOW {
+            return false;
+        }
+        queue.bytes.extend(data);
+        drop(queue);
+        self.ready.notify_one();
+        true
+    }
+    fn close(&self) {
+        if let Ok(mut queue) = self.queue.lock() {
+            queue.closed = true;
+        }
+        self.ready.notify_one();
+    }
+    async fn next(&self) -> Option<Vec<u8>> {
+        loop {
+            {
+                let mut queue = self.queue.lock().ok()?;
+                if !queue.bytes.is_empty() {
+                    let take = queue.bytes.len().min(WRITE_CHUNK);
+                    return Some(queue.bytes.drain(..take).collect());
+                }
+                if queue.closed {
+                    return None;
+                }
+            }
+            self.ready.notified().await;
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -23,8 +74,9 @@ struct StreamId(u32);
 
 #[derive(Debug)]
 struct Stream {
-    incoming: Option<mpsc::Sender<Incoming>>,
+    inbox: Arc<Inbox>,
     window: watch::Sender<(u32, u32)>,
+    reset: CancellationToken,
 }
 #[derive(Debug)]
 struct Frame {
@@ -45,7 +97,7 @@ impl Frame {
 async fn stream_task(
     id: StreamId,
     io: DuplexStream,
-    mut incoming: mpsc::Receiver<Incoming>,
+    inbox: Arc<Inbox>,
     mut window: watch::Receiver<(u32, u32)>,
     frames: mpsc::Sender<Frame>,
     cancel: CancellationToken,
@@ -54,9 +106,9 @@ async fn stream_task(
     let tx = frames.clone();
     let receive = async move {
         let mut consumed = 0u32;
-        while let Some(data) = incoming.recv().await {
-            w.write_all(&data.data).await?;
-            consumed = consumed.wrapping_add(u32::try_from(data.data.len()).unwrap_or(0));
+        while let Some(data) = inbox.next().await {
+            w.write_all(&data).await?;
+            consumed = consumed.wrapping_add(u32::try_from(data.len()).unwrap_or(0));
             let mut update = consumed.to_le_bytes().to_vec();
             update.extend_from_slice(&262_144_u32.to_le_bytes());
             if tx
@@ -108,14 +160,29 @@ async fn stream_task(
     };
     tokio::select! { () = cancel.cancelled() => {}, _ = receive => {}, _ = send => {} }
 }
-pub async fn run(ws: WebSocket, mut opens: mpsc::Receiver<Open>, cancel: CancellationToken) {
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Features {
+    pub source: bool,
+}
+pub async fn run(
+    ws: WebSocket,
+    mut opens: mpsc::Receiver<Open>,
+    cancel: CancellationToken,
+    features: Features,
+) {
     let (mut sink, mut source) = ws.split();
     let (frames, mut output) = mpsc::channel::<Frame>(64);
+    let (control, mut control_output) = mpsc::channel::<Frame>(CONTROL_QUEUE);
     let writer_cancel = cancel.clone();
     let writer = tokio::spawn(async move {
         loop {
             tokio::select! {
+                biased;
                 () = writer_cancel.cancelled() => break,
+                frame = control_output.recv() => {
+                    let Some(frame) = frame.and_then(Frame::encode) else { break };
+                    if sink.send(Message::Binary(frame.into())).await.is_err() { break }
+                }
                 frame = output.recv() => {
                     let Some(frame) = frame.and_then(Frame::encode) else { break };
                     if sink.send(Message::Binary(frame.into())).await.is_err() { break }
@@ -127,7 +194,6 @@ pub async fn run(ws: WebSocket, mut opens: mpsc::Receiver<Open>, cancel: Cancell
     let mut streams = HashMap::<StreamId, Stream>::new();
     let mut workers = tokio::task::JoinSet::new();
     let permits = Arc::new(Semaphore::new(256));
-    let buffer = Arc::new(Semaphore::new(4 << 20));
     let mut next = 0u32;
     let mut pending = Vec::new();
     let mut heartbeat = tokio::time::interval(Duration::from_secs(1));
@@ -137,12 +203,11 @@ pub async fn run(ws: WebSocket, mut opens: mpsc::Receiver<Open>, cancel: Cancell
             () = cancel.cancelled() => break,
             _ = heartbeat.tick() => {
                 if last.elapsed() >= Duration::from_secs(3) { break }
-                if frames.send(Frame { cmd:3,id:StreamId(0),data:Vec::new() }).await.is_err() { break }
+                if matches!(control.try_send(Frame { cmd:3,id:StreamId(0),data:Vec::new() }), Err(mpsc::error::TrySendError::Closed(_))) { break }
             }
             Some(result) = workers.join_next(), if !workers.is_empty() => {
                 if let Ok(id) = result {
                     streams.remove(&id);
-                    if frames.send(Frame { cmd:1,id,data:Vec::new() }).await.is_err() { break }
                 }
             }
             request = opens.recv() => {
@@ -150,13 +215,20 @@ pub async fn run(ws: WebSocket, mut opens: mpsc::Receiver<Open>, cancel: Cancell
                 let Ok(permit) = permits.clone().try_acquire_owned() else { continue };
                 let Some(raw_id) = next.checked_add(2) else { break }; next = raw_id; let id=StreamId(raw_id);
                 let (local,remote) = tokio::io::duplex(262_144);
-                let (incoming,rx) = mpsc::channel(16);
+                let inbox = Arc::new(Inbox::default());
                 let (window,wrx) = watch::channel((0,262_144));
                 let child = cancel.child_token();
-                streams.insert(id,Stream { incoming:Some(incoming),window });
-                if frames.send(Frame { cmd:0,id,data:Vec::new() }).await.is_err() { break }
+                streams.insert(id,Stream { inbox:inbox.clone(),window,reset:child.clone() });
+                let open = if features.source { ab_wire::framing::encode_tunnel_source(request.source) } else { Vec::new() };
+                if control.try_send(Frame { cmd:0,id,data:open }).is_err() { break }
                 let tx = frames.clone();
-                workers.spawn(async move { let _permit = permit; stream_task(id,remote,rx,wrx,tx,child).await; id });
+                let stopping = cancel.clone();
+                workers.spawn(async move {
+                    let _permit = permit;
+                    stream_task(id,remote,inbox,wrx,tx.clone(),child).await;
+                    tokio::select! { () = stopping.cancelled() => {}, _ = tx.send(Frame { cmd:1,id,data:Vec::new() }) => {} }
+                    id
+                });
                 let _ = request.reply.send(local);
             }
             message = source.next() => {
@@ -176,18 +248,8 @@ pub async fn run(ws: WebSocket, mut opens: mpsc::Receiver<Open>, cancel: Cancell
                     if h[0] != 2 { bad = true; break }
                     let data = &pending[offset+8..offset+8+n];
                     match cmd {
-                        1 if n==0 => { if let Some(s) = streams.get_mut(&id) { s.incoming.take(); } }
-                        2 => {
-                            if let Some(s) = streams.get(&id) && let Some(incoming_tx)=&s.incoming {
-                                let Ok(size) = u32::try_from(n) else { bad = true; break };
-                                let permit = tokio::select! { () = cancel.cancelled() => break, result = buffer.clone().acquire_many_owned(size) => result };
-                                let Ok(permit) = permit else { bad = true; break };
-                                let incoming = Incoming { data:data.to_vec(), _permit:permit };
-                                let sent = tokio::select! { () = cancel.cancelled() => break, result = incoming_tx.send(incoming) => result };
-                                if sent.is_err() { bad = true; break }
-                                last=Instant::now();
-                            }
-                        }
+                        1 if n==0 => { if let Some(s) = streams.get(&id) { s.inbox.close(); } }
+                        2 => { if let Some(s) = streams.get(&id) && !s.inbox.push(data) { s.reset.cancel(); } }
                         3 if n==0 => {},
                         4 if n == 8 => { if let Some(s) = streams.get(&id) { let consumed = u32::from_le_bytes([data[0],data[1],data[2],data[3]]); let size = u32::from_le_bytes([data[4],data[5],data[6],data[7]]); s.window.send_replace((consumed,size)); } }
                         _ => { bad = true; break }
