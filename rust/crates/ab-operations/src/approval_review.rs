@@ -165,7 +165,10 @@ fn classify(
     };
     let text = text.filter(|_| media_type == "text/plain");
     let excerpt = text.map(excerpt_of);
-    let excerpt_complete = whole && text.is_some_and(|text| text.chars().count() <= EXCERPT_CHARS);
+    let excerpt_complete = whole
+        && text
+            .zip(excerpt.as_deref())
+            .is_some_and(|(text, excerpt)| !excerpt.is_empty() && excerpt == text.trim_end());
     let preview = if size > MAX_INSPECT {
         Preview::TooLarge
     } else if image.is_some() {

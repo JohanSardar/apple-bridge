@@ -573,6 +573,21 @@ async fn the_phone_warns_unless_it_shows_the_whole_attachment() {
     assert!(!shown.contains(warning), "{shown}");
     assert!(!review.requires_consent);
 
+    for (name, altered) in [
+        ("tabs.txt", &b"payee\tamount\nAlice\t100"[..]),
+        ("blank.txt", &b" \n\t "[..]),
+    ] {
+        let (_, record) = pending_with_upload(&f, name, altered).await;
+        let review = f.gateway.approval_review(&record).await.expect("review");
+        assert!(summary(&review).contains(warning), "{name}");
+    }
+    let (_, record) = pending_with_upload(&f, "line.txt", b"one line\n").await;
+    let review = f.gateway.approval_review(&record).await.expect("review");
+    assert!(
+        !summary(&review).contains(warning),
+        "a final newline hides nothing"
+    );
+
     let long = "synthetic ".repeat(100);
     let (_, record) = pending_with_upload(&f, "long.txt", long.as_bytes()).await;
     let review = f.gateway.approval_review(&record).await.expect("review");
