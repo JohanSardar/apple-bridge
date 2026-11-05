@@ -203,6 +203,37 @@ fn rust_calls_voicemail_and_voice_memos_are_routed() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn a_call_history_locked_during_a_scan_is_scanned_again_once_free() -> Fallible<()> {
+    let directory = temporary("locked-phone")?;
+    media_fixture("phone", &directory, Some(101))?;
+    let holder = rusqlite::Connection::open(directory.join("CallHistory.storedata"))?;
+    holder.execute_batch("BEGIN EXCLUSIVE")?;
+    let sources = readers::from_config(&json!({"phone":{"root":directory}}).to_string())?;
+    let options = Options {
+        poll: Duration::from_millis(20),
+        ..Options::default()
+    };
+    let support::Wire {
+        mut gateway,
+        link: helper,
+        worker,
+        home: _,
+    } = support::wire(sources, options, json!({}))?;
+    expect_silence(&mut gateway)?;
+
+    holder.execute_batch("ROLLBACK")?;
+    let (_, capture) = receive(&mut gateway)?;
+    assert_eq!(capture["source"], "phone");
+    assert_eq!(capture["observations"][0]["kind"], "upsert");
+
+    drop(gateway);
+    drop(helper);
+    let _ = worker.join();
+    std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
 fn temporary(name: &str) -> Fallible<std::path::PathBuf> {
     let directory = std::env::temp_dir().join(format!(
         "ab-{name}-{}-{}",
@@ -882,7 +913,10 @@ fn messages_history_commits_in_single_frame_pages_and_resumes_after_a_reset() ->
 }
 
 #[derive(Debug)]
-struct Slow(bool);
+struct Slow {
+    entered: std::sync::mpsc::Sender<()>,
+    held: std::sync::mpsc::Receiver<()>,
+}
 
 impl readers::CaptureReader for Slow {
     fn source(&self) -> &'static str {
@@ -905,10 +939,8 @@ impl readers::CaptureReader for Slow {
         &mut self,
         _context: &readers::ScanContext,
     ) -> Result<Option<Value>, ab_session::Error> {
-        if !self.0 {
-            self.0 = true;
-            std::thread::sleep(Duration::from_secs(3));
-        }
+        let _ = self.entered.send(());
+        let _ = self.held.recv();
         Ok(None)
     }
 
@@ -921,21 +953,18 @@ impl readers::CaptureReader for Slow {
 fn a_busy_reader_never_delays_blob_reads_for_other_sources() -> Fallible<()> {
     let mut sources: std::collections::BTreeMap<String, Box<dyn readers::CaptureReader>> =
         std::collections::BTreeMap::new();
-    sources.insert("safari".into(), Box::new(Slow(false)));
+    let (release, held) = std::sync::mpsc::channel();
+    let (entered, busy) = std::sync::mpsc::channel();
+    sources.insert("safari".into(), Box::new(Slow { entered, held }));
     let mut session = wire(sources, polling(None), json!({}))?;
-    std::thread::sleep(Duration::from_millis(200));
-    let started = std::time::Instant::now();
+    busy.recv_timeout(Duration::from_secs(10))?;
     send(
         &mut session.gateway,
         &json!({"t":"BlobRead","handle":"swift-notes-handle","offset":0,"length":10}),
     )?;
     let (_, forwarded) = receive(&mut session.link)?;
     assert_eq!(forwarded["t"], "BlobRead");
-    assert!(
-        started.elapsed() < Duration::from_millis(1500),
-        "blob read waited {:?} behind a busy reader",
-        started.elapsed()
-    );
+    drop(release);
     drop(session.gateway);
     drop(session.link);
     let _ = session.worker.join();

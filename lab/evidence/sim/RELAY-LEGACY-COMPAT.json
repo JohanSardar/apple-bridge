@@ -1,0 +1,68 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "RELAY-LEGACY-COMPAT",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "eac3886bfb323db548e040e30383bd8dc9ff5049",
+ "at": "2026-11-05T20:55:21Z",
+ "hosts": [
+  "ubuntu"
+ ],
+ "assertions": [
+  {
+   "name": "legacy_and_upgraded_replicas_paired",
+   "passed": true
+  },
+  {
+   "name": "rust_gateway_started",
+   "passed": true
+  },
+  {
+   "name": "rust_gateway_ready",
+   "passed": true
+  },
+  {
+   "name": "rust_relay1_legacy_replica_authenticates_unchanged",
+   "passed": true
+  },
+  {
+   "name": "rust_relay1_unpaired_replica_rejected",
+   "passed": true
+  },
+  {
+   "name": "rust_relay2_replica_authenticates_and_is_marked",
+   "passed": true
+  },
+  {
+   "name": "rust_relay2_marked_replica_never_accepted_on_relay1",
+   "passed": true
+  },
+  {
+   "name": "rust_relay1_legacy_replica_unaffected_by_other_peer_upgrade",
+   "passed": true
+  },
+  {
+   "name": "rust_relay2_unpaired_replica_rejected",
+   "passed": true
+  },
+  {
+   "name": "rust_relay1_replica_upgrades_to_relay2_in_place",
+   "passed": true
+  },
+  {
+   "name": "rust_upgraded_replica_relay1_rejected_afterwards",
+   "passed": true
+  },
+  {
+   "name": "relay2_required_client_fails_against_relay1_only_gateway",
+   "passed": true
+  },
+  {
+   "name": "relay2_required_client_never_falls_back_to_relay1",
+   "passed": true
+  }
+ ]
+}

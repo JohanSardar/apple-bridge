@@ -36,8 +36,10 @@ for root, name in packages.items():
         if packages[current] not in allowed:
             print("offline graph rejects: " + " -> ".join(path), file=sys.stderr)
             failed = True
-        for child in nodes[current]["dependencies"]:
-            pending.append((child, path + [packages[child]]))
+        for child in nodes[current]["deps"]:
+            if all(kind["kind"] == "dev" for kind in child["dep_kinds"]):
+                continue
+            pending.append((child["pkg"], path + [packages[child["pkg"]]]))
 if failed:
     sys.exit(1)
 print("native offline dependency graph: OK")

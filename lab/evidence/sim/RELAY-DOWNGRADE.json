@@ -1,0 +1,109 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "RELAY-DOWNGRADE",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "eac3886bfb323db548e040e30383bd8dc9ff5049",
+ "at": "2026-11-05T20:55:21Z",
+ "hosts": [
+  "ubuntu"
+ ],
+ "assertions": [
+  {
+   "name": "missing_and_synthetic_tls_rejected",
+   "passed": true
+  },
+  {
+   "name": "splice_origin_enrolled",
+   "passed": true
+  },
+  {
+   "name": "new_hostname_has_128_bits",
+   "passed": true
+  },
+  {
+   "name": "genuine_paired_identities",
+   "passed": true,
+   "detail": "paired replica identity"
+  },
+  {
+   "name": "seeded_feed",
+   "passed": true
+  },
+  {
+   "name": "rust_relay2_origin_started",
+   "passed": true
+  },
+  {
+   "name": "rust_relay2_origin_ready",
+   "passed": true
+  },
+  {
+   "name": "bound_direct_feed_marker",
+   "passed": true
+  },
+  {
+   "name": "bound_direct_authentication",
+   "passed": true
+  },
+  {
+   "name": "requires_relay2_rejects_legacy",
+   "passed": true
+  },
+  {
+   "name": "rust_requires_relay2_rejects_legacy",
+   "passed": true
+  },
+  {
+   "name": "requires_relay2_rejects_capabilities",
+   "passed": true
+  },
+  {
+   "name": "rust_requires_relay2_rejects_capabilities",
+   "passed": true
+  },
+  {
+   "name": "rust_client_bound_authentication",
+   "passed": true
+  },
+  {
+   "name": "splice_origin_tunnel_attached",
+   "passed": true
+  },
+  {
+   "name": "rust_client_rejects_tls_splice",
+   "passed": true
+  },
+  {
+   "name": "two_trusted_tls_legs",
+   "passed": true
+  },
+  {
+   "name": "splice_rejected_before_feed",
+   "passed": true
+  },
+  {
+   "name": "no_application_data_observed",
+   "passed": true
+  },
+  {
+   "name": "only_hello_and_challenge_forwarded",
+   "passed": true
+  },
+  {
+   "name": "wrong_name_rejects_splice",
+   "passed": true
+  },
+  {
+   "name": "untrusted_certificate_rejects_splice",
+   "passed": true
+  },
+  {
+   "name": "direct_pinned_mtls_rejects_splice",
+   "passed": true
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "CORE-STALE-FENCE",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "eac3886bfb323db548e040e30383bd8dc9ff5049",
+ "at": "2026-11-05T20:55:21Z",
+ "hosts": [
+  "ubuntu"
+ ],
+ "assertions": [
+  {
+   "name": "world_started",
+   "passed": true,
+   "detail": "gateway and SimApple peer ready"
+  },
+  {
+   "name": "stale_fence_rejected",
+   "passed": true,
+   "detail": "superseded=true stale_reply=closed visible_through_public_query=false"
+  }
+ ]
+}

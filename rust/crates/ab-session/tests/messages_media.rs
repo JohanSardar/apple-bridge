@@ -429,21 +429,18 @@ fn a_live_photo_waits_for_its_companion_and_is_asked_again_with_it() -> Fallible
         row["native_key"] == "att-1" && row["data"]["media"].get("thumbhash").is_some()
     })?;
     assert_eq!(seen.last["data"]["media"], record["media"]);
-    for _ in 0..200 {
-        let world = wire.world.lock().map_err(|_| "poisoned")?;
-        let photo = world
-            .requests
-            .iter()
-            .filter(|request| request["args"]["digest"] == record["source_digest"])
-            .count();
-        drop(world);
-        if photo >= 2 {
-            break;
-        }
-        std::thread::sleep(Duration::from_millis(25));
-    }
+    let world = Arc::clone(&wire.world);
     let again = follow(&mut wire, |row| {
-        row["native_key"] == "att-1" && row["data"]["media"].get("thumbhash").is_some()
+        row["native_key"] == "att-1"
+            && row["data"]["media"].get("thumbhash").is_some()
+            && world.lock().is_ok_and(|world| {
+                world
+                    .requests
+                    .iter()
+                    .filter(|request| request["args"]["digest"] == record["source_digest"])
+                    .count()
+                    >= 2
+            })
     })?;
     assert_eq!(again.last["data"]["derivatives"], record["derivatives"]);
     let requests = wire.world.lock().map_err(|_| "poisoned")?.requests.clone();

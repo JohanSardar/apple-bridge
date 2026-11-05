@@ -46,7 +46,6 @@ dependencies = [
 name = "ab-commands"
 version = "0.1.2"
 dependencies = [
- "ab-catalog",
  "ab-wire",
  "base64 0.22.1",
  "jiff",

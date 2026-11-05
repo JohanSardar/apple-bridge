@@ -50,14 +50,7 @@ struct Session {
 }
 
 fn session(bodies: bool, shortcuts: bool) -> Fallible<Session> {
-    let root = std::env::temp_dir().join(format!(
-        "ab-session-mail-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&root)?;
+    let root = support::temporary("session-mail")?;
     let sources = BTreeMap::new();
     let options = Options {
         queries: NativeQueries {
