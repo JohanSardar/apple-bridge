@@ -9,8 +9,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-use subtle::ConstantTimeEq;
-use tokio::{io::AsyncReadExt, sync::watch};
+use tokio::sync::watch;
 use tower::ServiceExt;
 
 #[derive(Debug)]
@@ -234,33 +233,24 @@ async fn connection(
     app: Arc<App>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), Error> {
-    let binding = tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        let mut magic = vec![0; ab_remote::INGRESS_MAGIC.len()];
-        socket.read_exact(&mut magic).await?;
-        let mut received = [0; 32];
-        socket.read_exact(&mut received).await?;
-        if magic != ab_remote::INGRESS_MAGIC || !bool::from(proof.ct_eq(&received)) {
-            return Err(Error::Invalid);
-        }
-        let flag = socket.read_u8().await?;
-        let binding = match flag {
-            0 => None,
-            1 => {
-                let mut b = [0; 32];
-                socket.read_exact(&mut b).await?;
-                Some(b)
-            }
-            _ => return Err(Error::Invalid),
-        };
-        Ok(binding)
-    })
+    let preamble = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        ab_remote::read_ingress_preamble(&mut socket, &proof),
+    )
     .await
-    .map_err(|_| Error::Invalid)??;
+    .map_err(|_| Error::Invalid)?
+    .map_err(|_| Error::Invalid)?;
+    let (binding, source) = (preamble.binding, preamble.source);
     let service =
         hyper::service::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
             let app = app.clone();
             async move {
                 let mut request = request.map(Body::new);
+                if let Some(source) = source {
+                    request
+                        .extensions_mut()
+                        .insert(axum::extract::ConnectInfo(SocketAddr::new(source, 0)));
+                }
                 let Some(host) = request
                     .headers()
                     .get(hyper::header::HOST)
@@ -297,13 +287,13 @@ async fn connection(
                 router.oneshot(request).await
             }
         });
-    let connection = hyper::server::conn::http1::Builder::new()
-        .serve_connection(hyper_util::rt::TokioIo::new(socket), service)
-        .with_upgrades();
-    tokio::select! {
-        _ = stop.changed() => Ok(()),
-        result = connection => result.map_err(|_| Error::Invalid),
-    }
+    crate::http_deadline::serve(
+        socket,
+        service,
+        crate::http_deadline::Deadlines::INGRESS,
+        &mut stop,
+    )
+    .await
 }
 async fn reconcile(
     home: PathBuf,

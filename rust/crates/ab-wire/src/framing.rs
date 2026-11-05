@@ -226,6 +226,26 @@ impl RelayProof {
     }
 }
 
+pub const TUNNEL_FEATURES_HEADER: &str = "X-Bridge-Tunnel-Features";
+pub const TUNNEL_FEATURE_SOURCE: &str = "source";
+pub const POLICY_VERSION_HEADER: &str = "X-Bridge-Policy-Version";
+
+#[must_use]
+pub fn encode_tunnel_source(source: std::net::IpAddr) -> Vec<u8> {
+    match source {
+        std::net::IpAddr::V4(address) => address.octets().to_vec(),
+        std::net::IpAddr::V6(address) => address.octets().to_vec(),
+    }
+}
+
+#[must_use]
+pub fn decode_tunnel_source(bytes: &[u8]) -> Option<std::net::IpAddr> {
+    if let Ok(octets) = <[u8; 4]>::try_from(bytes) {
+        return Some(std::net::IpAddr::from(octets));
+    }
+    <[u8; 16]>::try_from(bytes).ok().map(std::net::IpAddr::from)
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RelayChallenge {
     pub nonce: String,

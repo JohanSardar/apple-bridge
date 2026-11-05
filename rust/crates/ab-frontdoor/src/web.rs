@@ -62,6 +62,10 @@ struct Rate {
     failure_at: Option<Instant>,
     retry_at: Option<Instant>,
 }
+const UNKNOWN_SOURCE: &str = "unknown";
+const UNKNOWN_SOURCE_SUFFIX: &str = ":unknown";
+const UNKNOWN_SOURCE_PER_MINUTE: u32 = 60;
+const OWNER_RECOVERY_PER_SECOND: u32 = 2;
 #[derive(Debug, Default)]
 pub(crate) struct Memory {
     ceremonies: HashMap<String, Ceremony>,
@@ -101,10 +105,12 @@ impl Web {
         Router::new().fallback(any(handle)).with_state(self)
     }
     pub(crate) fn allow(&self, key: &str, auth: bool, limit: u32) -> bool {
+        self.allow_at(key, auth, limit, Instant::now())
+    }
+    fn allow_at(&self, key: &str, auth: bool, limit: u32, now: Instant) -> bool {
         let Ok(mut m) = self.memory.lock() else {
             return false;
         };
-        let now = Instant::now();
         let cap = if auth { 4096 } else { 8192 };
         if !m.rates.contains_key(key) && m.rates.len() >= cap {
             if m.cleanup
@@ -177,13 +183,37 @@ impl Web {
         r.days += 1;
         r.seconds += 1;
         if auth {
-            r.minutes <= 10 && r.days <= 100 && r.retry_at.is_none_or(|t| now >= t)
+            if key.ends_with(UNKNOWN_SOURCE_SUFFIX) {
+                r.minutes <= UNKNOWN_SOURCE_PER_MINUTE
+            } else {
+                r.minutes <= 10 && r.days <= 100 && r.retry_at.is_none_or(|t| now >= t)
+            }
         } else {
             r.seconds <= limit
         }
     }
+    fn owner_recovery(&self, path: &str, body: &[u8]) -> bool {
+        if !path.starts_with("/auth/enroll/")
+            || !self.allow("owner-recovery", false, OWNER_RECOVERY_PER_SECOND)
+        {
+            return false;
+        }
+        let Ok(input) = serde_json::from_slice::<Value>(body) else {
+            return false;
+        };
+        if let Some(token) = input["token"].as_str() {
+            return self.authority.check_web_enroll(token).is_ok();
+        }
+        input["ceremony_id"].as_str().is_some_and(|id| {
+            self.memory
+                .lock()
+                .is_ok_and(|m| m.ceremonies.get(id).is_some_and(|c| c.flow == "enroll"))
+        })
+    }
     fn failure(&self, ip: &str) -> Response {
-        if let Ok(mut m) = self.memory.lock() {
+        if ip != UNKNOWN_SOURCE
+            && let Ok(mut m) = self.memory.lock()
+        {
             let r = m.rates.entry(format!("auth:{ip}")).or_default();
             let now = Instant::now();
             if r.failure_at
@@ -327,7 +357,7 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
         .extensions
         .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
         .map_or_else(
-            || "unknown".into(),
+            || UNKNOWN_SOURCE.into(),
             |v| match v.0.ip().to_canonical() {
                 std::net::IpAddr::V4(ip) => ip.to_string(),
                 std::net::IpAddr::V6(ip) => {
@@ -370,7 +400,7 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
                     return reject(429, "Too many requests. Wait a moment and try again.");
                 }
                 identity = w.authority.authenticate_device(cookie).ok();
-            } else if !w.allow(&format!("auth:{ip}"), true, 50) {
+            } else if !w.allow(&format!("auth:{ip}"), true, 50) && !w.owner_recovery(path, body) {
                 return reject(429, "rate_limited");
             }
         } else {
@@ -520,7 +550,7 @@ fn auth(
             return reject(503, "unavailable");
         };
         m.ceremonies.retain(|_, c| c.expires > Instant::now());
-        if m.ceremonies.len() >= 1024 {
+        if m.ceremonies.len() >= 1024 && flow != "enroll" {
             return reject(429, "rate_limited");
         }
         let id = format!("ceremony_{}", oauth::token(24));
@@ -655,4 +685,69 @@ fn approval(
         },
         |record| web_pages::command_status(&record),
     )
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod budget_tests {
+    use super::*;
+
+    fn web() -> (tempfile::TempDir, Arc<Web>) {
+        let home = tempfile::tempdir().unwrap();
+        let authority = Arc::new(Authority::open(home.path()).unwrap());
+        let connectors = crate::web_connector::Connectors::new(authority.clone());
+        let address = "127.0.0.1:7780".parse().unwrap();
+        (
+            home,
+            Web::new(authority, address, String::new(), None, connectors),
+        )
+    }
+
+    #[test]
+    fn one_source_can_spend_its_daily_budget_without_touching_another() {
+        let (_home, web) = web();
+        let start = Instant::now();
+        let mut refused_at = None;
+        'minutes: for minute in 0..20 {
+            for _ in 0..10 {
+                let now = start + Duration::from_secs(minute * 61);
+                if !web.allow_at("auth:203.0.113.1", true, 50, now) {
+                    refused_at = Some(minute);
+                    break 'minutes;
+                }
+            }
+        }
+        assert!(refused_at.is_some(), "the daily budget never ran out");
+        assert!(web.allow_at(
+            "auth:203.0.113.2",
+            true,
+            50,
+            start + Duration::from_secs(1300)
+        ));
+    }
+
+    #[test]
+    fn clients_with_no_known_source_are_never_locked_out_for_the_day() {
+        let (_home, web) = web();
+        let start = Instant::now();
+        for minute in 0..30 {
+            let now = start + Duration::from_secs(minute * 61);
+            for _ in 0..UNKNOWN_SOURCE_PER_MINUTE {
+                assert!(
+                    web.allow_at("auth:unknown", true, 50, now),
+                    "an anonymous caller exhausted the shared bucket in minute {minute}"
+                );
+            }
+            assert!(!web.allow_at("auth:unknown", true, 50, now));
+        }
+    }
+
+    #[test]
+    fn failures_from_an_unknown_source_do_not_lock_everyone_out() {
+        let (_home, web) = web();
+        for _ in 0..30 {
+            let _ = web.failure(UNKNOWN_SOURCE);
+        }
+        assert!(web.allow("auth:unknown", true, 50));
+    }
 }

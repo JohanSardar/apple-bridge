@@ -22,7 +22,13 @@ function guard(work) {
 }
 function nextPage() {
   const next = new URLSearchParams(location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  if (!next) return '/';
+  try {
+    const target = new URL(next, location.origin);
+    return target.origin === location.origin ? target.href : '/';
+  } catch {
+    return '/';
+  }
 }
 el('sign-in')?.addEventListener('submit', guard(async event => {
   await auth('/sign-in/email', fields(event.target));
@@ -59,8 +65,15 @@ el('device-lookup')?.addEventListener('submit', guard(async event => {
   grant = await api('grant-view', { code: fields(event.target).code });
   el('device-name').textContent = grant.name;
   el('device-fingerprint').textContent = grant.fingerprint;
+  el('device-age').textContent = grant.age_seconds == null ? 'Unknown' : grant.age_seconds < 60 ? 'Just now' : `${Math.round(grant.age_seconds / 60)} minutes ago`;
+  el('device-source').textContent = grant.source ?? 'Unknown';
+  el('device-network').textContent = grant.same_network === true ? 'This Mac is on the same network as this browser.' : grant.same_network === false ? 'This Mac is not on the same network as this browser. That is expected only if you are linking a Mac somewhere else.' : '';
+  el('device-network').className = grant.same_network === false ? 'status small error' : 'muted small';
+  el('device-mine').checked = false;
+  el('device-allow').disabled = true;
   el('device-confirm').hidden = false;
 }));
+el('device-mine')?.addEventListener('change', event => { el('device-allow').disabled = !event.target.checked; });
 el('device-allow')?.addEventListener('click', guard(async () => {
   await api('confirm', { code: grant.code, fingerprint: grant.fingerprint });
   el('device-confirm').hidden = true;

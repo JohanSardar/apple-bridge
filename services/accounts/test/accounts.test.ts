@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, beforeEach, test } from 'node:test';
+import vm from 'node:vm';
 import { toNodeHandler } from 'better-auth/node';
 import { INVITE_COOKIE, open, SESSION_COOKIE } from '../src/auth.ts';
 
@@ -147,6 +148,17 @@ test('sign-in attempts are limited per address', async () => {
   assert.ok(statuses.includes(429), statuses.join(','));
 });
 
+test('an account cannot be deleted while its Macs would stay admitted', async () => {
+  const { token } = accounts.invites.create({ uses: 1, days: 1 });
+  const invited = await inviteCookie(token);
+  const created = await signUp('leaver@example.test', invited);
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  const cookie = pairs(created.cookies);
+  const reply = await post('/delete-user', {}, { cookie });
+  assert.notEqual(reply.status, 200, JSON.stringify(reply.body));
+  assert.equal((await session(cookie))?.user?.email, 'leaver@example.test');
+});
+
 test('the relay stops at its account limit', async () => {
   const { token } = accounts.invites.create({ uses: 10, days: 1 });
   const cookie = await inviteCookie(token);
@@ -169,4 +181,32 @@ test('the bundle runs the CLI on its own', { skip: !process.env.AB_TEST_BUNDLE }
   };
   const out = execFileSync('node', [process.env.AB_TEST_BUNDLE ?? '', 'invite', 'create', '--uses', '2'], { env }).toString();
   assert.match(out, /^https:\/\/app\.example\.test\/invite#/);
+});
+
+function loadAccountPage(url: string) {
+  const location = new URL(url);
+  const context = vm.createContext({
+    URL,
+    URLSearchParams,
+    location,
+    document: { getElementById: () => null },
+    history: { replaceState() {} },
+    fetch: () => Promise.reject(new Error('no network in this test')),
+  });
+  vm.runInContext(readFileSync(join(import.meta.dirname, '../../../rust/crates/ab-relay-control/assets/account.js'), 'utf8'), context);
+  return (next: string | null) => {
+    location.search = next === null ? '' : `?next=${encodeURIComponent(next)}`;
+    return vm.runInContext('nextPage()', context) as string;
+  };
+}
+
+test('the page after sign-in stays on this site, however the address is written', () => {
+  const nextPage = loadAccountPage('https://app.example.test/sign-in');
+  for (const offsite of ['/\\\\review.invalid', '/\\review.invalid/x', '//review.invalid', 'https://review.invalid/', '/\t/review.invalid', '\\\\review.invalid', 'javascript:alert(1)', 'https://app.example.test//review.invalid/x', '/.//review.invalid/x']) {
+    const target = new URL(nextPage(offsite), 'https://app.example.test');
+    assert.equal(target.origin, 'https://app.example.test', offsite);
+  }
+  assert.equal(nextPage(null), '/');
+  assert.equal(nextPage('/device?code=BCDF-GHJK'), 'https://app.example.test/device?code=BCDF-GHJK');
+  assert.equal(nextPage('/'), 'https://app.example.test/');
 });

@@ -4,13 +4,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=ab-relay
-Group=ab-relay
+User=ab-accounts
+Group=ab-accounts
 EnvironmentFile=/etc/ab-relay/accounts.env
 ExecStart=/usr/local/lib/ab-relay/node/bin/node --disable-warning=ExperimentalWarning /usr/local/lib/ab-relay/accounts.mjs serve
 Restart=on-failure
 RestartSec=5
 StateDirectory=ab-accounts
+StateDirectoryMode=0750
 UMask=0077
 NoNewPrivileges=true
 ProtectSystem=strict

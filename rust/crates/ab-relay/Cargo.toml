@@ -22,6 +22,7 @@ getrandom = "0.3"
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 futures-util = "0.3"
+hyper.workspace = true
 hyper-util = { version = "0.1", features = ["server-auto", "tokio", "service"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "http2"] }
 hickory-resolver = "0.26"
@@ -35,5 +36,6 @@ x509-parser = "0.18"
 
 [dev-dependencies]
 ab-remote = { path = "../ab-remote" }
+tokio-tungstenite = { version = "0.29", features = ["rustls-tls-webpki-roots"] }
 tempfile = "3"
 webpki-roots = "1"

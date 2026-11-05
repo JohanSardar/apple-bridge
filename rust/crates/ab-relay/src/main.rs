@@ -4,7 +4,7 @@ use rustls::pki_types::pem::PemObject;
 
 use ab_relay::{
     http::Api,
-    server::Server,
+    server::{Capacity, ConnectionClock, ConnectionDeadlines, Server},
     store::{Limits, Store},
 };
 use axum::extract::connect_info::IntoMakeServiceWithConnectInfo;
@@ -14,10 +14,10 @@ use hyper_util::{
     service::TowerToHyperService,
 };
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Semaphore};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::sync::CancellationToken;
-use tower::Service;
+use tower::{Service, ServiceExt};
 
 fn listen_addr(addr: &str) -> String {
     if addr.starts_with(':') {
@@ -66,6 +66,13 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
             "app-upstream",
             "dns-listen",
             "public-ip",
+            "unrouted-slots",
+            "tenant-slots",
+            "control-slots",
+            "app-slots",
+            "source-slots",
+            "first-request-timeout",
+            "keep-alive-timeout",
         ]
         .contains(&key.as_str())
         {
@@ -101,6 +108,13 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     };
     let (control_tx, control_rx) = tokio::sync::mpsc::channel(256);
     let mut server = Server::new(store, idle);
+    server.capacity = configured_capacity(&args)?;
+    let deadlines = ConnectionDeadlines {
+        first_request: humantime::parse_duration(&get("first-request-timeout", "10s"))?,
+        idle: humantime::parse_duration(&get("keep-alive-timeout", "30s"))?,
+        ..ConnectionDeadlines::default()
+    };
+    let control_slots = Arc::new(Semaphore::new(server.capacity.control));
     if let Some(host) = args.get("control-host").filter(|s| !s.is_empty()) {
         server.control = Some((host.clone(), control_tx));
     }
@@ -157,9 +171,18 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             tls_builder()?,
             app_rx,
             stop.clone(),
+            deadlines,
         ));
     }
-    let api_task = serve_control(control, control_rx, make, acceptor, stop_api);
+    let own_listener = control.map(|listener| (listener, control_slots));
+    let api_task = serve_control(
+        own_listener,
+        control_rx,
+        make,
+        acceptor,
+        stop_api,
+        deadlines,
+    );
     tokio::select! { result = server.serve(public,stop.clone()) => result?, () = api_task => {} }
     stop.cancel();
     Ok(())
@@ -223,6 +246,7 @@ async fn control_tls(
     Ok(builder.with_single_cert(certs, key)?)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn serve_app(
     path: PathBuf,
     host: String,
@@ -231,6 +255,7 @@ async fn serve_app(
     builder: TlsBuilder,
     incoming: tokio::sync::mpsc::Receiver<ab_relay::server::ControlConnection>,
     stop: CancellationToken,
+    deadlines: ConnectionDeadlines,
 ) {
     let certificates = loop {
         if let Ok(certificates) =
@@ -250,15 +275,16 @@ async fn serve_app(
         return;
     };
     let make = router.into_make_service_with_connect_info();
-    serve_control(None, incoming, make, acceptor, stop).await;
+    serve_control(None, incoming, make, acceptor, stop, deadlines).await;
 }
 
 async fn serve_control(
-    control: Option<TcpListener>,
+    control: Option<(TcpListener, Arc<Semaphore>)>,
     mut incoming: tokio::sync::mpsc::Receiver<ab_relay::server::ControlConnection>,
     mut make: IntoMakeServiceWithConnectInfo<axum::Router, SocketAddr>,
     acceptor: TlsAcceptor,
     stop_api: CancellationToken,
+    deadlines: ConnectionDeadlines,
 ) {
     let mut workers = tokio::task::JoinSet::new();
     loop {
@@ -267,7 +293,7 @@ async fn serve_control(
             Some(_) = workers.join_next(), if !workers.is_empty() => {},
             accepted = async {
                 tokio::select! {
-                    result = async { match &control { Some(listener)=>listener.accept().await, None=>std::future::pending().await } } => result.map(|(socket,peer)| Some(ab_relay::server::ControlConnection { socket,peer,prefix:Vec::new(),completed:None })),
+                    result = async { match &control { Some((listener, _))=>listener.accept().await, None=>std::future::pending().await } } => result.map(|(socket,peer)| Some(ab_relay::server::ControlConnection { socket,peer,prefix:Vec::new(),completed:None })),
                     connection = incoming.recv() => Ok(connection),
                 }
             } => {
@@ -280,21 +306,66 @@ async fn serve_control(
                         continue;
                     }
                 };
+                let own_slot = match &control {
+                    Some((_, slots)) if completed.is_none() => match slots.clone().try_acquire_owned() {
+                        Ok(slot) => Some(slot),
+                        Err(_) => continue,
+                    },
+                    _ => None,
+                };
                 let socket = ab_relay::replay::Replay::new(socket,prefix);
                 let Ok(service) = make.call(peer).await; let acceptor = acceptor.clone();
                 workers.spawn(async move {
-                    let _completed = completed;
-                    if let Ok(Ok(tls)) = tokio::time::timeout(Duration::from_secs(5),acceptor.accept(socket)).await {
-                        let mut builder=Builder::new(TokioExecutor::new());
-                        builder.http1().timer(hyper_util::rt::TokioTimer::new()).header_read_timeout(Duration::from_secs(5)).max_buf_size(12288);
-                        let _ = builder.serve_connection_with_upgrades(TokioIo::new(tls),TowerToHyperService::new(service)).await;
-                    }
+                    let (_completed, _own_slot) = (completed, own_slot);
+                    let clock = ConnectionClock::start(deadlines);
+                    let served = async {
+                        if let Ok(Ok(tls)) = tokio::time::timeout(Duration::from_secs(5),acceptor.accept(socket)).await {
+                            let mut builder=Builder::new(TokioExecutor::new());
+                            builder.http1().timer(hyper_util::rt::TokioTimer::new()).header_read_timeout(Duration::from_secs(5)).max_buf_size(12288);
+                            let counted = {
+                                let clock = clock.clone();
+                                tower::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
+                                    let clock = clock.clone();
+                                    let service = service.clone();
+                                    async move {
+                                        clock.request_started();
+                                        let response = service.oneshot(request).await;
+                                        clock.request_finished();
+                                        response
+                                    }
+                                })
+                            };
+                            let _ = builder.serve_connection_with_upgrades(TokioIo::new(tls),TowerToHyperService::new(counted)).await;
+                        }
+                    };
+                    tokio::select! { () = served => {}, () = clock.expired() => {} }
                 });
             }
         }
     }
     workers.abort_all();
     while workers.join_next().await.is_some() {}
+}
+
+fn configured_capacity(
+    args: &HashMap<String, String>,
+) -> std::result::Result<Capacity, Box<dyn std::error::Error>> {
+    let defaults = Capacity::default();
+    let slots =
+        |key: &str, default: usize| -> std::result::Result<usize, Box<dyn std::error::Error>> {
+            let value = args.get(key).map_or(Ok(default), |value| value.parse())?;
+            if value == 0 {
+                return Err(format!("{key} must be positive").into());
+            }
+            Ok(value)
+        };
+    Ok(Capacity {
+        unrouted: slots("unrouted-slots", defaults.unrouted)?,
+        tenant: slots("tenant-slots", defaults.tenant)?,
+        control: slots("control-slots", defaults.control)?,
+        app: slots("app-slots", defaults.app)?,
+        per_source: slots("source-slots", defaults.per_source)?,
+    })
 }
 
 fn configured_store(

@@ -1,17 +1,179 @@
 use crate::{
     Error, Result, hello, mux,
-    store::{Store, month},
+    store::{Nonces, Store, month},
 };
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::{Mutex, Semaphore, mpsc, oneshot, watch},
+    sync::{Mutex, OwnedSemaphorePermit, Semaphore, mpsc, oneshot, watch},
     time::Instant,
 };
 use tokio_util::sync::CancellationToken;
 
 pub const ACCEPT_RETRY: Duration = Duration::from_millis(100);
+
+#[derive(Clone, Copy, Debug)]
+pub struct Capacity {
+    pub unrouted: usize,
+    pub tenant: usize,
+    pub control: usize,
+    pub app: usize,
+    pub per_source: usize,
+}
+impl Default for Capacity {
+    fn default() -> Self {
+        Self {
+            unrouted: 256,
+            tenant: 256,
+            control: 128,
+            app: 64,
+            per_source: 16,
+        }
+    }
+}
+
+#[must_use]
+pub fn source_key(address: IpAddr) -> IpAddr {
+    match address.to_canonical() {
+        IpAddr::V6(address) => {
+            let mut segments = address.segments();
+            segments[4..].fill(0);
+            IpAddr::from(segments)
+        }
+        address @ IpAddr::V4(_) => address,
+    }
+}
+
+#[derive(Debug)]
+struct SourceSlots {
+    limit: usize,
+    held: Arc<std::sync::Mutex<HashMap<IpAddr, usize>>>,
+}
+#[derive(Debug)]
+struct SourceSlot {
+    source: IpAddr,
+    held: Arc<std::sync::Mutex<HashMap<IpAddr, usize>>>,
+}
+impl SourceSlots {
+    fn new(limit: usize) -> Self {
+        Self {
+            limit,
+            held: Arc::default(),
+        }
+    }
+    fn acquire(&self, address: IpAddr) -> Option<SourceSlot> {
+        let source = source_key(address);
+        let mut held = self.held.lock().ok()?;
+        let count = held.entry(source).or_insert(0);
+        if *count >= self.limit {
+            return None;
+        }
+        *count += 1;
+        drop(held);
+        Some(SourceSlot {
+            source,
+            held: self.held.clone(),
+        })
+    }
+}
+impl Drop for SourceSlot {
+    fn drop(&mut self) {
+        if let Ok(mut held) = self.held.lock()
+            && let Some(count) = held.get_mut(&self.source)
+        {
+            *count -= 1;
+            if *count == 0 {
+                held.remove(&self.source);
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Pools {
+    unrouted: Arc<Semaphore>,
+    tenant: Arc<Semaphore>,
+    control: Arc<Semaphore>,
+    app: Arc<Semaphore>,
+    anonymous_sources: SourceSlots,
+    tenant_sources: SourceSlots,
+}
+impl Pools {
+    fn new(capacity: Capacity) -> Self {
+        Self {
+            unrouted: Arc::new(Semaphore::new(capacity.unrouted)),
+            tenant: Arc::new(Semaphore::new(capacity.tenant)),
+            control: Arc::new(Semaphore::new(capacity.control)),
+            app: Arc::new(Semaphore::new(capacity.app)),
+            anonymous_sources: SourceSlots::new(capacity.per_source),
+            tenant_sources: SourceSlots::new((capacity.tenant / 2).max(1)),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ConnectionDeadlines {
+    pub first_request: Duration,
+    pub request: Duration,
+    pub idle: Duration,
+}
+impl Default for ConnectionDeadlines {
+    fn default() -> Self {
+        Self {
+            first_request: Duration::from_secs(10),
+            request: Duration::from_secs(60),
+            idle: Duration::from_secs(30),
+        }
+    }
+}
+#[derive(Debug)]
+pub struct ConnectionClock {
+    deadlines: ConnectionDeadlines,
+    deadline: watch::Sender<Instant>,
+    in_flight: std::sync::atomic::AtomicUsize,
+}
+impl ConnectionClock {
+    #[must_use]
+    pub fn start(deadlines: ConnectionDeadlines) -> Arc<Self> {
+        Arc::new(Self {
+            deadlines,
+            deadline: watch::Sender::new(Instant::now() + deadlines.first_request),
+            in_flight: std::sync::atomic::AtomicUsize::new(0),
+        })
+    }
+    pub fn request_started(&self) {
+        self.in_flight
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.deadline
+            .send_replace(Instant::now() + self.deadlines.request);
+    }
+    pub fn request_finished(&self) {
+        let remaining = self
+            .in_flight
+            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed)
+            - 1;
+        if remaining == 0 {
+            self.deadline
+                .send_replace(Instant::now() + self.deadlines.idle);
+        }
+    }
+    pub async fn expired(&self) {
+        let mut changed = self.deadline.subscribe();
+        loop {
+            let deadline = *changed.borrow_and_update();
+            tokio::select! {
+                () = tokio::time::sleep_until(deadline) => return,
+                result = changed.changed() => { if result.is_err() { return } }
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Session {
@@ -38,10 +200,14 @@ pub struct Server {
     pub idle: Duration,
     pub control: Option<(String, ControlConnections)>,
     pub app: Option<(String, ControlConnections)>,
+    pub capacity: Capacity,
+    pub nonces: Arc<Nonces>,
 }
 impl Server {
     pub fn new(store: Store, idle: Duration) -> Self {
         Self {
+            nonces: store.nonces.clone(),
+            capacity: Capacity::default(),
             store: Arc::new(Mutex::new(store)),
             sessions: Mutex::new(HashMap::new()),
             idle,
@@ -90,7 +256,7 @@ impl Server {
         listener: TcpListener,
         cancel: CancellationToken,
     ) -> Result<()> {
-        let slots = Arc::new(Semaphore::new(256));
+        let pools = Arc::new(Pools::new(self.capacity));
         let mut workers = tokio::task::JoinSet::new();
         loop {
             tokio::select! {
@@ -98,9 +264,10 @@ impl Server {
                 Some(_) = workers.join_next(), if !workers.is_empty() => {},
                 accepted = listener.accept() => match accepted {
                     Ok((socket,peer)) => {
-                        let Ok(slot) = slots.clone().try_acquire_owned() else { continue };
-                        let server = self.clone(); let stop = cancel.clone();
-                        workers.spawn(async move { let _slot = slot; tokio::select! { () = stop.cancelled() => {}, _ = server.forward(socket,peer) => {} } });
+                        let Some(source) = pools.anonymous_sources.acquire(peer.ip()) else { continue };
+                        let Ok(unrouted) = pools.unrouted.clone().try_acquire_owned() else { continue };
+                        let server = self.clone(); let stop = cancel.clone(); let pools = pools.clone();
+                        workers.spawn(async move { tokio::select! { () = stop.cancelled() => {}, _ = server.forward(socket,peer,&pools,unrouted,source) => {} } });
                     }
                     Err(e) => {
                         eprintln!("relay accept failed: {e}");
@@ -117,16 +284,34 @@ impl Server {
         }
         Ok(())
     }
-    async fn forward(&self, mut socket: TcpStream, peer: SocketAddr) -> Result<()> {
+    #[allow(clippy::too_many_lines)]
+    async fn forward(
+        &self,
+        mut socket: TcpStream,
+        peer: SocketAddr,
+        pools: &Pools,
+        unrouted: OwnedSemaphorePermit,
+        source: SourceSlot,
+    ) -> Result<()> {
         let (host, hello) =
             tokio::time::timeout(Duration::from_secs(5), hello::client_hello(&mut socket))
                 .await
                 .map_err(|_| Error::Denied)??;
-        let terminating = [&self.control, &self.app]
+        let terminating = [(&self.control, &pools.control), (&self.app, &pools.app)]
             .into_iter()
-            .flatten()
-            .find(|(name, _)| *name == host);
-        if let Some((_, incoming)) = terminating {
+            .find_map(|(host_channel, pool)| {
+                host_channel
+                    .as_ref()
+                    .filter(|(name, _)| *name == host)
+                    .map(|(_, incoming)| (incoming, pool))
+            });
+        if let Some((incoming, pool)) = terminating {
+            let _slot = pool
+                .clone()
+                .try_acquire_owned()
+                .map_err(|_| Error::Denied)?;
+            drop(unrouted);
+            let _source = source;
             let (done, wait) = oneshot::channel();
             incoming
                 .send(ControlConnection {
@@ -140,6 +325,17 @@ impl Server {
             let _ = wait.await;
             return Ok(());
         }
+        let _source = pools
+            .tenant_sources
+            .acquire(peer.ip())
+            .ok_or(Error::Denied)?;
+        drop(source);
+        let _tenant = pools
+            .tenant
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| Error::Denied)?;
+        drop(unrouted);
         let host = self.store.lock().await.canonical(&host);
         let session = self
             .sessions
@@ -166,7 +362,10 @@ impl Server {
         let transfer = async {
             session
                 .open
-                .send(mux::Open { reply: tx })
+                .send(mux::Open {
+                    source: peer.ip().to_canonical(),
+                    reply: tx,
+                })
                 .await
                 .map_err(|_| Error::Denied)?;
             let mut upstream = tokio::time::timeout(Duration::from_secs(10), rx)

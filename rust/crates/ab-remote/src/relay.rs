@@ -505,6 +505,12 @@ impl Relay {
                 .parse()
                 .map_err(|_| Error::Contract("invalid proof header"))?,
         );
+        request.headers_mut().insert(
+            ab_wire::framing::TUNNEL_FEATURES_HEADER,
+            tokio_tungstenite::tungstenite::http::HeaderValue::from_static(
+                ab_wire::framing::TUNNEL_FEATURE_SOURCE,
+            ),
+        );
         let (ws, _) = tokio::time::timeout(
             Duration::from_secs(5),
             tokio_tungstenite::connect_async_tls_with_config(

@@ -60,9 +60,12 @@ pub(crate) fn device(email: &str, code: &str) -> String {
          <label class=\"field\">Code from your Mac<input class=\"code-entry\" type=\"text\" name=\"code\" value=\"{}\" autocomplete=\"off\" autocapitalize=\"characters\" required></label>\
          <button class=\"primary full\">Continue</button></form>\
          <section id=\"device-confirm\" class=\"section\" hidden><h2>Is this your Mac?</h2>\
-         <dl class=\"facts\"><dt>Name</dt><dd id=\"device-name\"></dd><dt>Key</dt><dd id=\"device-fingerprint\"></dd></dl>\
-         <p class=\"muted small\">The key must match what your Mac printed.</p>\
-         <div class=\"actions end\"><a class=\"button\" href=\"/\">Cancel</a><button id=\"device-allow\" class=\"primary\" type=\"button\">Link this Mac</button></div></section>\
+         <p id=\"device-warning\" class=\"status error\"><strong>Only continue if you started this yourself, on a Mac you can see right now.</strong> If someone sent you this code or link, or asked you to enter it, cancel: they are trying to attach their own Mac to your account.</p>\
+         <dl class=\"facts\"><dt>Name it gave</dt><dd id=\"device-name\"></dd><dt>Key</dt><dd id=\"device-fingerprint\"></dd><dt>Asked</dt><dd id=\"device-age\"></dd><dt>From address</dt><dd id=\"device-source\"></dd></dl>\
+         <p id=\"device-network\" class=\"small\"></p>\
+         <p class=\"muted small\">The Mac chooses its own name, so a name proves nothing. The key must match what your Mac printed.</p>\
+         <label class=\"field\"><input id=\"device-mine\" type=\"checkbox\"> I started this on my own Mac just now</label>\
+         <div class=\"actions end\"><a class=\"button\" href=\"/\">Cancel</a><button id=\"device-allow\" class=\"primary\" type=\"button\" disabled>Link this Mac</button></div></section>\
          <section id=\"device-done\" class=\"section\" hidden><h2>Linked</h2><p class=\"muted\">Your Mac is finishing setup on its own. Next, connect an app using the address it shows.</p>\
          <div class=\"actions\"><a class=\"button\" href=\"/\">See your Macs</a></div></section>\
          <p id=\"status\" class=\"status small\" role=\"status\"></p>",

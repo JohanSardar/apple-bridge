@@ -22,6 +22,8 @@ mod gateway_status;
 pub mod helper;
 pub mod helper_blobs;
 #[cfg(feature = "replica-feed")]
+mod http_deadline;
+#[cfg(feature = "replica-feed")]
 mod ingress;
 pub mod inspection;
 #[cfg(feature = "replica-feed")]

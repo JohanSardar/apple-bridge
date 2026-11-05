@@ -25,6 +25,7 @@ pub trait RelayAdmin: Send + Sync {
         hostname: &'a str,
         disabled: bool,
         revoked: bool,
+        version: i64,
     ) -> RelayFuture<'a, ()>;
 }
 
@@ -82,12 +83,14 @@ impl RelayAdmin for RelayApi {
         hostname: &'a str,
         disabled: bool,
         revoked: bool,
+        version: i64,
     ) -> RelayFuture<'a, ()> {
         Box::pin(async move {
             let response = self
                 .client
                 .post(format!("{}/policy", self.url))
                 .bearer_auth(&self.token)
+                .header(ab_wire::framing::POLICY_VERSION_HEADER, version)
                 .json(&json!({"hostname": hostname, "disabled": disabled, "revoked": revoked}))
                 .send()
                 .await
