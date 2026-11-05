@@ -318,10 +318,7 @@ fn attachment_rows(id: &str, row: &Value) -> String {
 pub(crate) fn attachment_file(index: usize, file: crate::web::AttachmentFile) -> Response {
     const IMAGES: [&str; 4] = ["image/png", "image/jpeg", "image/gif", "image/webp"];
     let (media_type, disposition) = match file.preview.as_str() {
-        "text" => (
-            "text/plain; charset=utf-8".to_owned(),
-            "inline".to_owned(),
-        ),
+        "text" => ("text/plain; charset=utf-8".to_owned(), "inline".to_owned()),
         "image" if IMAGES.contains(&file.media_type.as_str()) => {
             (file.media_type, "inline".to_owned())
         }
@@ -366,7 +363,11 @@ pub(crate) fn approvals(rows: &[Value]) -> Response {
             attachment_rows(&id, row),
             escape(row["arguments"].as_str().unwrap_or_default()),
             escape(row["binding"].as_str().unwrap_or_default()),
-            if row["requires_consent"] == true { UNPREVIEWABLE_CONSENT } else { "" },
+            if row["requires_consent"] == true {
+                UNPREVIEWABLE_CONSENT
+            } else {
+                ""
+            },
         );
     }
     document(
@@ -404,7 +405,7 @@ mod tests {
 
     #[test]
     fn a_write_grant_also_shows_that_it_reads() {
-        let grants = [Grant::parse("messages:write").expect("grant")];
+        let grants: Vec<Grant> = Grant::parse("messages:write").into_iter().collect();
         assert_eq!(
             access(&grants),
             Access {
@@ -417,7 +418,10 @@ mod tests {
             "Read: Messages\nAsk to change (each change needs your approval): Messages"
         );
         let section = access_section(&grants);
-        assert!(section.contains("Can read, and ask to make changes"), "{section}");
+        assert!(
+            section.contains("Can read, and ask to make changes"),
+            "{section}"
+        );
     }
 
     #[test]

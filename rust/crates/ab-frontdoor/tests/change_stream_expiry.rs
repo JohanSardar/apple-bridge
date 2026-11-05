@@ -73,7 +73,12 @@ impl GatewayTransport for Offline {
     fn connected(&self) -> bool {
         false
     }
-    fn exchange<'a>(&'a self, _: &'a GatewayRoute, _: String, _: Vec<u8>) -> Task<'a, ForwardReply> {
+    fn exchange<'a>(
+        &'a self,
+        _: &'a GatewayRoute,
+        _: String,
+        _: Vec<u8>,
+    ) -> Task<'a, ForwardReply> {
         Box::pin(async { Err(Code::Unavailable.into()) })
     }
 }

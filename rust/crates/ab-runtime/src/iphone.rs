@@ -60,9 +60,10 @@ fn id(row: &QueuedCommand) -> Result<String, Error> {
 impl PhoneGateway {
     fn phone_review(&self, row: &CommandRecord) -> Result<PhoneReview, Error> {
         let arguments = display_arguments(row).map_err(|error_value| error(&error_value))?;
-        let review = self.local.upgrade().map(|local| {
-            tokio::runtime::Handle::current().block_on(local.approval_review(row))
-        });
+        let review = self
+            .local
+            .upgrade()
+            .map(|local| tokio::runtime::Handle::current().block_on(local.approval_review(row)));
         Ok(match review {
             Some(Ok(review)) => PhoneReview {
                 hash: phone_decision_hash(&row.request_hash, &review.binding),

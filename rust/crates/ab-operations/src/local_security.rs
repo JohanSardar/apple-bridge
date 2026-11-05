@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::panic, clippy::default_trait_access)]
 use super::*;
 use crate::approval_review::{OwnerReview, Preview, phone_decision_hash};
 use crate::{GatewayStore, LocalQueryStore};
@@ -69,8 +70,10 @@ impl ApplePeer for TestPeer {
             } else {
                 IpcFrame {
                     t: "QueryResult".into(),
-                    result_json: Some(serde_json::value::to_raw_value(&json!({"ok":true}))
-                        .map_err(|_| Code::Corrupt)?),
+                    result_json: Some(
+                        serde_json::value::to_raw_value(&json!({"ok":true}))
+                            .map_err(|_| Code::Corrupt)?,
+                    ),
                     ..Default::default()
                 }
             })
@@ -117,11 +120,16 @@ fn owner() -> Principal {
     principal("device:owner", "device", "", &["admin"])
 }
 fn agent() -> Principal {
-    principal("agent:synthetic", "agent", "approve", &["messages:write", "print:write"])
+    principal(
+        "agent:synthetic",
+        "agent",
+        "approve",
+        &["messages:write", "print:write"],
+    )
 }
 
 struct Fixture {
-    _home: tempfile::TempDir,
+    home: tempfile::TempDir,
     gateway: Arc<LocalGateway>,
     peer: Arc<TestPeer>,
     blobs: Arc<tokio::sync::Mutex<ab_blobs::Store>>,
@@ -145,7 +153,7 @@ fn fixture() -> Fixture {
         blobs: blobs.clone(),
     }));
     Fixture {
-        _home: home,
+        home,
         gateway: Arc::new(gateway),
         peer,
         blobs,
@@ -181,7 +189,7 @@ const DOCUMENT_QUERIES: [(&str, &str); 4] = [
 #[tokio::test]
 async fn a_document_query_never_takes_a_caller_path() {
     let f = fixture();
-    let secret = f._home.path().join("outside.pdf");
+    let secret = f.home.path().join("outside.pdf");
     std::fs::write(&secret, b"%PDF-synthetic").expect("write");
     let path = secret.to_str().expect("path");
     for (op, scope) in DOCUMENT_QUERIES {
@@ -208,7 +216,13 @@ async fn a_document_query_refuses_the_retired_opt_in_flag() {
     let p = principal("agent:reader", "agent", "read", &["pdf:read"]);
     let error = f
         .gateway
-        .query(&p, query("pdf.text", &json!({"data_base64": "JVBERg==", "allow_file": true})))
+        .query(
+            &p,
+            query(
+                "pdf.text",
+                &json!({"data_base64": "JVBERg==", "allow_file": true}),
+            ),
+        )
         .await
         .expect_err("allow_file is not an input");
     assert_eq!(error.code, Code::Invalid);
@@ -228,7 +242,10 @@ async fn inline_documents_still_reach_the_helper_and_large_ones_are_staged_priva
     let large = STANDARD.encode(vec![b'x'; 200 << 10]);
     let p = principal("agent:reader", "agent", "read", &["audio:read"]);
     f.gateway
-        .query(&p, query("audio.transcribe", &json!({"data_base64": large})))
+        .query(
+            &p,
+            query("audio.transcribe", &json!({"data_base64": large})),
+        )
         .await
         .expect("large");
     let frames = f.peer.0.frames.lock().expect("frames");
@@ -362,9 +379,15 @@ async fn print_document_stages_inline_bytes_for_the_session() {
     let args = wait_for_frame(&f).await;
     let file = args["file"].as_str().expect("staged path");
     assert!(file.contains("ab-document-"), "{file}");
-    assert!(args["data_base64"].is_null() && args["blob"].is_null(), "{args}");
+    assert!(
+        args["data_base64"].is_null() && args["blob"].is_null(),
+        "{args}"
+    );
     assert_eq!(args["printer"], "PDF");
-    assert_eq!(f.peer.0.staged.lock().expect("staged")[0], b"%PDF-synthetic");
+    assert_eq!(
+        f.peer.0.staged.lock().expect("staged")[0],
+        b"%PDF-synthetic"
+    );
 }
 
 #[tokio::test]
@@ -383,23 +406,40 @@ async fn print_document_resolves_only_an_authorized_blob() {
             )
         })
         .expect("grant");
-    let args = json!({"blob": {"query_id": "qry_print", "digest": digest.as_str()}, "printer": "PDF"});
+    let args =
+        json!({"blob": {"query_id": "qry_print", "digest": digest.as_str()}, "printer": "PDF"});
     let denied = principal("agent:full", "agent", "full", &["print:write"]);
     let error = f
         .gateway
-        .submit(&denied, command("cmd_print_denied", "print.document", &args))
+        .submit(
+            &denied,
+            command("cmd_print_denied", "print.document", &args),
+        )
         .await
         .expect_err("no Files grant");
     assert_eq!(error.code, Code::Forbidden);
     assert_eq!(queries_reaching_native(&f), 0);
 
-    let allowed = principal("agent:full", "agent", "full", &["print:write", "files:read"]);
+    let allowed = principal(
+        "agent:full",
+        "agent",
+        "full",
+        &["print:write", "files:read"],
+    );
     f.gateway
-        .submit(&allowed, command("cmd_print_allowed", "print.document", &args))
+        .submit(
+            &allowed,
+            command("cmd_print_allowed", "print.document", &args),
+        )
         .await
         .expect("authorized print");
     let sent = wait_for_frame(&f).await;
-    assert!(sent["file"].as_str().expect("file").contains("ab-document-"));
+    assert!(
+        sent["file"]
+            .as_str()
+            .expect("file")
+            .contains("ab-document-")
+    );
     assert_eq!(f.peer.0.staged.lock().expect("staged")[0], bytes);
 }
 
@@ -446,7 +486,7 @@ async fn the_owner_sees_what_an_attachment_really_is() {
     assert_eq!(attachment.digest, ab_trust::fingerprint(marker));
     assert_eq!(attachment.preview, Preview::Text);
     assert!(!review.requires_consent);
-    assert!(!review.binding.is_empty());
+    assert_eq!(review.binding.len(), 64);
     let (shown, bytes) = f
         .gateway
         .approval_attachment(&record.command.id, 0)
@@ -466,7 +506,9 @@ async fn an_inline_attachment_is_reviewed_from_its_decoded_bytes() {
             command(
                 id,
                 "messages.send",
-                &send_args(&json!([{"name": "photo.png", "data": STANDARD.encode(b"inline text")}])),
+                &send_args(
+                    &json!([{"name": "photo.png", "data": STANDARD.encode(b"inline text")}]),
+                ),
             ),
         )
         .await
@@ -474,7 +516,10 @@ async fn an_inline_attachment_is_reviewed_from_its_decoded_bytes() {
     let record = f.gateway.state.command(id).expect("row");
     let review = f.gateway.approval_review(&record).await.expect("review");
     assert_eq!(review.attachments[0].media_type, "text/plain");
-    assert_eq!(review.attachments[0].digest, ab_trust::fingerprint(b"inline text"));
+    assert_eq!(
+        review.attachments[0].digest,
+        ab_trust::fingerprint(b"inline text")
+    );
     let shown = crate::approval_review::display_arguments(&record).expect("arguments");
     assert!(!shown.contains(&STANDARD.encode(b"inline text")), "{shown}");
 }
@@ -490,12 +535,20 @@ async fn an_image_previews_but_a_scriptable_or_binary_file_does_not() {
     assert!(!review.requires_consent);
     for (name, bytes, media) in [
         ("a.pdf", &b"%PDF-1.7 synthetic"[..], "application/pdf"),
-        ("a.exe", &b"MZ\0\0\xff\xfe synthetic"[..], "application/octet-stream"),
+        (
+            "a.exe",
+            &b"MZ\0\0\xff\xfe synthetic"[..],
+            "application/octet-stream",
+        ),
     ] {
         let (_, record) = pending_with_upload(&f, name, bytes).await;
         let review = f.gateway.approval_review(&record).await.expect("review");
         assert_eq!(review.attachments[0].media_type, media, "{name}");
-        assert_eq!(review.attachments[0].preview, Preview::DownloadOnly, "{name}");
+        assert_eq!(
+            review.attachments[0].preview,
+            Preview::DownloadOnly,
+            "{name}"
+        );
         assert!(review.requires_consent, "{name}");
     }
     let (_, record) = pending_with_upload(&f, "a.html", b"<script>alert(1)</script>").await;
@@ -591,7 +644,11 @@ async fn the_phone_decision_is_bound_to_the_attachments() {
         .expect_err("hash without the attachments");
     assert_eq!(error.code, Code::Unauthorized);
     let bound = phone_decision_hash(&record.request_hash, &review.binding);
-    let decided = f.gateway.decide_phone(&id, &bound, true).await.expect("bound");
+    let decided = f
+        .gateway
+        .decide_phone(&id, &bound, true)
+        .await
+        .expect("bound");
     assert_ne!(state_of(&decided), "awaiting_approval");
 }
 
@@ -630,7 +687,11 @@ async fn a_command_without_attachments_decides_as_before() {
     f.gateway
         .submit(
             &agent(),
-            command(id, "messages.send", &json!({"chat_id": "chat_synthetic", "text": "hello"})),
+            command(
+                id,
+                "messages.send",
+                &json!({"chat_id": "chat_synthetic", "text": "hello"}),
+            ),
         )
         .await
         .expect("submit");

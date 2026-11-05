@@ -16,7 +16,10 @@ fn state_with_replica_marker(home: &std::path::Path) -> State<Gateway> {
 }
 
 fn visibility(names: &[&str]) -> Visibility {
-    names.iter().map(|name| ((*name).to_owned(), true)).collect()
+    names
+        .iter()
+        .map(|name| ((*name).to_owned(), true))
+        .collect()
 }
 
 fn sources_status(state: &State<Gateway>, names: &[&str]) -> Value {

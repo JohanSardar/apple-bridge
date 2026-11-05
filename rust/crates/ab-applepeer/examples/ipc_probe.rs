@@ -118,7 +118,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 "Decide" => {
                     gateway
-                        .decide(&p, &frame.command_id, frame.code == "approve")
+                        .decide(
+                            &p,
+                            &frame.command_id,
+                            frame.code == "approve",
+                            &ab_operations::approval_review::OwnerReview {
+                                binding: "",
+                                accepted_unpreviewable: false,
+                            },
+                        )
                         .await
                 }
                 _ => gateway.recover().and_then(|()| {

@@ -2204,7 +2204,7 @@ Create an annotated PDF artifact
 
 ### print.document
 
-Print a file or authorized blob to PDF or a named printer
+Print an authorized blob or supplied PDF bytes to PDF or a named printer
 
 - Kind: `command`
 - Scope: `print:write`

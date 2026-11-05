@@ -314,7 +314,7 @@ fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange, salt: &str) -> Result<
     };
     if !r.used {
         r.rotated_at = now;
-        r.retry_salt = salt.to_owned();
+        salt.clone_into(&mut r.retry_salt);
     }
     r.used = true;
     Ok(Spent {
@@ -322,6 +322,35 @@ fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange, salt: &str) -> Result<
         reused,
         retry_salt,
         refresh_expires: r.expires_at.clone(),
+    })
+}
+fn saved_successor(
+    accesses: &[Access],
+    refreshes: &[Refresh],
+    e: &Exchange,
+    salt: &str,
+    scope: String,
+) -> Result<Tokens, Error> {
+    let access = successor(&e.refresh_token, salt, "access");
+    let next = successor(&e.refresh_token, salt, "refresh");
+    let expires = accesses
+        .iter()
+        .find(|a| a.hash == fingerprint(access.as_bytes()) && live(&a.expires_at))
+        .and_then(|a| a.expires_at.parse::<jiff::Timestamp>().ok())
+        .ok_or(Error::Unauthorized)?;
+    if !refreshes
+        .iter()
+        .any(|r| r.hash == fingerprint(next.as_bytes()) && live(&r.expires_at))
+    {
+        return Err(Error::Unauthorized);
+    }
+    Ok(Tokens {
+        access_token: access,
+        token_type: "Bearer".into(),
+        expires_in: u32::try_from(expires.as_second() - jiff::Timestamp::now().as_second())
+            .unwrap_or(0),
+        refresh_token: next,
+        scope,
     })
 }
 impl Authority {
@@ -468,30 +497,8 @@ impl Authority {
                 return Err(Error::Invalid);
             }
             if let Some(saved) = &spent.retry_salt {
-                let access = successor(&e.refresh_token, saved, "access");
-                let next = successor(&e.refresh_token, saved, "refresh");
                 let accesses: Vec<Access> = read(d, "oauth_access")?;
-                let expires = accesses
-                    .iter()
-                    .find(|a| a.hash == fingerprint(access.as_bytes()) && live(&a.expires_at))
-                    .and_then(|a| a.expires_at.parse::<jiff::Timestamp>().ok())
-                    .ok_or(Error::Unauthorized)?;
-                if !refreshes
-                    .iter()
-                    .any(|r| r.hash == fingerprint(next.as_bytes()) && live(&r.expires_at))
-                {
-                    return Err(Error::Unauthorized);
-                }
-                return Ok(Ok(Tokens {
-                    access_token: access,
-                    token_type: "Bearer".into(),
-                    expires_in: u32::try_from(
-                        expires.as_second() - jiff::Timestamp::now().as_second(),
-                    )
-                    .unwrap_or(0),
-                    refresh_token: next,
-                    scope: scopes,
-                }));
+                return Ok(saved_successor(&accesses, &refreshes, e, saved, scopes));
             }
             p.token_hash.clear();
             p.extra.insert("resource".into(), e.resource.clone().into());

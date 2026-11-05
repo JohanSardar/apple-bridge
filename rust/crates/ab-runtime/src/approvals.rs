@@ -142,7 +142,12 @@ mod tests {
         for key in ["index", "name", "digest", "size", "media_type"] {
             assert!(!attachment[key].is_null(), "{key}");
         }
-        assert!(!row["owner_arguments"].as_str().unwrap().contains("bm90ZQ=="));
+        assert!(
+            !row["owner_arguments"]
+                .as_str()
+                .unwrap()
+                .contains("bm90ZQ==")
+        );
     }
 
     #[test]
