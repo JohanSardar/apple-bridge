@@ -252,6 +252,20 @@ fn set_status(
     })
 }
 
+fn ids_with_header(probe: &dyn Probe, target: &str, header: &str) -> Result<Vec<String>, Failure> {
+    let listed = run(
+        probe,
+        &format!(
+            "set AppleScript's text item delimiters to \",\"\nreturn (id of messages of {target} whose message id is {header}) as text"
+        ),
+    )?;
+    Ok(listed
+        .split(',')
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .collect())
+}
+
 fn moved(
     probe: &dyn Probe,
     operation: &str,
@@ -272,16 +286,14 @@ fn moved(
     if header.is_empty() {
         return Err(Failure::Unconfirmed);
     }
-    run(probe, &format!("{find}move m to {target}\n"))?;
     let header = quote(&header);
+    let before = ids_with_header(probe, &target, &header)?;
+    run(probe, &format!("{find}move m to {target}\n"))?;
     poll(probe, CHANGE_WAIT, |probe| {
-        let found = run(
-            probe,
-            &format!(
-                "set matches to (messages of {target} whose message id is {header})\nif (count of matches) is not 1 then return \"\"\nreturn (id of item 1 of matches) as string"
-            ),
-        )?;
-        Ok((!found.is_empty()).then_some(found))
+        let mut new = ids_with_header(probe, &target, &header)?
+            .into_iter()
+            .filter(|id| !before.contains(id));
+        Ok(new.next().filter(|_| new.next().is_none()))
     })
 }
 
@@ -572,15 +584,17 @@ mod tests {
     fn a_move_follows_the_message_id_to_the_new_row() {
         let probe = Scripted::new(vec![
             Scripted::says("<x@y>"),
+            Scripted::says("50"),
             Scripted::says(""),
-            Scripted::says("77"),
+            Scripted::says("50"),
+            Scripted::says("50,77"),
         ]);
         let action = json!({"op": "mail.delete", "native_key": "12", "args": {"id": "r"}});
         let written = write(&probe, "c", &action, &Value::Null).unwrap();
         assert_eq!(written, json!({"observed": true, "native_key": "77"}));
         let seen = probe.seen.borrow();
-        assert!(seen[1].contains("move m to trash mailbox"));
-        assert!(seen[2].contains("messages of trash mailbox whose message id is \"<x@y>\""));
+        assert!(seen[1].contains("messages of trash mailbox whose message id is \"<x@y>\""));
+        assert!(seen[2].contains("move m to trash mailbox"));
     }
 
     #[test]
