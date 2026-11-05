@@ -1,10 +1,7 @@
 use crate::{
     http::{Client, random_id},
     queries::agent_token,
-    shortcuts::{
-        await_until, checks_binary, native_directory, native_target, run_checks, run_native,
-        scratch_directory,
-    },
+    shortcuts::{await_until, checks_binary, run_checks, scratch_directory},
 };
 use lab_runner::Evidence;
 use lab_world::{Result, World};

@@ -1,6 +1,5 @@
 use crate::{
     assertions::await_until,
-    files_native,
     http::{Client, random_id},
     journey,
 };

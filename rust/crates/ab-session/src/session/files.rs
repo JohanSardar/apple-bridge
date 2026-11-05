@@ -236,7 +236,7 @@ fn path_text(url: &Path) -> String {
     url.to_string_lossy().into_owned()
 }
 
-fn call(probe: &dyn Probe, operation: &str, path: &Path, more: Value) -> Result<Value, String> {
+fn call(probe: &dyn Probe, operation: &str, path: &Path, more: &Value) -> Result<Value, String> {
     let mut args = json!({"path": path_text(path)});
     if let (Some(fields), Some(extra)) = (args.as_object_mut(), more.as_object()) {
         fields.extend(extra.clone());
@@ -251,7 +251,7 @@ fn await_cloud(
 ) -> Result<(), String> {
     let deadline = Instant::now() + CLOUD_WAIT;
     loop {
-        let state = call(probe, "files.cloud_state", url, json!({}))?;
+        let state = call(probe, "files.cloud_state", url, &json!({}))?;
         if settled(&state)? {
             return Ok(());
         }
@@ -263,12 +263,12 @@ fn await_cloud(
 }
 
 fn cloud(probe: &dyn Probe, operation: &str, url: &Path) -> Result<(), String> {
-    let state = call(probe, "files.cloud_state", url, json!({}))?;
+    let state = call(probe, "files.cloud_state", url, &json!({}))?;
     if state["ubiquitous"] != true {
         return Err("unsupported".into());
     }
     if operation == "files.download" {
-        call(probe, "files.start_download", url, json!({}))?;
+        call(probe, "files.start_download", url, &json!({}))?;
     } else {
         await_cloud(probe, url, |state| {
             if state["upload_error"] == true {
@@ -276,7 +276,7 @@ fn cloud(probe: &dyn Probe, operation: &str, url: &Path) -> Result<(), String> {
             }
             Ok(state["uploaded"] == true)
         })?;
-        call(probe, "files.evict_item", url, json!({}))?;
+        call(probe, "files.evict_item", url, &json!({}))?;
     }
     let wanted = operation == "files.download";
     await_cloud(probe, url, |state| {
@@ -371,7 +371,7 @@ fn write(
             Ok(json!({"observed": true, "path": path_text(&goal), "native_key": path_text(&goal)}))
         }
         "files.trash" => {
-            let answer = call(probe, "files.trash_item", &url, json!({}))?;
+            let answer = call(probe, "files.trash_item", &url, &json!({}))?;
             let trash = text(&answer, "trash_path");
             let inside = Path::new(trash).components().any(|part| {
                 matches!(part, Component::Normal(name) if name == ".Trash" || name == ".Trashes")
@@ -385,7 +385,12 @@ fn write(
             )
         }
         "files.set_tags" => {
-            let answer = call(probe, "files.set_tags", &url, json!({"tags": args["tags"]}))?;
+            let answer = call(
+                probe,
+                "files.set_tags",
+                &url,
+                &json!({"tags": args["tags"]}),
+            )?;
             let wanted: BTreeSet<&str> = args["tags"]
                 .as_array()
                 .map(|tags| tags.iter().filter_map(Value::as_str).collect())
@@ -561,9 +566,9 @@ fn read(probe: &dyn Probe, args: &Value) -> Result<(Value, Value), String> {
         }
         .to_owned()
     })?;
-    let state = call(probe, "files.cloud_state", &url, json!({}))?;
+    let state = call(probe, "files.cloud_state", &url, &json!({}))?;
     if state["ubiquitous"] == true {
-        call(probe, "files.start_download", &url, json!({}))?;
+        call(probe, "files.start_download", &url, &json!({}))?;
         await_cloud(probe, &url, |state| {
             let status = text(state, "status");
             if status.is_empty() {
@@ -577,7 +582,7 @@ fn read(probe: &dyn Probe, args: &Value) -> Result<(Value, Value), String> {
         probe,
         "files.stage",
         &url,
-        json!({"directory": path_text(blobs.directory())}),
+        &json!({"directory": path_text(blobs.directory())}),
     )?;
     let digest = text(&staged, "digest").to_owned();
     blobs

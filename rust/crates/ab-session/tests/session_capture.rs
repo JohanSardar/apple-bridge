@@ -318,6 +318,7 @@ fn mail_bodies_and_reader_blobs_never_reach_the_helper() -> Fallible<()> {
         queries: NativeQueries {
             mail_bodies: Some(Arc::new(MailBodies::new(root.clone()))),
             shortcut_roots: None,
+            ..NativeQueries::default()
         },
         ..Options::default()
     };

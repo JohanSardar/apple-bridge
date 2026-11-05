@@ -577,6 +577,7 @@ fn pdf_prepare(probe: &dyn Probe, action: &Value, _expected: &Value) -> Result<V
     Ok(json!({"digest": digest_of(&bytes)}))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn pdf_validate(_probe: &dyn Probe, _action: &Value, _state: &Value) -> Result<(), Refusal> {
     Ok(())
 }
