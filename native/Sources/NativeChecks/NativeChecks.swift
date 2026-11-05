@@ -116,11 +116,11 @@ struct NativeChecks {
         }
         let revalidating = NativeServer(adapter: FakeNative())
         _ = await revalidating.handle(hello)
-        func ask(_ id: String, op: String = "agenda.events", collection: String = "calendar.event", keys: [String]) -> JSON {
+        func ask(_ id: String, op: String = "agenda.reminders", collection: String = "reminders.reminder", keys: [String]) -> JSON {
             .object(["t": .string("Revalidate"), "id": .string(id), "op": .string(op), "args": .object(["identities": .array(keys.map { .object(["collection": .string(collection), "native_key": .string($0)]) })])])
         }
         let verdicts = await revalidating.handle(ask("verdicts", keys: ["kept", "gone", "old"]))
-        try check(verdicts["t"] == .string("Revalidated") && verdicts["id"] == .string("verdicts") && verdicts["op"] == .string("agenda.events"), "revalidated frame")
+        try check(verdicts["t"] == .string("Revalidated") && verdicts["id"] == .string("verdicts") && verdicts["op"] == .string("agenda.reminders"), "revalidated frame")
         try check(verdicts["results"].array.map { $0["state"].string } == ["present", "missing", "outside_scope"] && verdicts["results"].array.map { $0["native_key"].string } == ["kept", "gone", "old"], "revalidate answers in request order")
         try check(await revalidating.handle(ask("history", op: "contacts.history", keys: ["a"]))["code"] == .string("unsupported"), "revalidate refuses an op outside the catalogue")
         try check(await revalidating.handle(ask("mismatch", collection: "calendar.calendar", keys: ["a"]))["code"] == .string("invalid"), "revalidate binds the collection to the op")

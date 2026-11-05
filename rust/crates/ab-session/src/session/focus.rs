@@ -117,7 +117,12 @@ pub(super) const DRIVER: Driver = Driver {
 };
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::needless_pass_by_value,
+    clippy::unnecessary_wraps
+)]
 mod tests {
     use super::*;
 

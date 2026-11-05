@@ -578,8 +578,10 @@ mod tests {
         let found = lookup(&store, &table(native), native).unwrap().unwrap();
         assert_eq!(found.selector["query"]["external"], alias);
 
-        let mut by_window = Store::default();
-        by_window.window = vec![event(native)];
+        let by_window = Store {
+            window: vec![event(native)],
+            ..Store::default()
+        };
         let found = lookup(&by_window, &table(native), native).unwrap().unwrap();
         assert_eq!(found.selector["query"]["via"], "window");
         assert_eq!(found.selector["query"]["start"], original.as_second() - 1);
@@ -616,8 +618,10 @@ mod tests {
         store.external.insert(alias, vec![moved.clone()]);
         assert!(lookup(&store, &table(native), native).unwrap().is_some());
         moved["occurrence_civil"] = json!("2026-03-09");
-        let mut next = Store::default();
-        next.window = vec![moved];
+        let next = Store {
+            window: vec![moved],
+            ..Store::default()
+        };
         assert!(lookup(&next, &table(native), native).unwrap().is_none());
     }
 
@@ -625,8 +629,10 @@ mod tests {
     fn a_scan_finds_and_remembers_what_the_table_did_not_know() {
         let mut row = event("k");
         row["locator"] = identity();
-        let mut store = Store::default();
-        store.window = vec![row];
+        let store = Store {
+            window: vec![row],
+            ..Store::default()
+        };
         let lookups = Lookups::open(None).unwrap();
         let found = fresh(&store, &lookups, "k").unwrap().unwrap();
         assert_eq!(found.selector["key"], "k");
@@ -734,8 +740,10 @@ mod tests {
             revalidate(&moved, &table("k"), "k", &json!({}), &now()).unwrap(),
             OUTSIDE_SCOPE
         );
-        let mut failing = Store::default();
-        failing.failing = true;
+        let failing = Store {
+            failing: true,
+            ..Store::default()
+        };
         assert!(revalidate(&failing, &table("k"), "k", &json!({}), &now()).is_err());
     }
 

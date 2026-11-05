@@ -615,7 +615,12 @@ pub(super) fn query(probe: &dyn Probe, frame: &Value) -> Value {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::needless_pass_by_value,
+    clippy::unnecessary_wraps
+)]
 mod tests {
     use super::*;
     use std::{cell::RefCell, os::unix::fs::symlink};
@@ -682,7 +687,7 @@ mod tests {
         }
     }
 
-    fn action(op: &str, args: Value) -> Value {
+    fn action(op: &str, args: &Value) -> Value {
         json!({"op": op, "args": args})
     }
 
@@ -779,7 +784,7 @@ mod tests {
         let made = write(
             &probe,
             "c",
-            &action("files.create", args.clone()),
+            &action("files.create", &args.clone()),
             &Value::Null,
         )
         .unwrap();
@@ -791,7 +796,7 @@ mod tests {
             write(
                 &probe,
                 "c",
-                &action("files.create", args.clone()),
+                &action("files.create", &args.clone()),
                 &Value::Null
             ),
             Err("conflict".to_owned())
@@ -802,7 +807,7 @@ mod tests {
             .unwrap()
             .extend(body("two").as_object().unwrap().clone());
         fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
-        write(&probe, "c", &action("files.write", update), &Value::Null).unwrap();
+        write(&probe, "c", &action("files.write", &update), &Value::Null).unwrap();
         assert_eq!(fs::read(&file).unwrap(), b"two");
         assert_eq!(
             fs::metadata(&file).unwrap().permissions().mode() & 0o777,
@@ -814,19 +819,19 @@ mod tests {
             .unwrap()
             .extend(body("x").as_object().unwrap().clone());
         assert_eq!(
-            write(&probe, "c", &action("files.write", missing), &Value::Null),
+            write(&probe, "c", &action("files.write", &missing), &Value::Null),
             Err("conflict".to_owned())
         );
         let moved = action(
             "files.move",
-            json!({"root": root, "path": "sub/n.txt", "parent": "", "name": "m.txt"}),
+            &json!({"root": root, "path": "sub/n.txt", "parent": "", "name": "m.txt"}),
         );
         write(&probe, "c", &moved, &Value::Null).unwrap();
         assert!(!file.exists() && world.root.join("m.txt").exists());
         fs::write(world.root.join("taken"), "keep").unwrap();
         let onto = action(
             "files.rename",
-            json!({"root": root, "path": "m.txt", "parent": "", "name": "taken"}),
+            &json!({"root": root, "path": "m.txt", "parent": "", "name": "taken"}),
         );
         assert_eq!(
             write(&probe, "c", &onto, &Value::Null),
@@ -843,7 +848,7 @@ mod tests {
         let root = path_text(&world.root);
         let wrong = action(
             "files.create",
-            json!({"root": root, "parent": "", "name": "w", "content_base64": STANDARD.encode("x"), "digest": digest_of(b"y")}),
+            &json!({"root": root, "parent": "", "name": "w", "content_base64": STANDARD.encode("x"), "digest": digest_of(b"y")}),
         );
         assert_eq!(
             prepare(&probe, &wrong, &Value::Null)
@@ -854,7 +859,7 @@ mod tests {
         let large = "x".repeat(MAX_CONTENT + 1);
         let big = action(
             "files.create",
-            json!({"root": root, "parent": "", "name": "w", "content_base64": STANDARD.encode(&large), "digest": digest_of(large.as_bytes())}),
+            &json!({"root": root, "parent": "", "name": "w", "content_base64": STANDARD.encode(&large), "digest": digest_of(large.as_bytes())}),
         );
         assert_eq!(
             prepare(&probe, &big, &Value::Null)
@@ -876,7 +881,10 @@ mod tests {
             "files.download",
             "files.evict",
         ] {
-            let escape = action(op, json!({"root": root, "path": "away/secret", "tags": []}));
+            let escape = action(
+                op,
+                &json!({"root": root, "path": "away/secret", "tags": []}),
+            );
             assert_eq!(
                 prepare(&probe, &escape, &Value::Null)
                     .expect_err("refused")
@@ -889,7 +897,7 @@ mod tests {
             );
         }
         assert!(probe.calls.borrow().is_empty());
-        let other = action("files.chmod", json!({"root": root, "path": "sub/a.txt"}));
+        let other = action("files.chmod", &json!({"root": root, "path": "sub/a.txt"}));
         assert_eq!(
             prepare(&probe, &other, &Value::Null)
                 .expect_err("refused")
@@ -900,7 +908,6 @@ mod tests {
 
     #[test]
     fn a_trash_path_outside_a_trash_folder_is_not_proof() {
-        let world = world("trash");
         struct Lying(Vec<PathBuf>);
         impl Probe for Lying {
             fn call(&self, operation: &str, _args: &Value) -> Result<Value, String> {
@@ -911,10 +918,11 @@ mod tests {
                 Ok(json!({"trash_path": "/tmp/elsewhere"}))
             }
         }
+        let world = world("trash");
         let probe = Lying(vec![world.root.clone()]);
         let action = action(
             "files.trash",
-            json!({"root": path_text(&world.root), "path": "sub/a.txt"}),
+            &json!({"root": path_text(&world.root), "path": "sub/a.txt"}),
         );
         assert_eq!(
             write(&probe, "c", &action, &Value::Null),
