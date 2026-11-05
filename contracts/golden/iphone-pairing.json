@@ -1,0 +1,17 @@
+{
+  "address": "https://mac.example.test",
+  "device_id": "iphone:01JDEVICEFIXTURE0000000000",
+  "encryption_key": "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=",
+  "gateway_key": "QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl8=",
+  "live_handle": "75d2f441efd683587a72efa8a3e4388c",
+  "live_task": "fixture-task",
+  "pair_proof": "8vwLKI1tPd07bE5BiVDwwjGWqPeEBFgkpRl5Bj4+1FY=",
+  "pairing_id": "01JPAIRFIXTURE000000000000",
+  "secret": "ZGVmZ2hpamtsbW5vcHFyc3R1dnc=",
+  "signing_key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "upload_at": 1800000000,
+  "upload_digest": "yiYPIOlBLRrF4eMAFOhZLHXgetk0Rlhkl+BIYwhLUqM=",
+  "upload_length": 12,
+  "upload_message": "YXBwbGUtYnJpZGdlLWlwaG9uZS11cGxvYWQvMQAvdjEvaXBob25lL2NhcHR1cmUAaXBob25lOjAxSkRFVklDRUZJWFRVUkUwMDAwMDAwMDAwADE4MDAwMDAwMDAAMTIAyiYPIOlBLRrF4eMAFOhZLHXgetk0Rlhkl+BIYwhLUqM=",
+  "upload_path": "/v1/iphone/capture"
+}
