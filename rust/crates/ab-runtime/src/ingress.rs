@@ -287,8 +287,13 @@ async fn connection(
                 router.oneshot(request).await
             }
         });
-    crate::http_deadline::serve(socket, service, crate::http_deadline::Deadlines::INGRESS, &mut stop)
-        .await
+    crate::http_deadline::serve(
+        socket,
+        service,
+        crate::http_deadline::Deadlines::INGRESS,
+        &mut stop,
+    )
+    .await
 }
 async fn reconcile(
     home: PathBuf,

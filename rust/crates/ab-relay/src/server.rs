@@ -46,7 +46,7 @@ pub fn source_key(address: IpAddr) -> IpAddr {
             segments[4..].fill(0);
             IpAddr::from(segments)
         }
-        address => address,
+        address @ IpAddr::V4(_) => address,
     }
 }
 
@@ -112,7 +112,7 @@ impl Pools {
             control: Arc::new(Semaphore::new(capacity.control)),
             app: Arc::new(Semaphore::new(capacity.app)),
             anonymous_sources: SourceSlots::new(capacity.per_source),
-            tenant_sources: SourceSlots::new(capacity.per_source.saturating_mul(4)),
+            tenant_sources: SourceSlots::new((capacity.tenant / 2).max(1)),
         }
     }
 }
@@ -284,6 +284,7 @@ impl Server {
         }
         Ok(())
     }
+    #[allow(clippy::too_many_lines)]
     async fn forward(
         &self,
         mut socket: TcpStream,
@@ -296,17 +297,14 @@ impl Server {
             tokio::time::timeout(Duration::from_secs(5), hello::client_hello(&mut socket))
                 .await
                 .map_err(|_| Error::Denied)??;
-        let terminating = [
-            (&self.control, &pools.control),
-            (&self.app, &pools.app),
-        ]
-        .into_iter()
-        .find_map(|(host_channel, pool)| {
-            host_channel
-                .as_ref()
-                .filter(|(name, _)| *name == host)
-                .map(|(_, incoming)| (incoming, pool))
-        });
+        let terminating = [(&self.control, &pools.control), (&self.app, &pools.app)]
+            .into_iter()
+            .find_map(|(host_channel, pool)| {
+                host_channel
+                    .as_ref()
+                    .filter(|(name, _)| *name == host)
+                    .map(|(_, incoming)| (incoming, pool))
+            });
         if let Some((incoming, pool)) = terminating {
             let _slot = pool
                 .clone()

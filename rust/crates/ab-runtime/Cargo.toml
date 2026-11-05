@@ -19,7 +19,6 @@ http-body = "1"
 hyper-util = { version = "0.1", features = ["tokio", "service"] }
 tower = { version = "0.5", features = ["util"] }
 webpki-roots = "1"
-subtle = "2"
 ab-remote = { path = "../ab-remote" }
 ab-operations = { path = "../ab-operations" }
 ab-frontdoor = { path = "../ab-frontdoor" }

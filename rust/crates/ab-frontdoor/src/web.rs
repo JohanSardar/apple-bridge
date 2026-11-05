@@ -696,7 +696,10 @@ mod budget_tests {
         let authority = Arc::new(Authority::open(home.path()).unwrap());
         let connectors = crate::web_connector::Connectors::new(authority.clone());
         let address = "127.0.0.1:7780".parse().unwrap();
-        (home, Web::new(authority, address, String::new(), None, connectors))
+        (
+            home,
+            Web::new(authority, address, String::new(), None, connectors),
+        )
     }
 
     #[test]

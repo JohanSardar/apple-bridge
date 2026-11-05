@@ -91,6 +91,7 @@ struct Worker {
     source: Option<IpAddr>,
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn serve<S>(
     ws: WebSocketStream<S>,
     gateway: Gateway,
@@ -233,7 +234,7 @@ impl Worker {
             let certificates = self.certificates.clone();
             let source = self.source;
             async move {
-                let _ = terminate(local, gateway, certificates, source).await;
+                let _ = Box::pin(terminate(local, gateway, certificates, source)).await;
                 finishing.cancel();
             }
         };
@@ -297,8 +298,8 @@ async fn inbound(
     let mut consumed = 0_u32;
     while let Some(data) = inbox.next().await {
         output.write_all(&data).await?;
-        consumed =
-            consumed.wrapping_add(u32::try_from(data.len()).map_err(|_| Error::Contract("smux length"))?);
+        consumed = consumed
+            .wrapping_add(u32::try_from(data.len()).map_err(|_| Error::Contract("smux length"))?);
         let mut update = consumed.to_le_bytes().to_vec();
         update.extend_from_slice(&STREAM_WINDOW.to_le_bytes());
         tx.send(frame(4, id, &update)?)
@@ -316,7 +317,7 @@ async fn outbound(
     mut window: watch::Receiver<(u32, u32)>,
 ) -> Result<()> {
     let mut sent = 0_u32;
-    let mut buf = [0; 16384];
+    let mut buf = vec![0; 16384];
     loop {
         let (consumed, size) = *window.borrow_and_update();
         let available = size.saturating_sub(sent.wrapping_sub(consumed));

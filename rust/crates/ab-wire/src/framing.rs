@@ -242,9 +242,7 @@ pub fn decode_tunnel_source(bytes: &[u8]) -> Option<std::net::IpAddr> {
     if let Ok(octets) = <[u8; 4]>::try_from(bytes) {
         return Some(std::net::IpAddr::from(octets));
     }
-    <[u8; 16]>::try_from(bytes)
-        .ok()
-        .map(std::net::IpAddr::from)
+    <[u8; 16]>::try_from(bytes).ok().map(std::net::IpAddr::from)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

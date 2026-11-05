@@ -227,23 +227,31 @@ mod tests {
     > + Send
     + Sync
     + 'static {
-        hyper::service::service_fn(|request: hyper::Request<hyper::body::Incoming>| async move {
-            let body = match request.uri().path() {
-                "/stream" => Body::from_stream(stream::unfold(0, |n| async move {
-                    if n == 6 {
-                        return None;
+        hyper::service::service_fn(
+            |request: hyper::Request<hyper::body::Incoming>| async move {
+                let body = match request.uri().path() {
+                    "/stream" => Body::from_stream(stream::unfold(0, |n| async move {
+                        if n == 6 {
+                            return None;
+                        }
+                        tokio::time::sleep(Duration::from_millis(200)).await;
+                        Some((Ok::<_, std::io::Error>("tick\n"), n + 1))
+                    })),
+                    "/silent" => {
+                        Body::from_stream(stream::pending::<Result<&str, std::io::Error>>())
                     }
-                    tokio::time::sleep(Duration::from_millis(200)).await;
-                    Some((Ok::<_, std::io::Error>("tick\n"), n + 1))
-                })),
-                "/silent" => Body::from_stream(stream::pending::<Result<&str, std::io::Error>>()),
-                _ => Body::from("ok"),
-            };
-            Ok::<_, std::convert::Infallible>(hyper::Response::new(body))
-        })
+                    _ => Body::from("ok"),
+                };
+                Ok::<_, std::convert::Infallible>(hyper::Response::new(body))
+            },
+        )
     }
 
-    fn start() -> (DuplexStream, tokio::task::JoinHandle<Result<(), Error>>, watch::Sender<bool>) {
+    fn start() -> (
+        DuplexStream,
+        tokio::task::JoinHandle<Result<(), Error>>,
+        watch::Sender<bool>,
+    ) {
         let (client, server) = tokio::io::duplex(1 << 16);
         let (stop_tx, mut stop) = watch::channel(false);
         let serving =
@@ -251,11 +259,18 @@ mod tests {
         (client, serving, stop_tx)
     }
 
-    async fn finishes(serving: tokio::task::JoinHandle<Result<(), Error>>, within: Duration) -> bool {
+    async fn finishes(
+        serving: tokio::task::JoinHandle<Result<(), Error>>,
+        within: Duration,
+    ) -> bool {
         tokio::time::timeout(within, serving).await.is_ok()
     }
 
-    async fn read_all_available(client: &mut DuplexStream, wanted: &[u8], within: Duration) -> Vec<u8> {
+    async fn read_all_available(
+        client: &mut DuplexStream,
+        wanted: &[u8],
+        within: Duration,
+    ) -> Vec<u8> {
         let mut received = Vec::new();
         let mut buffer = [0; 4096];
         let _ = tokio::time::timeout(within, async {
@@ -304,7 +319,9 @@ mod tests {
                 .unwrap()
                 .unwrap();
             assert!(n > 0, "the stream was cut off after {seen} ticks");
-            seen += String::from_utf8_lossy(&buffer[..n]).matches("tick").count();
+            seen += String::from_utf8_lossy(&buffer[..n])
+                .matches("tick")
+                .count();
         }
         drop(client);
         assert!(finishes(serving, Duration::from_secs(3)).await);

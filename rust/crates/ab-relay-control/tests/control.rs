@@ -26,7 +26,7 @@ static SOURCE: AtomicU32 = AtomicU32::new(1);
 
 struct Fixture;
 impl Accounts for Fixture {
-    fn session<'a>(&'a self, cookie: &'a str) -> SessionFuture<'a> {
+    fn session<'a>(&'a self, cookie: &'a str, _source: &'a str) -> SessionFuture<'a> {
         Box::pin(async move {
             let now = jiff::Timestamp::now().as_second();
             match cookie {
@@ -86,12 +86,11 @@ impl RelayAdmin for Relay {
         version: i64,
     ) -> RelayFuture<'a, ()> {
         Box::pin(async move {
-            if self.offline.load(Ordering::SeqCst)
-                || self
-                    .fail_next_policy
-                    .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
-                    .is_ok()
-            {
+            let fail_once = self.fail_next_policy.load(Ordering::SeqCst) > 0;
+            if fail_once {
+                self.fail_next_policy.fetch_sub(1, Ordering::SeqCst);
+            }
+            if self.offline.load(Ordering::SeqCst) || fail_once {
                 return Err(Error::Unavailable);
             }
             self.versions.lock().unwrap().push(version);
@@ -540,7 +539,11 @@ async fn approved(w: &World, cookie: &str, seed: u8) -> (String, SigningKey, Str
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    (start["polling_secret"].as_str().unwrap().to_owned(), key, public)
+    (
+        start["polling_secret"].as_str().unwrap().to_owned(),
+        key,
+        public,
+    )
 }
 
 #[tokio::test]
@@ -551,18 +554,19 @@ async fn linking_many_macs_at_once_cannot_pass_the_account_limit() {
     for seed in 1..=5 {
         macs.push(approved(&w, "ada", seed).await);
     }
-    let (a, b, c, d, e) = tokio::join!(
+    let results = tokio::join!(
         complete(&w, &macs[0].0, &macs[0].1, &macs[0].2),
         complete(&w, &macs[1].0, &macs[1].1, &macs[1].2),
         complete(&w, &macs[2].0, &macs[2].1, &macs[2].2),
         complete(&w, &macs[3].0, &macs[3].1, &macs[3].2),
         complete(&w, &macs[4].0, &macs[4].1, &macs[4].2),
     );
-    let linked = [&a, &b, &c, &d, &e]
+    let all = [&results.0, &results.1, &results.2, &results.3, &results.4];
+    let linked = all
         .iter()
         .filter(|(status, _)| *status == StatusCode::OK)
         .count();
-    assert_eq!(linked, 2, "{a:?} {b:?} {c:?} {d:?} {e:?}");
+    assert_eq!(linked, 2, "{all:?}");
     assert_eq!(w.relay.admitted.lock().unwrap().len(), 2);
     let (_, list) = w.post("list", Some("ada"), &json!({})).await;
     assert_eq!(list["devices"].as_array().unwrap().len(), 2);
@@ -591,7 +595,11 @@ async fn a_failed_suspend_retried_after_a_resume_cannot_win() {
         .post("suspend", Some("ada"), &json!({"hostname": hostname}))
         .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(w.relay.policy.lock().unwrap().len(), 0, "the suspend failed");
+    assert_eq!(
+        w.relay.policy.lock().unwrap().len(),
+        0,
+        "the suspend failed"
+    );
     let (status, _) = w
         .post("resume", Some("ada"), &json!({"hostname": hostname}))
         .await;
@@ -608,7 +616,7 @@ async fn a_failed_suspend_retried_after_a_resume_cannot_win() {
         Some(&(hostname.to_owned(), false, false)),
         "the relay ended on a stale state: {applied:?}"
     );
-    assert!(w.control.pending_policy().unwrap().is_empty());
+    assert_eq!(w.control.pending_policy().unwrap().len(), 0);
     let versions = w.relay.versions.lock().unwrap().clone();
     assert!(versions.windows(2).all(|pair| pair[0] <= pair[1]));
     assert!(versions.iter().all(|version| *version > 0));
@@ -661,7 +669,10 @@ async fn the_link_page_says_plainly_what_is_being_linked_and_who_asked() {
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    assert!(view["source"].as_str().is_some_and(|s| !s.is_empty()), "{view}");
+    assert!(
+        view["source"].as_str().is_some_and(|s| !s.is_empty()),
+        "{view}"
+    );
     assert_eq!(view["same_network"], false, "two different test addresses");
     assert!(view["age_seconds"].as_i64().is_some_and(|age| age >= 0));
 
@@ -688,7 +699,10 @@ async fn the_link_page_says_plainly_what_is_being_linked_and_who_asked() {
     assert!(page.contains("a name proves nothing"), "{page}");
     assert!(page.contains("id=\"device-source\""));
     assert!(page.contains("id=\"device-mine\""));
-    assert!(page.contains("disabled>Link this Mac"), "the button starts disabled");
+    assert!(
+        page.contains("disabled>Link this Mac"),
+        "the button starts disabled"
+    );
 }
 
 #[tokio::test]
@@ -702,4 +716,27 @@ async fn account_deletion_cannot_be_reached_while_macs_would_stay_admitted() {
         .unwrap();
     let (status, _, _) = w.send(request).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn a_session_lookup_carries_the_callers_address_so_callers_do_not_share_a_budget() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let seen = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut buffer = vec![0; 4096];
+        let n = socket.read(&mut buffer).await.unwrap();
+        socket
+            .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 4\r\n\r\nnull")
+            .await
+            .unwrap();
+        String::from_utf8_lossy(&buffer[..n]).to_lowercase()
+    });
+    let accounts = ab_relay_control::BetterAuth::new(&url).unwrap();
+    assert!(matches!(
+        accounts.session("c=1", "203.0.113.7").await,
+        Err(Error::Unauthorized)
+    ));
+    assert!(seen.await.unwrap().contains("x-forwarded-for: 203.0.113.7"));
 }
