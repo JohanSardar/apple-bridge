@@ -176,7 +176,17 @@ def synthetic_checks(output, signing, trusted, other, lab, failures):
         check(f"running child {name} ran", spawned_marker.exists(), expected == "admitted", failures)
 
 
-def helper_attacks(helper, signing, trusted, failures):
+def media_parents(fixture, binary, signing, trusted, other, work, failures):
+    request = '{"kind":"mime","uti":"public.jpeg"}'
+    for name, identity, identifier, expected in (("trusted session", trusted, "ab-session", 0), ("other certificate", other, "ab-session", 1), ("other identifier", trusted, "bridge", 1)):
+        parent = work / f"parent-{name.replace(' ', '-')}"
+        shutil.copy2(fixture, parent)
+        signing.sign(parent, identity, identifier)
+        result = subprocess.run([str(parent), "run", str(binary), "media-facts"], input=request, capture_output=True, text=True, timeout=30)
+        check(f"media facts from {name}", result.returncode, expected, failures)
+
+
+def helper_attacks(helper, signing, trusted, other, fixture, failures):
     work = private_directory(signing.work / "helper")
     app = work / "AppleBridgeHelper.app"
     macos = application(app, helper, "AppleBridgeHelper")
@@ -195,6 +205,8 @@ def helper_attacks(helper, signing, trusted, failures):
 
     facts = subprocess.run([str(binary), "media-facts"], input='{"kind":"mime","uti":"public.jpeg"}', capture_output=True, text=True, timeout=30)
     check("media facts refused for an unverified parent", facts.returncode, 1, failures)
+    if fixture:
+        media_parents(fixture, binary, signing, trusted, other, work, failures)
 
     directory = private_directory(Path(tempfile.mkdtemp(prefix="ab-id-", dir="/tmp")))
     server = socket.socket(socket.AF_UNIX)
@@ -244,7 +256,8 @@ def main():
         if arguments.output:
             synthetic_checks(arguments.output, signing, trusted, other, arguments.lab, failures)
         if arguments.helper:
-            helper_attacks(arguments.helper, signing, trusted, failures)
+            fixture = arguments.output / "HelperIdentityFixture" if arguments.output else None
+            helper_attacks(arguments.helper, signing, trusted, other, fixture, failures)
     finally:
         signing.close()
         shutil.rmtree(work, ignore_errors=True)

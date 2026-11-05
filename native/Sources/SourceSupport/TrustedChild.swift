@@ -80,18 +80,19 @@ public enum TrustedChild {
         Darwin.close(pipes[1])
         guard status == 0, (try? admit(spawned, identifier: identifier)) != nil else { return nil }
         let child = spawned
-        let timer = timeout.map { limit -> DispatchSourceTimer in
-            let source = DispatchSource.makeTimerSource(queue: .global())
-            source.schedule(deadline: .now() + limit)
-            source.setEventHandler {
-                kill(child, SIGTERM)
-                DispatchQueue.global().asyncAfter(deadline: .now() + 5) { kill(child, SIGKILL) }
+        let timers = timeout.map { limit in
+            [(limit, SIGTERM), (limit + 5, SIGKILL)].map { delay, signal -> DispatchSourceTimer in
+                let source = DispatchSource.makeTimerSource(queue: .global())
+                source.schedule(deadline: .now() + delay)
+                source.setEventHandler { kill(child, signal) }
+                source.resume()
+                return source
             }
-            source.resume()
-            return source
-        }
-        defer { timer?.cancel() }
+        } ?? []
         let output = FileHandle(fileDescriptor: pipes[0], closeOnDealloc: false).readDataToEndOfFile()
+        var exited = siginfo_t()
+        while waitid(P_PID, id_t(child), &exited, WEXITED | WNOWAIT) < 0 && errno == EINTR {}
+        for timer in timers { timer.cancel() }
         var exit: Int32 = 0
         while waitpid(child, &exit, 0) < 0 && errno == EINTR {}
         return exit == 0 ? output : nil

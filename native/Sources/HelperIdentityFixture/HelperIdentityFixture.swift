@@ -20,6 +20,13 @@ enum HelperIdentityFixture {
             touch(arguments[1])
         case "connector":
             print("[]")
+        case "run" where arguments.count >= 2:
+            let child = Process()
+            child.executableURL = URL(fileURLWithPath: arguments[1])
+            child.arguments = Array(arguments.dropFirst(2))
+            do { try child.run() } catch { exit(3) }
+            child.waitUntilExit()
+            exit(child.terminationStatus)
         case "listen" where arguments.count == 2:
             let path = arguments[1]
             let server = socket(AF_UNIX, SOCK_STREAM, 0)

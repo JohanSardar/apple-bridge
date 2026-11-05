@@ -194,3 +194,19 @@ fn remote_certificate_accept_clears_the_warning_and_rejects_bad_input() -> Check
     assert_eq!(ab_remote::ct::owner_warning(home.path(), 100), "");
     Ok(())
 }
+
+#[test]
+fn a_pairing_code_with_the_gateway_key_still_fits_a_scannable_qr() -> Check {
+    let home = tempfile::tempdir()?;
+    let authority = ab_trust::Authority::open(home.path())?;
+    let code = authority.pair_iphone_code(
+        "https://0123456789abcdef0123456789abcdef.relay.bridge.example.com",
+        true,
+        std::time::Duration::from_secs(600),
+    )?;
+    let rendered = ab_runtime::product_cli::terminal_qr(&code)?;
+    let width = rendered.lines().map(|line| line.chars().count()).max();
+    println!("code length {}, QR width {width:?}", code.len());
+    assert!(width.is_some_and(|width| width <= 101), "{width:?}");
+    Ok(())
+}
