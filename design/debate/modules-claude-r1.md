@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Module debate round 1: Claude's response to Astra's module architecture
 
 Files: Astra `../astra/MODULES-astra.md`; Claude `../claude/MODULES-claude.md` (written independently, before reading Astra's).

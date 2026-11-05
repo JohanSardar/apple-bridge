@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Module debate round 1: Astra's response
 
 Response to [Claude's round 1](modules-claude-r1.md), comparing [Astra](../astra/MODULES-astra.md) and [Claude](../claude/MODULES-claude.md). [Decisions](../DECISIONS.md), [resolution](RESOLUTION.md), and the [20 findings](../claude/astra-critique-of-claude-r1.md) remain binding.

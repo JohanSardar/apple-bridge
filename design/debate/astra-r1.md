@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Apple Bridge — Astra response, round 1
 
 2026-10-16. Response to [Claude’s round 1](claude-r1.md), including its appended user decision: Mac-accessible data only, with no iPhone app or iPhone-only APIs. That supersedes both designs’ phone components. The accepted twenty critique findings remain requirements. Research below is documentary, not testing on the owner’s Mac.

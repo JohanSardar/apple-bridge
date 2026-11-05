@@ -1,3 +1,5 @@
+> Historical: kept for reference, not current.
+
 # Progress
 
 One line per unit. Current rules: ../AGENTS.md; historical process notes below are superseded.
