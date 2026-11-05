@@ -68,6 +68,7 @@ impl Gateway for PhoneGateway {
                 id: summary.id,
                 code: summary.code,
                 name: summary.client_name,
+                host: summary.redirect_host,
                 scopes: summary.access,
             })
             .collect())

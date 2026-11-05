@@ -20,7 +20,25 @@ pub struct SecureTransport;
 pub trait Approvals: std::fmt::Debug + Send + Sync {
     fn pending(&self) -> Result<Vec<Value>, ab_trust::Error>;
     fn command(&self, id: &str) -> Result<Value, ab_trust::Error>;
-    fn decide(&self, owner: &Principal, id: &str, approve: bool) -> Result<Value, ab_trust::Error>;
+    fn attachment(&self, id: &str, index: usize) -> Result<AttachmentFile, ab_trust::Error>;
+    fn decide(
+        &self,
+        owner: &Principal,
+        id: &str,
+        approve: bool,
+        reviewed: &Reviewed<'_>,
+    ) -> Result<Value, ab_trust::Error>;
+}
+#[derive(Debug, Clone)]
+pub struct AttachmentFile {
+    pub media_type: String,
+    pub preview: String,
+    pub bytes: Vec<u8>,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct Reviewed<'a> {
+    pub binding: &'a str,
+    pub accepted_unpreviewable: bool,
 }
 #[derive(Debug)]
 struct Ceremony {
@@ -600,7 +618,15 @@ fn approval(
         let Some((p, _)) = identity else {
             return reject(401, "unauthorized");
         };
-        a.decide(p, id, decision == "approve")
+        a.decide(
+            p,
+            id,
+            decision == "approve",
+            &Reviewed {
+                binding: "",
+                accepted_unpreviewable: false,
+            },
+        )
     };
     record.map_or_else(
         |_| {

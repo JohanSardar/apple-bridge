@@ -551,6 +551,7 @@ mod tests {
             level: "act".into(),
             resource: String::new(),
             remote: false,
+            expires_at: None,
         };
         for grant in ["admin", "reminders:write"] {
             principal.grants = vec![grant.into()];

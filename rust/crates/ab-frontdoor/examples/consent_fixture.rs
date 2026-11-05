@@ -33,10 +33,23 @@ impl ab_frontdoor::web::Approvals for Gateway {
     fn command(&self, id: &str) -> Result<Value, Error> {
         self.call("/command", &json!({"id":id}))
     }
-    fn decide(&self, owner: &Principal, id: &str, approve: bool) -> Result<Value, Error> {
+    fn attachment(
+        &self,
+        _id: &str,
+        _index: usize,
+    ) -> Result<ab_frontdoor::web::AttachmentFile, Error> {
+        Err(Error::Invalid)
+    }
+    fn decide(
+        &self,
+        owner: &Principal,
+        id: &str,
+        approve: bool,
+        reviewed: &ab_frontdoor::web::Reviewed<'_>,
+    ) -> Result<Value, Error> {
         self.call(
             "/decision",
-            &json!({"id":id,"owner":owner,"approve":approve}),
+            &json!({"id":id,"owner":owner,"approve":approve,"attachments":reviewed.binding,"accept_unpreviewable":reviewed.accepted_unpreviewable}),
         )
     }
 }

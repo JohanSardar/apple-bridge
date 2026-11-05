@@ -60,6 +60,8 @@ pub struct Refresh {
     pub used: bool,
     #[serde(default)]
     pub rotated_at: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub retry_salt: String,
 }
 #[derive(Debug, Serialize)]
 pub struct Tokens {
@@ -396,6 +398,7 @@ impl Authority {
                 expires_at: spent.refresh_expires,
                 used: false,
                 rotated_at: 0,
+                retry_salt: String::new(),
             });
             let mut clients: Vec<Client> = read(d, "oauth_clients")?;
             if let Some(client) = clients
@@ -455,6 +458,10 @@ impl Authority {
         Ok(p)
     }
 }
+
+#[cfg(test)]
+#[path = "oauth_security_tests.rs"]
+mod security_tests;
 
 #[cfg(test)]
 mod remote_agent_tests {

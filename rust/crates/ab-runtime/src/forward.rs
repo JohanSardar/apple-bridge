@@ -83,6 +83,7 @@ impl Forward {
             level: identity.level,
             resource: String::new(),
             remote: identity.remote,
+            expires_at: None,
         };
         match request.method.as_str() {
             "submit" => self.local.submit(&principal, request.command).await,
