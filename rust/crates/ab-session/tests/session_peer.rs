@@ -1445,6 +1445,119 @@ fn a_resolved_outcome_is_bound_to_the_chunk_that_holds_its_key() {
 }
 
 #[test]
+fn an_outcome_with_several_parts_waits_for_the_chunk_that_holds_its_last_part() {
+    let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
+    let mut world = start_with(fresh_home(), 4_194_304, &json!({}), clock.clone());
+    let ticket = prepare_ticket(&mut world, "c1", "messages.send");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s1", "messages", &[("upsert", "k1", 10)], false)),
+    )
+    .expect("scan");
+    let (first, first_size) = ipc_read(&mut world.gateway).expect("first");
+    commit(&mut world.gateway, &first, first_size);
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::ScanCommitted(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Outcome(native::Outcome {
+            command_id: "c1".into(),
+            disposition: "locally_observed".into(),
+            evidence: raw(
+                &json!({"observed": true, "native_key": "k1", "parts": [{"native_key": "k1"}, {"native_key": "k2"}]}),
+            ),
+        }),
+    )
+    .expect("outcome");
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .expect("timeout");
+    assert!(
+        ipc_read(&mut world.gateway).is_err(),
+        "outcome sent before the row of its second part committed"
+    );
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s2", "messages", &[("upsert", "k2", 10)], false)),
+    )
+    .expect("scan");
+    let (second, second_size) = ipc_read(&mut world.gateway).expect("second");
+    commit(&mut world.gateway, &second, second_size);
+    let (outcome, _) = ipc_read(&mut world.gateway).expect("outcome");
+    assert_eq!(outcome["disposition"], "locally_observed");
+    assert_eq!(
+        outcome["evidence"]["capture_checkpoint"],
+        second["checkpoint"]
+    );
+    let _ = finish(world);
+}
+
+#[test]
+fn a_part_whose_row_never_commits_does_not_hold_the_outcome_past_the_bind_window() {
+    let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
+    let mut world = start_with(fresh_home(), 4_194_304, &json!({}), clock.clone());
+    let ticket = prepare_ticket(&mut world, "c1", "messages.send");
+    ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::Dispatch(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Scan(scan("s1", "messages", &[("upsert", "k1", 10)], false)),
+    )
+    .expect("scan");
+    let (first, first_size) = ipc_read(&mut world.gateway).expect("first");
+    commit(&mut world.gateway, &first, first_size);
+    assert!(matches!(
+        native::read_frame(&mut world.link),
+        Ok(Frame::ScanCommitted(_))
+    ));
+    native::write_frame(
+        &mut world.link,
+        &Frame::Outcome(native::Outcome {
+            command_id: "c1".into(),
+            disposition: "locally_observed".into(),
+            evidence: raw(
+                &json!({"observed": true, "native_key": "k1", "parts": [{"native_key": "k1"}, {"native_key": "never"}]}),
+            ),
+        }),
+    )
+    .expect("outcome");
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_millis(300)))
+        .expect("timeout");
+    assert!(
+        ipc_read(&mut world.gateway).is_err(),
+        "outcome sent while the window was open"
+    );
+    clock.0.store(500, std::sync::atomic::Ordering::SeqCst);
+    world
+        .gateway
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .expect("timeout");
+    let (outcome, _) = ipc_read(&mut world.gateway).expect("outcome");
+    assert_eq!(
+        outcome["evidence"]["capture_checkpoint"],
+        first["checkpoint"]
+    );
+    let _ = finish(world);
+}
+
+#[test]
 fn a_rust_owned_resolve_whose_key_is_never_committed_stays_indeterminate() {
     let home = crash_after_dispatch_started();
     let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
