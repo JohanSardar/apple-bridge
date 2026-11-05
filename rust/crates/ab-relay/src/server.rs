@@ -2,7 +2,7 @@ use crate::{
     Error, Result, hello, mux,
     store::{Store, month},
 };
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -10,6 +10,8 @@ use tokio::{
     time::Instant,
 };
 use tokio_util::sync::CancellationToken;
+
+pub const ACCEPT_RETRY: Duration = Duration::from_millis(100);
 
 #[derive(Debug)]
 pub struct Session {
@@ -23,6 +25,7 @@ pub struct Session {
 #[derive(Debug)]
 pub struct ControlConnection {
     pub socket: TcpStream,
+    pub peer: SocketAddr,
     pub prefix: Vec<u8>,
     pub completed: Option<oneshot::Sender<()>>,
 }
@@ -89,29 +92,32 @@ impl Server {
     ) -> Result<()> {
         let slots = Arc::new(Semaphore::new(256));
         let mut workers = tokio::task::JoinSet::new();
-        let result = loop {
+        loop {
             tokio::select! {
-                () = cancel.cancelled() => break Ok(()),
+                () = cancel.cancelled() => break,
                 Some(_) = workers.join_next(), if !workers.is_empty() => {},
                 accepted = listener.accept() => match accepted {
-                    Ok((socket,_)) => {
+                    Ok((socket,peer)) => {
                         let Ok(slot) = slots.clone().try_acquire_owned() else { continue };
                         let server = self.clone(); let stop = cancel.clone();
-                        workers.spawn(async move { let _slot = slot; tokio::select! { () = stop.cancelled() => {}, _ = server.forward(socket) => {} } });
+                        workers.spawn(async move { let _slot = slot; tokio::select! { () = stop.cancelled() => {}, _ = server.forward(socket,peer) => {} } });
                     }
-                    Err(e) => break Err(e.into()),
+                    Err(e) => {
+                        eprintln!("relay accept failed: {e}");
+                        tokio::time::sleep(ACCEPT_RETRY).await;
+                    }
                 }
             }
-        };
+        }
         cancel.cancel();
         workers.abort_all();
         while workers.join_next().await.is_some() {}
         for session in self.sessions.lock().await.drain().map(|(_, s)| s) {
             session.cancel.cancel();
         }
-        result
+        Ok(())
     }
-    async fn forward(&self, mut socket: TcpStream) -> Result<()> {
+    async fn forward(&self, mut socket: TcpStream, peer: SocketAddr) -> Result<()> {
         let (host, hello) =
             tokio::time::timeout(Duration::from_secs(5), hello::client_hello(&mut socket))
                 .await
@@ -125,6 +131,7 @@ impl Server {
             incoming
                 .send(ControlConnection {
                     socket,
+                    peer,
                     prefix: hello,
                     completed: Some(done),
                 })
