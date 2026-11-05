@@ -874,18 +874,25 @@ impl Hub {
                 nudge = self.clock.elapsed() + READER_NUDGE;
                 core = self.core()?;
             }
+            let fresh = |sequence: u64| (facts && !owned) || sequence > after;
             if let Some(seen) = core.flights.latest(key)
-                && ((facts && !owned) || seen.sequence > after)
+                && fresh(seen.sequence)
             {
                 let mut best = (seen.sequence, seen.checkpoint.clone());
+                let mut waiting = false;
                 for other in others {
-                    if let Some(other) = core.flights.latest(other)
-                        && other.sequence > best.0
-                    {
-                        best = (other.sequence, other.checkpoint.clone());
+                    match core.flights.latest(other) {
+                        Some(other) if fresh(other.sequence) => {
+                            if other.sequence > best.0 {
+                                best = (other.sequence, other.checkpoint.clone());
+                            }
+                        }
+                        _ => waiting = true,
                     }
                 }
-                return Ok(Some(best.1));
+                if !waiting || core.closed || self.clock.elapsed() >= deadline {
+                    return Ok(Some(best.1));
+                }
             }
             if core.closed {
                 return Ok(None);
