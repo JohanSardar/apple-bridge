@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{File, OpenOptions},
+    io::Write,
     os::{
         fd::AsFd,
         unix::fs::{MetadataExt, OpenOptionsExt},
@@ -111,6 +112,20 @@ impl Log {
     }
 
     fn rotate(&mut self) -> Result<(), Error> {
+        self.rotate_with(
+            |file| {
+                ab_sys::redirect_stdout(file)?;
+                ab_sys::redirect_stderr(file)
+            },
+            |from, to| std::fs::rename(from, to),
+        )
+    }
+
+    fn rotate_with(
+        &mut self,
+        mut redirect: impl FnMut(&File) -> std::io::Result<()>,
+        publish: impl FnOnce(&Path, &Path) -> std::io::Result<()>,
+    ) -> Result<(), Error> {
         let metadata = self.file.metadata()?;
         if metadata.len() <= LOG_LIMIT {
             return Ok(());
@@ -118,10 +133,24 @@ impl Log {
         if !same_file(&metadata, &std::fs::symlink_metadata(&self.path)?) {
             return Err(Error::Invalid);
         }
-        std::fs::rename(&self.path, self.path.with_extension("log.1"))?;
-        let replacement = append_log(&self.path)?;
-        ab_sys::redirect_stdout(&replacement)?;
-        ab_sys::redirect_stderr(&replacement)?;
+        redirect(&self.file)?;
+        let temporary = self.path.with_extension("log.next");
+        let replacement = append_log(&temporary)?;
+        let prepared = replacement.metadata()?;
+        if prepared.nlink() != 1 || same_file(&metadata, &prepared) {
+            return Err(Error::Invalid);
+        }
+        let archive = self.path.with_extension("log.1");
+        match std::fs::remove_file(&archive) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        std::fs::hard_link(&self.path, archive)?;
+        if let Err(error) = redirect(&replacement).and_then(|()| publish(&temporary, &self.path)) {
+            let _ = redirect(&self.file);
+            return Err(error.into());
+        }
         self.file = replacement;
         Ok(())
     }
@@ -138,7 +167,7 @@ pub(crate) async fn run(
             _ = stop.changed() => return Ok(()),
             _ = tick.tick() => {
                 if let Err(error) = log.rotate() {
-                    eprintln!("Could not rotate gateway.log: {error}");
+                    let _ = writeln!(std::io::stderr(), "Could not rotate gateway.log: {error}");
                 }
             }
         }
@@ -315,6 +344,203 @@ mod tests {
         stop.send(true)?;
         task.await??;
         eprintln!("after rotation");
+        Ok(())
+    }
+
+    #[test]
+    fn replacement_open_failure_keeps_the_current_log_and_retries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let log = open_log(&home.path().join("gateway.log"))?;
+        std::fs::write(
+            home.path().join("gateway.log"),
+            vec![b'x'; usize::try_from(LOG_LIMIT + 1)?],
+        )?;
+        let result = std::process::Command::new("/bin/sh")
+            .args(["-c", "ulimit -n 64; exec \"$@\"", "fixture"])
+            .arg(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "gateway_lifetime::tests::open_failure_fixture",
+                "--nocapture",
+            ])
+            .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
+            .stdout(log.try_clone()?)
+            .stderr(log)
+            .status()?;
+        assert!(result.success());
+        assert!(
+            std::fs::read_to_string(home.path().join("gateway.log"))?
+                .contains("rotation recovered")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn open_failure_fixture() -> Result<(), Box<dyn std::error::Error>> {
+        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
+            return Ok(());
+        };
+        let home = PathBuf::from(home);
+        let _ownership = HomeLock::acquire(&home)?;
+        let mut log = Log::inherited(&home)?.ok_or(Error::Invalid)?;
+        let original = log.file.metadata()?;
+        let mut exhausted = Vec::new();
+        while let Ok(file) = File::open("/dev/null") {
+            exhausted.push(file);
+        }
+        assert!(log.rotate().is_err());
+        assert!(same_file(&original, &std::fs::metadata(&log.path)?));
+        drop(exhausted);
+        log.rotate()?;
+        println!("rotation recovered");
+        eprintln!("stderr recovered");
+        let current = log.path.metadata()?;
+        assert!(same_file(
+            &current,
+            &File::from(std::io::stdout().as_fd().try_clone_to_owned()?).metadata()?
+        ));
+        assert!(same_file(
+            &current,
+            &File::from(std::io::stderr().as_fd().try_clone_to_owned()?).metadata()?
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn interrupted_rotation_recovers_tempfiles_and_both_descriptors()
+    -> Result<(), Box<dyn std::error::Error>> {
+        for mode in ["partial", "publish"] {
+            let home = tempfile::tempdir()?;
+            let log = open_log(&home.path().join("gateway.log"))?;
+            std::fs::write(
+                home.path().join("gateway.log"),
+                vec![b'x'; usize::try_from(LOG_LIMIT + 1)?],
+            )?;
+            std::fs::write(home.path().join("gateway.log.next"), b"crash leftover\n")?;
+            let result = std::process::Command::new(std::env::current_exe()?)
+                .args([
+                    "--exact",
+                    "gateway_lifetime::tests::interrupted_rotation_fixture",
+                    "--nocapture",
+                ])
+                .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
+                .env("APPLE_BRIDGE_LOG_ROTATION_FAILURE", mode)
+                .stdout(log.try_clone()?)
+                .stderr(log)
+                .status()?;
+            assert!(result.success(), "{mode}");
+            let current = std::fs::read(home.path().join("gateway.log"))?;
+            assert!(current.starts_with(b"crash leftover\n"));
+            let all = [std::fs::read(home.path().join("gateway.log.1"))?, current].concat();
+            let text = String::from_utf8(all)?;
+            for line in [
+                "before retry stdout",
+                "before retry stderr",
+                "after retry stdout",
+                "after retry stderr",
+            ] {
+                assert_eq!(text.matches(line).count(), 1, "{mode}: {line}");
+            }
+            assert!(!home.path().join("gateway.log.next").exists());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn interrupted_rotation_fixture() -> Result<(), Box<dyn std::error::Error>> {
+        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
+            return Ok(());
+        };
+        let home = PathBuf::from(home);
+        let _ownership = HomeLock::acquire(&home)?;
+        let mut log = Log::inherited(&home)?.ok_or(Error::Invalid)?;
+        let original = log.file.metadata()?;
+        let partial = std::env::var("APPLE_BRIDGE_LOG_ROTATION_FAILURE")? == "partial";
+        let mut calls = 0;
+        let result = log.rotate_with(
+            |file| {
+                calls += 1;
+                if partial && calls == 2 {
+                    ab_sys::redirect_stdout(file)?;
+                    return Err(std::io::Error::other("injected stderr dup2 failure"));
+                }
+                if partial && calls == 3 {
+                    return Err(std::io::Error::other("injected rollback failure"));
+                }
+                ab_sys::redirect_stdout(file)?;
+                ab_sys::redirect_stderr(file)
+            },
+            |from, to| {
+                if partial {
+                    std::fs::rename(from, to)
+                } else {
+                    Err(std::io::Error::other("injected publish failure"))
+                }
+            },
+        );
+        assert!(result.is_err());
+        assert!(same_file(&original, &log.path.metadata()?));
+        println!("before retry stdout");
+        eprintln!("before retry stderr");
+        log.rotate()?;
+        println!("after retry stdout");
+        eprintln!("after retry stderr");
+        let current = log.path.metadata()?;
+        assert!(same_file(
+            &current,
+            &File::from(std::io::stdout().as_fd().try_clone_to_owned()?).metadata()?
+        ));
+        assert!(same_file(
+            &current,
+            &File::from(std::io::stderr().as_fd().try_clone_to_owned()?).metadata()?
+        ));
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn rotation_error_reporting_on_a_full_disk_does_not_stop_the_task()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        std::fs::write(
+            home.path().join("gateway.log"),
+            vec![b'x'; usize::try_from(LOG_LIMIT + 1)?],
+        )?;
+        let result = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "gateway_lifetime::tests::full_disk_fixture",
+                "--nocapture",
+            ])
+            .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
+            .stdout(std::process::Stdio::null())
+            .stderr(OpenOptions::new().write(true).open("/dev/full")?)
+            .status()?;
+        assert!(result.success());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn full_disk_fixture() -> Result<(), Box<dyn std::error::Error>> {
+        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
+            return Ok(());
+        };
+        let home = PathBuf::from(home);
+        let ownership = Arc::new(HomeLock::acquire(&home)?);
+        let log = Log {
+            path: home.join("missing"),
+            file: File::open(home.join("gateway.log"))?,
+        };
+        let (stop, receiver) = tokio::sync::watch::channel(false);
+        let task = tokio::spawn(run(log, receiver, ownership));
+        tokio::time::sleep(POLL * 2).await;
+        assert!(
+            !task.is_finished(),
+            "rotation error reporting stopped the supervisor"
+        );
+        stop.send(true)?;
+        task.await??;
         Ok(())
     }
 
