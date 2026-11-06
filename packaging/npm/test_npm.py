@@ -50,9 +50,10 @@ class Tree(unittest.TestCase):
         self.app = Path(self.directory.name) / build.APP
         for name in build.EXECUTABLES:
             write_executable(self.app / "Contents/MacOS" / name, "code")
-        for path in ["Contents/Info.plist", build.GATEWAY_PLIST]:
+        for path in ["Contents/Info.plist", build.GATEWAY_PLIST, "Contents/Resources/AppIcon.icns"]:
             (self.app / path).parent.mkdir(parents=True, exist_ok=True)
-            (self.app / path).write_text("plist")
+            (self.app / path).write_text("fixture")
+        (self.app / "Contents/Info.plist").write_bytes(plistlib.dumps({"CFBundleIconFile": "AppIcon.icns"}))
 
     def test_a_flat_app_passes(self):
         self.assertEqual(build.tree_problems(self.app), [])
@@ -73,6 +74,14 @@ class Tree(unittest.TestCase):
         problems = "\n".join(build.tree_problems(self.app))
         self.assertIn("Contents/MacOS/ab-session is missing", problems)
         self.assertIn("dev.applebridge.gateway.plist is missing", problems)
+
+    def test_the_icon_and_its_plist_declaration_are_required(self):
+        icon = self.app / "Contents/Resources/AppIcon.icns"
+        icon.unlink()
+        self.assertIn("Contents/Resources/AppIcon.icns is missing", build.tree_problems(self.app))
+        icon.write_bytes(b"icon")
+        (self.app / "Contents/Info.plist").write_bytes(plistlib.dumps({}))
+        self.assertIn("CFBundleIconFile must name AppIcon.icns", build.tree_problems(self.app))
 
     def test_the_trust_requirement_matches_the_helper(self):
         self.assertEqual(build.code_requirement("bridge", "ABCDEF"), 'identifier "bridge" and certificate leaf = H"abcdef"')
