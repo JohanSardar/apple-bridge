@@ -171,7 +171,14 @@ pub fn permissions_request(
         &permission_arguments(app, name, &report.0),
         timeout.unwrap_or(PERMISSION_TIMEOUT),
     )?;
-    Ok(serde_json::from_slice(&std::fs::read(&report.0)?)?)
+    let states: BTreeMap<String, String> = serde_json::from_slice(&std::fs::read(&report.0)?)?;
+    if states.get("outcome").is_some_and(|outcome| outcome == "timed_out") {
+        return Err(Error::Io(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            format!("nobody answered the macOS prompt for {name} in time; run this again to retry"),
+        )));
+    }
+    Ok(states)
 }
 
 #[derive(Debug)]
@@ -343,6 +350,23 @@ mod tests {
             );
             assert!(!arguments.contains("onboard"), "{arguments}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn an_unanswered_prompt_is_reported_as_a_timeout() -> Check {
+        let _serial = serial();
+        let dir = tempfile::tempdir()?;
+        let program = script(
+            dir.path(),
+            "while [ \"$1\" != --report ]; do shift; done\nprintf '{\"request\":\"contacts\",\"outcome\":\"timed_out\"}' > \"$2\"",
+        )?;
+        let failure = permissions_request(&program, dir.path(), "/H.app", "contacts", None);
+        assert!(
+            failure
+                .err()
+                .is_some_and(|error| error.to_string().contains("nobody answered")),
+        );
         Ok(())
     }
 

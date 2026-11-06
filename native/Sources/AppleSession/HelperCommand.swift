@@ -47,9 +47,13 @@ public enum HelperCommand {
                         try PrivateReport.write(counts, to: report)
                     } else {
                         guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-                        try await NewPermissions.requestNative(arguments[1])
-                        try await Task.sleep(for: .seconds(2))
-                        try PrivateReport.write(["request": arguments[1]], to: report)
+                        switch try await NewPermissions.request(arguments[1]) {
+                        case .finished:
+                            try await Task.sleep(for: .seconds(2))
+                            try PrivateReport.write(["request": arguments[1]], to: report)
+                        case .timedOut:
+                            try PrivateReport.write(["request": arguments[1], "outcome": "timed_out"], to: report)
+                        }
                     }
                 } catch { failure = error }
                 finished = true

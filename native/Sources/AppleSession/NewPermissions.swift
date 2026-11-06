@@ -102,6 +102,38 @@ public enum NewPermissions {
         }
     }
 
+    public enum RequestOutcome: Sendable, Equatable { case finished, timedOut }
+    public static let requestDeadline: Duration = .seconds(150)
+
+    private final class FirstOutcome: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<RequestOutcome, Error>?
+        init(_ continuation: CheckedContinuation<RequestOutcome, Error>) { self.continuation = continuation }
+        func finish(_ result: Result<RequestOutcome, Error>) {
+            lock.lock()
+            let waiting = continuation
+            continuation = nil
+            lock.unlock()
+            waiting?.resume(with: result)
+        }
+    }
+
+    public static func request(_ name: String, deadline: Duration = requestDeadline, adapters: [String: RequestAdapter]? = nil) async throws -> RequestOutcome {
+        try await withCheckedThrowingContinuation { continuation in
+            let first = FirstOutcome(continuation)
+            Task { @MainActor in
+                do {
+                    try await requestNative(name, adapters: adapters)
+                    first.finish(.success(.finished))
+                } catch { first.finish(.failure(error)) }
+            }
+            Task.detached {
+                try? await Task.sleep(for: deadline)
+                first.finish(.success(.timedOut))
+            }
+        }
+    }
+
     public static func requestNative(_ name: String, adapters: [String: RequestAdapter]? = nil) async throws {
         switch name {
         case "contacts":

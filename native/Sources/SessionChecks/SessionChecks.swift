@@ -2,7 +2,6 @@ import Foundation
 import Darwin
 import AppleSession
 import NativeProtocol
-import RemindersSource
 import SourceSupport
 
 final class Once: @unchecked Sendable {
@@ -59,24 +58,27 @@ final class Peer: @unchecked Sendable {
 @main
 struct SessionChecks {
     @MainActor
-    static func remindersGeneration() throws {
-        let stable = try RemindersSource.generation(storeIdentifier: "store-a", sourceIdentifiers: ["other"])
-        try check(stable == "eventkit-19c29e0fbf72ec4bf6d83c5bf7f54efb97921f94480e70af8d1c94b49b7ce4b4", "a store identifier keeps the generation it always had")
-        let first = try RemindersSource.generation(storeIdentifier: "", sourceIdentifiers: ["b", "a", "a"])
-        let second = try RemindersSource.generation(storeIdentifier: "", sourceIdentifiers: ["a", "b"])
-        try check(first == second && first.hasPrefix("eventkit-sources-"), "without Calendar access the generation comes from the reminder sources")
-        try check(first != (try RemindersSource.generation(storeIdentifier: "", sourceIdentifiers: ["a"])), "another reminder source is another generation")
+    static func permissionRequestDeadline() async throws {
+        let never: NewPermissions.RequestAdapter = { try await Task.sleep(for: .seconds(3600)) }
+        let started = ContinuousClock.now
+        let unanswered = try await NewPermissions.request("contacts", deadline: .milliseconds(100), adapters: ["contacts": never])
+        try check(unanswered == .timedOut, "a prompt nobody answers ends at the deadline")
+        try check(started.duration(to: .now) < .seconds(5), "the deadline does not wait for the prompt")
+        let answered = try await NewPermissions.request("contacts", deadline: .seconds(30), adapters: ["contacts": {}])
+        try check(answered == .finished, "an answered prompt finishes")
         var refused = false
-        do { _ = try RemindersSource.generation(storeIdentifier: "", sourceIdentifiers: ["", ""]) } catch SourceFailure.unavailable { refused = true }
-        try check(refused, "no store and no reminder source is unavailable")
+        do { _ = try await NewPermissions.request("unknown_permission", deadline: .seconds(30), adapters: [:]) } catch { refused = true }
+        try check(refused, "an unknown permission is refused, not timed out")
+        try check(NewPermissions.requestDeadline < .seconds(180), "the Helper gives up before the command does")
     }
 
+    @MainActor
     static func main() async throws {
         if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--link-fd", let descriptor = Int32(CommandLine.arguments[2]) {
             try await live(descriptor)
             return
         }
-        try remindersGeneration()
+        try await permissionRequestDeadline()
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-session-checks-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let session = try AppleSession(socket: home.appendingPathComponent("none.sock").path, secretFile: home.appendingPathComponent("none").path, home: home, gatewayPID: getpid(), commandsEnabled: true)

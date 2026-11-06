@@ -54,7 +54,7 @@ const LEVEL_ONE: &[Permission] = &[
     Permission {
         id: "reminders",
         title: "Reminders",
-        why: "Read your lists",
+        why: "Read your lists (needs Calendar too)",
         source: "reminders",
         pane: "Privacy_Reminders",
         asks: true,
@@ -143,22 +143,33 @@ impl Backend<'_> {
         }
     }
 
-    fn restart_session(&self) -> Outcome<bool> {
-        let Self::Mac { home, .. } = self else {
-            return Ok(false);
+    fn restart_session(&self) -> Outcome<SessionRestart> {
+        let Self::Mac { home, helper } = self else {
+            return Ok(SessionRestart::NotNeeded);
         };
-        let Ok(pid) = std::fs::read_to_string(home.join("helper/helper.pid")) else {
-            return Ok(false);
+        let pid = match std::fs::read_to_string(home.join("helper/helper.pid")) {
+            Ok(pid) if is_session_helper(pid.trim(), helper, home) => pid.trim().to_owned(),
+            _ => return Ok(SessionRestart::NotRunning),
         };
-        let pid = pid.trim();
-        if !is_session_helper(pid, home) {
-            return Ok(false);
-        }
-        Ok(Command::new("/bin/kill")
-            .args(["-TERM", pid])
+        let stopped = Command::new("/bin/kill")
+            .args(["-TERM", &pid])
             .stderr(Stdio::null())
             .status()?
-            .success())
+            .success();
+        Ok(if stopped {
+            SessionRestart::Stopped(pid)
+        } else {
+            SessionRestart::CouldNotStop
+        })
+    }
+
+    fn session_replaced(&self, previous: &str) -> bool {
+        let Self::Mac { home, helper } = self else {
+            return true;
+        };
+        std::fs::read_to_string(home.join("helper/helper.pid")).is_ok_and(|pid| {
+            pid.trim() != previous && is_session_helper(pid.trim(), helper, home)
+        })
     }
 
     fn ask_macos(&self, permission: &Permission) -> Outcome {
@@ -195,15 +206,19 @@ impl Backend<'_> {
     }
 }
 
-fn is_session_helper(pid: &str, home: &Path) -> bool {
+fn is_session_command(command: &str, helper: &str, home: &Path) -> bool {
+    let executable = format!("{helper}/Contents/MacOS/AppleBridgeHelper session ");
+    let home_argument = format!(" --home {} --gateway-pid ", home.join("helper").display());
+    !helper.is_empty() && command.starts_with(&executable) && command.contains(&home_argument)
+}
+
+fn is_session_helper(pid: &str, helper: &str, home: &Path) -> bool {
     pid.parse::<u32>().is_ok()
         && Command::new("ps")
             .args(["-p", pid, "-o", "command="])
             .output()
             .is_ok_and(|output| {
-                let command = String::from_utf8_lossy(&output.stdout);
-                command.contains("AppleBridgeHelper session")
-                    && command.contains(&*home.to_string_lossy())
+                is_session_command(String::from_utf8_lossy(&output.stdout).trim(), helper, home)
             })
 }
 
@@ -362,22 +377,81 @@ fn ask_each(
     Ok(answers)
 }
 
-async fn let_new_grants_settle(backend: &Backend<'_>, asked: &[&Permission]) -> Outcome {
-    if asked.is_empty() || !backend.restart_session()? {
-        return Ok(());
+enum SessionRestart {
+    NotNeeded,
+    NotRunning,
+    CouldNotStop,
+    Stopped(String),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum NewGrants {
+    NothingAsked,
+    Reading,
+    NotRunning,
+    CouldNotRestart,
+    NoReplacement,
+    NotConfirmed(Vec<&'static str>),
+}
+
+impl NewGrants {
+    fn report(&self) -> Option<String> {
+        const RESTART: &str = "Run bridge down, then bridge up.";
+        match self {
+            Self::NothingAsked | Self::Reading => None,
+            Self::NotRunning => Some(
+                "Apple Bridge is not running here, so nothing new is being read. New permissions start with bridge up.".to_owned(),
+            ),
+            Self::CouldNotRestart => Some(format!(
+                "The Helper could not be restarted, so new permissions are not being read yet. {RESTART}"
+            )),
+            Self::NoReplacement => Some(format!(
+                "The Helper did not come back, so nothing new is being read yet. {RESTART}"
+            )),
+            Self::NotConfirmed(titles) => Some(format!(
+                "Not confirmed: {}. If you allowed it and it stays this way, {}",
+                titles.join(", "),
+                RESTART.to_lowercase()
+            )),
+        }
     }
-    let deadline = Instant::now() + NEW_GRANT_SETTLES;
-    while Instant::now() < deadline {
-        let mut settled = true;
+}
+
+async fn let_new_grants_settle(
+    backend: &Backend<'_>,
+    asked: &[&'static Permission],
+    limit: Duration,
+) -> Outcome<NewGrants> {
+    if asked.is_empty() {
+        return Ok(NewGrants::NothingAsked);
+    }
+    let previous = match backend.restart_session()? {
+        SessionRestart::NotNeeded => return Ok(NewGrants::Reading),
+        SessionRestart::NotRunning => return Ok(NewGrants::NotRunning),
+        SessionRestart::CouldNotStop => return Ok(NewGrants::CouldNotRestart),
+        SessionRestart::Stopped(pid) => pid,
+    };
+    let deadline = Instant::now() + limit;
+    loop {
+        let replaced = backend.session_replaced(&previous);
+        let mut waiting = Vec::new();
         for permission in asked {
-            settled &= backend.status(permission)? == "granted";
+            if backend.status(permission)? != "granted" {
+                waiting.push(permission.title);
+            }
         }
-        if settled {
-            return Ok(());
+        if replaced && waiting.is_empty() {
+            return Ok(NewGrants::Reading);
         }
-        tokio::time::sleep(POLL).await;
+        if Instant::now() >= deadline {
+            return Ok(if replaced {
+                NewGrants::NotConfirmed(waiting)
+            } else {
+                NewGrants::NoReplacement
+            });
+        }
+        tokio::time::sleep(POLL.min(limit)).await;
     }
-    Ok(())
 }
 
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
@@ -403,7 +477,11 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         }
         Ok(wanted)
     })?;
-    let_new_grants_settle(&backend, &answers.asked).await?;
+    let new_grants = let_new_grants_settle(&backend, &answers.asked, NEW_GRANT_SETTLES).await?;
+    if let Some(report) = new_grants.report() {
+        println!();
+        println!("{report}");
+    }
     for permission in LEVEL_ONE
         .iter()
         .filter(|permission| !answers.skipped.contains(&permission.id))
@@ -463,17 +541,15 @@ mod tests {
         Ok(false)
     }
 
-    fn running_as(directory: &Path, name: &str, home: &Path) -> Outcome<std::process::Child> {
-        use std::os::unix::fs::PermissionsExt;
-        let script = directory.join(name);
-        std::fs::write(
-            &script,
-            "#!/bin/sh\nsleep 30 &\nchild=$!\ntrap 'kill $child; exit 0' TERM\nwait $child\n",
-        )?;
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))?;
-        let child = Command::new(&script)
-            .args(["session", "--home"])
-            .arg(home)
+    fn running_as(app: &Path, home: &Path) -> Outcome<std::process::Child> {
+        let command = format!(
+            "{}/Contents/MacOS/AppleBridgeHelper session --socket s --secret-file f --home {} --gateway-pid 7",
+            app.display(),
+            home.join("helper").display()
+        );
+        let child = Command::new("/bin/bash")
+            .args(["-c", "exec -a \"$0\" sleep 30"])
+            .arg(command)
             .spawn()?;
         std::fs::create_dir_all(home.join("helper"))?;
         std::fs::write(home.join("helper/helper.pid"), child.id().to_string())?;
@@ -482,38 +558,118 @@ mod tests {
     }
 
     #[test]
+    fn the_session_is_matched_by_its_exact_executable_and_home() {
+        let app = "/Apps/Apple Bridge.app";
+        let home = Path::new("/tmp/world");
+        let exact = "/Apps/Apple Bridge.app/Contents/MacOS/AppleBridgeHelper session --socket /tmp/world/run/peer.sock --secret-file /tmp/world/apple-secret --home /tmp/world/helper --gateway-pid 7";
+        assert!(is_session_command(exact, app, home));
+        assert!(is_session_command(exact, app, Path::new("/tmp/world/")));
+        for other in [
+            exact.replace("--home /tmp/world/helper", "--home /tmp/world2/helper"),
+            exact.replace("--home /tmp/world/helper", "--home /tmp/world/helper2"),
+            exact.replace("--home /tmp/world/helper", "--home /old/tmp/world/helper"),
+            exact.replace("/Apps/Apple Bridge.app", "/Other/Apple Bridge.app"),
+            exact.replace(" session ", " status "),
+            format!("/bin/sh {exact}"),
+        ] {
+            assert!(!is_session_command(&other, app, home), "{other}");
+        }
+        assert!(!is_session_command(exact, "", home));
+    }
+
+    #[test]
     fn a_new_grant_restarts_only_this_homes_session_helper() -> Outcome {
         let directory = tempfile::tempdir()?;
-        let home = directory.path().join("home");
+        let app = directory.path().join("Apple Bridge.app");
+        let home = directory.path().join("world");
         let backend = Backend::Mac {
             home: &home,
-            helper: String::new(),
+            helper: app.display().to_string(),
         };
-        assert!(!backend.restart_session()?);
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
 
-        let mut helper = running_as(directory.path(), "AppleBridgeHelper", &home)?;
-        assert!(backend.restart_session()?);
+        let mut helper = running_as(&app, &home)?;
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::Stopped(_)
+        ));
         assert!(wait_for_exit(&mut helper)?);
 
-        let other_home = directory.path().join("other");
-        let mut foreign = running_as(directory.path(), "AppleBridgeHelper", &other_home)?;
+        let collision = directory.path().join("world2");
+        let mut foreign = running_as(&app, &collision)?;
         std::fs::write(
             home.join("helper/helper.pid"),
-            std::fs::read(other_home.join("helper/helper.pid"))?,
+            std::fs::read(collision.join("helper/helper.pid"))?,
         )?;
-        assert!(!backend.restart_session()?);
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
         assert!(foreign.try_wait()?.is_none());
         foreign.kill()?;
         foreign.wait()?;
 
-        let mut unrelated = running_as(directory.path(), "SomethingElse", &home)?;
-        assert!(!backend.restart_session()?);
-        assert!(unrelated.try_wait()?.is_none());
-        unrelated.kill()?;
-        unrelated.wait()?;
-
         std::fs::write(home.join("helper/helper.pid"), "1; rm -rf /")?;
-        assert!(!backend.restart_session()?);
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn settling_only_claims_what_it_confirmed() -> Outcome {
+        let contacts: &'static Permission = &LEVEL_ONE[1];
+        let directory = tempfile::tempdir()?;
+        let app = directory.path().join("Apple Bridge.app");
+        let home = directory.path().join("world");
+        let backend = Backend::Mac {
+            home: &home,
+            helper: app.display().to_string(),
+        };
+        let quick = Duration::from_millis(50);
+        assert_eq!(
+            let_new_grants_settle(&backend, &[], quick).await?,
+            NewGrants::NothingAsked
+        );
+        assert_eq!(
+            let_new_grants_settle(&backend, &[contacts], quick).await?,
+            NewGrants::NotRunning
+        );
+
+        let mut helper = running_as(&app, &home)?;
+        assert_eq!(
+            let_new_grants_settle(&backend, &[contacts], quick).await?,
+            NewGrants::NoReplacement
+        );
+        assert!(wait_for_exit(&mut helper)?);
+
+        let mut first = running_as(&app, &home)?;
+        let stopped = first.id().to_string();
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::Stopped(_)
+        ));
+        assert!(wait_for_exit(&mut first)?);
+        let mut replacement = running_as(&app, &home)?;
+        assert!(backend.session_replaced(&stopped));
+        assert!(!backend.session_replaced(&replacement.id().to_string()));
+        replacement.kill()?;
+        replacement.wait()?;
+
+        for outcome in [
+            NewGrants::NotRunning,
+            NewGrants::CouldNotRestart,
+            NewGrants::NoReplacement,
+            NewGrants::NotConfirmed(vec!["Contacts"]),
+        ] {
+            let report = outcome.report().unwrap_or_default();
+            assert!(report.contains("bridge up"), "{report}");
+        }
+        assert_eq!(NewGrants::Reading.report(), None);
         Ok(())
     }
 

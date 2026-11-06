@@ -93,7 +93,8 @@ fn owned(names: &[&str]) -> Vec<String> {
     names.iter().map(|name| (*name).to_owned()).collect()
 }
 
-fn reminders(status: &Value, os_build: &str) -> Readiness {
+fn reminders(status: &Value, calendar: Option<&Value>, os_build: &str) -> Readiness {
+    let calendar_refused = calendar.is_some_and(|calendar| calendar["authorized"] == false);
     let unproven: Vec<Value> = REMINDERS_UNPROVEN
         .iter()
         .map(|operation| {
@@ -106,14 +107,18 @@ fn reminders(status: &Value, os_build: &str) -> Readiness {
         })
         .collect();
     permission(
-        status["authorized"] == true,
+        status["authorized"] == true && !calendar_refused,
         json!({
             "fields": "partial",
             "missing": ["recurrence: next incomplete instance only"],
             "operations": unproven,
         }),
         owned(&REMINDERS),
-        "reminders_full_access_required",
+        if status["authorized"] == true {
+            "reminders_need_calendar_access"
+        } else {
+            "reminders_full_access_required"
+        },
     )
 }
 
@@ -270,7 +275,7 @@ pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Read
     };
     for (source, fields) in sources {
         let readiness = match source.as_str() {
-            "reminders" => reminders(fields, os_build),
+            "reminders" => reminders(fields, sources.get("calendar"), os_build),
             "calendar" => calendar(fields),
             "contacts" => contacts(fields),
             "focus" => focus(fields),
@@ -292,6 +297,22 @@ pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Read
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reminders_without_calendar_says_it_cannot_read() {
+        let told = framework(
+            &json!({"reminders": {"authorized": true}, "calendar": {"authorized": false}}),
+            "b",
+        );
+        assert_eq!(told["reminders"].state, "permission_missing");
+        assert_eq!(told["reminders"].reason, "reminders_need_calendar_access");
+        assert_eq!(told["reminders"].capabilities, Vec::<String>::new());
+        let both = framework(
+            &json!({"reminders": {"authorized": true}, "calendar": {"authorized": true}}),
+            "b",
+        );
+        assert_eq!(both["reminders"].state, "ready");
+    }
 
     #[test]
     fn without_the_grant_a_source_offers_nothing_and_says_why() {
