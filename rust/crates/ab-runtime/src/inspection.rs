@@ -22,10 +22,22 @@ pub fn status(home: &Path) -> Result<Value, Error> {
         .map_err(|_| Error::Invalid)?;
     Ok(json!({"role": config.role, "cursor": serde_json::from_str::<Value>(&raw)?}))
 }
+fn empty_keychain_lock(path: &Path, meta: &fs::Metadata) -> bool {
+    meta.is_file()
+        && meta.len() == 0
+        && meta.permissions().mode() & 0o022 == 0
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with(".fl"))
+}
 fn private(path: &Path) -> Result<bool, Error> {
     let meta = fs::symlink_metadata(path)?;
     if meta.file_type().is_symlink() {
         return Ok(false);
+    }
+    if empty_keychain_lock(path, &meta) {
+        return Ok(true);
     }
     let mut valid = meta.permissions().mode() & 0o777 == if meta.is_dir() { 0o700 } else { 0o600 };
     if meta.is_dir() {
@@ -386,6 +398,31 @@ fn clock(home: &Path, result: &mut Value) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn home_with(name: &str, bytes: &[u8], mode: u32) -> Result<tempfile::TempDir, Error> {
+        let home = tempfile::tempdir()?;
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+        let path = home.path().join(name);
+        fs::write(&path, bytes)?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(mode))?;
+        Ok(home)
+    }
+    #[test]
+    fn the_keychain_lock_macos_makes_does_not_fail_the_private_check() -> Result<(), Error> {
+        assert!(private(home_with(".fl9D511DB2", b"", 0o444)?.path())?);
+        Ok(())
+    }
+    #[test]
+    fn only_an_empty_unwritable_lock_is_excused() -> Result<(), Error> {
+        for (name, bytes, mode) in [
+            (".fl9D511DB2", b"secret".as_slice(), 0o444),
+            (".fl9D511DB2", b"".as_slice(), 0o666),
+            ("other", b"".as_slice(), 0o444),
+            ("Apple Bridge.keychain-db", b"data".as_slice(), 0o644),
+        ] {
+            assert!(!private(home_with(name, bytes, mode)?.path())?, "{name}");
+        }
+        Ok(())
+    }
     #[test]
     fn integrity_check_is_bounded_and_reports_incomplete() -> Result<(), Box<dyn std::error::Error>>
     {

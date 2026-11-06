@@ -3,11 +3,16 @@
 use ab_trust::{CredentialStore, Error, KeychainStore};
 use std::{
     io::Write,
+    os::unix::fs::PermissionsExt,
     path::Path,
     process::{Command, Stdio},
 };
 
 type Check = Result<(), Box<dyn std::error::Error>>;
+
+fn mode(path: &Path) -> Result<u32, std::io::Error> {
+    Ok(std::fs::metadata(path)?.permissions().mode() & 0o777)
+}
 
 const GO_SCRIPT: &str = include_str!("../src/go_keychain.py");
 
@@ -72,11 +77,16 @@ fn managed_temporary_keychain_round_trips_and_reads_go_items() -> Check {
     ));
     assert_eq!(search_list()?, before);
     assert!(path.exists());
+    assert_eq!(mode(&path)?, 0o600);
     assert_eq!(
         go_store("put", &path, service, "pre", b"seed")?["status"],
         0
     );
     assert_eq!(store.get("pre")?, b"seed");
+    assert_eq!(mode(&path)?, 0o600);
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644))?;
+    assert_eq!(store.get("pre")?, b"seed");
+    assert_eq!(mode(&path)?, 0o600);
     assert_eq!(store.get("pre")?, b"seed");
     store.put("pre", b"seed2")?;
     assert_eq!(store.get("pre")?, b"seed2");

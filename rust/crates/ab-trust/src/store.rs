@@ -358,6 +358,7 @@ impl KeychainStore {
             let _ = security(&restore.iter().map(String::as_str).collect::<Vec<_>>());
             created?;
         }
+        fs::set_permissions(&self.path, fs::Permissions::from_mode(0o600))?;
         security(&["unlock-keychain", "-p", &password, &keychain])?;
         Ok(())
     }
