@@ -1,4 +1,5 @@
 use crate::rawhttp::request;
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::Value;
@@ -11,11 +12,13 @@ const GOLDEN: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../../contracts/golden/oauth.json"
 );
+const AUTHORIZATION_SERVER: &str = "/.well-known/oauth-authorization-server";
 const PATHS: [&str; 3] = [
     "/.well-known/oauth-protected-resource",
     "/.well-known/oauth-protected-resource/mcp",
-    "/.well-known/oauth-authorization-server",
+    AUTHORIZATION_SERVER,
 ];
+const OFFLINE_ACCESS: &str = "offline_access";
 
 fn frozen_sources() -> Result<BTreeMap<String, bool>> {
     let corpus: Value = serde_json::from_slice(
@@ -47,6 +50,50 @@ fn frozen_sources() -> Result<BTreeMap<String, bool>> {
         return Err(Error::Invalid("frozen OAuth source grants missing".into()));
     }
     Ok(groups)
+}
+
+fn offline_access_grants_nothing(world: &World, address: &str, evidence: &mut Evidence) {
+    evidence.check(
+        "offline_access_is_not_a_token_grant",
+        world
+            .gateway_cli(&["token", "create", "--scope", OFFLINE_ACCESS])
+            .is_err(),
+        "",
+    );
+    let registration = request(
+        address,
+        "POST",
+        "/oauth/register",
+        &[("Content-Type", "application/json")],
+        Some(br#"{"client_name":"Bridge Test scopes","redirect_uris":["https://connector.example/callback"],"token_endpoint_auth_method":"none"}"#),
+        10,
+    );
+    let client = registration
+        .as_ref()
+        .map(|reply| reply.json()["client_id"].as_str().unwrap_or_default().to_owned())
+        .unwrap_or_default();
+    let challenge = URL_SAFE_NO_PAD.encode([7u8; 32]);
+    let refused = request(
+        address,
+        "GET",
+        &format!(
+            "/oauth/authorize?client_id={client}&redirect_uri=https%3A%2F%2Fconnector.example%2Fcallback&response_type=code&code_challenge_method=S256&code_challenge={challenge}&scope={OFFLINE_ACCESS}"
+        ),
+        &[],
+        None,
+        10,
+    );
+    evidence.check(
+        "offline_access_alone_is_an_invalid_scope",
+        !client.is_empty()
+            && refused.is_ok_and(|reply| {
+                reply.status == 303
+                    && reply
+                        .header("Location")
+                        .is_some_and(|to| to.contains("error=invalid_scope"))
+            }),
+        "",
+    );
 }
 
 pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
@@ -85,7 +132,7 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
             10,
         )
         .ok();
-        let scopes: BTreeSet<String> = reply
+        let mut scopes: BTreeSet<String> = reply
             .as_ref()
             .map(crate::rawhttp::Response::json)
             .and_then(|v| {
@@ -103,6 +150,13 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
                     .is_some_and(|all| !all.is_empty())
         });
         evidence.check(&format!("metadata_document_{path}"), listed, "");
+        if path == AUTHORIZATION_SERVER {
+            evidence.check(
+                "authorization_server_lists_offline_access",
+                scopes.remove(OFFLINE_ACCESS),
+                "",
+            );
+        }
         evidence.check(
             &format!("all_registered_grants_{path}"),
             scopes == expected,
@@ -113,5 +167,6 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
             Some(base) => evidence.check(&format!("equal_scope_sets_{path}"), *base == scopes, ""),
         }
     }
+    offline_access_grants_nothing(world, &address, evidence);
     Ok(())
 }
