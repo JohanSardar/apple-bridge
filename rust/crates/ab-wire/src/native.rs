@@ -264,6 +264,7 @@ pub enum Frame {
     BlobRead(BlobRead),
     BlobChunk(BlobChunk),
     BlobUnavailable(BlobUnavailable),
+    Restart,
     Close,
 }
 
@@ -397,6 +398,7 @@ impl Frame {
             "BlobRead" => Self::BlobRead(body(bytes)?),
             "BlobChunk" => Self::BlobChunk(body(bytes)?),
             "BlobUnavailable" => Self::BlobUnavailable(body(bytes)?),
+            "Restart" => Self::Restart,
             "Close" => Self::Close,
             _ => return Err(ErrorCode::Invalid),
         })
@@ -442,6 +444,7 @@ impl Frame {
             Self::BlobRead(frame) => tagged("BlobRead", frame),
             Self::BlobChunk(frame) => tagged("BlobChunk", frame),
             Self::BlobUnavailable(frame) => tagged("BlobUnavailable", frame),
+            Self::Restart => tagged("Restart", &Empty {}),
             Self::Close => tagged("Close", &Empty {}),
         }?;
         if json.is_empty() || json.len() > MAX_FRAME {
