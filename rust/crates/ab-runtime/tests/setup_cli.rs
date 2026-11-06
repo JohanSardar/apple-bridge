@@ -107,6 +107,11 @@ fn help_and_version_work_and_say_how_to_start() -> Check {
     let output = bridge().args(["remote", "--help"]).output()?;
     assert!(output.status.success());
     assert!(text(&output.stdout).contains("--relay-url"));
+    let output = bridge().args(["down", "--help"]).output()?;
+    assert!(output.status.success());
+    let help = text(&output.stdout);
+    assert!(help.contains("before updating or uninstalling"), "{help}");
+    assert!(help.contains("does not stop a running gateway"), "{help}");
     Ok(())
 }
 
@@ -172,7 +177,7 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     let marker = home.join("run/gateway-build.json");
     let original = std::fs::read(&marker)?;
     let mut stale: serde_json::Value = serde_json::from_slice(&original)?;
-    stale["inode"] = serde_json::json!(0);
+    stale["build"] = serde_json::json!("different-build-fixture");
     stale["version"] = serde_json::json!("older-fixture");
     std::fs::write(&marker, serde_json::to_vec(&stale)?)?;
     let updated = run(&home, &["up"])?;
@@ -199,9 +204,11 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
 }
 
 #[test]
-fn uninstalling_a_running_executable_stops_its_gateway() -> Check {
+fn updating_moving_and_removing_an_install_does_not_stop_its_gateway() -> Check {
     let directory = tempfile::tempdir_in("/tmp")?;
-    let binary = directory.path().join("bridge");
+    let install = directory.path().join("install");
+    std::fs::create_dir(&install)?;
+    let binary = install.join("bridge");
     std::fs::copy(env!("CARGO_BIN_EXE_bridge"), &binary)?;
     let home = directory.path().join("home");
     let api = free_port()?;
@@ -220,16 +227,20 @@ fn uninstalling_a_running_executable_stops_its_gateway() -> Check {
         .env("APPLE_BRIDGE_SECRET_STORE", "file")
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    std::fs::remove_file(binary)?;
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(80);
-    while TcpListener::bind(&api).is_err() {
-        assert!(
-            std::time::Instant::now() < deadline,
-            "removed gateway still running"
-        );
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
-    assert!(std::fs::read_to_string(home.join("gateway.log"))?.contains("was removed; stopping"));
+    let replacement = directory.path().join("replacement");
+    std::fs::copy(env!("CARGO_BIN_EXE_bridge"), &replacement)?;
+    std::fs::rename(replacement, &binary)?;
+    let moved = directory.path().join("moved");
+    std::fs::rename(install, &moved)?;
+    std::fs::remove_dir_all(moved)?;
+    std::thread::sleep(std::time::Duration::from_secs(65));
+    assert!(
+        TcpListener::bind(&api).is_err(),
+        "healthy gateway stopped after its install changed"
+    );
+    let stopped = run(&home, &["down"])?;
+    assert!(stopped.status.success(), "{}", text(&stopped.stderr));
+    assert!(TcpListener::bind(&api).is_ok());
     Ok(())
 }
 

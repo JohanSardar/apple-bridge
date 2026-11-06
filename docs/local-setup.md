@@ -32,6 +32,8 @@ Useful options: `--home DIR` picks another data folder, `--api-addr 127.0.0.1:PO
 
 `bridge up` keeps running after you close the terminal but does not start again after a restart. The Apple Bridge app handles starting at login.
 
+Run `bridge down` before updating or uninstalling. Moving, replacing or deleting the installation does not stop a running gateway. If the app owns the gateway, stop it through the app instead. If you already removed the command while it was running, reinstall it, then run `bridge down` before uninstalling again.
+
 ## Connect an agent
 
 `bridge link claude` adds the server to Claude Code, then signs in through your browser. The page shows a four-digit code. Check that the Apple Bridge window on your Mac shows the same code, and click Allow. Without the app, `bridge link` prints the command to run in another terminal:
