@@ -268,9 +268,8 @@ async fn wait_for(backend: &Backend<'_>, permission: &Permission) -> Outcome<boo
 }
 
 fn not_listed_hint(permission: &Permission, helper: &str) -> Option<String> {
-    (!permission.asks && !helper.is_empty()).then(|| {
-        format!("  Not in the list? Click +, press Command-Shift-G and paste: {helper}")
-    })
+    (!permission.asks && !helper.is_empty())
+        .then(|| format!("  Not in the list? Click +, press Command-Shift-G and paste: {helper}"))
 }
 
 async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool) -> Outcome {
@@ -340,7 +339,7 @@ mod tests {
         let [full_disk, contacts, ..] = LEVEL_ONE else {
             panic!("level one lists Full Disk Access and Contacts first");
         };
-        let app = "/lib/node_modules/applebridge/Apple Bridge.app";
+        let app = "/opt/Apple Bridge.app";
         let hint = not_listed_hint(full_disk, app).unwrap_or_default();
         assert!(hint.ends_with(app), "{hint}");
         assert_eq!(not_listed_hint(contacts, app), None);

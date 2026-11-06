@@ -21,6 +21,7 @@ native:
 lint: lint-rust-sources
 	python3 packaging/dev/test_source_registrations.py
 	python3 packaging/relay/test_selfhost.py
+	python3 packaging/npm/test_npm.py
 	packaging/capture/check.sh
 
 .PHONY: lint-rust-sources
