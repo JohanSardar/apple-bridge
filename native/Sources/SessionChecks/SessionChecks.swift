@@ -3,6 +3,9 @@ import Darwin
 import AppleSession
 import NativeProtocol
 import SourceSupport
+import Contacts
+import EventKit
+import UserNotifications
 
 final class Once: @unchecked Sendable {
     private let lock = NSLock()
@@ -75,6 +78,35 @@ struct SessionChecks {
         try check(!watchdogFires(cancelled: true), "a cancelled watchdog stays quiet")
     }
 
+    @MainActor
+    static func permissionDenials() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-permission-denials-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: home) }
+        for (name, domain, code) in [
+            ("contacts", CNErrorDomain, CNError.Code.authorizationDenied.rawValue),
+            ("calendar", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
+            ("reminders", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
+            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue)
+        ] {
+            for attempt in 0..<2 {
+                let report = home.appendingPathComponent("\(name)-\(attempt).json")
+                let deny: NewPermissions.RequestAdapter = { throw NSError(domain: domain, code: code) }
+                try await HelperCommand.requestPermission(name, report: report, adapters: [name: deny])
+                let result = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: report))
+                try check(result == ["request": name, "outcome": "denied"], "a denial writes a report, including on a repeated request")
+                let attributes = try FileManager.default.attributesOfItem(atPath: report.path)
+                try check(attributes[.posixPermissions] as? Int == 0o600, "permission reports stay private")
+            }
+        }
+        let broken: NewPermissions.RequestAdapter = { throw NSError(domain: "synthetic_failure", code: 1) }
+        var failed = false
+        do {
+            _ = try await NewPermissions.request("contacts", adapters: ["contacts": broken])
+        } catch { failed = (error as NSError).domain == "synthetic_failure" }
+        try check(failed, "unrelated failures are not reported as denials")
+    }
+
     private static func watchdogFires(cancelled: Bool) -> Bool {
         let fired = DispatchSemaphore(value: 0)
         let watchdog = NewPermissions.armWatchdog(after: .milliseconds(100)) { fired.signal() }
@@ -89,6 +121,7 @@ struct SessionChecks {
             return
         }
         try await permissionRequestDeadline()
+        try await permissionDenials()
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-session-checks-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let session = try AppleSession(socket: home.appendingPathComponent("none.sock").path, secretFile: home.appendingPathComponent("none").path, home: home, gatewayPID: getpid(), commandsEnabled: true)

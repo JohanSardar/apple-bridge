@@ -1,5 +1,5 @@
 use super::{
-    Failure, Outcome,
+    Failure, Outcome, permissions,
     tree::{
         AgentAction, AgentCreateArgs, ConnectArgs, ConnectorAction, JoinArgs, PairArgs,
         RemoteAction, RemoteArgs, RestoreArgs, ScopeArgs, SelftestArgs, ShortcutsAction, StartArgs,
@@ -39,7 +39,7 @@ pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
             product_cli::PERMISSIONS.join(", ")
         )));
     }
-    product_cli::permissions_request(
+    let report = product_cli::permissions_request(
         Path::new("open"),
         &product_cli::default_report_dir(),
         &crate::bundle::helper_app(
@@ -49,6 +49,12 @@ pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
         name,
         None,
     )?;
+    if report
+        .get("outcome")
+        .is_some_and(|outcome| outcome == "denied")
+    {
+        println!("{}", permissions::declined(name));
+    }
     Ok(())
 }
 

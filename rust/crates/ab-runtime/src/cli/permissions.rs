@@ -69,6 +69,8 @@ struct Fixture {
     #[serde(default)]
     grant_when_asked: Vec<String>,
     #[serde(default)]
+    deny_when_asked: Vec<String>,
+    #[serde(default)]
     opened: Vec<String>,
     #[serde(default)]
     asked: Vec<String>,
@@ -165,7 +167,7 @@ impl Backend<'_> {
             .is_ok_and(|fence| fence > previous)
     }
 
-    fn ask_macos(&self, permission: &Permission) -> Outcome {
+    fn ask_macos(&self, permission: &Permission) -> Outcome<bool> {
         match self {
             Self::Fixture(path) => {
                 let mut fixture = Self::fixture(path)?;
@@ -179,21 +181,30 @@ impl Backend<'_> {
                         .statuses
                         .insert(permission.id.to_owned(), "granted".to_owned());
                 }
-                Self::save(path, &fixture)
+                let denied = fixture.deny_when_asked.iter().any(|id| id == permission.id);
+                if denied {
+                    fixture
+                        .statuses
+                        .insert(permission.id.to_owned(), "denied".to_owned());
+                }
+                Self::save(path, &fixture)?;
+                Ok(denied)
             }
             Self::Mac { helper, .. } => {
                 if helper.is_empty() {
                     return Err(Failure::new("No Helper app was found to ask macOS with.")
                         .next("Install Apple Bridge, or pass --helper-app."));
                 }
-                product_cli::permissions_request(
+                let report = product_cli::permissions_request(
                     Path::new("open"),
                     &product_cli::default_report_dir(),
                     helper,
                     permission.id,
                     None,
                 )?;
-                Ok(())
+                Ok(report
+                    .get("outcome")
+                    .is_some_and(|outcome| outcome == "denied"))
             }
         }
     }
@@ -215,6 +226,29 @@ fn source_status(home: &Path, source: &str) -> Outcome<String> {
         _ => "unknown",
     }
     .to_owned())
+}
+
+pub(super) fn declined(name: &str) -> String {
+    let title = LEVEL_ONE
+        .iter()
+        .find(|permission| permission.id == name)
+        .map_or_else(
+            || match name {
+                "screen_recording" => "Screen & System Audio Recording".to_owned(),
+                "speech_recognition" => "Speech Recognition".to_owned(),
+                name if name.starts_with("automation_") => "Automation".to_owned(),
+                _ => name.replace('_', " "),
+            },
+            |permission| permission.title.to_owned(),
+        );
+    let settings = if name == "notifications" {
+        "System Settings > Notifications".to_owned()
+    } else {
+        format!("System Settings > Privacy & Security > {title}")
+    };
+    format!(
+        "{title} permission was declined. Other sources still work. To turn it on, open {settings}, enable Apple Bridge, then run bridge down and bridge up."
+    )
 }
 
 fn label(status: &str) -> &'static str {
@@ -365,8 +399,12 @@ fn ask_one(
         return Ok(());
     }
     if wants(permission)? {
-        backend.ask_macos(permission)?;
-        answers.asked.push(permission);
+        if backend.ask_macos(permission)? {
+            println!("  {}", declined(permission.id));
+            answers.skipped.push(permission.id);
+        } else {
+            answers.asked.push(permission);
+        }
     } else {
         answers.skipped.push(permission.id);
     }

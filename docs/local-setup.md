@@ -2,6 +2,23 @@
 
 Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on remote use yourself, though an agent you connect may send what it reads to its own service.
 
+## Install, update and uninstall with npm
+
+```sh
+npm install -g applebridge
+```
+
+Node installed with the nodejs.org `.pkg` has a root-owned global prefix, so global npm changes can fail with `EACCES`. With that Node, use `sudo npm install -g applebridge`, `sudo npm update -g applebridge` and `sudo npm uninstall -g applebridge`. Run `bridge down` before updating or uninstalling, and `bridge up` after updating. Never run `bridge` with sudo.
+
+Alternatively, choose a user-writable prefix and use npm without sudo for install, update and uninstall:
+
+```sh
+npm config set prefix "$HOME/.npm-global"
+export PATH="$HOME/.npm-global/bin:$PATH"
+```
+
+Add the PATH line to your shell startup file, such as `~/.zshrc`, for future terminals. See the [npm package README](../packaging/npm/README.md) for the full update and uninstall steps.
+
 ## Quick start
 
 ```sh
@@ -80,7 +97,7 @@ Reminders can only be read with Calendar allowed too. Without Calendar, Reminder
 
 Mail reports missing local data when its folder can be listed but the supported index is absent. Check that Mail has an account on this Mac and has downloaded its mail. If the folder cannot be listed, Apple Bridge cannot tell an absent account from missing Full Disk Access and keeps the permission advice.
 
-`bridge permissions request <name>` asks for one permission, such as `contacts` or `camera`, and nothing else.
+`bridge permissions request <name>` asks for one permission, such as `contacts` or `camera`, and nothing else. If you click Don't Allow, it reports that the permission was declined; the guide continues with the remaining permissions. To enable it later, open System Settings > Privacy & Security > that source, turn on Apple Bridge, then run `bridge down` and `bridge up`. Repeating the request does not make macOS prompt again after a denial.
 
 ## See what has synced
 
@@ -89,7 +106,7 @@ $ bridge stats
   ✓ Messages     163,101 messages · 708 chats · 6,791 attachments
   ✓ Contacts     154 contacts
   ✓ Calendar     1,776 events · 30 calendars
-  ! Notes        nothing yet  (needs a Mac permission: run bridge permissions guide)
+  ! Notes        nothing yet  (needs a Mac permission; if declined, enable it in System Settings > Privacy & Security > Full Disk Access, then run bridge down and bridge up)
   354,321 items in total. Counts only, no content.
 ```
 

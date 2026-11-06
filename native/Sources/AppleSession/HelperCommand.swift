@@ -8,6 +8,25 @@ import SourceSupport
 
 public enum HelperCommand {
     @MainActor
+    public static func requestPermission(_ name: String, report: URL, adapters: [String: NewPermissions.RequestAdapter]? = nil) async throws {
+        let watchdog = NewPermissions.armWatchdog(after: NewPermissions.watchdogDeadline) {
+            try? PrivateReport.write(["request": name, "outcome": "timed_out"], to: report)
+            exit(0)
+        }
+        defer { watchdog.cancel() }
+        let outcome = try await NewPermissions.request(name, adapters: adapters)
+        switch outcome {
+        case .finished:
+            try await Task.sleep(for: .seconds(2))
+            try PrivateReport.write(["request": name], to: report)
+        case .denied:
+            try PrivateReport.write(["request": name, "outcome": "denied"], to: report)
+        case .timedOut:
+            try PrivateReport.write(["request": name, "outcome": "timed_out"], to: report)
+        }
+    }
+
+    @MainActor
     public static func run(_ arguments: [String]) throws {
         if arguments.first == "permission-status-proof" || arguments.first == "permission-status" || arguments.first == "permission-request" || arguments.first == "permission-fake" {
             guard let index = arguments.firstIndex(of: "--report"), index + 1 < arguments.count else { throw ProbeFailure.invalidArguments }
@@ -47,20 +66,7 @@ public enum HelperCommand {
                         try PrivateReport.write(counts, to: report)
                     } else {
                         guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-                        let name = arguments[1]
-                        let watchdog = NewPermissions.armWatchdog(after: NewPermissions.watchdogDeadline) {
-                            try? PrivateReport.write(["request": name, "outcome": "timed_out"], to: report)
-                            exit(0)
-                        }
-                        let outcome = try await NewPermissions.request(name)
-                        watchdog.cancel()
-                        switch outcome {
-                        case .finished:
-                            try await Task.sleep(for: .seconds(2))
-                            try PrivateReport.write(["request": arguments[1]], to: report)
-                        case .timedOut:
-                            try PrivateReport.write(["request": arguments[1], "outcome": "timed_out"], to: report)
-                        }
+                        try await requestPermission(arguments[1], report: report)
                     }
                 } catch { failure = error }
                 finished = true

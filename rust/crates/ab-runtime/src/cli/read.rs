@@ -299,9 +299,8 @@ fn limit_records(value: &mut Value, wanted: &[&str], remaining: &mut usize) {
                         return false;
                     }
                     *remaining -= 1;
-                } else {
-                    limit_records(item, wanted, remaining);
                 }
+                limit_records(item, wanted, remaining);
                 true
             });
         }
@@ -395,6 +394,51 @@ mod tests {
         let mut every = Vec::new();
         collect(&answer, &[], &mut every);
         assert_eq!(every.len(), 2);
+    }
+
+    #[test]
+    fn json_limit_counts_nested_reminder_subtasks() {
+        let item = |id: &str, subtasks: Value| {
+            json!({
+                "reminder": {"collection":"reminders.reminder","id":id,"data":{}},
+                "subtasks":subtasks,
+                "attachments":[{"collection":"reminders.attachment","id":"media","data":{}}]
+            })
+        };
+        let original = json!({"count":6,"sections":[
+            {"items":[item("parent", json!([
+                item("child", json!([item("grandchild", json!([]))])),
+                item("sibling", json!([]))
+            ])), item("second", json!([]))]},
+            {"items":[item("third", json!([]))]}
+        ]});
+        let expected = [
+            "parent",
+            "child",
+            "grandchild",
+            "sibling",
+            "second",
+            "third",
+        ];
+        for limit in 0..=6 {
+            let mut answer = original.clone();
+            let mut remaining = limit;
+            limit_records(&mut answer, &["reminders.reminder"], &mut remaining);
+            let mut records = Vec::new();
+            collect(&answer, &["reminders.reminder"], &mut records);
+            let ids: Vec<_> = records
+                .iter()
+                .filter_map(|record| record["id"].as_str())
+                .collect();
+            assert_eq!(ids, expected[..limit], "limit {limit}: {answer}");
+            assert_eq!(answer["count"], 6);
+            if limit > 0 {
+                assert_eq!(
+                    answer["sections"][0]["items"][0]["attachments"],
+                    original["sections"][0]["items"][0]["attachments"]
+                );
+            }
+        }
     }
 
     #[test]

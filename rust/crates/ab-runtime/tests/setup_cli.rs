@@ -504,6 +504,25 @@ fn stats_shows_counts_and_state_per_source() -> Check {
 }
 
 #[test]
+fn stats_gives_a_settings_fallback_after_a_permission_decline() -> Check {
+    let home = tempfile::tempdir()?;
+    seed_sources(home.path())?;
+    let output = run(home.path(), &["stats"])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let message = text(&output.stdout);
+    for phrase in [
+        "if declined",
+        "System Settings > Privacy & Security",
+        "Full Disk Access",
+        "bridge down",
+        "bridge up",
+    ] {
+        assert!(message.contains(phrase), "{message}");
+    }
+    Ok(())
+}
+
+#[test]
 fn stats_watch_reports_each_source_then_finishes() -> Check {
     let home = tempfile::tempdir()?;
     seed_sources(home.path())?;
@@ -622,11 +641,17 @@ fn json_reads_apply_the_limit_even_when_the_operation_has_none() -> Check {
         config.save()?;
         let server = std::thread::spawn(
             move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-                let body = serde_json::json!({"records":[
-                    {"collection":collection,"id":"one","data":{}},
-                    {"collection":collection,"id":"two","data":{}}
-                ]})
-                .to_string();
+                let body = if kind == "reminders" {
+                    serde_json::json!({"sections":[{"items":[{
+                        "reminder":{"collection":collection,"id":"parent","data":{}},
+                        "subtasks":[{"reminder":{"collection":collection,"id":"child","data":{}},"subtasks":[]}]
+                    }]}]})
+                } else {
+                    serde_json::json!({"records":[
+                        {"collection":collection,"id":"one","data":{}},
+                        {"collection":collection,"id":"two","data":{}}
+                    ]})
+                }.to_string();
                 for answer in ["{}", &body] {
                     let (mut stream, _) = listener.accept()?;
                     stream.set_read_timeout(Some(std::time::Duration::from_secs(5)))?;
@@ -648,11 +673,18 @@ fn json_reads_apply_the_limit_even_when_the_operation_has_none() -> Check {
             .map_err(|error| error.to_string())?;
         assert!(output.status.success(), "{}", text(&output.stderr));
         let answer: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-        assert_eq!(
-            answer["records"].as_array().ok_or("records")?.len(),
-            1,
-            "{kind}: {answer}"
-        );
+        if kind == "reminders" {
+            let items = &answer["sections"][0]["items"];
+            assert_eq!(items.as_array().ok_or("items")?.len(), 1, "{answer}");
+            assert_eq!(items[0]["reminder"]["id"], "parent", "{answer}");
+            assert_eq!(items[0]["subtasks"], serde_json::json!([]), "{answer}");
+        } else {
+            assert_eq!(
+                answer["records"].as_array().ok_or("records")?.len(),
+                1,
+                "{kind}: {answer}"
+            );
+        }
     }
     Ok(())
 }
@@ -740,6 +772,89 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     assert!(text(&walked.stdout).contains("Waiting up to 10 minutes"));
     assert!(text(&walked.stdout).contains("Mission Control"));
     assert!(text(&walked.stdout).contains("existing grants are kept"));
+    Ok(())
+}
+
+#[test]
+fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() -> Check {
+    let directory = tempfile::tempdir()?;
+    let fixture = directory.path().join("fixture.json");
+    std::fs::write(
+        &fixture,
+        serde_json::to_vec(&serde_json::json!({
+            "statuses":{"full_disk_access":"granted","contacts":"not_determined","calendar":"not_determined","reminders":"not_determined"},
+            "deny_when_asked":["contacts"],
+            "grant_when_asked":["calendar","reminders"]
+        }))?,
+    )?;
+    let home = directory.path().join("home");
+    for _ in 0..2 {
+        let output = run(
+            &home,
+            &[
+                "permissions",
+                "guide",
+                "--yes",
+                "--fixture",
+                fixture.to_str().ok_or("fixture path")?,
+            ],
+        )?;
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
+        let message = text(&output.stdout);
+        for phrase in [
+            "Contacts permission was declined",
+            "System Settings > Privacy & Security > Contacts",
+            "bridge down",
+            "bridge up",
+        ] {
+            assert!(message.contains(phrase), "{message}");
+        }
+    }
+    let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
+    assert_eq!(
+        after["asked"],
+        serde_json::json!(["contacts", "calendar", "reminders", "contacts"])
+    );
+    assert_eq!(after["opened"], serde_json::json!([]));
+    assert_eq!(after["statuses"]["calendar"], "granted");
+    assert_eq!(after["statuses"]["reminders"], "granted");
+    Ok(())
+}
+
+#[test]
+fn a_declined_permission_request_exits_cleanly_including_on_retry() -> Check {
+    let home = tempfile::tempdir()?;
+    let bin = home.path().join("bin");
+    std::fs::create_dir(&bin)?;
+    std::fs::create_dir_all(
+        home.path()
+            .join("Library/Application Support/AppleBridgeDev"),
+    )?;
+    let open = bin.join("open");
+    std::fs::write(
+        &open,
+        "#!/bin/sh\nwhile [ \"$1\" != --report ]; do shift; done\nprintf '{\"request\":\"contacts\",\"outcome\":\"denied\"}' > \"$2\"\n",
+    )?;
+    std::fs::set_permissions(&open, std::fs::Permissions::from_mode(0o755))?;
+    for _ in 0..2 {
+        let output = bridge()
+            .args(["permissions", "request", "contacts"])
+            .env("HOME", home.path())
+            .env("PATH", &bin)
+            .output()?;
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
+        let message = text(&output.stdout);
+        for phrase in [
+            "permission was declined",
+            "System Settings > Privacy & Security > Contacts",
+            "bridge down",
+            "bridge up",
+        ] {
+            assert!(message.contains(phrase), "{message}");
+        }
+    }
     Ok(())
 }
 
