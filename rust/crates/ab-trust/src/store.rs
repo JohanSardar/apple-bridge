@@ -252,6 +252,33 @@ fn keychain_error(locked: bool) -> Error {
     }
     .into()
 }
+fn keychain_not_a_file() -> Error {
+    CredentialStoreError {
+        code: "credential_store_invalid".into(),
+        store: "keychain".into(),
+        remedy: "Apple Bridge.keychain-db in the data folder must be a regular file, not a link or a folder. Move it away, then retry bridge start.".into(),
+        retryable: false,
+    }
+    .into()
+}
+fn make_regular_file_private(path: &Path) -> Result<(), Error> {
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(path)
+        .map_err(|error| {
+            if error.raw_os_error() == Some(libc::ELOOP) {
+                keychain_not_a_file()
+            } else {
+                error.into()
+            }
+        })?;
+    if !file.metadata()?.is_file() {
+        return Err(keychain_not_a_file());
+    }
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    Ok(())
+}
 pub(crate) fn service_for(home: &Path) -> String {
     format!(
         "apple-bridge:{}",
@@ -340,7 +367,7 @@ impl KeychainStore {
         }
         let password = String::from_utf8(password).map_err(|_| Error::Unauthorized)?;
         let keychain = self.path.to_string_lossy().into_owned();
-        if !self.path.exists() {
+        if fs::symlink_metadata(&self.path).is_err() {
             let search = security(&["list-keychains", "-d", "user"])?;
             let created = security(&["create-keychain", "-p", &password, &keychain]);
             let mut restore = vec![
@@ -358,7 +385,7 @@ impl KeychainStore {
             let _ = security(&restore.iter().map(String::as_str).collect::<Vec<_>>());
             created?;
         }
-        fs::set_permissions(&self.path, fs::Permissions::from_mode(0o600))?;
+        make_regular_file_private(&self.path)?;
         security(&["unlock-keychain", "-p", &password, &keychain])?;
         Ok(())
     }
@@ -464,6 +491,104 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), Error> {
         fs::remove_file(temp)?;
     }
     result
+}
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod keychain_file_tests {
+    use super::*;
+    use std::os::unix::fs::symlink;
+
+    fn mode(path: &Path) -> u32 {
+        fs::metadata(path).unwrap().permissions().mode() & 0o777
+    }
+
+    fn set_mode(path: &Path, mode: u32) {
+        fs::set_permissions(path, fs::Permissions::from_mode(mode)).unwrap();
+    }
+
+    fn store_in(home: &Path) -> (KeychainStore, PathBuf) {
+        let password = home.join("keychain-password");
+        fs::write(&password, "a".repeat(64)).unwrap();
+        set_mode(&password, 0o600);
+        let path = home.join("Apple Bridge.keychain-db");
+        (KeychainStore::managed("test".into(), path.clone()), path)
+    }
+
+    fn assert_refused(store: &KeychainStore) {
+        match store.get("key") {
+            Err(Error::CredentialStore(failure)) => {
+                assert_eq!(failure.code, "credential_store_invalid");
+                assert!(!failure.retryable);
+                assert!(failure.remedy.contains("must be a regular file"));
+            }
+            other => panic!("expected a clear refusal, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_regular_file_becomes_private() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("keychain");
+        fs::write(&path, b"data").unwrap();
+        set_mode(&path, 0o644);
+        make_regular_file_private(&path).unwrap();
+        assert_eq!(mode(&path), 0o600);
+        assert_eq!(fs::read(&path).unwrap(), b"data");
+    }
+
+    #[test]
+    fn a_link_to_a_folder_is_refused_and_the_folder_keeps_its_mode() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, path) = store_in(root.path());
+        let target = root.path().join("target");
+        fs::create_dir(&target).unwrap();
+        set_mode(&target, 0o755);
+        symlink(&target, &path).unwrap();
+        assert_refused(&store);
+        assert_eq!(mode(&target), 0o755);
+    }
+
+    #[test]
+    fn a_link_to_a_file_is_refused_and_the_file_keeps_its_mode() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, path) = store_in(root.path());
+        let target = root.path().join("target");
+        fs::write(&target, b"data").unwrap();
+        set_mode(&target, 0o640);
+        symlink(&target, &path).unwrap();
+        assert_refused(&store);
+        assert_eq!(mode(&target), 0o640);
+        assert_eq!(fs::read(&target).unwrap(), b"data");
+    }
+
+    #[test]
+    fn a_dangling_link_is_refused_and_nothing_is_created_through_it() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, path) = store_in(root.path());
+        let target = root.path().join("target");
+        symlink(&target, &path).unwrap();
+        assert_refused(&store);
+        assert!(!target.exists());
+    }
+
+    #[test]
+    fn a_folder_is_refused_and_keeps_its_mode() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, path) = store_in(root.path());
+        fs::create_dir(&path).unwrap();
+        set_mode(&path, 0o755);
+        assert_refused(&store);
+        assert_eq!(mode(&path), 0o755);
+    }
+
+    #[test]
+    fn a_pipe_is_refused_without_blocking() {
+        let root = tempfile::tempdir().unwrap();
+        let (store, path) = store_in(root.path());
+        let made = Command::new("mkfifo").arg(&path).status().unwrap();
+        assert!(made.success());
+        assert_refused(&store);
+    }
 }
 #[cfg(all(test, target_os = "linux"))]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
