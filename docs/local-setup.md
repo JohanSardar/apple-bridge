@@ -41,7 +41,7 @@ bridge connector allow --request <id> --code <code>
 
 | Option | What it does |
 |---|---|
-| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step. This two-step path was checked by hand on an earlier build |
+| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step. A script drove this two-step path on an earlier build |
 | `--name NAME` | Use another name in the agent |
 | `--no-login` | Add the server now and sign in later with `claude mcp login apple-bridge` |
 | `--no-browser` | Claude Code only, for a session without a browser: prints the address, then you paste the final address back |
