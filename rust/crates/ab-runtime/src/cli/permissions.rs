@@ -14,6 +14,7 @@ use std::{
 
 const WAIT_FOR_GRANT: Duration = Duration::from_secs(120);
 const POLL: Duration = Duration::from_secs(1);
+const NEW_GRANT_SETTLES: Duration = Duration::from_secs(30);
 const SETTINGS: &str = "x-apple.systempreferences:com.apple.preference.security?";
 
 struct Permission {
@@ -53,7 +54,7 @@ const LEVEL_ONE: &[Permission] = &[
     Permission {
         id: "reminders",
         title: "Reminders",
-        why: "Read your lists",
+        why: "Read your lists (needs Calendar too)",
         source: "reminders",
         pane: "Privacy_Reminders",
         asks: true,
@@ -70,7 +71,7 @@ struct Fixture {
     #[serde(default)]
     opened: Vec<String>,
     #[serde(default)]
-    asked: u32,
+    asked: Vec<String>,
 }
 
 enum Backend<'a> {
@@ -142,13 +143,47 @@ impl Backend<'_> {
         }
     }
 
-    fn ask_macos(&self) -> Outcome {
+    fn restart_session(&self) -> Outcome<SessionRestart> {
+        let Self::Mac { home, helper } = self else {
+            return Ok(SessionRestart::NotNeeded);
+        };
+        let pid = match std::fs::read_to_string(home.join("helper/helper.pid")) {
+            Ok(pid) if is_session_helper(pid.trim(), helper, home) => pid.trim().to_owned(),
+            _ => return Ok(SessionRestart::NotRunning),
+        };
+        let stopped = Command::new("/bin/kill")
+            .args(["-TERM", &pid])
+            .stderr(Stdio::null())
+            .status()?
+            .success();
+        Ok(if stopped {
+            SessionRestart::Stopped(pid)
+        } else {
+            SessionRestart::CouldNotStop
+        })
+    }
+
+    fn session_replaced(&self, previous: &str) -> bool {
+        let Self::Mac { home, helper } = self else {
+            return true;
+        };
+        std::fs::read_to_string(home.join("helper/helper.pid"))
+            .is_ok_and(|pid| pid.trim() != previous && is_session_helper(pid.trim(), helper, home))
+    }
+
+    fn ask_macos(&self, permission: &Permission) -> Outcome {
         match self {
             Self::Fixture(path) => {
                 let mut fixture = Self::fixture(path)?;
-                fixture.asked += 1;
-                for id in fixture.grant_when_asked.clone() {
-                    fixture.statuses.insert(id, "granted".to_owned());
+                fixture.asked.push(permission.id.to_owned());
+                if fixture
+                    .grant_when_asked
+                    .iter()
+                    .any(|id| id == permission.id)
+                {
+                    fixture
+                        .statuses
+                        .insert(permission.id.to_owned(), "granted".to_owned());
                 }
                 Self::save(path, &fixture)
             }
@@ -157,15 +192,33 @@ impl Backend<'_> {
                     return Err(Failure::new("No Helper app was found to ask macOS with.")
                         .next("Install Apple Bridge, or pass --helper-app."));
                 }
-                product_cli::onboard(
+                product_cli::permissions_request(
                     Path::new("open"),
                     &product_cli::default_report_dir(),
                     helper,
+                    permission.id,
+                    None,
                 )?;
                 Ok(())
             }
         }
     }
+}
+
+fn is_session_command(command: &str, helper: &str, home: &Path) -> bool {
+    let executable = format!("{helper}/Contents/MacOS/AppleBridgeHelper session ");
+    let home_argument = format!(" --home {} --gateway-pid ", home.join("helper").display());
+    !helper.is_empty() && command.starts_with(&executable) && command.contains(&home_argument)
+}
+
+fn is_session_helper(pid: &str, helper: &str, home: &Path) -> bool {
+    pid.parse::<u32>().is_ok()
+        && Command::new("ps")
+            .args(["-p", pid, "-o", "command="])
+            .output()
+            .is_ok_and(|output| {
+                is_session_command(String::from_utf8_lossy(&output.stdout).trim(), helper, home)
+            })
 }
 
 fn source_status(home: &Path, source: &str) -> Outcome<String> {
@@ -298,6 +351,108 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
     Ok(())
 }
 
+#[derive(Default)]
+struct Answers {
+    asked: Vec<&'static Permission>,
+    skipped: Vec<&'static str>,
+}
+
+fn ask_each(
+    backend: &Backend<'_>,
+    mut wants: impl FnMut(&Permission) -> Outcome<bool>,
+) -> Outcome<Answers> {
+    let mut answers = Answers::default();
+    for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
+        if backend.status(permission)? == "granted" {
+            continue;
+        }
+        if wants(permission)? {
+            backend.ask_macos(permission)?;
+            answers.asked.push(permission);
+        } else {
+            answers.skipped.push(permission.id);
+        }
+    }
+    Ok(answers)
+}
+
+enum SessionRestart {
+    NotNeeded,
+    NotRunning,
+    CouldNotStop,
+    Stopped(String),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum NewGrants {
+    NothingAsked,
+    Reading,
+    NotRunning,
+    CouldNotRestart,
+    NoReplacement,
+    NotConfirmed(Vec<&'static str>),
+}
+
+impl NewGrants {
+    fn report(&self) -> Option<String> {
+        const RESTART: &str = "Run bridge down, then bridge up.";
+        match self {
+            Self::NothingAsked | Self::Reading => None,
+            Self::NotRunning => Some(
+                "Apple Bridge is not running here, so nothing new is being read. New permissions start with bridge up.".to_owned(),
+            ),
+            Self::CouldNotRestart => Some(format!(
+                "The Helper could not be restarted, so new permissions are not being read yet. {RESTART}"
+            )),
+            Self::NoReplacement => Some(format!(
+                "The Helper did not come back, so nothing new is being read yet. {RESTART}"
+            )),
+            Self::NotConfirmed(titles) => Some(format!(
+                "Not confirmed: {}. If you allowed it and it stays this way, {}",
+                titles.join(", "),
+                RESTART.to_lowercase()
+            )),
+        }
+    }
+}
+
+async fn let_new_grants_settle(
+    backend: &Backend<'_>,
+    asked: &[&'static Permission],
+    limit: Duration,
+) -> Outcome<NewGrants> {
+    if asked.is_empty() {
+        return Ok(NewGrants::NothingAsked);
+    }
+    let previous = match backend.restart_session()? {
+        SessionRestart::NotNeeded => return Ok(NewGrants::Reading),
+        SessionRestart::NotRunning => return Ok(NewGrants::NotRunning),
+        SessionRestart::CouldNotStop => return Ok(NewGrants::CouldNotRestart),
+        SessionRestart::Stopped(pid) => pid,
+    };
+    let deadline = Instant::now() + limit;
+    loop {
+        let replaced = backend.session_replaced(&previous);
+        let mut waiting = Vec::new();
+        for permission in asked {
+            if backend.status(permission)? != "granted" {
+                waiting.push(permission.title);
+            }
+        }
+        if replaced && waiting.is_empty() {
+            return Ok(NewGrants::Reading);
+        }
+        if Instant::now() >= deadline {
+            return Ok(if replaced {
+                NewGrants::NotConfirmed(waiting)
+            } else {
+                NewGrants::NoReplacement
+            });
+        }
+        tokio::time::sleep(POLL.min(limit)).await;
+    }
+}
+
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
     println!("Mac permissions for Apple Bridge. You can skip any of them; the rest still work.");
@@ -309,18 +464,27 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         );
         return Ok(());
     }
-    let mut asked = false;
-    for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
-        if backend.status(permission)? != "granted" && !asked {
-            println!();
-            println!("Contacts, Calendar and Reminders: macOS asks you in a small window.");
-            if pause("  Press Enter to ask now, or type s to skip:", args.yes)? {
-                backend.ask_macos()?;
-            }
-            asked = true;
+    let answers = ask_each(&backend, |permission| {
+        println!();
+        println!(
+            "{}: {}. macOS asks you in a small window.",
+            permission.title, permission.why
+        );
+        let wanted = pause("  Press Enter to ask now, or type s to skip:", args.yes)?;
+        if !wanted {
+            println!("  Skipped. Other sources still work.");
         }
+        Ok(wanted)
+    })?;
+    let new_grants = let_new_grants_settle(&backend, &answers.asked, NEW_GRANT_SETTLES).await?;
+    if let Some(report) = new_grants.report() {
+        println!();
+        println!("{report}");
     }
-    for permission in LEVEL_ONE {
+    for permission in LEVEL_ONE
+        .iter()
+        .filter(|permission| !answers.skipped.contains(&permission.id))
+    {
         settings_step(&backend, permission, args.yes).await?;
     }
     println!();
@@ -333,6 +497,180 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_permission_is_asked_on_its_own_and_a_skip_asks_nothing() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("fixture.json");
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({
+                "statuses": {"contacts":"unknown","calendar":"unknown","reminders":"unknown"},
+                "grant_when_asked": ["contacts", "calendar", "reminders"],
+            }))?,
+        )?;
+        let backend = Backend::Fixture(path.clone());
+        let mut offered = Vec::new();
+        let answers = ask_each(&backend, |permission| {
+            offered.push(permission.id);
+            Ok(permission.id != "calendar")
+        })?;
+        assert_eq!(offered, ["contacts", "calendar", "reminders"]);
+        assert_eq!(answers.skipped, ["calendar"]);
+        assert_eq!(
+            answers.asked.iter().map(|p| p.id).collect::<Vec<_>>(),
+            ["contacts", "reminders"]
+        );
+        let fixture = Backend::fixture(&path)?;
+        assert_eq!(fixture.asked, ["contacts", "reminders"]);
+        assert_eq!(fixture.statuses["contacts"], "granted");
+        assert_eq!(fixture.statuses["calendar"], "unknown");
+        assert_eq!(fixture.statuses["reminders"], "granted");
+        Ok(())
+    }
+
+    fn wait_for_exit(child: &mut std::process::Child) -> Outcome<bool> {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline {
+            if child.try_wait()?.is_some() {
+                return Ok(true);
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        Ok(false)
+    }
+
+    fn running_as(app: &Path, home: &Path) -> Outcome<std::process::Child> {
+        let command = format!(
+            "{}/Contents/MacOS/AppleBridgeHelper session --socket s --secret-file f --home {} --gateway-pid 7",
+            app.display(),
+            home.join("helper").display()
+        );
+        let child = Command::new("/bin/bash")
+            .args(["-c", "exec -a \"$0\" sleep 30"])
+            .arg(command)
+            .spawn()?;
+        std::fs::create_dir_all(home.join("helper"))?;
+        std::fs::write(home.join("helper/helper.pid"), child.id().to_string())?;
+        std::thread::sleep(Duration::from_millis(200));
+        Ok(child)
+    }
+
+    #[test]
+    fn the_session_is_matched_by_its_exact_executable_and_home() {
+        let app = "/Apps/Apple Bridge.app";
+        let home = Path::new("/tmp/world");
+        let exact = "/Apps/Apple Bridge.app/Contents/MacOS/AppleBridgeHelper session --socket /tmp/world/run/peer.sock --secret-file /tmp/world/apple-secret --home /tmp/world/helper --gateway-pid 7";
+        assert!(is_session_command(exact, app, home));
+        assert!(is_session_command(exact, app, Path::new("/tmp/world/")));
+        for other in [
+            exact.replace("--home /tmp/world/helper", "--home /tmp/world2/helper"),
+            exact.replace("--home /tmp/world/helper", "--home /tmp/world/helper2"),
+            exact.replace("--home /tmp/world/helper", "--home /old/tmp/world/helper"),
+            exact.replace("/Apps/Apple Bridge.app", "/Other/Apple Bridge.app"),
+            exact.replace(" session ", " status "),
+            format!("/bin/sh {exact}"),
+        ] {
+            assert!(!is_session_command(&other, app, home), "{other}");
+        }
+        assert!(!is_session_command(exact, "", home));
+    }
+
+    #[test]
+    fn a_new_grant_restarts_only_this_homes_session_helper() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        let app = directory.path().join("Apple Bridge.app");
+        let home = directory.path().join("world");
+        let backend = Backend::Mac {
+            home: &home,
+            helper: app.display().to_string(),
+        };
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
+
+        let mut helper = running_as(&app, &home)?;
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::Stopped(_)
+        ));
+        assert!(wait_for_exit(&mut helper)?);
+
+        let collision = directory.path().join("world2");
+        let mut foreign = running_as(&app, &collision)?;
+        std::fs::write(
+            home.join("helper/helper.pid"),
+            std::fs::read(collision.join("helper/helper.pid"))?,
+        )?;
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
+        assert!(foreign.try_wait()?.is_none());
+        foreign.kill()?;
+        foreign.wait()?;
+
+        std::fs::write(home.join("helper/helper.pid"), "1; rm -rf /")?;
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::NotRunning
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn settling_only_claims_what_it_confirmed() -> Outcome {
+        let contacts: &'static Permission = &LEVEL_ONE[1];
+        let directory = tempfile::tempdir()?;
+        let app = directory.path().join("Apple Bridge.app");
+        let home = directory.path().join("world");
+        let backend = Backend::Mac {
+            home: &home,
+            helper: app.display().to_string(),
+        };
+        let quick = Duration::from_millis(50);
+        assert_eq!(
+            let_new_grants_settle(&backend, &[], quick).await?,
+            NewGrants::NothingAsked
+        );
+        assert_eq!(
+            let_new_grants_settle(&backend, &[contacts], quick).await?,
+            NewGrants::NotRunning
+        );
+
+        let mut helper = running_as(&app, &home)?;
+        assert_eq!(
+            let_new_grants_settle(&backend, &[contacts], quick).await?,
+            NewGrants::NoReplacement
+        );
+        assert!(wait_for_exit(&mut helper)?);
+
+        let mut first = running_as(&app, &home)?;
+        let stopped = first.id().to_string();
+        assert!(matches!(
+            backend.restart_session()?,
+            SessionRestart::Stopped(_)
+        ));
+        assert!(wait_for_exit(&mut first)?);
+        let mut replacement = running_as(&app, &home)?;
+        assert!(backend.session_replaced(&stopped));
+        assert!(!backend.session_replaced(&replacement.id().to_string()));
+        replacement.kill()?;
+        replacement.wait()?;
+
+        for outcome in [
+            NewGrants::NotRunning,
+            NewGrants::CouldNotRestart,
+            NewGrants::NoReplacement,
+            NewGrants::NotConfirmed(vec!["Contacts"]),
+        ] {
+            let report = outcome.report().unwrap_or_default();
+            assert!(report.contains("bridge up"), "{report}");
+        }
+        assert_eq!(NewGrants::Reading.report(), None);
+        Ok(())
+    }
 
     #[test]
     fn only_a_settings_only_permission_with_a_known_app_gets_the_add_hint() {

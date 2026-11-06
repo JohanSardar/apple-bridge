@@ -1,5 +1,7 @@
 import Foundation
 import MessagesSource
+import Contacts
+import EventKit
 import CoreLocation
 import AVFoundation
 import CoreGraphics
@@ -14,6 +16,8 @@ import Carbon
 public enum NewPermissions {
     public static let automation = ["automation_mail": "com.apple.mail", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
     public static let names = ["location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
+    public static let levelOne = ["contacts", "calendar", "reminders"]
+    public static let requestable = names + levelOne
 
     public static func status() async -> [String: String] {
         var result = Dictionary(uniqueKeysWithValues: names.map { ($0, "unknown") })
@@ -98,8 +102,46 @@ public enum NewPermissions {
         }
     }
 
+    public enum RequestOutcome: Sendable, Equatable { case finished, timedOut }
+    public static let requestDeadline: Duration = .seconds(150)
+
+    private final class FirstOutcome: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<RequestOutcome, Error>?
+        init(_ continuation: CheckedContinuation<RequestOutcome, Error>) { self.continuation = continuation }
+        func finish(_ result: Result<RequestOutcome, Error>) {
+            lock.lock()
+            let waiting = continuation
+            continuation = nil
+            lock.unlock()
+            waiting?.resume(with: result)
+        }
+    }
+
+    public static func request(_ name: String, deadline: Duration = requestDeadline, adapters: [String: RequestAdapter]? = nil) async throws -> RequestOutcome {
+        try await withCheckedThrowingContinuation { continuation in
+            let first = FirstOutcome(continuation)
+            Task { @MainActor in
+                do {
+                    try await requestNative(name, adapters: adapters)
+                    first.finish(.success(.finished))
+                } catch { first.finish(.failure(error)) }
+            }
+            Task.detached {
+                try? await Task.sleep(for: deadline)
+                first.finish(.success(.timedOut))
+            }
+        }
+    }
+
     public static func requestNative(_ name: String, adapters: [String: RequestAdapter]? = nil) async throws {
         switch name {
+        case "contacts":
+            try await call("contacts", adapters: adapters) { _ = try await CNContactStore().requestAccess(for: .contacts) }
+        case "calendar":
+            try await call("calendar", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToEvents() }
+        case "reminders":
+            try await call("reminders", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToReminders() }
         case "location":
             try await call("location", adapters: adapters) {
                 location = CLLocationManager()

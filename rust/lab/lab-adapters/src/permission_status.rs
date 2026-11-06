@@ -149,7 +149,7 @@ pub fn sim(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let states = states.unwrap_or_default();
     evidence.check(
         "helper_report",
-        states.len() == 12,
+        states.len() == 15,
         &format!("{} permission states", states.len()),
     );
     for (key, state) in &states {
