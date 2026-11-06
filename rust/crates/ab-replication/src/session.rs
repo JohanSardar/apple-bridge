@@ -1,4 +1,6 @@
-use crate::{Client, ConnectionState, Error, Live, ReplicaState, Writer, clock, command, raw};
+use crate::{
+    Client, ConnectionState, Error, FollowStatus, Live, ReplicaState, Writer, clock, command, raw,
+};
 use ab_blobs::Digest;
 use ab_trust::{
     Enrollment, Grant, Principal,
@@ -10,7 +12,10 @@ use futures_util::{
 };
 use std::time::Duration;
 use tokio::sync::mpsc;
-use tokio_tungstenite::{WebSocketStream, tungstenite::Message};
+use tokio_tungstenite::{
+    WebSocketStream,
+    tungstenite::{Message, protocol::frame::coding::CloseCode},
+};
 
 impl<S: ReplicaState> Client<S> {
     pub(super) async fn session<T>(
@@ -102,6 +107,11 @@ impl<S: ReplicaState> Client<S> {
                 continue;
             }
             let Message::Text(text) = message else {
+                if let Message::Close(Some(close)) = &message
+                    && close.code == CloseCode::Error
+                {
+                    return Err(Error::Refused(close.reason.to_string()));
+                }
                 if message.is_close() {
                     return Err(Error::Disconnected);
                 }
@@ -126,8 +136,7 @@ impl<S: ReplicaState> Client<S> {
                 if synced && !ready {
                     ready = true;
                     registration.session.ready();
-                    self.status
-                        .send_modify(|status| status.state = ConnectionState::Connected);
+                    self.status.send_modify(mark_connected);
                 }
                 continue;
             }
@@ -183,8 +192,7 @@ impl<S: ReplicaState> Client<S> {
                     {
                         ready = true;
                         registration.session.ready();
-                        self.status
-                            .send_modify(|status| status.state = ConnectionState::Connected);
+                        self.status.send_modify(mark_connected);
                     }
                 } else {
                     writer.send(ack).await?;
@@ -195,6 +203,10 @@ impl<S: ReplicaState> Client<S> {
             }
         }
     }
+}
+fn mark_connected(status: &mut FollowStatus) {
+    status.state = ConnectionState::Connected;
+    status.last_error.clear();
 }
 async fn write_messages<T>(
     sink: &mut SplitSink<WebSocketStream<T>, Message>,
@@ -618,6 +630,102 @@ mod tests {
             Arc::new(ab_trust::Authority::open(home)?),
             None,
         ))
+    }
+    #[derive(Debug)]
+    struct UnreadableGateway;
+    #[derive(Debug)]
+    struct NoSnapshot;
+    impl crate::server::FrozenSnapshot for NoSnapshot {
+        fn begin(&self) -> FeedFrame {
+            FeedFrame::default()
+        }
+        fn records(&self) -> &[Box<serde_json::value::RawValue>] {
+            &[]
+        }
+        fn cursor(&self) -> Cursor {
+            Cursor::default()
+        }
+        fn renew(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+    impl crate::server::GatewayState for UnreadableGateway {
+        type Snapshot = NoSnapshot;
+        type Changes = ();
+        fn head(&self) -> Result<Cursor, Error> {
+            Ok(Cursor {
+                epoch: "synthetic".into(),
+                ..Cursor::default()
+            })
+        }
+        fn retention_floor(&self) -> Result<u64, Error> {
+            Ok(0)
+        }
+        fn freeze_snapshot(
+            &mut self,
+            _: &ab_trust::Visibility,
+            _: u64,
+        ) -> Result<NoSnapshot, Error> {
+            Err(Error::Json(
+                serde_json::from_str::<u8>("\"synthetic unreadable row\"").unwrap_err(),
+            ))
+        }
+        fn changes(
+            &mut self,
+            _: &ab_trust::Visibility,
+            _: Cursor,
+            _: bool,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+        fn next_changes(&mut self, (): &mut ()) -> Result<Option<Batch>, Error> {
+            Ok(None)
+        }
+    }
+    #[tokio::test]
+    async fn a_gateway_that_cannot_serve_tells_the_replica_why()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let gateway_home = tempfile::tempdir()?;
+        let replica_home = tempfile::tempdir()?;
+        let authority = Arc::new(ab_trust::Authority::open(gateway_home.path())?);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+        let code = authority.pair(
+            &listener.local_addr()?.to_string(),
+            "",
+            vec![ab_trust::Grant::parse("system:read")?],
+            600,
+        )?;
+        let server = Arc::new(crate::server::Server {
+            delegations: Arc::new(crate::delegation::Delegations::new(authority.clone())),
+            uploads: None,
+            blobs: None,
+            state: Arc::new(Mutex::new(UnreadableGateway)),
+            authority,
+        });
+        let (stop, stopped) = tokio::sync::watch::channel(false);
+        let listening = tokio::spawn(server.listen(listener, stopped.clone()));
+        let client = client(replica_home.path())?;
+        client.authority.join(&code).await?;
+
+        let refused = client.connect().await.expect_err("the gateway cannot serve");
+        assert!(
+            matches!(&refused, Error::Refused(reason) if reason.contains("gateway")),
+            "{refused}"
+        );
+
+        let mut status = client.status();
+        let follow = client.follow(stopped);
+        let seen = status.wait_for(|status| status.last_error.contains("refused"));
+        tokio::select! {
+            result = follow => panic!("follow ended early: {result:?}"),
+            result = tokio::time::timeout(Duration::from_secs(10), seen) => {
+                let status = result??;
+                assert!(status.last_error.contains("could not read"), "{}", status.last_error);
+            }
+        }
+        stop.send(true)?;
+        listening.await??;
+        Ok(())
     }
     #[tokio::test]
     async fn snapshot_ack_requires_matching_id_and_successful_install()

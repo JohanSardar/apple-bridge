@@ -40,6 +40,8 @@ pub enum Error {
     Invalid,
     #[error("feed disconnected")]
     Disconnected,
+    #[error("the gateway refused the feed: {0}")]
+    Refused(String),
     #[error("state: {0}")]
     State(String),
     #[error(transparent)]
@@ -93,6 +95,7 @@ pub struct FollowStatus {
     pub resumes: u64,
     pub snapshot_pages: u64,
     pub last_heartbeat: String,
+    pub last_error: String,
 }
 #[derive(Debug)]
 pub(crate) struct Live {
@@ -236,6 +239,11 @@ impl<S: ReplicaState> Client<S> {
     pub fn status(&self) -> watch::Receiver<FollowStatus> {
         self.status.subscribe()
     }
+    fn report_failure(&self, error: &Error) {
+        eprintln!("replica feed: {error}");
+        self.status
+            .send_modify(|status| status.last_error = error.to_string());
+    }
     pub async fn follow(&self, mut stop: watch::Receiver<bool>) -> Result<(), Error> {
         loop {
             if *stop.borrow() {
@@ -243,7 +251,7 @@ impl<S: ReplicaState> Client<S> {
             }
             self.status
                 .send_modify(|s| s.state = ConnectionState::Connecting);
-            tokio::select! { _=stop.changed()=>return Ok(()), result=self.connect()=>{ if let Err(error) = result { eprintln!("replica feed: {error}"); } } }
+            tokio::select! { _=stop.changed()=>return Ok(()), result=self.connect()=>{ if let Err(error) = result { self.report_failure(&error); } } }
             self.status
                 .send_modify(|s| s.state = ConnectionState::Disconnected);
             tokio::select! { _=stop.changed()=>return Ok(()), ()=tokio::time::sleep(Duration::from_secs(1))=>{} }
@@ -333,7 +341,7 @@ impl<S: ReplicaState> Client<S> {
                 .await?;
                 self.consume(ws, e.clone()).await
             };
-            tokio::select! { _=stop.changed()=>return Ok(()), _=connection=>{} }
+            tokio::select! { _=stop.changed()=>return Ok(()), result=connection=>{ if let Err(error) = result { self.report_failure(&error); } } }
         }
     }
     pub async fn consume<T>(

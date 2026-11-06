@@ -18,7 +18,13 @@ use tokio::{
     io::{AsyncRead, AsyncWrite},
     sync::Mutex,
 };
-use tokio_tungstenite::{WebSocketStream, tungstenite::Message};
+use tokio_tungstenite::{
+    WebSocketStream,
+    tungstenite::{
+        Message,
+        protocol::{CloseFrame, frame::coding::CloseCode},
+    },
+};
 
 pub trait FrozenSnapshot: std::fmt::Debug + Send {
     fn begin(&self) -> FeedFrame;
@@ -119,6 +125,24 @@ async fn transmit<S: GatewayState, T: AsyncRead + AsyncWrite + Unpin>(
     })
     .await
     .map_err(|_| Error::Disconnected)?
+}
+
+fn refusal(error: &Error) -> Option<String> {
+    match error {
+        Error::Disconnected
+        | Error::Refused(_)
+        | Error::Io(_)
+        | Error::WebSocket(_)
+        | Error::Contract(ab_trust::domain::ErrorCode::Reset) => None,
+        Error::Invalid | Error::Contract(_) => Some(error.to_string()),
+        Error::Trust(_)
+        | Error::Blob(_)
+        | Error::Json(_)
+        | Error::State(_)
+        | Error::Storage(_) => {
+            Some("the gateway could not read its data; its log has the detail".into())
+        }
+    }
 }
 
 impl<S: GatewayState> Server<S> {
@@ -308,7 +332,18 @@ impl<S: GatewayState> Server<S> {
                 }
             }
         };
-        tokio::select! { result = session => result, result = invalidated => { result?; Err(Error::Disconnected) } }
+        let result = tokio::select! { result = session => result, result = invalidated => { result?; Err(Error::Disconnected) } };
+        if let Err(error) = &result
+            && let Some(reason) = refusal(error)
+        {
+            eprintln!("replica feed {}: {error}", principal.id);
+            let close = CloseFrame {
+                code: CloseCode::Error,
+                reason: reason.into(),
+            };
+            let _ = tokio::time::timeout(Duration::from_secs(2), socket.close(Some(close))).await;
+        }
+        result
     }
 
     #[allow(clippy::too_many_lines)]

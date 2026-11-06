@@ -430,7 +430,8 @@ async fn track_status(
                 "blobs": progress,
                 "snapshots": current.snapshots, "resumes": current.resumes,
                 "snapshot_pages": current.snapshot_pages,
-                "last_heartbeat": current.last_heartbeat
+                "last_heartbeat": current.last_heartbeat,
+                "last_error": current.last_error
             })).map_err(|_| Error::Invalid)?;
     }
     Ok::<(), Error>(())
