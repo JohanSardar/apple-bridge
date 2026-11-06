@@ -52,7 +52,7 @@ def code_facts(app):
         requirement = run("codesign", "-d", "-r-", path).stdout
         details = run("codesign", "-dvvv", path).stderr
         facts[name] = {
-            "requirement": next(line for line in requirement.splitlines() if line.startswith("designated")),
+            "requirement": next(line.removeprefix("# ") for line in requirement.splitlines() if line.removeprefix("# ").startswith("designated =>")),
             "cdhash": next(line for line in details.splitlines() if line.startswith("CDHash=")),
         }
     return facts
