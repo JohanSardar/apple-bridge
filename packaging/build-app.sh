@@ -30,13 +30,17 @@ session=${AB_SESSION_BINARY:-$("$root/packaging/dev/build-session.sh")}
 cp "$session" "$app/Contents/MacOS/ab-session"
 chmod 755 "$app/Contents/MacOS/ab-session"
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
-python3 - "$app" "$app_home" "$api" "$peer" <<'CONFIG'
+python3 - "$app" "$app_home" "$api" "$peer" "$root/rust/Cargo.toml" <<'CONFIG'
 import plistlib
+import re
 import sys
 from pathlib import Path
 app = Path(sys.argv[1])
 info = app / "Contents/Info.plist"
 values = plistlib.loads(info.read_bytes())
+version = re.search(r'\[workspace\.package\][^\[]*?^version = "([^"]+)"', Path(sys.argv[5]).read_text(), re.MULTILINE).group(1)
+values["CFBundleShortVersionString"] = version
+values["CFBundleVersion"] = version
 values["CFBundleName"] = "Apple Bridge"
 values["CFBundleDisplayName"] = "Apple Bridge"
 values["NSContactsUsageDescription"] = "Apple Bridge synchronizes your contacts."

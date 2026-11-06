@@ -1,15 +1,15 @@
 #!/bin/sh
-system=$(uname -s)
-machine=$(uname -m)
+system=$(/usr/bin/uname -s)
+machine=$(/usr/bin/uname -m)
 if [ "$system" != Darwin ] || [ "$machine" != arm64 ]; then
     echo "Apple Bridge needs a Mac with Apple silicon running macOS 26 or later. This is $system on $machine." >&2
     exit 1
 fi
-release=$(uname -r)
+release=$(/usr/bin/uname -r)
 if [ "${release%%.*}" -lt 25 ]; then
     echo "Apple Bridge needs macOS 26 or later. This Mac runs Darwin $release." >&2
     exit 1
 fi
-launcher=$(realpath "$0") || exit 1
-package=$(dirname "$(dirname "$launcher")")
+launcher=$(/bin/realpath "$0") || exit 1
+package=$(/usr/bin/dirname "$(/usr/bin/dirname "$launcher")")
 exec "$package/Apple Bridge.app/Contents/MacOS/bridge" "$@"

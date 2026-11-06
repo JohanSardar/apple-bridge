@@ -60,22 +60,14 @@ The tarball carries one signed `Apple Bridge.app` from `packaging/build-app.sh`:
 
 Signing happens locally because the Developer ID key stays in the release keychain, so a publish is run by hand and has no npm provenance. Users can check a package with `codesign -dv` on the installed app, which names the team.
 
-To publish, on the Mac that holds the release keychain, from a clean checkout of the release commit, with `name` set to the package name and `version` to the workspace version:
+To publish, on the Mac that holds the release keychain, from a clean checkout of the release commit, with `name` set in `packaging/npm/package.json`, the workspace version bumped, and `RELEASE_KEYCHAIN`, `ASC_KEY_PATH`, `ASC_KEY_ID` and `ASC_ISSUER_ID` exported:
 
 ```sh
-security unlock-keychain -p "$(cat ~/.config/apple-bridge-release/keychain.password)" "$RELEASE_KEYCHAIN"
-identity=$(security find-identity -v -p codesigning "$RELEASE_KEYCHAIN" | awk '/Developer ID Application/{print $2; exit}')
-out=dist/npm-$version
-APPLE_BRIDGE_SIGNING_GUI=1 packaging/build-app.sh --identity "$identity" "$out/Apple Bridge.app"
-ditto -c -k --keepParent "$out/Apple Bridge.app" "$out/notary.zip"
-xcrun notarytool submit "$out/notary.zip" --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" --wait --timeout 20m
-xcrun stapler staple "$out/Apple Bridge.app"
-python3 packaging/npm/build.py --app "$out/Apple Bridge.app" --identity "$identity" --output "$out/package"
-python3 packaging/npm/check.py --tarball "$out/package/$name-$version.tgz" --app "$out/Apple Bridge.app" --identity "$identity" --require-notarized
-security lock-keychain "$RELEASE_KEYCHAIN"
 npm login
-npm publish "$out/package/$name-$version.tgz" --access public
+packaging/npm/publish.sh                # or --no-publish to stop after the checks
 ```
+
+The script stops at the first failure, always builds in a new `dist/npm-*` folder, locks the keychain on every exit, and publishes only the tarball it just checked.
 
 `build.py` refuses an app that is not Developer ID signed, stapled and accepted by Gatekeeper. With `--proof` it accepts any signature, and keeps `"private": true` so npm refuses to publish the result. `check.py` installs into throwaway folders and runs `bridge` with a throwaway HOME and data folder. A stand-in replaces `open`, so it never launches the app or touches a permission.
 
