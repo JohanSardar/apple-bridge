@@ -19,7 +19,7 @@ pub(crate) async fn start(
     if config.peer_address.is_empty() {
         config.peer_address = "127.0.0.1:7443".into();
     }
-    let _lock = HomeLock::acquire(&config.home)?;
+    let ownership = Arc::new(HomeLock::acquire(&config.home)?);
     let storage = Storage::open(&config)?;
     let Storage {
         state,
@@ -140,7 +140,13 @@ pub(crate) async fn start(
     running.save(&config.home)?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
-    tasks.spawn(crate::gateway_lifetime::run(running, receiver.clone()));
+    if let Some(log) = crate::gateway_lifetime::Log::inherited(&config.home)? {
+        tasks.spawn(crate::gateway_lifetime::run(
+            log,
+            receiver.clone(),
+            ownership.clone(),
+        ));
+    }
     let connector_listener = crate::connector::bind(&config.home)?;
     tasks.spawn(crate::connector::serve(
         connector_listener,

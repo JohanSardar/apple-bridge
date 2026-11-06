@@ -25,7 +25,7 @@ Your Mac permissions belong to the signing identity and app identifier, and both
 
 ## Uninstalling
 
-Stop Apple Bridge and disconnect your agents first. Removing the package removes the commands that stop it. New gateways stop themselves after their executable has been absent for one minute; an ordinary package replacement that restores it within that time does not stop them. Older gateways do not have this safeguard:
+Run `bridge down` before uninstalling, and disconnect your agents. Removing the package removes the commands that stop it. The gateway does not stop automatically when its installation is moved, replaced or deleted:
 
 ```sh
 bridge unlink claude        # and: bridge unlink codex, for the agents you connected
@@ -44,7 +44,7 @@ These stay on your Mac, in case you install again or also use the app:
 - Any cached files, in `~/Library/Caches/AppleBridge`. You can delete this folder.
 - Mac permissions, listed in System Settings under Privacy & Security. Turn them off there.
 
-The background gateway checks `gateway.log` each second. Above 8 MiB it keeps the newest 4 MiB in the same file, so existing writers keep logging. This bounds retained logs rather than preserving an unlimited history; a burst can briefly exceed the threshold.
+A gateway started by `bridge up` checks its own `gateway.log` each second. Above 8 MiB it rotates the file to `gateway.log.1`, replacing the previous archive, and redirects its stdout and stderr to a new log. Nothing truncates an active writer. One archive is retained rather than unlimited history; a burst can exceed the threshold until the next check. Foreground gateways keep the logging destination chosen by their caller.
 
 ## The app
 

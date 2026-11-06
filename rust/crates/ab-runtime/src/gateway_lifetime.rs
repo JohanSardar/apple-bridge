@@ -1,27 +1,25 @@
-use crate::Error;
+use crate::{Error, HomeLock};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{File, OpenOptions},
-    io::{Read, Seek, SeekFrom, Write},
-    os::unix::fs::{MetadataExt, OpenOptionsExt},
+    os::{
+        fd::AsFd,
+        unix::fs::{MetadataExt, OpenOptionsExt},
+    },
     path::{Path, PathBuf},
-    time::{Duration, Instant},
+    sync::Arc,
+    time::Duration,
 };
 
 const LOG_LIMIT: u64 = 8 * 1024 * 1024;
-const LOG_KEEP: u64 = LOG_LIMIT / 2;
 const POLL: Duration = Duration::from_secs(1);
-const REMOVAL_GRACE: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Running {
     pub version: String,
-    executable: PathBuf,
     #[serde(default)]
     build: String,
-    #[serde(skip)]
-    file: Option<File>,
 }
 
 fn build_identity(mut file: &File) -> std::io::Result<String> {
@@ -36,16 +34,13 @@ impl Running {
     }
 
     fn open(executable: &Path) -> Result<Self, Error> {
-        let file = File::open(executable)?;
         Ok(Self {
             version: env!("CARGO_PKG_VERSION").into(),
-            executable: executable.to_owned(),
-            build: build_identity(&file)?,
-            file: Some(file),
+            build: build_identity(&File::open(executable)?)?,
         })
     }
 
-    pub(crate) fn matches(&self, executable: &Path) -> bool {
+    fn matches(&self, executable: &Path) -> bool {
         File::open(executable)
             .and_then(|file| build_identity(&file))
             .is_ok_and(|build| self.build == build)
@@ -58,16 +53,6 @@ impl Running {
         )
         .map_err(|_| Error::Invalid)
     }
-
-    fn removed(&self) -> bool {
-        self.file
-            .as_ref()
-            .is_some_and(|file| file.metadata().is_ok_and(|metadata| metadata.nlink() == 0))
-            && self
-                .executable
-                .metadata()
-                .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound)
-    }
 }
 
 pub(crate) fn older(home: &Path) -> Option<String> {
@@ -77,36 +62,7 @@ pub(crate) fn older(home: &Path) -> Option<String> {
     (!running.matches(&executable)).then_some(running.version)
 }
 
-fn bound_log(path: &Path) -> Result<(), Error> {
-    let mut file = match OpenOptions::new()
-        .read(true)
-        .write(true)
-        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
-        .open(path)
-    {
-        Ok(file) => file,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(error.into()),
-    };
-    let metadata = file.metadata()?;
-    if !metadata.is_file() {
-        return Err(Error::Invalid);
-    }
-    let length = metadata.len();
-    if length <= LOG_LIMIT {
-        return Ok(());
-    }
-    file.seek(SeekFrom::Start(length - LOG_KEEP))?;
-    let mut recent = Vec::new();
-    (&mut file).take(LOG_KEEP).read_to_end(&mut recent)?;
-    file.set_len(0)?;
-    file.seek(SeekFrom::Start(0))?;
-    file.write_all(&recent)?;
-    Ok(())
-}
-
-pub(crate) fn open_log(path: &Path) -> Result<File, Error> {
-    bound_log(path)?;
+fn append_log(path: &Path) -> Result<File, Error> {
     let file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -119,23 +75,71 @@ pub(crate) fn open_log(path: &Path) -> Result<File, Error> {
     Ok(file)
 }
 
+pub(crate) fn open_log(path: &Path) -> Result<File, Error> {
+    let _ownership = HomeLock::acquire(path.parent().ok_or(Error::Invalid)?)?;
+    append_log(path)
+}
+
+fn same_file(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bool {
+    left.is_file() && right.is_file() && left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+#[derive(Debug)]
+pub(crate) struct Log {
+    path: PathBuf,
+    file: File,
+}
+
+impl Log {
+    pub(crate) fn inherited(home: &Path) -> Result<Option<Self>, Error> {
+        let file = File::from(std::io::stderr().as_fd().try_clone_to_owned()?);
+        let metadata = file.metadata()?;
+        if !metadata.is_file() {
+            return Ok(None);
+        }
+        let stdout = File::from(std::io::stdout().as_fd().try_clone_to_owned()?);
+        let path = home.join("gateway.log");
+        let on_disk = match std::fs::symlink_metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        Ok(
+            (same_file(&metadata, &on_disk) && same_file(&metadata, &stdout.metadata()?))
+                .then_some(Self { path, file }),
+        )
+    }
+
+    fn rotate(&mut self) -> Result<(), Error> {
+        let metadata = self.file.metadata()?;
+        if metadata.len() <= LOG_LIMIT {
+            return Ok(());
+        }
+        if !same_file(&metadata, &std::fs::symlink_metadata(&self.path)?) {
+            return Err(Error::Invalid);
+        }
+        std::fs::rename(&self.path, self.path.with_extension("log.1"))?;
+        let replacement = append_log(&self.path)?;
+        ab_sys::redirect_stdout(&replacement)?;
+        ab_sys::redirect_stderr(&replacement)?;
+        self.file = replacement;
+        Ok(())
+    }
+}
+
 pub(crate) async fn run(
-    running: Running,
+    mut log: Log,
     mut stop: tokio::sync::watch::Receiver<bool>,
+    _ownership: Arc<HomeLock>,
 ) -> Result<(), Error> {
     let mut tick = tokio::time::interval(POLL);
-    let mut missing_since = None;
     loop {
         tokio::select! {
             _ = stop.changed() => return Ok(()),
             _ = tick.tick() => {
-                if running.removed() {
-                    let since = missing_since.get_or_insert_with(Instant::now);
-                    if since.elapsed() >= REMOVAL_GRACE {
-                        eprintln!("Apple Bridge was removed; stopping the gateway.");
-                        return Ok(());
-                    }
-                } else { missing_since = None; }
+                if let Err(error) = log.rotate() {
+                    eprintln!("Could not rotate gateway.log: {error}");
+                }
             }
         }
     }
@@ -144,23 +148,23 @@ pub(crate) async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
-    fn log_trimming_refuses_symlinks() -> Result<(), Box<dyn std::error::Error>> {
+    fn log_open_refuses_symlinks() -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
         let target = home.path().join("unrelated");
         let path = home.path().join("gateway.log");
         let bytes = vec![b'x'; usize::try_from(LOG_LIMIT + 1)?];
         std::fs::write(&target, &bytes)?;
         std::os::unix::fs::symlink(&target, &path)?;
-        assert!(bound_log(&path).is_err());
         assert!(open_log(&path).is_err());
         assert_eq!(std::fs::read(target)?, bytes);
         Ok(())
     }
 
     #[test]
-    fn log_trimming_refuses_non_regular_descriptors() -> Result<(), Box<dyn std::error::Error>> {
+    fn log_open_refuses_non_regular_descriptors() -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
         let path = home.path().join("gateway.log");
         assert!(
@@ -169,46 +173,148 @@ mod tests {
                 .status()?
                 .success()
         );
-        assert!(bound_log(&path).is_err());
         assert!(open_log(&path).is_err());
         Ok(())
     }
 
-    #[tokio::test]
-    async fn lifetime_polling_preserves_append_writes() -> Result<(), Box<dyn std::error::Error>> {
+    #[test]
+    fn delayed_startup_cannot_trim_an_owned_homes_log() -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
         let path = home.path().join("gateway.log");
-        let mut writer = open_log(&path)?;
+        let ready = Arc::new(std::sync::Barrier::new(2));
+        let delayed = {
+            let path = path.clone();
+            let ready = ready.clone();
+            std::thread::spawn(move || {
+                ready.wait();
+                open_log(&path)
+            })
+        };
+        let _owner = HomeLock::acquire(home.path())?;
+        let mut writer = OpenOptions::new().create(true).append(true).open(&path)?;
         let mut expected = vec![b'x'; usize::try_from(LOG_LIMIT + 1)?];
         writer.write_all(&expected)?;
-        let running = Running::current()?;
-        let (stop, receiver) = tokio::sync::watch::channel(false);
-        let task = tokio::spawn(run(running, receiver));
-        for _ in 0..3 {
-            writer.write_all(b"appended while polling\n")?;
-            expected.extend_from_slice(b"appended while polling\n");
-            tokio::time::sleep(POLL).await;
-        }
-        stop.send(true)?;
-        task.await??;
-        assert_eq!(std::fs::metadata(&path)?.len(), expected.len() as u64);
+        ready.wait();
+        let result = delayed.join().map_err(|_| Error::Invalid)?;
+        assert!(matches!(result, Err(Error::Locked)));
+        writer.write_all(b"owner still logging\n")?;
+        expected.extend_from_slice(b"owner still logging\n");
         assert_eq!(std::fs::read(path)?, expected);
         Ok(())
     }
 
     #[test]
-    fn moving_an_install_is_not_removal() -> Result<(), Box<dyn std::error::Error>> {
+    fn startup_log_releases_ownership_and_never_trims() -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
-        let install = home.path().join("install");
-        std::fs::create_dir(&install)?;
-        let executable = install.join("bridge");
-        std::fs::write(&executable, b"build")?;
-        let running = Running::open(&executable)?;
-        let moved = home.path().join("moved");
-        std::fs::rename(install, &moved)?;
-        assert!(!running.removed());
-        std::fs::remove_file(moved.join("bridge"))?;
-        assert!(running.removed());
+        let path = home.path().join("gateway.log");
+        let bytes = vec![b'x'; usize::try_from(LOG_LIMIT + 1)?];
+        std::fs::write(&path, &bytes)?;
+        let log = open_log(&path)?;
+        let _gateway_ownership = HomeLock::acquire(home.path())?;
+        assert!(log.metadata()?.is_file());
+        assert_eq!(std::fs::read(path)?, bytes);
+        Ok(())
+    }
+
+    #[test]
+    fn running_rotation_preserves_concurrent_stdout_and_stderr()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let path = home.path().join("gateway.log");
+        let mut log = open_log(&path)?;
+        let mut previous = vec![b'x'; usize::try_from(LOG_LIMIT + 1)?];
+        previous.extend_from_slice(b"\nbefore rotation\n");
+        log.write_all(&previous)?;
+        let output = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "gateway_lifetime::tests::rotation_fixture",
+                "--nocapture",
+            ])
+            .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
+            .stdout(log.try_clone()?)
+            .stderr(log)
+            .status()?;
+        assert!(output.success());
+        let archive = std::fs::read(home.path().join("gateway.log.1"))?;
+        let current = std::fs::read(&path)?;
+        assert!(archive.starts_with(&previous));
+        assert!(current.len() < usize::try_from(LOG_LIMIT)?);
+        let all = [archive, current].concat();
+        let text = String::from_utf8(all)?;
+        for number in 0..100 {
+            assert_eq!(
+                text.matches(&format!("stdout fixture {number:03}\n"))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                text.matches(&format!("stderr fixture {number:03}\n"))
+                    .count(),
+                1
+            );
+        }
+        assert!(text.contains("after rotation\n"));
+        Ok(())
+    }
+
+    #[test]
+    fn repeated_rotation_retains_only_one_archive() -> Result<(), Box<dyn std::error::Error>> {
+        let home = tempfile::tempdir()?;
+        let path = home.path().join("gateway.log");
+        let log = open_log(&path)?;
+        std::fs::write(&path, vec![b'x'; usize::try_from(LOG_LIMIT + 1)?])?;
+        let output = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "gateway_lifetime::tests::rotation_fixture",
+                "--nocapture",
+            ])
+            .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
+            .env("APPLE_BRIDGE_LOG_ROTATION_TWICE", "1")
+            .stdout(log.try_clone()?)
+            .stderr(log)
+            .status()?;
+        assert!(output.success());
+        let archive = std::fs::read(home.path().join("gateway.log.1"))?;
+        assert!(
+            archive
+                .windows(b"second generation".len())
+                .any(|bytes| bytes == b"second generation")
+        );
+        assert!(archive.len() < usize::try_from(LOG_LIMIT * 2)?);
+        assert!(path.metadata()?.len() < LOG_LIMIT);
+        assert!(!home.path().join("gateway.log.2").exists());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rotation_fixture() -> Result<(), Box<dyn std::error::Error>> {
+        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
+            return Ok(());
+        };
+        let home = PathBuf::from(home);
+        let ownership = Arc::new(HomeLock::acquire(&home)?);
+        let log = Log::inherited(&home)?.ok_or(Error::Invalid)?;
+        let (stop, receiver) = tokio::sync::watch::channel(false);
+        let task = tokio::spawn(run(log, receiver, ownership));
+        let writer = std::thread::spawn(|| {
+            for number in 0..100 {
+                println!("stdout fixture {number:03}");
+                eprintln!("stderr fixture {number:03}");
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        });
+        tokio::time::sleep(POLL * 2).await;
+        writer.join().map_err(|_| Error::Invalid)?;
+        if std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_TWICE").is_some() {
+            println!("second generation");
+            std::io::stdout().write_all(&vec![b'y'; usize::try_from(LOG_LIMIT + 1)?])?;
+            tokio::time::sleep(POLL * 2).await;
+        }
+        stop.send(true)?;
+        task.await??;
+        eprintln!("after rotation");
         Ok(())
     }
 
@@ -253,53 +359,6 @@ mod tests {
             serde_json::to_vec(&legacy)?,
         )?;
         assert_eq!(older(home.path()).as_deref(), Some("fixture"));
-        Ok(())
-    }
-
-    #[test]
-    fn replacement_is_not_removal_and_has_a_different_identity()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let home = tempfile::tempdir()?;
-        let executable = home.path().join("bridge");
-        std::fs::write(&executable, b"old")?;
-        let running = Running::open(&executable)?;
-        assert!(running.matches(&executable));
-        let replacement = home.path().join("update");
-        std::fs::write(&replacement, b"new")?;
-        std::fs::rename(replacement, &executable)?;
-        assert_eq!(
-            running
-                .file
-                .as_ref()
-                .ok_or(Error::Invalid)?
-                .metadata()?
-                .nlink(),
-            0
-        );
-        assert!(!running.matches(&executable));
-        assert!(!running.removed());
-        std::fs::remove_file(executable)?;
-        assert!(running.removed());
-        Ok(())
-    }
-
-    #[test]
-    fn the_log_is_bounded_before_opening_the_append_writer()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let home = tempfile::tempdir()?;
-        let path = home.path().join("gateway.log");
-        let mut previous = vec![b'x'; usize::try_from(LOG_LIMIT)?];
-        previous.extend_from_slice(b"recent\n");
-        std::fs::write(&path, &previous)?;
-        let mut writer = open_log(&path)?;
-        assert_eq!(writer.metadata()?.len(), LOG_KEEP);
-        assert_eq!(
-            std::fs::read(&path)?,
-            previous[previous.len() - usize::try_from(LOG_KEEP)?..]
-        );
-        writer.write_all(b"still logging\n")?;
-        let bytes = std::fs::read(path)?;
-        assert!(bytes.ends_with(b"recent\nstill logging\n"));
         Ok(())
     }
 }

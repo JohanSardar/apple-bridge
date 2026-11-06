@@ -36,7 +36,10 @@ pub struct Cli {
 pub enum Command {
     #[command(about = "Start Apple Bridge on this Mac, for local agents. Asks nothing")]
     Up(UpArgs),
-    #[command(about = "Stop a gateway that `bridge up` started")]
+    #[command(
+        about = "Stop a gateway that `bridge up` started",
+        after_help = "Run bridge down before updating or uninstalling. Moving or deleting the installation does not stop a running gateway."
+    )]
     Down,
     #[command(about = "Connect Claude Code or Codex to this Mac's local MCP address")]
     Link(LinkArgs),

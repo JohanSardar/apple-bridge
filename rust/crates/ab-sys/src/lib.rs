@@ -54,6 +54,16 @@ pub fn inherited_unix_stream(fd: i32) -> io::Result<UnixStream> {
 }
 
 #[allow(unsafe_code)]
+pub fn redirect_stdout(file: &std::fs::File) -> io::Result<()> {
+    use std::os::fd::AsRawFd;
+    // SAFETY: dup2 duplicates a live borrowed descriptor onto descriptor 1 without dereferencing memory.
+    if unsafe { libc::dup2(file.as_raw_fd(), 1) } < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+#[allow(unsafe_code)]
 pub fn redirect_stderr(file: &std::fs::File) -> io::Result<()> {
     use std::os::fd::AsRawFd;
     // SAFETY: dup2 duplicates a live borrowed descriptor onto descriptor 2 without dereferencing memory.
