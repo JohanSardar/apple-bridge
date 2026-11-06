@@ -172,7 +172,7 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     let marker = home.join("run/gateway-build.json");
     let original = std::fs::read(&marker)?;
     let mut stale: serde_json::Value = serde_json::from_slice(&original)?;
-    stale["inode"] = serde_json::json!(0);
+    stale["build"] = serde_json::json!("different-build-fixture");
     stale["version"] = serde_json::json!("older-fixture");
     std::fs::write(&marker, serde_json::to_vec(&stale)?)?;
     let updated = run(&home, &["up"])?;

@@ -6,7 +6,7 @@ use std::{
     io::{ErrorKind, Read, Seek, SeekFrom},
     net::{SocketAddr, TcpListener},
     os::unix::{
-        fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt},
+        fs::{DirBuilderExt, PermissionsExt},
         process::CommandExt,
     },
     path::{Path, PathBuf},
@@ -178,11 +178,7 @@ struct Launch<'a> {
 
 fn spawn_gateway(launch: &Launch<'_>) -> Outcome<std::process::Child> {
     let executable = std::env::current_exe()?;
-    let log = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .mode(0o600)
-        .open(log_file(launch.home))?;
+    let log = crate::gateway_lifetime::open_log(&log_file(launch.home))?;
     let mut command = Command::new("/usr/bin/nohup");
     command
         .arg(executable)

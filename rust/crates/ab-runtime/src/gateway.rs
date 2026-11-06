@@ -140,11 +140,7 @@ pub(crate) async fn start(
     running.save(&config.home)?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
-    tasks.spawn(crate::gateway_lifetime::run(
-        config.home.clone(),
-        running,
-        receiver.clone(),
-    ));
+    tasks.spawn(crate::gateway_lifetime::run(running, receiver.clone()));
     let connector_listener = crate::connector::bind(&config.home)?;
     tasks.spawn(crate::connector::serve(
         connector_listener,

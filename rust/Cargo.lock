@@ -323,6 +323,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "jiff",
+ "libc",
  "qrcode",
  "rand 0.8.8",
  "reqwest",
