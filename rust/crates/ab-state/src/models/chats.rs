@@ -196,8 +196,8 @@ fn summary(db: &Connection, visibility: &Visibility, record: &Record) -> Result<
             )?;
             if !media.is_empty() {
                 let mut kinds = Vec::new();
-                for attachments in &media {
-                    let k = kind(&data(attachments)?);
+                for attachment in &media {
+                    let k = kind(&data(attachment)?);
                     if !kinds.contains(&k) {
                         kinds.push(k);
                     }

@@ -201,19 +201,20 @@ impl LocalGateway {
             }
         }
         if self.message_parts(&mut record, &mut frame)? {
-            let failed = record.parts.iter().any(|principal| {
+            let failed = record.parts.iter().any(|part| {
                 matches!(
-                    principal.disposition.as_str(),
+                    part.disposition.as_str(),
                     "delivery_failed" | "failed_no_effect"
                 )
             });
             let delivered = record
                 .parts
                 .iter()
-                .all(|principal| principal.disposition == "delivered");
-            let observed = record.parts.iter().all(|principal| {
-                matches!(principal.disposition.as_str(), "observed" | "delivered")
-            });
+                .all(|part| part.disposition == "delivered");
+            let observed = record
+                .parts
+                .iter()
+                .all(|part| matches!(part.disposition.as_str(), "observed" | "delivered"));
             (state, disposition) = if failed {
                 (State::DeliveryFailed, Disposition::DeliveryFailed)
             } else if delivered {

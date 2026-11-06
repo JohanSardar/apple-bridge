@@ -54,29 +54,25 @@ impl LocalGateway {
             .and_then(|value| serde_json::from_str(value.get()).ok())
             .unwrap_or(Value::Null);
         let mut proofs = BTreeMap::new();
-        for principal in previous["parts"].as_array().into_iter().flatten() {
-            if let Some(index) = principal["index"].as_u64() {
-                proofs.insert(index, principal.clone());
+        for part in previous["parts"].as_array().into_iter().flatten() {
+            if let Some(index) = part["index"].as_u64() {
+                proofs.insert(index, part.clone());
             }
         }
         let mut seen = std::collections::BTreeSet::new();
         let mut problems = serde_json::Map::new();
         let mut commit = record.commit_seq;
-        for principal in proof["parts"].as_array().into_iter().flatten() {
-            let Some(index) = principal["index"]
-                .as_u64()
-                .and_then(|i| usize::try_from(i).ok())
-            else {
+        for part in proof["parts"].as_array().into_iter().flatten() {
+            let Some(index) = part["index"].as_u64().and_then(|i| usize::try_from(i).ok()) else {
                 return Ok(false);
             };
-            if index >= parts.len() || !seen.insert(index) || principal["kind"] != parts[index].kind
-            {
+            if index >= parts.len() || !seen.insert(index) || part["kind"] != parts[index].kind {
                 return Ok(false);
             }
             let prior = parts[index].clone();
             let mut next = prior.clone();
             next.record_id.clear();
-            next.disposition = match principal["disposition"].as_str().unwrap_or_default() {
+            next.disposition = match part["disposition"].as_str().unwrap_or_default() {
                 "delivery_failed" => "delivery_failed",
                 "failed_no_effect" | "not_dispatched" | "rejected_before_dispatch" => {
                     "failed_no_effect"
@@ -85,13 +81,13 @@ impl LocalGateway {
             }
             .into();
             let mut bound = false;
-            let mut candidate = principal.clone();
+            let mut candidate = part.clone();
             candidate["fingerprint"] = proof["fingerprint"].clone();
             candidate["capture_checkpoint"] = proof["capture_checkpoint"].clone();
             if proof["ambiguous"] != true
                 && proof["candidate_count"].as_u64().unwrap_or(0) <= 1
                 && matches!(
-                    principal["disposition"].as_str(),
+                    part["disposition"].as_str(),
                     Some("locally_observed" | "delivered" | "delivery_failed")
                 )
             {
@@ -101,13 +97,10 @@ impl LocalGateway {
                 };
                 if let Some((cursor, key)) = self.bound(record, &part_frame, "messages.message") {
                     bound = true;
-                    next.disposition = if principal["disposition"] == "locally_observed" {
+                    next.disposition = if part["disposition"] == "locally_observed" {
                         "observed".into()
                     } else {
-                        principal["disposition"]
-                            .as_str()
-                            .ok_or(Code::Corrupt)?
-                            .into()
+                        part["disposition"].as_str().ok_or(Code::Corrupt)?.into()
                     };
                     match self
                         .state
@@ -130,7 +123,7 @@ impl LocalGateway {
                 old["native_key"]
                     .as_str()
                     .is_some_and(|value| !value.is_empty())
-                    && old["native_key"] == principal["native_key"]
+                    && old["native_key"] == part["native_key"]
             });
             let bound_failure = prior.disposition == "observed"
                 && next.disposition == "delivery_failed"
@@ -149,10 +142,10 @@ impl LocalGateway {
                     old["native_key"]
                         .as_str()
                         .is_some_and(|value| !value.is_empty())
-                        && principal["native_key"]
+                        && part["native_key"]
                             .as_str()
                             .is_some_and(|value| !value.is_empty())
-                        && old["native_key"] != principal["native_key"]
+                        && old["native_key"] != part["native_key"]
                 })
             {
                 continue;
@@ -167,7 +160,7 @@ impl LocalGateway {
                 continue;
             }
             parts[index] = next;
-            proofs.insert(index as u64, principal.clone());
+            proofs.insert(index as u64, part.clone());
         }
         proof["parts"] = Value::Array(proofs.into_values().collect());
         if !problems.is_empty() {
@@ -184,10 +177,9 @@ pub(super) fn resolvable(record: &CommandRecord) -> bool {
         || record.source == "messages"
             && (record.state == State::Observed
                 || record.state == State::DeliveryFailed
-                    && record.parts.iter().any(|principal| {
-                        principal.disposition == "indeterminate"
-                            || principal.disposition == "observed"
-                            || principal.disposition == "delivery_failed"
-                                && principal.record_id.is_empty()
+                    && record.parts.iter().any(|part| {
+                        part.disposition == "indeterminate"
+                            || part.disposition == "observed"
+                            || part.disposition == "delivery_failed" && part.record_id.is_empty()
                     }))
 }
