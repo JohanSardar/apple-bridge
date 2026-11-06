@@ -22,18 +22,34 @@ pub fn status(home: &Path) -> Result<Value, Error> {
         .map_err(|_| Error::Invalid)?;
     Ok(json!({"role": config.role, "cursor": serde_json::from_str::<Value>(&raw)?}))
 }
-fn private(path: &Path) -> Result<bool, Error> {
+fn empty_keychain_lock(home: &Path, path: &Path, meta: &fs::Metadata) -> bool {
+    meta.is_file()
+        && meta.len() == 0
+        && meta.permissions().mode() & 0o222 == 0
+        && path.parent() == Some(home)
+        && path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with(".fl"))
+}
+fn private_below(home: &Path, path: &Path) -> Result<bool, Error> {
     let meta = fs::symlink_metadata(path)?;
     if meta.file_type().is_symlink() {
         return Ok(false);
     }
+    if empty_keychain_lock(home, path, &meta) {
+        return Ok(true);
+    }
     let mut valid = meta.permissions().mode() & 0o777 == if meta.is_dir() { 0o700 } else { 0o600 };
     if meta.is_dir() {
         for entry in fs::read_dir(path)? {
-            valid &= private(&entry?.path())?;
+            valid &= private_below(home, &entry?.path())?;
         }
     }
     Ok(valid)
+}
+fn private(home: &Path) -> Result<bool, Error> {
+    private_below(home, home)
 }
 pub fn doctor(home: &Path) -> Result<Value, Error> {
     let store = ab_trust::backend_name(&ab_trust::StoreEnvironment::current());
@@ -386,6 +402,62 @@ fn clock(home: &Path, result: &mut Value) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn home_with(name: &str, bytes: &[u8], mode: u32) -> Result<tempfile::TempDir, Error> {
+        let home = tempfile::tempdir()?;
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+        let path = home.path().join(name);
+        fs::write(&path, bytes)?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(mode))?;
+        Ok(home)
+    }
+    #[test]
+    fn the_keychain_lock_macos_makes_does_not_fail_the_private_check() -> Result<(), Error> {
+        assert!(private(home_with(".fl9D511DB2", b"", 0o444)?.path())?);
+        Ok(())
+    }
+    #[test]
+    fn only_an_empty_unwritable_lock_is_excused() -> Result<(), Error> {
+        for (name, bytes, mode) in [
+            (".fl9D511DB2", b"secret".as_slice(), 0o444),
+            (".fl9D511DB2", b"".as_slice(), 0o666),
+            (".fl-export", b"".as_slice(), 0o644),
+            (".fl-export", b"".as_slice(), 0o744),
+            ("other", b"".as_slice(), 0o444),
+            ("Apple Bridge.keychain-db", b"data".as_slice(), 0o644),
+        ] {
+            assert!(
+                !private(home_with(name, bytes, mode)?.path())?,
+                "{name} {mode:o}"
+            );
+        }
+        Ok(())
+    }
+    #[test]
+    fn a_lock_name_below_the_data_folder_is_not_excused() -> Result<(), Error> {
+        let home = home_with("runtime.json", b"", 0o600)?;
+        let folder = home.path().join("helper");
+        fs::create_dir(&folder)?;
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+        assert!(private(home.path())?);
+        let nested = folder.join(".fl9D511DB2");
+        fs::write(&nested, b"")?;
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o444))?;
+        assert!(!private(home.path())?);
+        Ok(())
+    }
+    #[test]
+    fn a_folder_with_a_lock_name_is_not_excused() -> Result<(), Error> {
+        let home = home_with("runtime.json", b"", 0o600)?;
+        let folder = home.path().join(".fl9D511DB2");
+        fs::create_dir(&folder)?;
+        for mode in [0o444, 0o555, 0o755] {
+            fs::set_permissions(&folder, fs::Permissions::from_mode(mode))?;
+            let result = private(home.path());
+            fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+            assert!(!result?, "{mode:o}");
+        }
+        Ok(())
+    }
     #[test]
     fn integrity_check_is_bounded_and_reports_incomplete() -> Result<(), Box<dyn std::error::Error>>
     {

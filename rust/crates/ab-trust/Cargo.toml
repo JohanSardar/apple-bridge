@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 ab-domain = { path = "../ab-domain" }
+libc = "0.2"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
