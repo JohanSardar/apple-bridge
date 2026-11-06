@@ -12,7 +12,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const WAIT_FOR_GRANT: Duration = Duration::from_secs(120);
+const WAIT_FOR_GRANT: Duration = Duration::from_secs(600);
 const POLL: Duration = Duration::from_secs(1);
 const NEW_GRANT_SETTLES: Duration = Duration::from_secs(30);
 const SETTINGS: &str = "x-apple.systempreferences:com.apple.preference.security?";
@@ -143,32 +143,26 @@ impl Backend<'_> {
         }
     }
 
-    fn restart_session(&self) -> Outcome<SessionRestart> {
-        let Self::Mac { home, helper } = self else {
+    async fn restart_session(&self) -> Outcome<SessionRestart> {
+        let Self::Mac { home, .. } = self else {
             return Ok(SessionRestart::NotNeeded);
         };
-        let pid = match std::fs::read_to_string(home.join("helper/helper.pid")) {
-            Ok(pid) if is_session_helper(pid.trim(), helper, home) => pid.trim().to_owned(),
-            _ => return Ok(SessionRestart::NotRunning),
-        };
-        let stopped = Command::new("/bin/kill")
-            .args(["-TERM", &pid])
-            .stderr(Stdio::null())
-            .status()?
-            .success();
-        Ok(if stopped {
-            SessionRestart::Stopped(pid)
-        } else {
-            SessionRestart::CouldNotStop
+        if !home.join("run/control.sock").exists() {
+            return Ok(SessionRestart::NotRunning);
+        }
+        Ok(match crate::control::restart_helper(home).await {
+            Ok(fence) if fence > 0 => SessionRestart::Stopped(fence),
+            _ => SessionRestart::CouldNotStop,
         })
     }
 
-    fn session_replaced(&self, previous: &str) -> bool {
-        let Self::Mac { home, helper } = self else {
+    async fn session_replaced(&self, previous: u64) -> bool {
+        let Self::Mac { home, .. } = self else {
             return true;
         };
-        std::fs::read_to_string(home.join("helper/helper.pid"))
-            .is_ok_and(|pid| pid.trim() != previous && is_session_helper(pid.trim(), helper, home))
+        crate::control::helper_fence(home)
+            .await
+            .is_ok_and(|fence| fence > previous)
     }
 
     fn ask_macos(&self, permission: &Permission) -> Outcome {
@@ -203,22 +197,6 @@ impl Backend<'_> {
             }
         }
     }
-}
-
-fn is_session_command(command: &str, helper: &str, home: &Path) -> bool {
-    let executable = format!("{helper}/Contents/MacOS/AppleBridgeHelper session ");
-    let home_argument = format!(" --home {} --gateway-pid ", home.join("helper").display());
-    !helper.is_empty() && command.starts_with(&executable) && command.contains(&home_argument)
-}
-
-fn is_session_helper(pid: &str, helper: &str, home: &Path) -> bool {
-    pid.parse::<u32>().is_ok()
-        && Command::new("ps")
-            .args(["-p", pid, "-o", "command="])
-            .output()
-            .is_ok_and(|output| {
-                is_session_command(String::from_utf8_lossy(&output.stdout).trim(), helper, home)
-            })
 }
 
 fn source_status(home: &Path, source: &str) -> Outcome<String> {
@@ -343,10 +321,18 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
         return Ok(());
     }
     backend.open_settings(permission)?;
+    println!(
+        "  If Settings is not visible, click System Settings in the Dock or use Mission Control to find its Space."
+    );
+    println!(
+        "  Waiting up to 10 minutes. You can press Ctrl-C and rerun bridge permissions guide; existing grants are kept."
+    );
     if wait_for(backend, permission).await? {
         println!("  ✓ {} allowed.", permission.title);
     } else {
-        println!("  Not confirmed yet. It can take a restart: bridge down, then bridge up.");
+        println!(
+            "  Not confirmed yet. Rerun bridge permissions guide to continue. If you allowed it, run bridge down, then bridge up."
+        );
     }
     Ok(())
 }
@@ -391,7 +377,7 @@ enum SessionRestart {
     NotNeeded,
     NotRunning,
     CouldNotStop,
-    Stopped(String),
+    Stopped(u64),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -435,15 +421,15 @@ async fn let_new_grants_settle(
     if asked.is_empty() {
         return Ok(NewGrants::NothingAsked);
     }
-    let previous = match backend.restart_session()? {
+    let previous = match backend.restart_session().await? {
         SessionRestart::NotNeeded => return Ok(NewGrants::Reading),
         SessionRestart::NotRunning => return Ok(NewGrants::NotRunning),
         SessionRestart::CouldNotStop => return Ok(NewGrants::CouldNotRestart),
-        SessionRestart::Stopped(pid) => pid,
+        SessionRestart::Stopped(fence) => fence,
     };
     let deadline = Instant::now() + limit;
     loop {
-        let replaced = backend.session_replaced(&previous);
+        let replaced = backend.session_replaced(previous).await;
         let mut waiting = Vec::new();
         for permission in asked {
             if backend.status(permission)? != "granted" {
@@ -544,33 +530,6 @@ mod tests {
         Ok(())
     }
 
-    fn wait_for_exit(child: &mut std::process::Child) -> Outcome<bool> {
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while Instant::now() < deadline {
-            if child.try_wait()?.is_some() {
-                return Ok(true);
-            }
-            std::thread::sleep(Duration::from_millis(20));
-        }
-        Ok(false)
-    }
-
-    fn running_as(app: &Path, home: &Path) -> Outcome<std::process::Child> {
-        let command = format!(
-            "{}/Contents/MacOS/AppleBridgeHelper session --socket s --secret-file f --home {} --gateway-pid 7",
-            app.display(),
-            home.join("helper").display()
-        );
-        let child = Command::new("/bin/bash")
-            .args(["-c", "exec -a \"$0\" sleep 30"])
-            .arg(command)
-            .spawn()?;
-        std::fs::create_dir_all(home.join("helper"))?;
-        std::fs::write(home.join("helper/helper.pid"), child.id().to_string())?;
-        std::thread::sleep(Duration::from_millis(200));
-        Ok(child)
-    }
-
     #[test]
     fn a_later_failure_keeps_the_grants_already_made() -> Outcome {
         let directory = tempfile::tempdir()?;
@@ -599,78 +558,35 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn the_session_is_matched_by_its_exact_executable_and_home() {
-        let app = "/Apps/Apple Bridge.app";
-        let home = Path::new("/tmp/world");
-        let exact = "/Apps/Apple Bridge.app/Contents/MacOS/AppleBridgeHelper session --socket /tmp/world/run/peer.sock --secret-file /tmp/world/apple-secret --home /tmp/world/helper --gateway-pid 7";
-        assert!(is_session_command(exact, app, home));
-        assert!(is_session_command(exact, app, Path::new("/tmp/world/")));
-        for other in [
-            exact.replace("--home /tmp/world/helper", "--home /tmp/world2/helper"),
-            exact.replace("--home /tmp/world/helper", "--home /tmp/world/helper2"),
-            exact.replace("--home /tmp/world/helper", "--home /old/tmp/world/helper"),
-            exact.replace("/Apps/Apple Bridge.app", "/Other/Apple Bridge.app"),
-            exact.replace(" session ", " status "),
-            format!("/bin/sh {exact}"),
-        ] {
-            assert!(!is_session_command(&other, app, home), "{other}");
-        }
-        assert!(!is_session_command(exact, "", home));
-    }
-
-    #[test]
-    fn a_new_grant_restarts_only_this_homes_session_helper() -> Outcome {
+    #[tokio::test]
+    async fn a_stale_pid_file_is_never_used_to_restart_a_process() -> Outcome {
         let directory = tempfile::tempdir()?;
-        let app = directory.path().join("Apple Bridge.app");
-        let home = directory.path().join("world");
+        std::fs::create_dir_all(directory.path().join("helper"))?;
+        let mut foreign = Command::new("sleep").arg("30").spawn()?;
+        std::fs::write(
+            directory.path().join("helper/helper.pid"),
+            foreign.id().to_string(),
+        )?;
         let backend = Backend::Mac {
-            home: &home,
-            helper: app.display().to_string(),
+            home: directory.path(),
+            helper: "Fixture.app".into(),
         };
         assert!(matches!(
-            backend.restart_session()?,
-            SessionRestart::NotRunning
-        ));
-
-        let mut helper = running_as(&app, &home)?;
-        assert!(matches!(
-            backend.restart_session()?,
-            SessionRestart::Stopped(_)
-        ));
-        assert!(wait_for_exit(&mut helper)?);
-
-        let collision = directory.path().join("world2");
-        let mut foreign = running_as(&app, &collision)?;
-        std::fs::write(
-            home.join("helper/helper.pid"),
-            std::fs::read(collision.join("helper/helper.pid"))?,
-        )?;
-        assert!(matches!(
-            backend.restart_session()?,
+            backend.restart_session().await?,
             SessionRestart::NotRunning
         ));
         assert!(foreign.try_wait()?.is_none());
         foreign.kill()?;
         foreign.wait()?;
-
-        std::fs::write(home.join("helper/helper.pid"), "1; rm -rf /")?;
-        assert!(matches!(
-            backend.restart_session()?,
-            SessionRestart::NotRunning
-        ));
         Ok(())
     }
 
     #[tokio::test]
     async fn settling_only_claims_what_it_confirmed() -> Outcome {
-        let contacts: &'static Permission = &LEVEL_ONE[1];
         let directory = tempfile::tempdir()?;
-        let app = directory.path().join("Apple Bridge.app");
-        let home = directory.path().join("world");
         let backend = Backend::Mac {
-            home: &home,
-            helper: app.display().to_string(),
+            home: directory.path(),
+            helper: "Fixture.app".into(),
         };
         let quick = Duration::from_millis(50);
         assert_eq!(
@@ -678,30 +594,10 @@ mod tests {
             NewGrants::NothingAsked
         );
         assert_eq!(
-            let_new_grants_settle(&backend, &[contacts], quick).await?,
+            let_new_grants_settle(&backend, &[&LEVEL_ONE[1]], quick).await?,
             NewGrants::NotRunning
         );
-
-        let mut helper = running_as(&app, &home)?;
-        assert_eq!(
-            let_new_grants_settle(&backend, &[contacts], quick).await?,
-            NewGrants::NoReplacement
-        );
-        assert!(wait_for_exit(&mut helper)?);
-
-        let mut first = running_as(&app, &home)?;
-        let stopped = first.id().to_string();
-        assert!(matches!(
-            backend.restart_session()?,
-            SessionRestart::Stopped(_)
-        ));
-        assert!(wait_for_exit(&mut first)?);
-        let mut replacement = running_as(&app, &home)?;
-        assert!(backend.session_replaced(&stopped));
-        assert!(!backend.session_replaced(&replacement.id().to_string()));
-        replacement.kill()?;
-        replacement.wait()?;
-
+        assert!(!backend.session_replaced(1).await);
         for outcome in [
             NewGrants::NotRunning,
             NewGrants::CouldNotRestart,

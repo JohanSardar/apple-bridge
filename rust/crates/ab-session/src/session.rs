@@ -349,6 +349,10 @@ fn gateway_frame<'scope>(
         "Query" | "QueryCancel" | "Prepare" | "Dispatch" | "Resolve" | "BlobRead" => {
             hub.gateway_command(scope, frame)?;
         }
+        "Restart" => {
+            hub.send_link(&Link::Restart)?;
+            return Ok(false);
+        }
         "Close" => return Ok(false),
         _ => return Err(Error::Invalid),
     }
