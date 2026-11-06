@@ -88,6 +88,13 @@ impl Backend<'_> {
         Ok(())
     }
 
+    fn helper(&self) -> &str {
+        match self {
+            Self::Mac { helper, .. } => helper,
+            Self::Fixture(_) => "",
+        }
+    }
+
     fn status(&self, permission: &Permission) -> Outcome<String> {
         match self {
             Self::Fixture(path) => Ok(Self::fixture(path)?
@@ -260,6 +267,12 @@ async fn wait_for(backend: &Backend<'_>, permission: &Permission) -> Outcome<boo
     Ok(false)
 }
 
+fn not_listed_hint(permission: &Permission, helper: &str) -> Option<String> {
+    (!permission.asks && !helper.is_empty()).then(|| {
+        format!("  Not in the list? Click +, press Command-Shift-G and paste: {helper}")
+    })
+}
+
 async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool) -> Outcome {
     if backend.status(permission)? == "granted" {
         return Ok(());
@@ -270,6 +283,9 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
         "  System Settings > Privacy & Security > {}: switch on Apple Bridge.",
         permission.title
     );
+    if let Some(hint) = not_listed_hint(permission, backend.helper()) {
+        println!("{hint}");
+    }
     if !pause("  Press Enter to open it, or type s to skip:", yes)? {
         println!("  Skipped. Other sources still work.");
         return Ok(());
@@ -313,4 +329,21 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     println!();
     println!("Follow the sync with: bridge stats --watch");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_settings_only_permission_with_a_known_app_gets_the_add_hint() {
+        let [full_disk, contacts, ..] = LEVEL_ONE else {
+            panic!("level one lists Full Disk Access and Contacts first");
+        };
+        let app = "/lib/node_modules/applebridge/Apple Bridge.app";
+        let hint = not_listed_hint(full_disk, app).unwrap_or_default();
+        assert!(hint.ends_with(app), "{hint}");
+        assert_eq!(not_listed_hint(contacts, app), None);
+        assert_eq!(not_listed_hint(full_disk, ""), None);
+    }
 }
