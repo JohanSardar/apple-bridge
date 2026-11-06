@@ -113,9 +113,18 @@ class World:
             report.transcript(" ".join(["bridge", *arguments]), result)
         return result
 
-    def launch_calls(self):
+    def launch_calls(self, wanted):
         calls = self.stub / "calls"
-        return calls.read_text() if calls.exists() else ""
+        for _ in range(150):
+            text = calls.read_text() if calls.exists() else ""
+            if wanted in text:
+                break
+            time.sleep(0.1)
+        return text
+
+    def log_tail(self):
+        log = self.home / "gateway.log"
+        return log.read_text()[-800:] if log.exists() else "(no gateway log)"
 
     def stop_stubs(self):
         pids = self.stub / "pids"
@@ -133,7 +142,9 @@ def exercise(world, app, port, report, label):
     up = world.bridge(report, "up", "--home", home, "--api-addr", f"127.0.0.1:{port}", "--peer-addr", "127.0.0.1:0")
     report.expect(f"{label}: bridge up", up.returncode == 0 and "is on" in up.stdout)
     report.expect(f"{label}: bridge up found the installed app", "no Helper app found" not in up.stdout)
-    report.expect(f"{label}: the gateway asks open for the installed app", f"-a {app.resolve()} --args session" in world.launch_calls(), world.launch_calls())
+    wanted = f"-a {app.resolve()} --args session"
+    report.expect(f"{label}: the gateway asks open for the installed app", wanted in world.launch_calls(wanted), f"open calls: {world.launch_calls(wanted)!r}. Gateway log: {world.log_tail()}")
+    report.expect(f"{label}: the app itself was never launched", run("pgrep", "-f", f"{app.resolve()}/Contents/MacOS/AppleBridgeHelper").returncode == 1)
     stats = world.bridge(report, "stats", "--home", home)
     report.expect(f"{label}: bridge stats", stats.returncode == 0)
     down = world.bridge(report, "down", "--home", home)
