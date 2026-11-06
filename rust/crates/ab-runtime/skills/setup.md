@@ -4,9 +4,8 @@ Everything here runs on the owner's Mac. It needs no account, server or domain.
 
 ## Levels
 
-- **Level 1, agents on this Mac (default):** Claude Code, Codex and similar, on `http://127.0.0.1:7780/mcp`.
-- **Level 2, other apps and bots on this Mac:** the same address. `bridge link other` prints what they need.
-- **Level 3, remote use (optional):** `bridge remote on`. Only when the owner asks for it. Never turn it on for them.
+- **Level 1, anything on this Mac (default):** Claude Code, Codex, other apps and bots, on `http://127.0.0.1:7780/mcp`. `bridge link other` prints what other apps need.
+- **Level 2, remote use (optional):** `bridge remote on`. Only when the owner asks for it. Never turn it on for them.
 
 ## Steps
 

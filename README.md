@@ -8,7 +8,7 @@ Apple Bridge connects agents such as Claude Code and Codex to your Mac’s Apple
 
 Early access is by invite from the repository maintainers. Public installation is not available yet: there is no public Mac installer or Homebrew package. The Mac release targets Apple Silicon and macOS 26 or later. Capabilities vary by source and macOS permissions; see the [feature status](features.yaml).
 
-## Quick start: Level 1, local agents (default)
+## Quick start: Level 1, this Mac (default)
 
 With Apple Bridge installed through your invitation, run this on your Mac:
 
@@ -29,13 +29,11 @@ To try things yourself, use `bridge read reminders`, `bridge read chats` or `bri
 
 **What has been tested.** On a test copy of real data, a fresh home reached a real Claude Code read in about 10 seconds through the local MCP address and sign-in, and Codex completed sign-in the same way. A script played the browser and the approval. The Apple Bridge window, real macOS permission prompts and a real first sync from Apple's apps were not part of that test. See [what was proven](docs/local-setup.md#what-has-been-proven).
 
-## Level 2: other apps and bots on this Mac
-
-Other MCP-capable apps and bots on the same computer use the same local address. `bridge link other` prints what they need, including how to create a read-only token with `bridge agent create`. No account, server or domain is needed, and the relay can stay off. Developers can also use the local REST API. This route is **not yet tested with a real app** other than Claude Code and Codex.
+**Other apps and bots on this Mac** use the same local address and need nothing extra. `bridge link other` prints what they need, including how to create a read-only token with `bridge agent create`. Developers can also use the local REST API. This is **not yet tested with a real app** other than Claude Code and Codex.
 
 The local address only works on that Mac. ChatGPT and Claude's websites cannot reach it.
 
-## Level 3: remote access (optional)
+## Level 2: remote access (optional)
 
 Choose this level only to connect from another computer or from cloud apps such as ChatGPT and Claude’s website. Your Mac must stay awake and connected. There are two options:
 
