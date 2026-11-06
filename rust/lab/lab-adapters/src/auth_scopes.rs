@@ -70,7 +70,12 @@ fn offline_access_grants_nothing(world: &World, address: &str, evidence: &mut Ev
     );
     let client = registration
         .as_ref()
-        .map(|reply| reply.json()["client_id"].as_str().unwrap_or_default().to_owned())
+        .map(|reply| {
+            reply.json()["client_id"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        })
         .unwrap_or_default();
     let challenge = URL_SAFE_NO_PAD.encode([7u8; 32]);
     let refused = request(
