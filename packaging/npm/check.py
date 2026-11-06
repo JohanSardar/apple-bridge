@@ -14,7 +14,7 @@ import tempfile
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build import ADHOC, APP, EXECUTABLES, code_paths, run, signature_problems
+from build import ADHOC, APP, EXECUTABLES, code_paths, run, signature_problems, version_problems
 
 OPEN_STUB = """#!/bin/sh
 echo "$$" >> "$(dirname "$0")/pids"
@@ -221,6 +221,10 @@ def main():
             if installed.returncode != 0:
                 continue
             app = inspect_install(prefix, name, source_app, args.identity, facts, report, label)
+            problems = version_problems(app, definition["version"])
+            report.expect(f"{label}: the package, bridge and the app report one version", not problems, "; ".join(problems))
+            reported = world.bridge(report, "--version", show=False)
+            report.expect(f"{label}: the bridge command reports the package version", reported.stdout.strip() == f"bridge {definition['version']}", reported.stdout.strip())
             exercise(world, app, free_port(), report, label)
             if label == "default":
                 stapling(app, report, args.require_notarized)

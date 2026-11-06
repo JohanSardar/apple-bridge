@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import plistlib
 import re
 import shutil
 import subprocess
@@ -94,6 +95,18 @@ def release_problems(app):
     return problems
 
 
+def version_problems(app, version):
+    problems = []
+    reported = run(app / "Contents/MacOS/bridge", "--version")
+    if reported.returncode != 0 or reported.stdout.strip() != f"bridge {version}":
+        problems.append(f"bridge --version reports {reported.stdout.strip()!r}, exit {reported.returncode}, but the package is version {version}")
+    info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+    for key in ["CFBundleShortVersionString", "CFBundleVersion"]:
+        if info.get(key) != version:
+            problems.append(f"Info.plist {key} is {info.get(key)!r}, but the package is version {version}")
+    return problems
+
+
 def staged_definition(version, proof):
     definition = package_definition()
     definition["version"] = version
@@ -137,15 +150,14 @@ def build(app, identity, output, proof):
         raise Refused("Pass the signing identity as its SHA-1 fingerprint.")
     if identity == ADHOC and not proof:
         raise Refused("An ad hoc signature can only make a --proof package.")
+    version = workspace_version()
     problems = tree_problems(app) + signature_problems(app, identity)
     if not proof:
         problems += release_problems(app)
+    if not problems:
+        problems = version_problems(app, version)
     if problems:
         raise Refused("The app cannot be packaged:\n  " + "\n  ".join(problems))
-    version = workspace_version()
-    reported = run(app / "Contents/MacOS/bridge", "--version")
-    if version not in reported.stdout:
-        raise Refused(f"The app's bridge reports {reported.stdout.strip()!r}, but this checkout is version {version}.")
     output.mkdir(parents=True)
     tarball = pack(stage(app, output, staged_definition(version, proof)), output)
     return {
