@@ -1,10 +1,10 @@
-use crate::{Result, State, Visibility, allows, records};
+use crate::{Result, State, Visibility, allows, known_records};
 use rusqlite::params;
 use serde_json::Value;
 impl<Role> State<Role> {
     pub fn restrict(&mut self, visibility: &Visibility) -> Result<()> {
         let tx = self.db.transaction()?;
-        let stored = records(
+        let stored = known_records(
             &tx,
             "SELECT payload FROM records ORDER BY collection,id",
             &[],
@@ -71,7 +71,7 @@ impl<Role> State<Role> {
             return Ok(None);
         };
         let mut allowed = std::collections::HashSet::new();
-        for record in records(&self.db, "SELECT payload FROM records WHERE deleted=0", &[])? {
+        for record in known_records(&self.db, "SELECT payload FROM records WHERE deleted=0", &[])? {
             if allows(visibility, &record)? {
                 let mut stmt = self
                     .db

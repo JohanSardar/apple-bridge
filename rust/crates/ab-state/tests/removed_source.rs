@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used)]
 use ab_domain::{Coverage, Source};
 use ab_state::{Cursor, Gateway, ReadQuery, State, Visibility};
+use ab_wire::messages::Capture;
 use rusqlite::{Connection, params};
 use serde_json::json;
 use std::path::Path;
@@ -186,6 +187,102 @@ fn a_damaged_row_from_a_known_source_is_still_an_error() {
         "contacts",
         "system.source",
         &damaged.to_string(),
+    );
+    assert!(state.freeze_snapshot(&visibility(), 0).is_err());
+}
+
+fn payload_of(home: &Path, collection: &str) -> (i64, Vec<u8>) {
+    Connection::open(home.join("state.db"))
+        .expect("database")
+        .query_row(
+            "SELECT version,payload FROM records WHERE collection=?",
+            [collection],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .expect("row")
+}
+
+fn mislabel_payload_source(home: &Path, collection: &str, known: &str) -> (i64, Vec<u8>) {
+    let (version, payload) = payload_of(home, collection);
+    let text = String::from_utf8(payload).expect("text");
+    let damaged = text.replace(
+        &format!("\"source\":\"{known}\""),
+        &format!("\"source\":\"{known}_typo\""),
+    );
+    assert_ne!(text, damaged);
+    Connection::open(home.join("state.db"))
+        .expect("database")
+        .execute(
+            "UPDATE records SET payload=? WHERE collection=?",
+            params![damaged.as_bytes(), collection],
+        )
+        .expect("damage");
+    (version, damaged.into_bytes())
+}
+
+#[test]
+fn source_state_never_overwrites_a_row_it_cannot_read() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = gateway_with_contacts(home.path());
+    let before = mislabel_payload_source(home.path(), "system.source", "contacts");
+    let write = state.source_state(
+        Source::Contacts,
+        "denied",
+        Coverage {
+            pack_version: String::new(),
+            operations: Vec::new(),
+            fields: "full".into(),
+            missing: None,
+        },
+        Some(&[]),
+        "changed",
+    );
+    assert!(write.is_err(), "the write refuses instead of replacing");
+    assert_eq!(payload_of(home.path(), "system.source"), before);
+}
+
+#[test]
+fn a_capture_never_overwrites_a_row_it_cannot_read() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = State::<Gateway>::open(home.path()).expect("state");
+    let capture = |checkpoint: &str, predecessor: &str, title: &str| -> Capture {
+        serde_json::from_value(json!({
+            "source": "contacts",
+            "generation": "g",
+            "predecessor": predecessor,
+            "checkpoint": checkpoint,
+            "scan_id": checkpoint,
+            "scope": ["contacts.container"],
+            "scan_started_at": "2026-11-05T00:00:00Z",
+            "completion_evidence": "complete",
+            "observations": [{
+                "kind": "upsert", "collection": "contacts.container", "native_key": "synthetic",
+                "observed_at": "2026-11-05T00:00:00Z",
+                "data": {"name": title, "type": 1},
+            }],
+        }))
+        .expect("capture")
+    };
+    state
+        .commit_capture(&capture("1", "", "first"))
+        .expect("first capture");
+    let before = mislabel_payload_source(home.path(), "contacts.container", "contacts");
+    assert!(
+        state.commit_capture(&capture("2", "1", "second")).is_err(),
+        "the capture refuses instead of replacing"
+    );
+    assert_eq!(payload_of(home.path(), "contacts.container"), before);
+}
+
+#[test]
+fn a_known_source_with_an_unknown_collection_is_still_an_error() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = gateway_with_contacts(home.path());
+    plant_record(
+        home.path(),
+        "contacts",
+        "contacts.removed",
+        &removed_row("contacts", "contacts.removed"),
     );
     assert!(state.freeze_snapshot(&visibility(), 0).is_err());
 }

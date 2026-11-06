@@ -1,5 +1,5 @@
 use crate::projection::{b, s, valid_digest};
-use crate::{ErrorCode, Record, Result, Visibility, records};
+use crate::{ErrorCode, Record, Result, Visibility, known_records};
 use rusqlite::Connection;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashSet};
@@ -57,7 +57,7 @@ pub(crate) fn list(db: &Connection, visibility: &Visibility, query: &Value) -> R
     if visibility.get("notes") != Some(&true) {
         return Ok(out);
     }
-    let stored = records(
+    let stored = known_records(
         db,
         "SELECT payload FROM records WHERE collection IN ('notes.folder','notes.note') AND deleted=0 ORDER BY collection,id",
         &[],

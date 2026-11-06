@@ -214,16 +214,18 @@ pub fn digest(records: &[Record]) -> String {
     }
     format!("{:x}", h.finalize())
 }
-fn names_unknown_origin(record: &serde_json::Value) -> bool {
-    fn unknown<T: serde::de::DeserializeOwned>(value: &serde_json::Value) -> bool {
-        value.is_string() && serde_json::from_value::<T>(value.clone()).is_err()
-    }
-    unknown::<Source>(&record["source"]) || unknown::<Collection>(&record["collection"])
+fn names_unknown_source(record: &serde_json::Value) -> bool {
+    record["source"].is_string()
+        && serde_json::from_value::<Source>(record["source"].clone()).is_err()
 }
-fn report_unknown_origin(record: &serde_json::Value) {
+fn report_unknown_source(record: &serde_json::Value) {
     static REPORTED: std::sync::Mutex<std::collections::BTreeSet<String>> =
         std::sync::Mutex::new(std::collections::BTreeSet::new());
-    let origin = format!("{}/{}", record["source"], record["collection"]);
+    let origin = format!(
+        "{:.40}/{:.40}",
+        record["source"].as_str().unwrap_or_default(),
+        record["collection"].as_str().unwrap_or_default()
+    );
     if REPORTED
         .lock()
         .is_ok_and(|mut reported| reported.insert(origin.clone()))
@@ -245,10 +247,10 @@ fn stored_row<T: serde::de::DeserializeOwned>(
         return Err(error.into());
     };
     let record = record_of(&row);
-    if !names_unknown_origin(record) {
+    if !names_unknown_source(record) {
         return Err(error.into());
     }
-    report_unknown_origin(record);
+    report_unknown_source(record);
     Ok(None)
 }
 fn stored_record(bytes: &[u8]) -> Result<Option<Record>> {
@@ -257,10 +259,11 @@ fn stored_record(bytes: &[u8]) -> Result<Option<Record>> {
 fn stored_change(bytes: &[u8]) -> Result<Option<Change>> {
     stored_row(bytes, |row| &row["record"])
 }
-pub(crate) fn records(
+fn decoded_rows(
     db: &Connection,
     sql: &str,
     args: &[&dyn rusqlite::ToSql],
+    decode: fn(&[u8]) -> Result<Option<Record>>,
 ) -> Result<Vec<Record>> {
     let mut stmt = db.prepare_cached(sql)?;
     let mut rows = stmt.query(args)?;
@@ -271,11 +274,27 @@ pub(crate) fn records(
         else {
             return Err(ErrorCode::Corrupt.into());
         };
-        if let Some(record) = stored_record(bytes)? {
+        if let Some(record) = decode(bytes)? {
             out.push(record);
         }
     }
     Ok(out)
+}
+pub(crate) fn records(
+    db: &Connection,
+    sql: &str,
+    args: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<Record>> {
+    decoded_rows(db, sql, args, |bytes| {
+        Ok(Some(serde_json::from_slice(bytes)?))
+    })
+}
+pub(crate) fn known_records(
+    db: &Connection,
+    sql: &str,
+    args: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<Record>> {
+    decoded_rows(db, sql, args, stored_record)
 }
 fn upgrade_schema(db: &mut Connection, home: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;

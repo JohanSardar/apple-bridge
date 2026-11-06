@@ -72,7 +72,7 @@ fn sort_time(raw: &str, zone: &jiff::tz::TimeZone) -> Option<jiff::Timestamp> {
     })
 }
 use crate::projection::{b, s};
-use crate::{ErrorCode, Record, Result, Visibility, records};
+use crate::{ErrorCode, Record, Result, Visibility, known_records};
 use rusqlite::Connection;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -117,7 +117,7 @@ fn custom(fields: &Value) -> bool {
         .any(|k| !fields[k].is_null() && fields[k] != "")
 }
 fn all(db: &Connection, c: &str) -> Result<Vec<Record>> {
-    records(
+    known_records(
         db,
         "SELECT payload FROM records WHERE collection=? AND deleted=0 ORDER BY id",
         &[&c],
@@ -305,7 +305,7 @@ pub(crate) fn items(db: &Connection, visibility: &Visibility, query: &Value) -> 
     let rs = if s(query, "list").is_empty() {
         all(db, "reminders.reminder")?
     } else {
-        records(
+        known_records(
             db,
             "SELECT payload FROM records WHERE collection='reminders.reminder' AND deleted=0 AND json_extract(payload,'$.data.list_id')=? ORDER BY id",
             &[&s(query, "list")],

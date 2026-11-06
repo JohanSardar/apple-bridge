@@ -1,8 +1,8 @@
 use crate::{
     Change, Collection, Connection, Cursor, Deserialize, ErrorCode, EscapeMode, Gateway, HashMap,
     OptionalExtension, Path, PhantomData, Read, Record, Replica, Result, Serialize, State,
-    Visibility, allows, apply, digest, encoded, gojson, head, number, params, project, projection,
-    records, set_cursor, set_meta,
+    Visibility, allows, apply, digest, encoded, gojson, head, known_records, number, params,
+    project, projection, records, set_cursor, set_meta,
 };
 use ab_domain::{Coverage, Source};
 use ab_wire::messages::{Capture, Checkpoint, Observation};
@@ -191,7 +191,7 @@ fn note_version(old: Option<&Record>, value: &mut Value) -> Result<()> {
 }
 fn contact_index(db: &Connection) -> Result<HashMap<String, String>> {
     let mut index = HashMap::new();
-    for r in records(
+    for r in known_records(
         db,
         "SELECT payload FROM records WHERE collection='contacts.contact' AND deleted=0",
         &[],
@@ -577,7 +577,7 @@ impl State<Gateway> {
         let mut cursor = head(&tx)?;
         cursor.subscription_revision = revision;
         let mut visible = Vec::new();
-        for record in records(
+        for record in known_records(
             &tx,
             "SELECT payload FROM records WHERE deleted=0 ORDER BY collection,id",
             &[],

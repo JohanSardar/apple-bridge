@@ -13,7 +13,7 @@ struct Identity<'a> {
 }
 
 use crate::projection::{b, kind, normalize, s, time};
-use crate::{ErrorCode, Record, Result, State, Visibility, head, records};
+use crate::{ErrorCode, Record, Result, State, Visibility, head, known_records};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rusqlite::{Connection, params, types::Value as Sql};
 use serde_json::{Value, json};
@@ -27,7 +27,7 @@ fn list(db: &Connection, sql: &str, args: &[Sql]) -> Result<Vec<Record>> {
         .iter()
         .map(|visibility| visibility as &dyn rusqlite::ToSql)
         .collect();
-    records(db, sql, &refs)
+    known_records(db, sql, &refs)
 }
 fn text(s: &str) -> Sql {
     Sql::Text(s.into())
