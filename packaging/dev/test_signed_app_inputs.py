@@ -112,9 +112,13 @@ class AdHocSigningTests(unittest.TestCase):
             command.chmod(0o700)
             environment = dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"], SIGN_LOG=str(log), APPLE_BRIDGE_SIGNING_IDENTITY="-", APPLE_BRIDGE_NATIVE_LAB="1")
             script = Path(__file__).with_name("sign.sh")
+            session = root / "Fixture.app/Contents/MacOS/ab-session"
+            session.parent.mkdir(parents=True)
+            session.write_bytes(b"fixture")
             result = subprocess.run(["/bin/bash", str(script), str(root / "Fixture.app")], env=environment, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(len(log.read_text().splitlines()), 2)
+            self.assertEqual(len(log.read_text().splitlines()), 3)
+            self.assertIn("--identifier ab-session", log.read_text())
             self.assertIn("--sign -", log.read_text())
             log.unlink()
             environment["APPLE_BRIDGE_NATIVE_LAB"] = "0"

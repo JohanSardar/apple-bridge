@@ -8,10 +8,23 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import build
+import check
+
+
+class SignatureFacts(unittest.TestCase):
+    def test_explicit_and_inferred_requirements_are_recorded(self):
+        for prefix in ["", "# "]:
+            with patch("check.code_paths", return_value={"ab-session": Path("fixture")}):
+                with patch("check.run", side_effect=[
+                    subprocess.CompletedProcess([], 0, stdout=prefix + 'designated => cdhash H"abc"\n', stderr=""),
+                    subprocess.CompletedProcess([], 0, stdout="", stderr="CDHash=abc\n"),
+                ]):
+                    self.assertEqual(check.code_facts(Path("app"))["ab-session"], {"requirement": 'designated => cdhash H"abc"', "cdhash": "CDHash=abc"})
 
 
 def write_executable(path, text):

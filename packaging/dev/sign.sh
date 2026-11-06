@@ -6,7 +6,7 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 if [[ ${APPLE_BRIDGE_SIGNING_IDENTITY:-} == - ]]; then
     [[ ${APPLE_BRIDGE_NATIVE_LAB:-1} == 1 ]] || exit 1
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
-        codesign --force --sign - --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
+        codesign --force --sign - --options runtime --timestamp=none --identifier ab-session "$1/Contents/MacOS/ab-session"
     fi
     codesign --force --sign - --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" "$1"
     codesign --verify --strict "$1"
@@ -46,7 +46,7 @@ PYPROFILE
         codesign --force --sign "$identity" --options runtime --timestamp=none --identifier bridge "$1/Contents/MacOS/bridge"
     fi
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
-        codesign --force --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
+        codesign --force --sign "$identity" --options runtime --timestamp=none --identifier ab-session "$1/Contents/MacOS/ab-session"
     fi
     codesign --force --sign "$identity" --options runtime --timestamp=none --entitlements "$entitlements" "$1"
     codesign --verify --strict "$1"
@@ -57,7 +57,7 @@ if [[ -n ${2:-} ]]; then
         codesign --force --sign "$2" --options runtime --timestamp --identifier bridge "$1/Contents/MacOS/bridge"
     fi
     if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
-        codesign --force --sign "$2" --options runtime --timestamp "$1/Contents/MacOS/ab-session"
+        codesign --force --sign "$2" --options runtime --timestamp --identifier ab-session "$1/Contents/MacOS/ab-session"
     fi
     codesign --force --sign "$2" --options runtime --timestamp --entitlements "$root/packaging/dev/Helper.entitlements" "$1"
     codesign --verify --strict "$1"
@@ -74,7 +74,7 @@ if [[ -f "$1/Contents/MacOS/bridge" ]]; then
     codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --identifier bridge "$1/Contents/MacOS/bridge"
 fi
 if [[ -f "$1/Contents/MacOS/ab-session" ]]; then
-    codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none "$1/Contents/MacOS/ab-session"
+    codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --identifier ab-session "$1/Contents/MacOS/ab-session"
 fi
 codesign --force --keychain "$keychain" --sign "$identity" --options runtime --timestamp=none --entitlements "$root/packaging/dev/Helper.entitlements" --requirements "=designated => identifier \"$bundle_id\" and certificate leaf = H\"$identity\"" "$1"
 codesign --verify --strict "$1"
