@@ -9,7 +9,6 @@ use std::{
 };
 
 const NON_INTERACTIVE_WATCH_LIMIT: Duration = Duration::from_secs(300);
-const DEFAULT_SETTLE: Duration = Duration::from_secs(30);
 const PROGRESS_EVERY: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(1);
 
@@ -162,6 +161,9 @@ impl SourceStats {
         match self.state.as_str() {
             "permission_missing" => Some("needs a Mac permission: run bridge permissions guide"),
             "capture_failed" => Some("could not be read: run bridge doctor"),
+            "unavailable" if self.source == "mail" => {
+                Some("no supported local Mail data; check that Mail has an account on this Mac")
+            }
             "unavailable" => Some("not available on this Mac right now"),
             "degraded" => Some("partly available"),
             _ => None,
@@ -565,10 +567,6 @@ async fn watch(
     }
 }
 
-pub async fn watch_first_sync(home: &Path) -> Outcome {
-    watch(home, DEFAULT_SETTLE, None, false, false).await
-}
-
 pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
     if args.watch {
         let timeout = args
@@ -706,6 +704,26 @@ mod tests {
             at(6),
         );
         assert_eq!(names(&events), ["finished notes 3", "all 3"]);
+    }
+
+    #[test]
+    fn unavailable_mail_and_phone_states_have_consistent_advice() {
+        assert!(
+            source("mail", "unavailable", 0)
+                .advice()
+                .unwrap_or_default()
+                .contains("Mail has an account")
+        );
+        for total in [0, 1, 100] {
+            assert_eq!(
+                source("phone", "unavailable", total).advice(),
+                Some("not available on this Mac right now")
+            );
+            assert_eq!(
+                source("phone", "degraded", total).advice(),
+                Some("partly available")
+            );
+        }
     }
 
     #[test]

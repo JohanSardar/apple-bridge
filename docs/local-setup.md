@@ -26,7 +26,7 @@ Level 1 never starts the relay. Level 2 only starts when you run `bridge remote 
 
 ## Start and stop
 
-`bridge up` starts the gateway in the background and shows the address, what has synced so far and what to do next. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
+`bridge up` starts the gateway in the background and returns as soon as it is ready, with the address, current counts and Next steps last. It never waits for the first sync; use `bridge stats --watch` to follow that separately. The older `--no-watch` flag is accepted as a no-op. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
 
 Useful options: `--home DIR` picks another data folder, `--api-addr 127.0.0.1:PORT` picks another port, and `--json` prints a result for scripts.
 
@@ -74,7 +74,9 @@ macOS may list Apple Bridge in Accessibility with its switch off without showing
 
 Reminders can only be read with Calendar allowed too. Without Calendar, Reminders shows as needing a permission.
 
-`bridge permissions status` only shows the list and never asks macOS for anything. It reads the status from what each source last reported, so it shows "not known yet" until the Helper has connected. Without a terminal, the guide does the same and changes nothing, unless you pass `--yes`.
+`bridge permissions status` only shows the list and never asks macOS for anything. It reads the status from what each source last reported, so it shows "not known yet" until the Helper has connected. JSON uses `granted`, `needs_permission` or `unknown`: needing permission does not prove that you denied a request. Without a terminal, the guide does the same and changes nothing, unless you pass `--yes`.
+
+Mail reports missing local data when its folder can be listed but the supported index is absent. Check that Mail has an account on this Mac and has downloaded its mail. If the folder cannot be listed, Apple Bridge cannot tell an absent account from missing Full Disk Access and keeps the permission advice.
 
 `bridge permissions request <name>` asks for one permission, such as `contacts` or `camera`, and nothing else.
 
@@ -107,7 +109,7 @@ bridge call sources.status
 bridge call records.query --args '{"collection":"reminders.list","limit":5}'
 ```
 
-These print your real data to the terminal. They need the gateway running, and they only read: each one uses a read-only credential that is removed when it finishes. Add `--json` for the full answer, and see `bridge call --list` for every read operation.
+These print your real data to the terminal. They need the gateway running, and they only read: each one uses a read-only credential that is removed when it finishes. Add `--json` for structured output; `bridge read --limit N` limits the returned items in either format (up to 200), while metadata such as total counts still describes the full query. See `bridge call --list` for every read operation. `bridge call helper.version` needs no arguments.
 
 ## Instructions for your agent
 

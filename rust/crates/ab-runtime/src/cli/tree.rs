@@ -130,7 +130,7 @@ pub struct UpArgs {
     pub json: bool,
     #[arg(
         long,
-        help = "Return at once, even in a terminal, while syncing continues"
+        help = "Compatibility flag: up always returns while syncing continues"
     )]
     pub no_watch: bool,
 }
@@ -243,7 +243,7 @@ pub struct ReadArgs {
     pub chat: Option<String>,
     #[arg(long, default_value_t = 7, help = "Calendar only: how many days ahead")]
     pub days: u32,
-    #[arg(long, help = "Print the full JSON answer")]
+    #[arg(long, help = "Print the JSON answer, limited to --limit items")]
     pub json: bool,
 }
 

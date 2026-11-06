@@ -280,10 +280,49 @@ async fn run_call(home: &Path, operation: &str, arguments: &Value) -> Outcome<Va
     result
 }
 
+fn limit_records(value: &mut Value, wanted: &[&str], remaining: &mut usize) {
+    let record = |value: &Value| {
+        value["collection"]
+            .as_str()
+            .is_some_and(|collection| wanted.contains(&collection))
+            && value.get("data").is_some()
+    };
+    match value {
+        Value::Array(items) => {
+            items.retain_mut(|item| {
+                let is_item = record(item)
+                    || item
+                        .as_object()
+                        .is_some_and(|fields| fields.values().any(record));
+                if is_item {
+                    if *remaining == 0 {
+                        return false;
+                    }
+                    *remaining -= 1;
+                } else {
+                    limit_records(item, wanted, remaining);
+                }
+                true
+            });
+        }
+        Value::Object(fields) => {
+            for child in fields.values_mut() {
+                limit_records(child, wanted, remaining);
+            }
+        }
+        _ => {}
+    }
+}
+
 pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
     let (operation, arguments, collections) = request(args)?;
-    let answer = run_call(home, operation, &arguments).await?;
+    let mut answer = run_call(home, operation, &arguments).await?;
     if args.json {
+        limit_records(
+            &mut answer,
+            collections,
+            &mut (args.limit.min(200) as usize),
+        );
         println!("{answer}");
     } else {
         render(&answer, collections, args.limit as usize);
@@ -332,10 +371,13 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
         ))
         .next("Agents make changes through MCP, where you approve them."));
     }
-    let arguments: Value = serde_json::from_str(&args.args).map_err(|error| {
+    let mut arguments: Value = serde_json::from_str(&args.args).map_err(|error| {
         Failure::new(format!("--args is not valid JSON: {error}."))
             .next("For example: --args '{\"limit\": 5}'")
     })?;
+    if operation == "helper.version" && arguments == json!({}) {
+        arguments = json!({"args": {}});
+    }
     println!("{}", run_call(home, operation, &arguments).await?);
     Ok(())
 }
@@ -353,6 +395,36 @@ mod tests {
         let mut every = Vec::new();
         collect(&answer, &[], &mut every);
         assert_eq!(every.len(), 2);
+    }
+
+    #[test]
+    fn json_limits_items_across_sections_without_removing_metadata() {
+        for (collection, key, wrapper) in [
+            ("contacts.contact", "contacts", "contact"),
+            ("notes.note", "notes", "note"),
+            ("reminders.reminder", "items", "reminder"),
+            ("calendar.event", "events", "event"),
+            ("messages.chat", "chats", "chat"),
+            ("messages.message", "messages", "message"),
+            ("mail.message", "records", "message"),
+        ] {
+            let item =
+                json!({wrapper: {"collection":collection,"id":"a","data":{}},"metadata":"kept"});
+            let original = json!({"count":3,"sections":[{key:[item.clone(),item.clone()]},{key:[item]}],"other":[{"collection":"other","data":{}}]});
+            for limit in [0, 1, 2, 3] {
+                let mut answer = original.clone();
+                let mut remaining = limit;
+                limit_records(&mut answer, &[collection], &mut remaining);
+                let mut records = Vec::new();
+                collect(&answer, &[collection], &mut records);
+                assert_eq!(records.len(), limit, "{answer}");
+                assert_eq!(answer["count"], 3);
+                assert_eq!(answer["other"], original["other"]);
+                if limit > 0 {
+                    assert_eq!(answer["sections"][0][key][0]["metadata"], "kept");
+                }
+            }
+        }
     }
 
     #[test]
