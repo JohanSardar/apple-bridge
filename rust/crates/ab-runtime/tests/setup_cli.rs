@@ -62,7 +62,8 @@ fn fake_tool(directory: &Path, name: &str) -> Result<PathBuf, std::io::Error> {
     std::fs::write(
         &path,
         format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ]; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ]; then echo \"URL: $FAKE_URL\"; echo \"$FAKE_STATUS\"; fi\nif [ \"$2\" = add ] && [ \"$FAKE_ADD_WAITS\" = 1 ]; then sleep 60; fi\nexit 0\n",
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ]; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ] && {{ [ \"$FAKE_ADD_WAITS\" != 1 ] || grep -q '^mcp add ' '{}'; }}; then echo \"URL: $FAKE_URL\"; echo \"$FAKE_STATUS\"; fi\nif [ \"$2\" = add ] && [ \"$FAKE_ADD_WAITS\" = 1 ]; then sleep 60; fi\nexit 0\n",
+            log.display(),
             log.display()
         ),
     )?;
