@@ -286,3 +286,97 @@ fn a_known_source_with_an_unknown_collection_is_still_an_error() {
     );
     assert!(state.freeze_snapshot(&visibility(), 0).is_err());
 }
+
+fn capture_of(
+    source: &str,
+    checkpoint: &str,
+    predecessor: &str,
+    row: &serde_json::Value,
+) -> Capture {
+    serde_json::from_value(json!({
+        "source": source,
+        "generation": "g",
+        "predecessor": predecessor,
+        "checkpoint": checkpoint,
+        "scan_id": checkpoint,
+        "scope": [row["collection"]],
+        "scan_started_at": "2026-11-05T00:00:00Z",
+        "completion_evidence": "complete",
+        "observations": [row],
+    }))
+    .expect("capture")
+}
+
+fn contact(key: &str, phone: &str) -> serde_json::Value {
+    json!({
+        "kind": "upsert", "collection": "contacts.contact", "native_key": key,
+        "observed_at": "2026-11-05T00:00:00Z",
+        "data": {"display_name": key, "phones": [{"value": phone}], "emails": []},
+    })
+}
+
+#[test]
+fn an_unreadable_contact_never_relinks_a_handle() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = State::<Gateway>::open(home.path()).expect("state");
+    state
+        .commit_capture(&capture_of(
+            "contacts",
+            "1",
+            "",
+            &contact("synthetic-a", "+15550000001"),
+        ))
+        .expect("contact");
+    let handle = json!({
+        "kind": "upsert", "collection": "messages.handle", "native_key": "synthetic-handle",
+        "observed_at": "2026-11-05T00:00:00Z",
+        "data": {"address": "+15550000001", "service": "iMessage"},
+    });
+    state
+        .commit_capture(&capture_of("messages", "1", "", &handle))
+        .expect("handle");
+    let linked = payload_of(home.path(), "messages.handle");
+    assert!(
+        String::from_utf8_lossy(&linked.1).contains("contact_id"),
+        "the handle starts linked"
+    );
+    mislabel_payload_source(home.path(), "contacts.contact", "contacts");
+    assert!(
+        state
+            .commit_capture(&capture_of(
+                "contacts",
+                "2",
+                "1",
+                &contact("synthetic-b", "+15550000002")
+            ))
+            .is_err(),
+        "the capture refuses instead of relinking from a partial index"
+    );
+    assert_eq!(payload_of(home.path(), "messages.handle"), linked);
+}
+
+#[test]
+fn a_collection_read_does_not_hide_an_unreadable_row() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = State::<Gateway>::open(home.path()).expect("state");
+    state
+        .commit_capture(&capture_of(
+            "contacts",
+            "1",
+            "",
+            &contact("synthetic-a", "+15550000001"),
+        ))
+        .expect("contact");
+    let contacts: Visibility = [("contacts".to_owned(), true)].into_iter().collect();
+    assert!(
+        state
+            .read_model(&contacts, "contacts.list", &json!({}))
+            .is_ok()
+    );
+    mislabel_payload_source(home.path(), "contacts.contact", "contacts");
+    assert!(
+        state
+            .read_model(&contacts, "contacts.list", &json!({}))
+            .is_err()
+    );
+}

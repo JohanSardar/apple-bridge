@@ -1,4 +1,4 @@
-use crate::{Result, collection, encoded, known_records, number, set_meta, source};
+use crate::{Result, collection, encoded, known_records, number, records, set_meta, source};
 use ab_domain::Record;
 use rusqlite::{Connection, params};
 use serde_json::Value;
@@ -57,7 +57,7 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
         )
         .ok();
     if version.as_deref() != Some("3") {
-        for record in known_records(
+        for record in records(
             db,
             "SELECT payload FROM records WHERE collection LIKE 'messages.%' ORDER BY CASE collection WHEN 'messages.message' THEN 0 ELSE 1 END,id",
             &[],
@@ -219,7 +219,7 @@ fn chat_participants(db: &Connection, record: &Record, fields: &Value) -> Result
 }
 fn rebuild_participants(db: &Connection) -> Result<()> {
     db.execute_batch("DELETE FROM handle_address; DELETE FROM chat_participant;")?;
-    for record in known_records(
+    for record in records(
         db,
         "SELECT payload FROM records WHERE collection IN ('messages.handle','messages.chat') ORDER BY collection,id",
         &[],

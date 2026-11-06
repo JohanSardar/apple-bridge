@@ -1,5 +1,5 @@
 use crate::projection::{b, normalize, s};
-use crate::{ErrorCode, Record, Result, Visibility, allows, known_records, project};
+use crate::{ErrorCode, Record, Result, Visibility, allows, known_records, project, records};
 use rusqlite::Connection;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -9,7 +9,7 @@ fn data(record: &Record) -> Result<Value> {
     Ok(serde_json::from_str(record.data.get())?)
 }
 fn all(db: &Connection, collection: &str) -> Result<Vec<Record>> {
-    known_records(
+    records(
         db,
         "SELECT payload FROM records WHERE collection=? AND deleted=0 ORDER BY id",
         &[&collection],
@@ -255,7 +255,11 @@ pub(crate) fn contacts(db: &Connection, visibility: &Visibility, query: &Value) 
 }
 pub(crate) fn sources(db: &Connection, visibility: &Visibility) -> Result<Value> {
     let mut out = Vec::new();
-    for record in all(db, "system.source")? {
+    for record in known_records(
+        db,
+        "SELECT payload FROM records WHERE collection='system.source' AND deleted=0 ORDER BY id",
+        &[],
+    )? {
         if !allows(visibility, &record)? {
             continue;
         }
@@ -407,7 +411,7 @@ pub(crate) fn calendar(db: &Connection, visibility: &Visibility, query: &Value) 
     let civil_end = civil_end.to_string();
     let end_raw = end.to_string();
     let start_raw = start.to_string();
-    let candidates = known_records(
+    let candidates = records(
         db,
         "SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND coalesce(json_extract(payload,'$.data.all_day'),0)=0 AND julianday(json_extract(payload,'$.data.start'))<=julianday(?) AND julianday(json_extract(payload,'$.data.end'))>=julianday(?) UNION ALL SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND json_extract(payload,'$.data.all_day')=1 AND json_extract(payload,'$.data.start')<? AND json_extract(payload,'$.data.end')>? LIMIT 10001",
         &[&end_raw, &start_raw, &civil_end, &civil_start],

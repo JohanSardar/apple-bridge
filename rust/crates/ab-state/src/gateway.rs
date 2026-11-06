@@ -191,7 +191,7 @@ fn note_version(old: Option<&Record>, value: &mut Value) -> Result<()> {
 }
 fn contact_index(db: &Connection) -> Result<HashMap<String, String>> {
     let mut index = HashMap::new();
-    for r in known_records(
+    for r in records(
         db,
         "SELECT payload FROM records WHERE collection='contacts.contact' AND deleted=0",
         &[],
