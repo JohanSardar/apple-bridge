@@ -12,6 +12,7 @@ import MessagesSource
 
 public actor AppleSession {
     private var running = false
+    private var restartRequested = false
     var link: NativeSessionLink?
     private var facts: NativeServer?
     private var connected: Bool { link != nil }
@@ -216,6 +217,9 @@ public actor AppleSession {
             }
             queryTasks[id] = Task { await query(frame); queryTasks.removeValue(forKey: id) }
         case "QueryCancel": queryTasks[frame["id"].string]?.cancel()
+        case "Restart":
+            restartRequested = true
+            throw SourceFailure.unavailable
         case "Close": throw SourceFailure.unavailable
         default: throw SourceFailure.invalid
         }
@@ -280,7 +284,7 @@ public actor AppleSession {
                 disconnect()
             }
             stop?()
-            guard kill(gatewayPID, 0) == 0 else { return }
+            guard !restartRequested, kill(gatewayPID, 0) == 0 else { return }
             try await Task.sleep(for: .milliseconds(backoff))
             backoff = min(backoff * 2, 2000)
         }

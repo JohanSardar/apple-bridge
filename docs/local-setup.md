@@ -66,7 +66,11 @@ Send the token as `Authorization: Bearer <token>`, to `/mcp` or to the REST API 
 
 ## Mac permissions
 
-`bridge permissions guide` lists Full Disk Access, Contacts, Calendar and Reminders with their status, then walks through any that are missing. For each one it waits for you, then asks macOS for that permission alone or opens the right page in System Settings. You can skip any of them, and the other sources keep working. When it has asked macOS for something, it restarts the Helper so a new permission starts reading right away, and says so if it cannot confirm that.
+`bridge permissions guide` lists Full Disk Access, Contacts, Calendar and Reminders with their status, then walks through any that are missing. For each one it waits for you, then asks macOS for that permission alone or opens the right page in System Settings. You can skip any of them, and the other sources keep working. When it has asked macOS for something, it asks the gateway to restart its connected Helper so a new permission starts reading right away, and says so if it cannot confirm that. An older gateway that cannot restart the Helper needs `bridge down`, then `bridge up`.
+
+The Settings step waits up to ten minutes. If the window is not visible, click System Settings in the Dock or use Mission Control to find the Space containing it; Apple Bridge cannot force a Settings window onto your current Space. Press Ctrl-C at any time and rerun `bridge permissions guide` to continue: existing grants are kept, including after a timeout.
+
+macOS may list Apple Bridge in Accessibility with its switch off without showing a permission prompt. The Notes folder-rename capability checks `AXIsProcessTrusted` through the Helper, which is not a request to grant access. This check stays so Notes folder UI remains available when you have allowed it. The guide does not request Accessibility or switch it on. Legacy `onboard` explicitly requests Accessibility; it is not run by this guide.
 
 Reminders can only be read with Calendar allowed too. Without Calendar, Reminders shows as needing a permission.
 

@@ -68,6 +68,24 @@ async fn send(writer: &Mutex<OwnedWriteHalf>, frame: &IpcFrame) -> Result<(), Er
     .map_err(|_| Code::Unavailable)?
 }
 impl Commands {
+    pub async fn restart(&self) -> Result<u64, Error> {
+        let session = self.session.lock().await;
+        let writer = session.writer.as_ref().ok_or(Code::Unavailable)?;
+        send(
+            writer,
+            &IpcFrame {
+                t: "Restart".into(),
+                ..IpcFrame::default()
+            },
+        )
+        .await?;
+        Ok(session.fence)
+    }
+
+    pub fn current_fence(&self) -> u64 {
+        self.fence.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
     async fn attach(&self, fence: u64, writer: Arc<Mutex<OwnedWriteHalf>>) {
         let mut s = self.session.lock().await;
         self.fence.store(fence, std::sync::atomic::Ordering::SeqCst);
@@ -369,6 +387,30 @@ impl Commands {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn restart_uses_only_the_attached_session_and_returns_its_fence()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use tokio::io::AsyncReadExt;
+        let commands = Commands::default();
+        assert!(commands.restart().await.is_err());
+        let (stream, mut peer) = tokio::net::UnixStream::pair()?;
+        let (_, writer) = stream.into_split();
+        commands.attach(7, Arc::new(Mutex::new(writer))).await;
+        assert_eq!(commands.restart().await?, 7);
+        let length = peer.read_u32().await?;
+        let mut bytes = vec![0; length as usize];
+        peer.read_exact(&mut bytes).await?;
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&bytes)?["t"],
+            "Restart"
+        );
+        commands.detach(7).await;
+        assert_eq!(commands.current_fence(), 0);
+        assert!(commands.restart().await.is_err());
+        Ok(())
+    }
+
     #[tokio::test]
     #[allow(clippy::expect_used)]
     async fn receipt_lookup_is_independent_of_session_contention() {

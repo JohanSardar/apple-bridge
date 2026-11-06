@@ -187,7 +187,7 @@ pub(crate) async fn start(
     ));
     tasks.spawn(crate::capture::hydrate(
         blobs.clone(),
-        blob_source,
+        blob_source.clone(),
         hydration,
         hydrate_stop,
     ));
@@ -195,6 +195,7 @@ pub(crate) async fn start(
     tasks.spawn(crate::control::serve(
         control,
         (**store).clone(),
+        blob_source.clone(),
         control_stop,
     ));
     let peer_stop = receiver.clone();

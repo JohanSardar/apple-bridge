@@ -676,6 +676,9 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
         assert_eq!(after["statuses"][permission], "granted", "{permission}");
     }
     assert!(text(&walked.stdout).contains("Full Disk Access allowed"));
+    assert!(text(&walked.stdout).contains("Waiting up to 10 minutes"));
+    assert!(text(&walked.stdout).contains("Mission Control"));
+    assert!(text(&walked.stdout).contains("existing grants are kept"));
     Ok(())
 }
 
