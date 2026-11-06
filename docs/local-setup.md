@@ -13,15 +13,16 @@ bridge stats --watch        # counts per source, as each one finishes
 
 Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
 
-## The three levels
+## The two levels
+
+The only network difference is whether the app runs on your Mac.
 
 | Level | Who connects | How | Needs |
 |---|---|---|---|
-| 1, the default | Agents on this Mac | `bridge link claude` or `bridge link codex` | Nothing else |
-| 2 | Other apps and bots on this Mac | The same address. `bridge link other` prints the details | Nothing else |
-| 3, opt-in | Other computers and cloud apps such as ChatGPT | `bridge remote on` | An invite for the hosted relay, or [your own server](self-host.md) |
+| 1, the default | Anything on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
+| 2, opt-in | Other computers and cloud apps such as ChatGPT | `bridge remote on` | An invite for the hosted relay, or [your own server](self-host.md) |
 
-Levels 1 and 2 never start the relay. Level 3 only starts when you run `bridge remote on`, and `bridge remote off` stops it.
+Level 1 never starts the relay. Level 2 only starts when you run `bridge remote on`, and `bridge remote off` stops it.
 
 ## Start and stop
 
