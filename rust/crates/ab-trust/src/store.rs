@@ -252,7 +252,7 @@ fn keychain_error(locked: bool) -> Error {
     }
     .into()
 }
-pub fn service_for(home: &Path) -> String {
+pub(crate) fn service_for(home: &Path) -> String {
     format!(
         "apple-bridge:{}",
         fingerprint(absolute(home).as_os_str().as_encoded_bytes())

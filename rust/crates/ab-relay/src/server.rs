@@ -39,7 +39,7 @@ impl Default for Capacity {
 }
 
 #[must_use]
-pub fn source_key(address: IpAddr) -> IpAddr {
+pub(crate) fn source_key(address: IpAddr) -> IpAddr {
     match address.to_canonical() {
         IpAddr::V6(address) => {
             let mut segments = address.segments();

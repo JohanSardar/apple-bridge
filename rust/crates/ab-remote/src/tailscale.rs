@@ -176,7 +176,7 @@ impl Tailscale {
     pub async fn add(&self, target: &str) -> Result<Lease> {
         self.add_mode(target, false).await
     }
-    pub async fn add_mode(&self, target: &str, private: bool) -> Result<Lease> {
+    pub(crate) async fn add_mode(&self, target: &str, private: bool) -> Result<Lease> {
         let status: Value = self
             .api
             .request(reqwest::Method::GET, "status?peers=false", None, None)

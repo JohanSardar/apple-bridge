@@ -135,7 +135,7 @@ pub struct Store {
 pub fn digest(value: &str) -> String {
     format!("{:x}", Sha256::digest(value.as_bytes()))
 }
-pub fn random_token() -> Result<String> {
+pub(crate) fn random_token() -> Result<String> {
     let mut b = [0; 32];
     getrandom::fill(&mut b).map_err(|e| Error::Random(e.to_string()))?;
     Ok(B64.encode(b))
@@ -359,7 +359,7 @@ impl Store {
         self.versioned_policy(host, limits, disabled, revoked, 0)
             .map(|_| ())
     }
-    pub fn versioned_policy(
+    pub(crate) fn versioned_policy(
         &mut self,
         host: &str,
         limits: Limits,
@@ -387,7 +387,7 @@ impl Store {
         self.commit(host.to_owned(), d, Some(old))?;
         Ok(true)
     }
-    pub fn charge(&mut self, host: &str, size: usize) -> Result<usize> {
+    pub(crate) fn charge(&mut self, host: &str, size: usize) -> Result<usize> {
         let old = self.devices.get(host).cloned().ok_or(Error::Denied)?;
         if old.disabled || old.revoked {
             return Err(Error::Denied);

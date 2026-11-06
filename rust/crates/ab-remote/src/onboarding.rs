@@ -27,7 +27,7 @@ fn clean(path: &Path) -> PathBuf {
     clean
 }
 
-pub fn control_path(home: &Path, id: &str) -> Result<PathBuf> {
+pub(crate) fn control_path(home: &Path, id: &str) -> Result<PathBuf> {
     let absolute = if home.is_absolute() {
         home.to_path_buf()
     } else {
@@ -49,7 +49,7 @@ fn hex(bytes: &[u8]) -> String {
     })
 }
 
-pub fn valid_link(link: &str) -> bool {
+pub(crate) fn valid_link(link: &str) -> bool {
     link.strip_prefix("https://")
         .and_then(|rest| rest.split(['/', '?', '#']).next())
         .is_some_and(|host| !host.is_empty() && !host.contains('@'))

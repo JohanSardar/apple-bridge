@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
-pub fn valid_host(host: &str) -> bool {
+pub(crate) fn valid_host(host: &str) -> bool {
     host.len() <= 253
         && host.contains('.')
         && host.split('.').all(|label| {

@@ -35,7 +35,7 @@ impl std::fmt::Debug for LocalApi {
     }
 }
 
-pub fn parse_lsof(output: &str) -> Option<(u16, String)> {
+pub(crate) fn parse_lsof(output: &str) -> Option<(u16, String)> {
     output.lines().find_map(|line| {
         let (_, after) = line.split_once(APP_GROUP_MARKER)?;
         parse_proof(after)
@@ -46,7 +46,7 @@ fn parse_proof(name: &str) -> Option<(u16, String)> {
     let port = port.parse::<u16>().ok().filter(|port| *port != 0)?;
     (!token.is_empty()).then(|| (port, token.to_owned()))
 }
-pub fn macsys_credentials(dir: &Path) -> Option<(u16, String)> {
+pub(crate) fn macsys_credentials(dir: &Path) -> Option<(u16, String)> {
     let target = std::fs::read_link(dir.join("ipnport")).ok()?;
     let port_text = target.to_str()?;
     let port = port_text.parse::<u16>().ok().filter(|port| *port != 0)?;
@@ -57,7 +57,7 @@ pub fn macsys_credentials(dir: &Path) -> Option<(u16, String)> {
     }
     Some((port, token.to_owned()))
 }
-pub fn group_container_credentials(dir: &Path) -> Option<(u16, String)> {
+pub(crate) fn group_container_credentials(dir: &Path) -> Option<(u16, String)> {
     let mut found = std::fs::read_dir(dir)
         .ok()?
         .filter_map(std::result::Result::ok)
