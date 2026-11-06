@@ -14,7 +14,7 @@ import tempfile
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build import ADHOC, APP, EXECUTABLES, code_paths, run, signature_problems, version_problems
+from build import ADHOC, APP, EXECUTABLES, code_paths, run, signature_problems, tree_problems, version_problems
 
 OPEN_STUB = """#!/bin/sh
 echo "$$" >> "$(dirname "$0")/pids"
@@ -75,6 +75,7 @@ def inspect_install(prefix, name, source_app, identity, facts, report, label):
     link = prefix / "bin/bridge"
     report.expect(f"{label}: bin/bridge links to the package launcher", link.is_symlink() and link.resolve() == (package / "bin/bridge").resolve())
     report.expect(f"{label}: every app file is byte-identical with the same executable bit", fingerprints(app) == fingerprints(source_app))
+    report.expect(f"{label}: one flat app with its declared icon", not tree_problems(app) and len(list(package.rglob("*.app"))) == 1)
     report.expect(f"{label}: signature, identifier, leaf and hardened runtime", not signature_problems(app, identity), "; ".join(signature_problems(app, identity)))
     installed = code_facts(app)
     report.expect(f"{label}: codesign -d -r- and CDHash match the app before packing", installed == facts, f"{installed} != {facts}")

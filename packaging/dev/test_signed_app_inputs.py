@@ -80,6 +80,18 @@ class SessionBundleKeyTests(unittest.TestCase):
 
 
 class AdHocSigningTests(unittest.TestCase):
+    def test_icon_changes_invalidate_the_signed_helper_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            icon = root / "packaging/dev/AppIcon.icns"
+            icon.parent.mkdir(parents=True)
+            icon.write_bytes(b"first icon")
+            with patch.dict(os.environ, {"APPLE_BRIDGE_SIGNING_IDENTITY": "-", "APPLE_BRIDGE_NATIVE_LAB": "1"}):
+                with patch("signed_app_inputs.run", return_value="/fixture"):
+                    first = source_key(root)
+                    icon.write_bytes(b"second icon")
+                    self.assertNotEqual(first, source_key(root))
+
     def test_lab_cache_never_reads_the_signing_keychain(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(os.environ, {"APPLE_BRIDGE_SIGNING_IDENTITY": "-", "APPLE_BRIDGE_NATIVE_LAB": "1"}):

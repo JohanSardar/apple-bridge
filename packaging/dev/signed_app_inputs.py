@@ -46,7 +46,7 @@ def session_inputs(root, environment):
 
 def source_key(root):
     digest = hashlib.sha256()
-    wanted = {"Info.plist", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py", "app-intents.py", "build-session.sh"}
+    wanted = {"Info.plist", "AppIcon.icns", "Truth-Info.plist", "Helper.entitlements", "sign.sh", "sign-gui.py", "build-helper.sh", "build-truth.sh", "build-native.sh", "build-native.py", "generate-source-registrations.py", "sdkroot.sh", "signed-app-cache.py", "signed_app_inputs.py", "app-intents.py", "build-session.sh"}
     for base in [root / "native", root / "lab/truth/native", root / "packaging/dev", root / "packaging/app-intents"]:
         paths = []
         for directory, children, files in os.walk(base):
