@@ -233,7 +233,7 @@ fn source_status(home: &Path, source: &str) -> Outcome<String> {
     let snapshot = stats::read_states(&connection)?;
     Ok(match snapshot.get(source).map(String::as_str) {
         Some("ready" | "degraded") => "granted",
-        Some("permission_missing") => "denied",
+        Some("permission_missing") => "needs_permission",
         _ => "unknown",
     }
     .to_owned())
@@ -242,7 +242,7 @@ fn source_status(home: &Path, source: &str) -> Outcome<String> {
 fn label(status: &str) -> &'static str {
     match status {
         "granted" => "allowed",
-        "denied" => "needs permission",
+        "denied" | "needs_permission" => "needs permission",
         _ => "not known yet",
     }
 }
@@ -250,7 +250,7 @@ fn label(status: &str) -> &'static str {
 fn mark(status: &str) -> &'static str {
     match status {
         "granted" => "✓",
-        "denied" => "!",
+        "denied" | "needs_permission" => "!",
         _ => "?",
     }
 }

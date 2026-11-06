@@ -6,6 +6,25 @@ use ab_native::{capture, mail};
 
 const MAIL_DATABASE: &str = "Envelope Index";
 const MAIL_MAX_ROWS: usize = 1_000_000;
+
+fn data_absent(root: &Path) -> bool {
+    let mut missing = root.join(MAIL_DATABASE);
+    while let Some(parent) = missing.parent() {
+        match std::fs::read_dir(parent) {
+            Ok(entries) => {
+                return entries
+                    .collect::<Result<Vec<_>, _>>()
+                    .is_ok_and(|entries| entries.iter().all(|entry| entry.path() != missing));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                missing = parent.to_path_buf();
+            }
+            Err(_) => return false,
+        }
+    }
+    false
+}
+
 const OPERATIONS: [&str; 6] = [
     "mail.create_draft",
     "mail.send",
@@ -62,6 +81,8 @@ impl CaptureReader for MailReader {
     fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
         Some(if mail::readable(&self.root.join(MAIL_DATABASE)) {
             Readiness::ready(mail::coverage(), &OPERATIONS)
+        } else if data_absent(&self.root) {
+            Readiness::not("unavailable", mail::coverage(), "no_local_mail_data")
         } else {
             Readiness::not(
                 "permission_missing",
@@ -105,6 +126,41 @@ impl CaptureReader for MailReader {
         let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
         self.reader.commit(pending).map_err(reader_error)?;
         self.committed = Some(current);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn absent_mail_data_is_not_reported_as_a_missing_permission()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let directory =
+            std::env::temp_dir().join(format!("ab-mail-readiness-{}", std::process::id()));
+        std::fs::create_dir_all(&directory)?;
+        let root = directory.join("Mail/V10/MailData");
+        let context = ReadinessContext {
+            fence: 1,
+            os_build: "test",
+        };
+        let mut reader = MailReader::new(root.clone());
+        assert_eq!(
+            reader.readiness(&context).ok_or("readiness")?.state,
+            "unavailable"
+        );
+        std::fs::create_dir_all(&root)?;
+        assert!(data_absent(&root));
+        std::fs::write(root.join(MAIL_DATABASE), b"not sqlite")?;
+        assert_eq!(
+            reader.readiness(&context).ok_or("readiness")?.state,
+            "permission_missing"
+        );
+        std::fs::remove_file(root.join(MAIL_DATABASE))?;
+        std::os::unix::fs::symlink(directory.join("missing"), root.join(MAIL_DATABASE))?;
+        assert!(!data_absent(&root));
+        std::fs::remove_dir_all(directory)?;
         Ok(())
     }
 }
