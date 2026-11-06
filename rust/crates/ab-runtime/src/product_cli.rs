@@ -172,7 +172,10 @@ pub fn permissions_request(
         timeout.unwrap_or(PERMISSION_TIMEOUT),
     )?;
     let states: BTreeMap<String, String> = serde_json::from_slice(&std::fs::read(&report.0)?)?;
-    if states.get("outcome").is_some_and(|outcome| outcome == "timed_out") {
+    if states
+        .get("outcome")
+        .is_some_and(|outcome| outcome == "timed_out")
+    {
         return Err(Error::Io(std::io::Error::new(
             std::io::ErrorKind::TimedOut,
             format!("nobody answered the macOS prompt for {name} in time; run this again to retry"),

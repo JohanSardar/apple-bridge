@@ -167,9 +167,8 @@ impl Backend<'_> {
         let Self::Mac { home, helper } = self else {
             return true;
         };
-        std::fs::read_to_string(home.join("helper/helper.pid")).is_ok_and(|pid| {
-            pid.trim() != previous && is_session_helper(pid.trim(), helper, home)
-        })
+        std::fs::read_to_string(home.join("helper/helper.pid"))
+            .is_ok_and(|pid| pid.trim() != previous && is_session_helper(pid.trim(), helper, home))
     }
 
     fn ask_macos(&self, permission: &Permission) -> Outcome {
