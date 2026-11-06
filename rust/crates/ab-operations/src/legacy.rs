@@ -86,3 +86,24 @@ pub fn read_model(name: &str, value: &Value) -> Result<Box<RawValue>, Error> {
     emit(value, kind, &shapes, &mut out)?;
     RawValue::from_string(out).map_err(|_| Code::Corrupt.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    #[test]
+    fn replica_status_carries_the_last_feed_error() {
+        let shaped = super::read_model(
+            "sources.status",
+            &json!({"records": [], "replica": {"role": "replica", "last_error": "the gateway refused the feed"}}),
+        )
+        .map_err(|_| "shape")
+        .unwrap_or_else(|error| panic!("{error}"));
+        let shaped: serde_json::Value =
+            serde_json::from_str(shaped.get()).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            shaped["replica"]["last_error"],
+            "the gateway refused the feed"
+        );
+    }
+}

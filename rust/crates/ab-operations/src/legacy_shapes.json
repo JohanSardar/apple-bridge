@@ -111,6 +111,10 @@
     [
       "resumes",
       "int"
+    ],
+    [
+      "last_error",
+      "string"
     ]
   ],
   "DialStatus": [
