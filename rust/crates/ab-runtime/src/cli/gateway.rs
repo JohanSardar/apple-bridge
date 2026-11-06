@@ -320,6 +320,9 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
         start_gateway(home, args, previous.as_ref()).await?
     };
     let helper = !Config::load(home)?.helper_app.is_empty();
+    let older = running
+        .then(|| crate::gateway_lifetime::older(home))
+        .flatten();
     let elapsed = began.elapsed();
     if args.json {
         println!(
@@ -332,11 +335,24 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
                 "helper": helper,
                 "remote": remote_state(home),
                 "seconds": elapsed.as_secs_f64(),
+                "restart_needed": older.is_some(),
             })
         );
         return Ok(());
     }
     print_summary(home, &address, !running, helper, elapsed);
+    if let Some(version) = older {
+        println!(
+            "Warning: the running gateway ({version}) differs from this installed executable."
+        );
+        println!(
+            "  Run bridge down, then bridge up to finish the update. If the app started it, restart the app instead."
+        );
+    } else if running && !home.join("run/gateway-build.json").exists() {
+        println!(
+            "Warning: this gateway predates update detection. If you updated, run bridge down, then bridge up."
+        );
+    }
     println!();
     stats::print_once(home)?;
     print_next(

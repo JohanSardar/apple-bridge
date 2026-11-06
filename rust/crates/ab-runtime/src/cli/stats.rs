@@ -165,7 +165,9 @@ impl SourceStats {
                 Some("no supported local Mail data; check that Mail has an account on this Mac")
             }
             "unavailable" => Some("not available on this Mac right now"),
-            "degraded" => Some("partly available"),
+            "degraded" => Some(
+                "partly available; if this follows an update, run bridge down, then bridge up; otherwise run bridge doctor",
+            ),
             _ => None,
         }
     }
@@ -721,7 +723,9 @@ mod tests {
             );
             assert_eq!(
                 source("phone", "degraded", total).advice(),
-                Some("partly available")
+                Some(
+                    "partly available; if this follows an update, run bridge down, then bridge up; otherwise run bridge doctor"
+                )
             );
         }
     }
