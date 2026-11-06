@@ -168,6 +168,21 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     assert!(summary.contains("was already on"), "{summary}");
     assert!(summary.contains(&format!("http://{api}/mcp")), "{summary}");
     assert!(summary.contains("bridge link claude"), "{summary}");
+    assert!(!summary.contains("Warning:"), "{summary}");
+    let marker = home.join("run/gateway-build.json");
+    let original = std::fs::read(&marker)?;
+    let mut stale: serde_json::Value = serde_json::from_slice(&original)?;
+    stale["inode"] = serde_json::json!(0);
+    stale["version"] = serde_json::json!("older-fixture");
+    std::fs::write(&marker, serde_json::to_vec(&stale)?)?;
+    let updated = run(&home, &["up"])?;
+    let warning = text(&updated.stdout);
+    assert!(warning.contains("older-fixture"), "{warning}");
+    assert!(warning.contains("bridge down, then bridge up"), "{warning}");
+    let updated = run(&home, &["up", "--json"])?;
+    let updated: serde_json::Value = serde_json::from_slice(&updated.stdout)?;
+    assert_eq!(updated["restart_needed"], true);
+    std::fs::write(marker, original)?;
 
     let doctor = run(&home, &["doctor"])?;
     let report: serde_json::Value = serde_json::from_slice(&doctor.stdout)?;
@@ -180,6 +195,41 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     let stopped = run(&home, &["down"])?;
     assert!(stopped.status.success());
     assert!(text(&stopped.stdout).contains("not running"));
+    Ok(())
+}
+
+#[test]
+fn uninstalling_a_running_executable_stops_its_gateway() -> Check {
+    let directory = tempfile::tempdir_in("/tmp")?;
+    let binary = directory.path().join("bridge");
+    std::fs::copy(env!("CARGO_BIN_EXE_bridge"), &binary)?;
+    let home = directory.path().join("home");
+    let api = free_port()?;
+    let _guard = Gateway(&home);
+    let output = Command::new(&binary)
+        .args([
+            "up",
+            "--json",
+            "--api-addr",
+            &api,
+            "--peer-addr",
+            "127.0.0.1:0",
+            "--home",
+        ])
+        .arg(&home)
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .output()?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    std::fs::remove_file(binary)?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(80);
+    while TcpListener::bind(&api).is_err() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "removed gateway still running"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    assert!(std::fs::read_to_string(home.join("gateway.log"))?.contains("was removed; stopping"));
     Ok(())
 }
 

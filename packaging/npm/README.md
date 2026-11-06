@@ -21,11 +21,11 @@ npm update -g PACKAGE_NAME
 bridge up
 ```
 
-Your Mac permissions belong to the signing identity and app identifier, and both stay the same between releases.
+Your Mac permissions belong to the signing identity and app identifier, and both stay the same between releases. If you update without stopping, `bridge up` warns when the running executable differs from the installed one. Run `bridge down`, then `bridge up` to finish. A disconnected Helper can leave sources partly available: stored records remain readable, but new changes may not sync until the restart. Restart the app instead if it owns the gateway.
 
 ## Uninstalling
 
-Stop Apple Bridge and disconnect your agents first. Removing the package does not stop a gateway that is already running, and it removes the commands that stop it:
+Stop Apple Bridge and disconnect your agents first. Removing the package removes the commands that stop it. New gateways stop themselves after their executable has been absent for one minute; an ordinary package replacement that restores it within that time does not stop them. Older gateways do not have this safeguard:
 
 ```sh
 bridge unlink claude        # and: bridge unlink codex, for the agents you connected
@@ -40,8 +40,11 @@ If you already uninstalled while it was running, install the package again, then
 These stay on your Mac, in case you install again or also use the app:
 
 - Your data, in `~/Library/Application Support/AppleBridge`. It holds a copy of your private messages and mail, plus Apple Bridge's own keychain file with its credentials. Delete this folder when you no longer want them.
+- Permission-guide reports, in `~/Library/Application Support/AppleBridgeDev`. They can contain permission status and probe results. Delete this folder when no guide or development probe is running.
 - Any cached files, in `~/Library/Caches/AppleBridge`. You can delete this folder.
 - Mac permissions, listed in System Settings under Privacy & Security. Turn them off there.
+
+The background gateway checks `gateway.log` each second. Above 8 MiB it keeps the newest 4 MiB in the same file, so existing writers keep logging. This bounds retained logs rather than preserving an unlimited history; a burst can briefly exceed the threshold.
 
 ## The app
 

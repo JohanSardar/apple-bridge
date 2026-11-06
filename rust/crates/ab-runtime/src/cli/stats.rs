@@ -163,7 +163,7 @@ impl SourceStats {
             "permission_missing" => Some("needs a Mac permission: run bridge permissions guide"),
             "capture_failed" => Some("could not be read: run bridge doctor"),
             "unavailable" => Some("not available on this Mac right now"),
-            "degraded" => Some("partly available"),
+            "degraded" => Some("partly available; if this follows an update, run bridge down, then bridge up; otherwise run bridge doctor"),
             _ => None,
         }
     }

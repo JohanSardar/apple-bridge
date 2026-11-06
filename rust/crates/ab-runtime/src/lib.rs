@@ -20,6 +20,8 @@ mod forward_observer;
 #[cfg(feature = "replica-feed")]
 mod gateway;
 #[cfg(feature = "replica-feed")]
+mod gateway_lifetime;
+#[cfg(feature = "replica-feed")]
 mod gateway_status;
 pub mod helper;
 pub mod helper_blobs;

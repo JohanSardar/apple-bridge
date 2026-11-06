@@ -136,8 +136,15 @@ pub(crate) async fn start(
         .merge(phone_router.clone())
         .fallback_service(web.clone().router());
     config.save()?;
+    let running = crate::gateway_lifetime::Running::current()?;
+    running.save(&config.home)?;
     let (stop, receiver) = tokio::sync::watch::channel(false);
     let mut tasks = tokio::task::JoinSet::new();
+    tasks.spawn(crate::gateway_lifetime::run(
+        config.home.clone(),
+        running,
+        receiver.clone(),
+    ));
     let connector_listener = crate::connector::bind(&config.home)?;
     tasks.spawn(crate::connector::serve(
         connector_listener,
