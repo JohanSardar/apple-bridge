@@ -4,4 +4,4 @@ HTTPS client IDs resolve to metadata documents with an exact matching client_id 
 
 WEB-AGENT-OAUTH-CIMD exercises consent, token exchange, mismatched IDs, invalid redirects, private addresses and redirects, otherwise-valid oversized documents, timeouts and DNS rebinding through the production transport at sim level. The web level checks discovery and rejection of private client URLs in Chromium light desktop.
 
-Protected-resource and authorization-server metadata advertise identical `scopes_supported` sets containing every grant in the per-source grant table. AUTH-SCOPES-METADATA proves exact set equality, including newly registered sources. Consent and agent setup retain their agent-eligible catalog.
+Protected-resource metadata advertises exactly the grants in the per-source grant table. Authorization-server metadata advertises the same grants plus `offline_access`, which clients send when they ask for a refresh token. It is not a grant: it adds no access, and a request for it alone is an invalid scope. AUTH-SCOPES-METADATA proves both sets exactly, including newly registered sources. Consent and agent setup retain their agent-eligible catalog.

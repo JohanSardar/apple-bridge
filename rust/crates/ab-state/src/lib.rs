@@ -16,7 +16,7 @@ mod query;
 mod reminders;
 mod scope;
 mod specialized;
-use ab_domain::{Collection, ErrorCode, Record};
+use ab_domain::{Collection, ErrorCode, Record, Source};
 use ab_wire::{
     gojson::{self, EscapeMode},
     messages::{Batch, FeedFrame},
@@ -214,10 +214,56 @@ pub fn digest(records: &[Record]) -> String {
     }
     format!("{:x}", h.finalize())
 }
-pub(crate) fn records(
+fn names_unknown_source(record: &serde_json::Value) -> bool {
+    record["source"].is_string()
+        && serde_json::from_value::<Source>(record["source"].clone()).is_err()
+}
+fn report_unknown_source(record: &serde_json::Value) {
+    static REPORTED: std::sync::Mutex<std::collections::BTreeSet<String>> =
+        std::sync::Mutex::new(std::collections::BTreeSet::new());
+    let origin = format!(
+        "{:.40}/{:.40}",
+        record["source"].as_str().unwrap_or_default(),
+        record["collection"].as_str().unwrap_or_default()
+    );
+    if REPORTED
+        .lock()
+        .is_ok_and(|mut reported| reported.insert(origin.clone()))
+    {
+        eprintln!(
+            "state: keeping but not serving stored rows from {origin}: this build does not know that source"
+        );
+    }
+}
+fn stored_row<T: serde::de::DeserializeOwned>(
+    bytes: &[u8],
+    record_of: fn(&serde_json::Value) -> &serde_json::Value,
+) -> Result<Option<T>> {
+    let error = match serde_json::from_slice(bytes) {
+        Ok(row) => return Ok(Some(row)),
+        Err(error) => error,
+    };
+    let Ok(row) = serde_json::from_slice::<serde_json::Value>(bytes) else {
+        return Err(error.into());
+    };
+    let record = record_of(&row);
+    if !names_unknown_source(record) {
+        return Err(error.into());
+    }
+    report_unknown_source(record);
+    Ok(None)
+}
+fn stored_record(bytes: &[u8]) -> Result<Option<Record>> {
+    stored_row(bytes, |row| row)
+}
+fn stored_change(bytes: &[u8]) -> Result<Option<Change>> {
+    stored_row(bytes, |row| &row["record"])
+}
+fn decoded_rows(
     db: &Connection,
     sql: &str,
     args: &[&dyn rusqlite::ToSql],
+    decode: fn(&[u8]) -> Result<Option<Record>>,
 ) -> Result<Vec<Record>> {
     let mut stmt = db.prepare_cached(sql)?;
     let mut rows = stmt.query(args)?;
@@ -228,9 +274,27 @@ pub(crate) fn records(
         else {
             return Err(ErrorCode::Corrupt.into());
         };
-        out.push(serde_json::from_slice(bytes)?);
+        if let Some(record) = decode(bytes)? {
+            out.push(record);
+        }
     }
     Ok(out)
+}
+pub(crate) fn records(
+    db: &Connection,
+    sql: &str,
+    args: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<Record>> {
+    decoded_rows(db, sql, args, |bytes| {
+        Ok(Some(serde_json::from_slice(bytes)?))
+    })
+}
+pub(crate) fn known_records(
+    db: &Connection,
+    sql: &str,
+    args: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<Record>> {
+    decoded_rows(db, sql, args, stored_record)
 }
 fn upgrade_schema(db: &mut Connection, home: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -597,7 +661,9 @@ impl<Role> State<Role> {
         let limit = if query.limit == 0 { 1000 } else { query.limit };
         while let Some(row) = rows.next()? {
             let raw: Vec<u8> = row.get(0)?;
-            let record: Record = serde_json::from_slice(&raw)?;
+            let Some(record) = stored_record(&raw)? else {
+                continue;
+            };
             if !allows(visibility, &record)?
                 || format!("{}/{}", collection(record.collection), record.id.as_str())
                     <= query.after
@@ -700,7 +766,9 @@ impl<Role> State<Role> {
         let mut size = 0;
         while let Some(row) = rows.next()? {
             let raw: Vec<u8> = row.get(0)?;
-            let mut ch: Change = serde_json::from_slice(&raw)?;
+            let Some(mut ch) = stored_change(&raw)? else {
+                continue;
+            };
             if !allows(&i.visibility, &ch.record)? {
                 continue;
             }

@@ -133,7 +133,7 @@ fn start_of(record: &Value) -> String {
         .to_owned()
 }
 fn civil_midnight(days: i64) -> Result<Timestamp> {
-    let zone = TimeZone::UTC;
+    let zone = TimeZone::system();
     let today = Timestamp::now().to_zoned(zone.clone()).date();
     let shifted = today
         .checked_add(Span::new().days(days))
@@ -1146,7 +1146,6 @@ impl Run<'_> {
     }
 
     fn window_slide(&mut self, tag: &str) -> Option<()> {
-        let today = civil_midnight(0).ok()?;
         let old = civil_midnight(-730).ok()?;
         let future = civil_midnight(730)
             .ok()?
@@ -1165,7 +1164,7 @@ impl Run<'_> {
         if !self.await_count(2) {
             return self.fail("initial_window_boundaries");
         }
-        let next = today.checked_add(Duration::from_hours(24)).ok()?;
+        let next = civil_midnight(1).ok()?;
         if !self.control(
             "/calendar",
             &json!({"action": "clock", "now": next.to_string()}),

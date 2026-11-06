@@ -403,7 +403,8 @@ impl Owner {
         )?;
         let page = String::from_utf8_lossy(&reply.body).into_owned();
         let record = page
-            .split_once("<pre>")
+            .split_once("<pre")
+            .and_then(|(_, rest)| rest.split_once('>'))
             .and_then(|(_, rest)| rest.split_once("</pre>"))
             .and_then(|(body, _)| {
                 serde_json::from_str(

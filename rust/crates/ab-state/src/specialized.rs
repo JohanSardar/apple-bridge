@@ -1,5 +1,5 @@
 use crate::projection::{b, normalize, s};
-use crate::{ErrorCode, Record, Result, Visibility, allows, project, records};
+use crate::{ErrorCode, Record, Result, Visibility, allows, known_records, project, records};
 use rusqlite::Connection;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -255,7 +255,11 @@ pub(crate) fn contacts(db: &Connection, visibility: &Visibility, query: &Value) 
 }
 pub(crate) fn sources(db: &Connection, visibility: &Visibility) -> Result<Value> {
     let mut out = Vec::new();
-    for record in all(db, "system.source")? {
+    for record in known_records(
+        db,
+        "SELECT payload FROM records WHERE collection='system.source' AND deleted=0 ORDER BY id",
+        &[],
+    )? {
         if !allows(visibility, &record)? {
             continue;
         }

@@ -1,4 +1,4 @@
-use crate::{Result, collection, encoded, number, records, set_meta, source};
+use crate::{Result, collection, encoded, known_records, number, records, set_meta, source};
 use ab_domain::Record;
 use rusqlite::{Connection, params};
 use serde_json::Value;
@@ -106,7 +106,7 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
         )
         .ok();
     if refs_version.as_deref() != Some("1") {
-        for record in records(db, "SELECT payload FROM records", &[])? {
+        for record in known_records(db, "SELECT payload FROM records", &[])? {
             blob_refs(db, &format!("record:{}", record.id.as_str()), &record)?;
         }
         set_meta(db, "blob_refs_version", "1")?;

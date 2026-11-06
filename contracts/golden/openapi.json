@@ -389,6 +389,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -416,6 +419,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -7127,6 +7133,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -7154,6 +7163,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -40022,6 +40034,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -40049,6 +40064,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -40441,6 +40459,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -40468,6 +40489,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -44458,6 +44482,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -44485,6 +44512,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -44877,6 +44907,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -44904,6 +44937,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",
@@ -45663,6 +45699,9 @@
                                 ],
                                 "type": "object"
                               },
+                              "last_error": {
+                                "type": "string"
+                              },
                               "last_heartbeat": {
                                 "format": "date-time",
                                 "type": "string"
@@ -45690,6 +45729,9 @@
                         },
                         "lag": {
                           "type": "integer"
+                        },
+                        "last_error": {
+                          "type": "string"
                         },
                         "last_heartbeat": {
                           "format": "date-time",

@@ -390,11 +390,29 @@ fn oauth_grants(world: &World, evidence: &mut Evidence) -> Result<()> {
         }),
         "refresh rotates both tokens",
     );
-    let reuse = grants.refresh(&client, &refresh_token, &resource);
     let rotated_access = rotated
         .as_ref()
         .map(|r| text(r, "access_token").to_owned())
         .unwrap_or_default();
+    let retry = grants.refresh(&client, &refresh_token, &resource);
+    evidence.check(
+        "oauth_grant_refresh_retry_returns_saved_successor",
+        rotated.as_ref().is_ok_and(|r| {
+            retry.as_ref().is_ok_and(|again| {
+                text(again, "refresh_token") == text(r, "refresh_token")
+                    && text(again, "access_token") == rotated_access
+            })
+        }) && chats_status(world, &rotated_access) == 200,
+        "a retry inside the window returns the one saved successor",
+    );
+    let aged = edit_credentials(world, |data| {
+        for row in data["oauth_refresh"].as_array_mut().into_iter().flatten() {
+            if row["used"] == true {
+                row["rotated_at"] = json!(1);
+            }
+        }
+    });
+    let reuse = aged.and_then(|()| grants.refresh(&client, &refresh_token, &resource));
     evidence.check(
         "oauth_grant_refresh_reuse_revokes",
         reuse.is_err() && chats_status(world, &rotated_access) == 401,
