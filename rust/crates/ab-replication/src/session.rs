@@ -666,16 +666,11 @@ mod tests {
             _: &ab_trust::Visibility,
             _: u64,
         ) -> Result<NoSnapshot, Error> {
-            Err(Error::Json(
-                serde_json::from_str::<u8>("\"synthetic unreadable row\"").unwrap_err(),
-            ))
+            serde_json::from_str::<u8>("\"synthetic unreadable row\"")
+                .map(|_| NoSnapshot)
+                .map_err(Error::Json)
         }
-        fn changes(
-            &mut self,
-            _: &ab_trust::Visibility,
-            _: Cursor,
-            _: bool,
-        ) -> Result<(), Error> {
+        fn changes(&mut self, _: &ab_trust::Visibility, _: Cursor, _: bool) -> Result<(), Error> {
             Ok(())
         }
         fn next_changes(&mut self, (): &mut ()) -> Result<Option<Batch>, Error> {
@@ -707,7 +702,9 @@ mod tests {
         let client = client(replica_home.path())?;
         client.authority.join(&code).await?;
 
-        let refused = client.connect().await.expect_err("the gateway cannot serve");
+        let Err(refused) = client.connect().await else {
+            return Err("the gateway cannot serve".into());
+        };
         assert!(
             matches!(&refused, Error::Refused(reason) if reason.contains("gateway")),
             "{refused}"
@@ -717,7 +714,7 @@ mod tests {
         let follow = client.follow(stopped);
         let seen = status.wait_for(|status| status.last_error.contains("refused"));
         tokio::select! {
-            result = follow => panic!("follow ended early: {result:?}"),
+            result = follow => return Err(format!("follow ended early: {result:?}").into()),
             result = tokio::time::timeout(Duration::from_secs(10), seen) => {
                 let status = result??;
                 assert!(status.last_error.contains("could not read"), "{}", status.last_error);

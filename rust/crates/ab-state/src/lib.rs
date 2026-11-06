@@ -228,7 +228,9 @@ fn report_unknown_origin(record: &serde_json::Value) {
         .lock()
         .is_ok_and(|mut reported| reported.insert(origin.clone()))
     {
-        eprintln!("state: keeping but not serving stored rows from {origin}: this build does not know that source");
+        eprintln!(
+            "state: keeping but not serving stored rows from {origin}: this build does not know that source"
+        );
     }
 }
 fn stored_row<T: serde::de::DeserializeOwned>(

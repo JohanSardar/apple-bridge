@@ -135,11 +135,7 @@ fn refusal(error: &Error) -> Option<String> {
         | Error::WebSocket(_)
         | Error::Contract(ab_trust::domain::ErrorCode::Reset) => None,
         Error::Invalid | Error::Contract(_) => Some(error.to_string()),
-        Error::Trust(_)
-        | Error::Blob(_)
-        | Error::Json(_)
-        | Error::State(_)
-        | Error::Storage(_) => {
+        Error::Trust(_) | Error::Blob(_) | Error::Json(_) | Error::State(_) | Error::Storage(_) => {
             Some("the gateway could not read its data; its log has the detail".into())
         }
     }
