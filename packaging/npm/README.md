@@ -11,6 +11,21 @@ bridge permissions guide    # allow the Mac permissions you want
 bridge stats --watch        # counts per source, as each one finishes
 ```
 
+## Installing
+
+```sh
+npm install -g PACKAGE_NAME
+```
+
+Node installed with the nodejs.org `.pkg` uses a root-owned global prefix. If npm fails with `EACCES`, use `sudo npm install -g PACKAGE_NAME` (and the sudo update/uninstall commands below), or choose a user-writable prefix before installing:
+
+```sh
+npm config set prefix "$HOME/.npm-global"
+export PATH="$HOME/.npm-global/bin:$PATH"
+```
+
+Add that PATH line to your shell startup file, such as `~/.zshrc`, for future terminals. With a user-writable prefix, use npm without sudo. Never run `bridge` with sudo.
+
 ## Updating
 
 Stop the gateway first, so the running version and the installed one don't differ:
@@ -20,6 +35,8 @@ bridge down
 npm update -g PACKAGE_NAME
 bridge up
 ```
+
+With the nodejs.org `.pkg` and its root-owned prefix, use `sudo npm update -g PACKAGE_NAME` for the npm step instead. No sudo is needed with a user-writable prefix.
 
 Your Mac permissions belong to the signing identity and app identifier, and both stay the same between releases. If you update without stopping, `bridge up` warns when the running executable differs from the installed one. Run `bridge down`, then `bridge up` to finish. A disconnected Helper can leave sources partly available: stored records remain readable, but new changes may not sync until the restart. Restart the app instead if it owns the gateway.
 
@@ -32,6 +49,8 @@ bridge unlink claude        # and: bridge unlink codex, for the agents you conne
 bridge down
 npm uninstall -g PACKAGE_NAME
 ```
+
+With the nodejs.org `.pkg` and its root-owned prefix, use `sudo npm uninstall -g PACKAGE_NAME` for the npm step instead. No sudo is needed with a user-writable prefix.
 
 If `bridge down` says it did not start the gateway, the Apple Bridge app is running it. Use the app's own uninstall instead, or quit it first.
 

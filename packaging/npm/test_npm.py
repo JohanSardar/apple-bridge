@@ -16,6 +16,18 @@ import build
 import check
 
 
+class Documentation(unittest.TestCase):
+    def test_root_owned_node_prefix_has_install_update_and_uninstall_advice(self):
+        for path, name in [(HERE / "README.md", "PACKAGE_NAME"), (HERE.parent.parent / "docs/local-setup.md", "applebridge")]:
+            with self.subTest(path=path):
+                text = path.read_text()
+                for phrase in ["nodejs.org", "`.pkg`", "root-owned", "EACCES", "user-writable prefix", 'npm config set prefix "$HOME/.npm-global"', 'export PATH="$HOME/.npm-global/bin:$PATH"']:
+                    self.assertIn(phrase, text)
+                for action in ["install", "update", "uninstall"]:
+                    self.assertIn(f"sudo npm {action} -g {name}", text)
+                self.assertIn("Never run `bridge` with sudo", text)
+
+
 class SignatureFacts(unittest.TestCase):
     def test_explicit_and_inferred_requirements_are_recorded(self):
         for prefix in ["", "# "]:

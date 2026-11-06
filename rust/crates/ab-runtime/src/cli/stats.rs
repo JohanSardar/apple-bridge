@@ -159,7 +159,9 @@ impl SourceStats {
 
     fn advice(&self) -> Option<&'static str> {
         match self.state.as_str() {
-            "permission_missing" => Some("needs a Mac permission: run bridge permissions guide"),
+            "permission_missing" => Some(
+                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes, Mail or Safari), then run bridge down and bridge up",
+            ),
             "capture_failed" => Some("could not be read: run bridge doctor"),
             "unavailable" if self.source == "mail" => {
                 Some("no supported local Mail data; check that Mail has an account on this Mac")

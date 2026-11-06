@@ -171,7 +171,17 @@ pub fn permissions_request(
         &permission_arguments(app, name, &report.0),
         timeout.unwrap_or(PERMISSION_TIMEOUT),
     )?;
-    let states: BTreeMap<String, String> = serde_json::from_slice(&std::fs::read(&report.0)?)?;
+    let data = std::fs::read(&report.0).map_err(|error| {
+        let message = if error.kind() == std::io::ErrorKind::NotFound {
+            "The Helper did not write a permission report"
+        } else {
+            "The Helper's permission report could not be read"
+        };
+        Error::Io(std::io::Error::other(format!(
+            "{message} for {name}. Check that the Apple Bridge app is installed, then retry `bridge permissions request {name}`."
+        )))
+    })?;
+    let states: BTreeMap<String, String> = serde_json::from_slice(&data)?;
     if states
         .get("outcome")
         .is_some_and(|outcome| outcome == "timed_out")
@@ -370,6 +380,27 @@ mod tests {
                 .err()
                 .is_some_and(|error| error.to_string().contains("nobody answered")),
         );
+        Ok(())
+    }
+
+    #[test]
+    fn a_missing_permission_report_explains_the_helper_failure() -> Check {
+        let _serial = serial();
+        let dir = tempfile::tempdir()?;
+        let program = script(dir.path(), "exit 0")?;
+        let error = permissions_request(&program, dir.path(), "/H.app", "contacts", None)
+            .err()
+            .ok_or("a missing report is not a permission outcome")?
+            .to_string();
+        assert!(
+            error.contains("Helper did not write a permission report for contacts"),
+            "{error}"
+        );
+        assert!(
+            error.contains("bridge permissions request contacts"),
+            "{error}"
+        );
+        assert!(!error.contains("os error 2"), "{error}");
         Ok(())
     }
 

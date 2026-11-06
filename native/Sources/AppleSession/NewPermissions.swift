@@ -102,7 +102,20 @@ public enum NewPermissions {
         }
     }
 
-    public enum RequestOutcome: Sendable, Equatable { case finished, timedOut }
+    public enum RequestOutcome: Sendable, Equatable { case finished, denied, timedOut }
+    private enum RequestFailure: Error { case denied }
+
+    private static func requireAccess(_ granted: Bool) throws {
+        if !granted { throw RequestFailure.denied }
+    }
+
+    private static func isDenial(_ error: any Error) -> Bool {
+        if error is RequestFailure { return true }
+        let error = error as NSError
+        return (error.domain == CNErrorDomain && error.code == CNError.Code.authorizationDenied.rawValue)
+            || (error.domain == EKErrorDomain && error.code == EKError.Code.eventStoreNotAuthorized.rawValue)
+            || (error.domain == UNErrorDomain && error.code == UNError.Code.notificationsNotAllowed.rawValue)
+    }
     public static let requestDeadline: Duration = .seconds(150)
     public static let watchdogDeadline: Duration = .seconds(155)
 
@@ -133,7 +146,9 @@ public enum NewPermissions {
                 do {
                     try await requestNative(name, adapters: adapters)
                     first.finish(.success(.finished))
-                } catch { first.finish(.failure(error)) }
+                } catch {
+                    first.finish(isDenial(error) ? .success(.denied) : .failure(error))
+                }
             }
             Task.detached {
                 try? await Task.sleep(for: deadline)
@@ -145,11 +160,11 @@ public enum NewPermissions {
     public static func requestNative(_ name: String, adapters: [String: RequestAdapter]? = nil) async throws {
         switch name {
         case "contacts":
-            try await call("contacts", adapters: adapters) { _ = try await CNContactStore().requestAccess(for: .contacts) }
+            try await call("contacts", adapters: adapters) { try requireAccess(try await CNContactStore().requestAccess(for: .contacts)) }
         case "calendar":
-            try await call("calendar", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToEvents() }
+            try await call("calendar", adapters: adapters) { try requireAccess(try await EKEventStore().requestFullAccessToEvents()) }
         case "reminders":
-            try await call("reminders", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToReminders() }
+            try await call("reminders", adapters: adapters) { try requireAccess(try await EKEventStore().requestFullAccessToReminders()) }
         case "location":
             try await call("location", adapters: adapters) {
                 location = CLLocationManager()
@@ -158,21 +173,23 @@ public enum NewPermissions {
                     if location?.authorizationStatus != .notDetermined { break }
                     try await Task.sleep(for: .milliseconds(250))
                 }
+                try requireAccess(![.denied, .restricted].contains(location?.authorizationStatus))
             }
         case "camera":
-            try await call("camera", adapters: adapters) { _ = await AVCaptureDevice.requestAccess(for: .video) }
+            try await call("camera", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .video)) }
         case "microphone":
-            try await call("microphone", adapters: adapters) { _ = await AVCaptureDevice.requestAccess(for: .audio) }
+            try await call("microphone", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .audio)) }
         case "screen_recording":
-            try await call("screen_recording", adapters: adapters) { _ = CGRequestScreenCaptureAccess() }
+            try await call("screen_recording", adapters: adapters) { try requireAccess(CGRequestScreenCaptureAccess()) }
         case "speech_recognition":
             try await call("speech_recognition", adapters: adapters) {
-                await withCheckedContinuation { continuation in
-                    SFSpeechRecognizer.requestAuthorization { _ in continuation.resume() }
+                let status = await withCheckedContinuation { continuation in
+                    SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
                 }
+                try requireAccess(![.denied, .restricted].contains(status))
             }
         case "focus":
-            try await call("focus", adapters: adapters) { _ = await INFocusStatusCenter.default.requestAuthorization() }
+            try await call("focus", adapters: adapters) { try requireAccess(await INFocusStatusCenter.default.requestAuthorization() == .authorized) }
         case "bluetooth":
             try await call("bluetooth", adapters: adapters) {
                 bluetooth = CBCentralManager(delegate: nil, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])
@@ -180,16 +197,18 @@ public enum NewPermissions {
                     if CBManager.authorization != .notDetermined { break }
                     try await Task.sleep(for: .milliseconds(250))
                 }
+                try requireAccess(![.denied, .restricted].contains(CBManager.authorization))
             }
         case "notifications":
-            try await call("notifications", adapters: adapters) { _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) }
+            try await call("notifications", adapters: adapters) { try requireAccess(try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) }
         default:
             guard let bundle = automation[name] else { throw HelperCommandFailure.unknownCommand }
             try await call(name, adapters: adapters) {
-                _ = await Task.detached {
+                let status = await Task.detached {
                     let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
                     return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), true)
                 }.value
+                try requireAccess(status != -1743)
             }
         }
     }
