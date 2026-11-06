@@ -456,7 +456,7 @@ impl Identity for TrustIdentity {
             .map_err(|error| trust_error(&error))
     }
 }
-pub fn empty_command() -> Result<Command, Error> {
+pub(crate) fn empty_command() -> Result<Command, Error> {
     serde_json::from_str("{\"args\":null}").map_err(|_| Code::Corrupt.into())
 }
 #[cfg(test)]

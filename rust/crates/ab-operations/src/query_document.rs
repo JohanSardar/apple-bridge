@@ -88,7 +88,7 @@ impl LocalQueryStore {
         let args = self.resolve_document(p, input).await?;
         Self::stage_document(args, INLINE_DOCUMENT_BYTES).await
     }
-    pub async fn document_file(
+    pub(crate) async fn document_file(
         &self,
         p: &Principal,
         input: &RawValue,

@@ -154,7 +154,7 @@ pub struct Principal {
     pub expires_at: Option<jiff::Timestamp>,
 }
 impl Principal {
-    pub fn is_agent(&self) -> bool {
+    pub(crate) fn is_agent(&self) -> bool {
         if !matches!(self.kind.as_str(), "agent" | "delegated") {
             return false;
         }

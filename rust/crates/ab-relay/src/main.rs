@@ -4,20 +4,15 @@ use rustls::pki_types::pem::PemObject;
 
 use ab_relay::{
     http::Api,
-    server::{Capacity, ConnectionClock, ConnectionDeadlines, Server},
+    server::{Capacity, ConnectionDeadlines, Server},
     store::{Limits, Store},
 };
-use axum::extract::connect_info::IntoMakeServiceWithConnectInfo;
-use hyper_util::{
-    rt::{TokioExecutor, TokioIo},
-    server::conn::auto::Builder,
-    service::TowerToHyperService,
-};
-use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::Semaphore};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::sync::CancellationToken;
-use tower::{Service, ServiceExt};
+mod control;
+use control::serve_control;
 
 fn listen_addr(addr: &str) -> String {
     if addr.starts_with(':') {
@@ -142,17 +137,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let router = api.clone().router();
     let make = router.into_make_service_with_connect_info();
     let public = TcpListener::bind(listen_addr(&get("addr", "0.0.0.0:443"))).await?;
-    let quit = stop.clone();
-    tokio::spawn(async move {
-        let Ok(mut term) =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-        else {
-            quit.cancel();
-            return;
-        };
-        tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = term.recv() => {} }
-        quit.cancel();
-    });
+    tokio::spawn(cancel_on_signal(stop.clone()));
     let stop_api = stop.clone();
     tokio::spawn(ab_relay::ct::monitor(api, stop.clone()));
     if !app_host.is_empty() {
@@ -183,7 +168,10 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         stop_api,
         deadlines,
     );
-    tokio::select! { result = server.serve(public,stop.clone()) => result?, () = api_task => {} }
+    tokio::select! {
+        result = server.serve(public, stop.clone()) => result?,
+        () = api_task => {},
+    }
     stop.cancel();
     Ok(())
 }
@@ -278,75 +266,6 @@ async fn serve_app(
     serve_control(None, incoming, make, acceptor, stop, deadlines).await;
 }
 
-async fn serve_control(
-    control: Option<(TcpListener, Arc<Semaphore>)>,
-    mut incoming: tokio::sync::mpsc::Receiver<ab_relay::server::ControlConnection>,
-    mut make: IntoMakeServiceWithConnectInfo<axum::Router, SocketAddr>,
-    acceptor: TlsAcceptor,
-    stop_api: CancellationToken,
-    deadlines: ConnectionDeadlines,
-) {
-    let mut workers = tokio::task::JoinSet::new();
-    loop {
-        tokio::select! {
-            () = stop_api.cancelled() => break,
-            Some(_) = workers.join_next(), if !workers.is_empty() => {},
-            accepted = async {
-                tokio::select! {
-                    result = async { match &control { Some((listener, _))=>listener.accept().await, None=>std::future::pending().await } } => result.map(|(socket,peer)| Some(ab_relay::server::ControlConnection { socket,peer,prefix:Vec::new(),completed:None })),
-                    connection = incoming.recv() => Ok(connection),
-                }
-            } => {
-                let ab_relay::server::ControlConnection { socket,peer,prefix,completed } = match accepted {
-                    Ok(Some(connection)) => connection,
-                    Ok(None) => break,
-                    Err(e) => {
-                        eprintln!("control accept failed: {e}");
-                        tokio::time::sleep(ab_relay::server::ACCEPT_RETRY).await;
-                        continue;
-                    }
-                };
-                let own_slot = match &control {
-                    Some((_, slots)) if completed.is_none() => match slots.clone().try_acquire_owned() {
-                        Ok(slot) => Some(slot),
-                        Err(_) => continue,
-                    },
-                    _ => None,
-                };
-                let socket = ab_relay::replay::Replay::new(socket,prefix);
-                let Ok(service) = make.call(peer).await; let acceptor = acceptor.clone();
-                workers.spawn(async move {
-                    let (_completed, _own_slot) = (completed, own_slot);
-                    let clock = ConnectionClock::start(deadlines);
-                    let served = async {
-                        if let Ok(Ok(tls)) = tokio::time::timeout(Duration::from_secs(5),acceptor.accept(socket)).await {
-                            let mut builder=Builder::new(TokioExecutor::new());
-                            builder.http1().timer(hyper_util::rt::TokioTimer::new()).header_read_timeout(Duration::from_secs(5)).max_buf_size(12288);
-                            let counted = {
-                                let clock = clock.clone();
-                                tower::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
-                                    let clock = clock.clone();
-                                    let service = service.clone();
-                                    async move {
-                                        clock.request_started();
-                                        let response = service.oneshot(request).await;
-                                        clock.request_finished();
-                                        response
-                                    }
-                                })
-                            };
-                            let _ = builder.serve_connection_with_upgrades(TokioIo::new(tls),TowerToHyperService::new(counted)).await;
-                        }
-                    };
-                    tokio::select! { () = served => {}, () = clock.expired() => {} }
-                });
-            }
-        }
-    }
-    workers.abort_all();
-    while workers.join_next().await.is_some() {}
-}
-
 fn configured_capacity(
     args: &HashMap<String, String>,
 ) -> std::result::Result<Capacity, Box<dyn std::error::Error>> {
@@ -390,6 +309,19 @@ fn configured_store(
         }
     }
     Ok(store)
+}
+
+async fn cancel_on_signal(quit: CancellationToken) {
+    let Ok(mut term) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+    else {
+        quit.cancel();
+        return;
+    };
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {},
+        _ = term.recv() => {},
+    }
+    quit.cancel();
 }
 
 #[cfg(test)]

@@ -16,7 +16,7 @@ pub fn capture(op: &str) -> bool {
 pub fn playback(op: &str) -> bool {
     matches!(op, "speech.say" | "capture.play_sound")
 }
-pub fn requires_capture(op: &str) -> bool {
+pub(crate) fn requires_capture(op: &str) -> bool {
     !capture(op)
         && !playback(op)
         && !op.starts_with("mac.")

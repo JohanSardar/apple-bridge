@@ -116,7 +116,7 @@ fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_jso
     }
     tools
 }
-pub async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
+pub(crate) async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
     let principal = request.extensions().get::<Principal>().cloned();
     let Ok(descriptors) = tool_descriptors() else {
         return problem(Code::Corrupt.into());
