@@ -30,6 +30,8 @@ session=${AB_SESSION_BINARY:-$("$root/packaging/dev/build-session.sh")}
 cp "$session" "$app/Contents/MacOS/ab-session"
 chmod 755 "$app/Contents/MacOS/ab-session"
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
+mkdir -p "$app/Contents/Resources"
+cp "$root/packaging/dev/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 python3 - "$app" "$app_home" "$api" "$peer" "$root/rust/Cargo.toml" <<'CONFIG'
 import plistlib
 import re

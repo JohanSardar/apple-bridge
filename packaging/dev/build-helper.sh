@@ -32,6 +32,8 @@ if [[ -n ${AB_HELPER_BRIDGE_BINARY:-} ]]; then
     chmod 755 "$app/Contents/MacOS/bridge"
 fi
 cp "$root/packaging/dev/Info.plist" "$app/Contents/Info.plist"
+mkdir -p "$app/Contents/Resources"
+cp "$root/packaging/dev/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 python3 "$root/packaging/dev/app-intents.py" "$app"
 "$root/packaging/dev/sign.sh" "$app"
 ditto "$app" "$destination"

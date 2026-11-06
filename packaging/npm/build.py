@@ -50,9 +50,13 @@ def tree_problems(app):
             problems.append(f"{name} is an empty folder, and npm tarballs drop them")
         elif path.suffix == ".framework":
             problems.append(f"{name} is a framework, which relies on symlinks")
-    for required in [*(f"Contents/MacOS/{name}" for name in EXECUTABLES), GATEWAY_PLIST, "Contents/Info.plist"]:
+    for required in [*(f"Contents/MacOS/{name}" for name in EXECUTABLES), GATEWAY_PLIST, "Contents/Info.plist", "Contents/Resources/AppIcon.icns"]:
         if not (app / required).is_file():
             problems.append(f"{required} is missing")
+    if (app / "Contents/Info.plist").is_file():
+        info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+        if info.get("CFBundleIconFile") != "AppIcon.icns":
+            problems.append("CFBundleIconFile must name AppIcon.icns")
     return problems
 
 

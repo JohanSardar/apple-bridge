@@ -162,6 +162,7 @@ def build(args):
     agent = dict(Label="dev.applebridge.gateway", BundleProgram="Contents/MacOS/bridge", ProgramArguments=["bridge", "start", "--role", "gateway", "--api-addr", "127.0.0.1:7780", "--peer-addr", "127.0.0.1:7443"], RunAtLoad=True, KeepAlive=True, ThrottleInterval=2, LimitLoadToSessionType="Aqua", ProcessType="Background")
     (app / "Contents/Library/LaunchAgents/dev.applebridge.gateway.plist").write_bytes(plistlib.dumps(agent))
     run("python3", ROOT / "packaging/dev/app-intents.py", app)
+    shutil.copy2(ROOT / "packaging/dev/AppIcon.icns", app / "Contents/Resources/AppIcon.icns")
     shutil.copy2(tools / "LICENSE", app / "Contents/Resources/Sparkle-LICENSE")
     if args.prepare_unsigned:
         print("R1-BUILD passed=true signed=false")
