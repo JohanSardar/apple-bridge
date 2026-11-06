@@ -19,7 +19,6 @@ const DEFAULT_PEER: &str = "127.0.0.1:7443";
 const ANY_PEER: &str = "127.0.0.1:0";
 const START_BUDGET: Duration = Duration::from_secs(60);
 const STOP_BUDGET: Duration = Duration::from_secs(20);
-const FIRST_SYNC_NOTE: &str = "Ctrl-C stops watching. Syncing continues in the background.";
 
 fn lock_held(home: &Path) -> bool {
     let Ok(file) = OpenOptions::new()
@@ -311,7 +310,6 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
         ))
         .next("Run it with `bridge start --role replica`, or choose another --home."));
     }
-    let first_run = !home.join("state.db").exists();
     let running = lock_held(home);
     let address = if running {
         running_address(home).await.map_err(|_| {
@@ -361,11 +359,6 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
         crate::default_home().is_ok_and(|default| default == home),
         home,
     );
-    if first_run && helper && !args.no_watch && super::interactive() {
-        println!();
-        println!("{FIRST_SYNC_NOTE}");
-        stats::watch_first_sync(home).await?;
-    }
     Ok(())
 }
 

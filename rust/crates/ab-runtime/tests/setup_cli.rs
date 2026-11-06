@@ -234,6 +234,53 @@ fn uninstalling_a_running_executable_stops_its_gateway() -> Check {
 }
 
 #[test]
+fn first_up_in_a_terminal_returns_with_next_steps_last() -> Check {
+    use std::io::{Read, Write};
+    let directory = tempfile::tempdir()?;
+    let home = directory.path().join("home");
+    let _lock = ab_runtime::HomeLock::acquire(&home)?;
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let config: ab_runtime::Config = serde_json::from_value(serde_json::json!({
+        "role":"gateway", "home":home, "api_address":listener.local_addr()?.to_string(),
+        "peer_address":"127.0.0.1:0", "socket":"", "helper_app":"Fixture.app"
+    }))?;
+    config.save()?;
+    let health = std::thread::spawn(move || -> Result<(), std::io::Error> {
+        let (mut stream, _) = listener.accept()?;
+        let mut request = [0; 4096];
+        assert!(stream.read(&mut request)? > 0);
+        stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}")
+    });
+    let output = Command::new("python3")
+        .args([
+            "-c",
+            "import os,pty,select,subprocess,sys; master,slave=pty.openpty(); result=subprocess.run(sys.argv[1:],stdin=slave,stdout=slave,stderr=slave,timeout=10); data=b''\nwhile select.select([master],[],[],0.1)[0]:\n chunk=os.read(master,65536)\n if not chunk: break\n data+=chunk\nos.close(slave); sys.stdout.buffer.write(data); sys.exit(result.returncode)",
+            env!("CARGO_BIN_EXE_bridge"),
+            "up",
+            "--home",
+        ])
+        .arg(&home)
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .output()?;
+    health.join().map_err(|_| "health thread")??;
+    assert!(
+        output.status.success(),
+        "{} {}",
+        text(&output.stdout),
+        text(&output.stderr)
+    );
+    let summary = text(&output.stdout);
+    assert!(summary.contains("Next:"), "{summary}");
+    assert!(
+        summary.trim_end().ends_with("follow the first sync"),
+        "{summary}"
+    );
+    assert!(!summary.contains("Ctrl-C stops watching"), "{summary}");
+    ab_runtime::cli::parse(["bridge", "up", "--no-watch"].map(std::ffi::OsString::from))?;
+    Ok(())
+}
+
+#[test]
 fn up_reports_a_busy_port_and_leaves_it_alone() -> Check {
     let home = tempfile::tempdir()?;
     let busy = TcpListener::bind("127.0.0.1:0")?;
@@ -525,11 +572,77 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     }
     let human = run(home.path(), &["read", "contacts"])?;
     assert!(text(&human.stdout).contains("Nothing to show"));
+    let helper = run(home.path(), &["call", "helper.version"])?;
+    assert!(!helper.status.success());
+    assert!(
+        text(&helper.stderr).contains("unavailable"),
+        "{}",
+        text(&helper.stderr)
+    );
+    assert!(
+        !text(&helper.stderr).contains("(invalid)"),
+        "{}",
+        text(&helper.stderr)
+    );
     let listed = run(home.path(), &["call", "--list"])?;
     let listed = text(&listed.stdout);
     assert!(listed.contains("sources.status"));
     assert!(!listed.contains("messages.send"));
     assert_eq!(principals(home.path())?, before);
+    Ok(())
+}
+
+#[test]
+fn json_reads_apply_the_limit_even_when_the_operation_has_none() -> Check {
+    use std::io::{Read, Write};
+    for (kind, collection) in [
+        ("contacts", "contacts.contact"),
+        ("calendar", "calendar.event"),
+        ("reminders", "reminders.reminder"),
+        ("notes", "notes.note"),
+    ] {
+        let home = tempfile::tempdir()?;
+        let _lock = ab_runtime::HomeLock::acquire(home.path())?;
+        let listener = TcpListener::bind("127.0.0.1:0")?;
+        let config: ab_runtime::Config = serde_json::from_value(serde_json::json!({
+            "role":"gateway", "home":home.path(), "api_address":listener.local_addr()?.to_string(),
+            "peer_address":"127.0.0.1:0", "socket":""
+        }))?;
+        config.save()?;
+        let server = std::thread::spawn(
+            move || -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                let body = serde_json::json!({"records":[
+                    {"collection":collection,"id":"one","data":{}},
+                    {"collection":collection,"id":"two","data":{}}
+                ]})
+                .to_string();
+                for answer in ["{}", &body] {
+                    let (mut stream, _) = listener.accept()?;
+                    stream.set_read_timeout(Some(std::time::Duration::from_secs(5)))?;
+                    let mut request = [0; 8192];
+                    assert!(stream.read(&mut request)? > 0);
+                    write!(
+                        stream,
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}",
+                        answer.len()
+                    )?;
+                }
+                Ok(())
+            },
+        );
+        let output = run(home.path(), &["read", kind, "--json", "--limit", "1"])?;
+        server
+            .join()
+            .map_err(|_| "server thread")?
+            .map_err(|error| error.to_string())?;
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        let answer: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        assert_eq!(
+            answer["records"].as_array().ok_or("records")?.len(),
+            1,
+            "{kind}: {answer}"
+        );
+    }
     Ok(())
 }
 
@@ -626,7 +739,7 @@ fn permission_status_reads_source_state_and_prompts_for_nothing() -> Check {
     let output = run(home.path(), &["permissions", "status", "--json"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let statuses: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(statuses["full_disk_access"], "denied");
+    assert_eq!(statuses["full_disk_access"], "needs_permission");
     assert_eq!(statuses["contacts"], "granted");
     assert_eq!(statuses["calendar"], "unknown");
     Ok(())

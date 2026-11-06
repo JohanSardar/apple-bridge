@@ -4,6 +4,8 @@ Generated from the operation registry in `rust/crates/ab-catalog` with `cargo ru
 
 This lists the catalog only: whether an operation is usable depends on its source, granted permissions, and the feature status in `features.yaml`.
 
+`bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.
+
 147 operations.
 
 ## audio

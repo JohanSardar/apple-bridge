@@ -18,6 +18,7 @@ pub fn operations_reference_markdown(descriptors: &[OperationDescriptor]) -> Str
     out.push_str(
         "This lists the catalog only: whether an operation is usable depends on its source, granted permissions, and the feature status in `features.yaml`.\n\n",
     );
+    out.push_str("`bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.\n\n");
     let _ = writeln!(out, "{} operations.\n", descriptors.len());
     for (source, operations) in &groups {
         let _ = writeln!(out, "## {source}\n");
