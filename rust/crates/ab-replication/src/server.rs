@@ -328,7 +328,7 @@ impl<S: GatewayState> Server<S> {
                 }
             }
         };
-        let result = tokio::select! { result = session => result, result = invalidated => { result?; Err(Error::Disconnected) } };
+        let result = tokio::select! { result = session => result, result = invalidated => result.and(Err(Error::Disconnected)) };
         if let Err(error) = &result
             && let Some(reason) = refusal(error)
         {
