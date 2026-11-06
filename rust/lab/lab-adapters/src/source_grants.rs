@@ -118,26 +118,32 @@ fn consent_group(world: &World, base: &str, evidence: &mut Evidence) {
     );
     let reply = fetch(
         "GET",
-        &format!("{}/oauth/authorize?{query}&format=json", owner.origin),
+        &format!("{}/oauth/authorize?{query}", owner.origin),
         &[("Cookie", cookie)],
         None,
     );
     let found = reply.as_ref().is_ok_and(|(status, raw)| {
+        let page = String::from_utf8_lossy(raw);
         *status == 200
-            && serde_json::from_slice::<Value>(raw).is_ok_and(|page| {
-                page["groups"].as_array().is_some_and(|groups| {
-                    groups.iter().any(|group| {
-                        group["source"] == "labdummy"
-                            && group["grants"].as_array().is_some_and(|g| g.len() == 2)
-                    })
-                })
-            })
+            && access_section(&page).contains("<p>labdummy</p>")
+            && consent_grants(&page) == ["labdummy:read", "labdummy:write"]
     });
     evidence.check(
         "consent_dummy_group",
         found,
         "the OAuth consent page lists the dummy source with two grants",
     );
+}
+fn access_section(page: &str) -> &str {
+    page.split_once("<section class=\"section access\">")
+        .and_then(|(_, rest)| rest.split_once("</section>"))
+        .map_or("", |(section, _)| section)
+}
+fn consent_grants(page: &str) -> Vec<&str> {
+    page.split("<input type=\"hidden\" name=\"scopes\" value=\"")
+        .skip(1)
+        .filter_map(|rest| rest.split('"').next())
+        .collect()
 }
 fn encode(value: &str) -> String {
     value
