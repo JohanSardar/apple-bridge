@@ -204,7 +204,7 @@ fn first_up_in_a_terminal_returns_with_next_steps_last() -> Check {
     let output = Command::new("python3")
         .args([
             "-c",
-            "import os,pty,subprocess,sys; master,slave=pty.openpty(); result=subprocess.run(sys.argv[1:],stdin=slave,stdout=slave,stderr=slave,timeout=10); os.close(slave); data=b''\nwhile True:\n try: chunk=os.read(master,65536)\n except OSError: break\n if not chunk: break\n data+=chunk\nsys.stdout.buffer.write(data); sys.exit(result.returncode)",
+            "import os,pty,select,subprocess,sys; master,slave=pty.openpty(); result=subprocess.run(sys.argv[1:],stdin=slave,stdout=slave,stderr=slave,timeout=10); data=b''\nwhile select.select([master],[],[],0.1)[0]:\n chunk=os.read(master,65536)\n if not chunk: break\n data+=chunk\nos.close(slave); sys.stdout.buffer.write(data); sys.exit(result.returncode)",
             env!("CARGO_BIN_EXE_bridge"),
             "up",
             "--home",
