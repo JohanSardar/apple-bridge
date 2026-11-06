@@ -15,10 +15,18 @@ public final class RemindersSource: Source {
         self.gate = gate; self.commandsEnabled = commandsEnabled
     }
 
-    private func lineageGeneration() throws -> String {
-        let identity = gate.store.eventStoreIdentifier
-        guard !identity.isEmpty else { throw SourceFailure.unavailable }
-        return "eventkit-" + SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+    public nonisolated static func generation(storeIdentifier: String, sourceIdentifiers: [String]) throws -> String {
+        func digest(_ text: String) -> String {
+            SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
+        if !storeIdentifier.isEmpty { return "eventkit-" + digest(storeIdentifier) }
+        let sources = Set(sourceIdentifiers.filter { !$0.isEmpty }).sorted()
+        guard !sources.isEmpty else { throw SourceFailure.unavailable }
+        return "eventkit-sources-" + digest(sources.joined(separator: "\n"))
+    }
+
+    private func lineageGeneration(_ calendars: [EKCalendar]) throws -> String {
+        try Self.generation(storeIdentifier: gate.store.eventStoreIdentifier, sourceIdentifiers: calendars.map(\.source.sourceIdentifier))
     }
 
 
@@ -78,8 +86,8 @@ public final class RemindersSource: Source {
         guard gate.authorized(.reminder) else { throw SourceFailure.permissionMissing }
         let activity = ForegroundActivity.shared.begin()
         defer { ForegroundActivity.shared.end(activity) }
-        let generation = try lineageGeneration()
         let calendars = gate.store.calendars(for: .reminder)
+        let generation = try lineageGeneration(calendars)
         let reminders = try await gate.reminders()
         let observedAt = timestamp()
         var current: [String: JSON] = [:]

@@ -14,6 +14,7 @@ use std::{
 
 const WAIT_FOR_GRANT: Duration = Duration::from_secs(120);
 const POLL: Duration = Duration::from_secs(1);
+const NEW_GRANT_SETTLES: Duration = Duration::from_secs(30);
 const SETTINGS: &str = "x-apple.systempreferences:com.apple.preference.security?";
 
 struct Permission {
@@ -142,6 +143,24 @@ impl Backend<'_> {
         }
     }
 
+    fn restart_session(&self) -> Outcome<bool> {
+        let Self::Mac { home, .. } = self else {
+            return Ok(false);
+        };
+        let Ok(pid) = std::fs::read_to_string(home.join("helper/helper.pid")) else {
+            return Ok(false);
+        };
+        let pid = pid.trim();
+        if !is_session_helper(pid, home) {
+            return Ok(false);
+        }
+        Ok(Command::new("/bin/kill")
+            .args(["-TERM", pid])
+            .stderr(Stdio::null())
+            .status()?
+            .success())
+    }
+
     fn ask_macos(&self, permission: &Permission) -> Outcome {
         match self {
             Self::Fixture(path) => {
@@ -174,6 +193,18 @@ impl Backend<'_> {
             }
         }
     }
+}
+
+fn is_session_helper(pid: &str, home: &Path) -> bool {
+    pid.parse::<u32>().is_ok()
+        && Command::new("ps")
+            .args(["-p", pid, "-o", "command="])
+            .output()
+            .is_ok_and(|output| {
+                let command = String::from_utf8_lossy(&output.stdout);
+                command.contains("AppleBridgeHelper session")
+                    && command.contains(&*home.to_string_lossy())
+            })
 }
 
 fn source_status(home: &Path, source: &str) -> Outcome<String> {
@@ -306,22 +337,47 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
     Ok(())
 }
 
+#[derive(Default)]
+struct Answers {
+    asked: Vec<&'static Permission>,
+    skipped: Vec<&'static str>,
+}
+
 fn ask_each(
     backend: &Backend<'_>,
     mut wants: impl FnMut(&Permission) -> Outcome<bool>,
-) -> Outcome<Vec<&'static str>> {
-    let mut skipped = Vec::new();
+) -> Outcome<Answers> {
+    let mut answers = Answers::default();
     for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
         if backend.status(permission)? == "granted" {
             continue;
         }
         if wants(permission)? {
             backend.ask_macos(permission)?;
+            answers.asked.push(permission);
         } else {
-            skipped.push(permission.id);
+            answers.skipped.push(permission.id);
         }
     }
-    Ok(skipped)
+    Ok(answers)
+}
+
+async fn let_new_grants_settle(backend: &Backend<'_>, asked: &[&Permission]) -> Outcome {
+    if asked.is_empty() || !backend.restart_session()? {
+        return Ok(());
+    }
+    let deadline = Instant::now() + NEW_GRANT_SETTLES;
+    while Instant::now() < deadline {
+        let mut settled = true;
+        for permission in asked {
+            settled &= backend.status(permission)? == "granted";
+        }
+        if settled {
+            return Ok(());
+        }
+        tokio::time::sleep(POLL).await;
+    }
+    Ok(())
 }
 
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
@@ -335,7 +391,7 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         );
         return Ok(());
     }
-    let skipped = ask_each(&backend, |permission| {
+    let answers = ask_each(&backend, |permission| {
         println!();
         println!(
             "{}: {}. macOS asks you in a small window.",
@@ -347,9 +403,10 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         }
         Ok(wanted)
     })?;
+    let_new_grants_settle(&backend, &answers.asked).await?;
     for permission in LEVEL_ONE
         .iter()
-        .filter(|permission| !skipped.contains(&permission.id))
+        .filter(|permission| !answers.skipped.contains(&permission.id))
     {
         settings_step(&backend, permission, args.yes).await?;
     }
@@ -377,17 +434,83 @@ mod tests {
         )?;
         let backend = Backend::Fixture(path.clone());
         let mut offered = Vec::new();
-        let skipped = ask_each(&backend, |permission| {
+        let answers = ask_each(&backend, |permission| {
             offered.push(permission.id);
             Ok(permission.id != "calendar")
         })?;
         assert_eq!(offered, ["contacts", "calendar", "reminders"]);
-        assert_eq!(skipped, ["calendar"]);
+        assert_eq!(answers.skipped, ["calendar"]);
+        assert_eq!(
+            answers.asked.iter().map(|p| p.id).collect::<Vec<_>>(),
+            ["contacts", "reminders"]
+        );
         let fixture = Backend::fixture(&path)?;
         assert_eq!(fixture.asked, ["contacts", "reminders"]);
         assert_eq!(fixture.statuses["contacts"], "granted");
         assert_eq!(fixture.statuses["calendar"], "unknown");
         assert_eq!(fixture.statuses["reminders"], "granted");
+        Ok(())
+    }
+
+    fn wait_for_exit(child: &mut std::process::Child) -> Outcome<bool> {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline {
+            if child.try_wait()?.is_some() {
+                return Ok(true);
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        Ok(false)
+    }
+
+    fn running_as(directory: &Path, name: &str, home: &Path) -> Outcome<std::process::Child> {
+        use std::os::unix::fs::PermissionsExt;
+        let script = directory.join(name);
+        std::fs::write(&script, "#!/bin/sh\nsleep 30 &\nchild=$!\ntrap 'kill $child; exit 0' TERM\nwait $child\n")?;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))?;
+        let child = Command::new(&script)
+            .args(["session", "--home"])
+            .arg(home)
+            .spawn()?;
+        std::fs::create_dir_all(home.join("helper"))?;
+        std::fs::write(home.join("helper/helper.pid"), child.id().to_string())?;
+        std::thread::sleep(Duration::from_millis(200));
+        Ok(child)
+    }
+
+    #[test]
+    fn a_new_grant_restarts_only_this_homes_session_helper() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        let home = directory.path().join("home");
+        let backend = Backend::Mac {
+            home: &home,
+            helper: String::new(),
+        };
+        assert!(!backend.restart_session()?);
+
+        let mut helper = running_as(directory.path(), "AppleBridgeHelper", &home)?;
+        assert!(backend.restart_session()?);
+        assert!(wait_for_exit(&mut helper)?);
+
+        let other_home = directory.path().join("other");
+        let mut foreign = running_as(directory.path(), "AppleBridgeHelper", &other_home)?;
+        std::fs::write(
+            home.join("helper/helper.pid"),
+            std::fs::read(other_home.join("helper/helper.pid"))?,
+        )?;
+        assert!(!backend.restart_session()?);
+        assert!(foreign.try_wait()?.is_none());
+        foreign.kill()?;
+        foreign.wait()?;
+
+        let mut unrelated = running_as(directory.path(), "SomethingElse", &home)?;
+        assert!(!backend.restart_session()?);
+        assert!(unrelated.try_wait()?.is_none());
+        unrelated.kill()?;
+        unrelated.wait()?;
+
+        std::fs::write(home.join("helper/helper.pid"), "1; rm -rf /")?;
+        assert!(!backend.restart_session()?);
         Ok(())
     }
 
