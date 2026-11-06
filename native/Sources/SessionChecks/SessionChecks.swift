@@ -122,11 +122,18 @@ struct SessionChecks {
         try peer.wire.send(.object(["t": .string("Primitive"), "id": .string("p3"), "op": .string("nowhere.other"), "args": .object([:])]))
         try check(try await peer.next("PrimitiveError")["id"] == .string("p3"), "primitive for no source is refused")
 
-        try peer.wire.send(.object(["t": .string("Bogus")]))
-        running.cancel()
+        let stopped = Counter()
+        try peer.wire.send(.object(["t": .string("Restart")]))
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(5))
+            if stopped.count == 0 { running.cancel(); shutdown(helperDescriptor, SHUT_RDWR) }
+        }
+        _ = await running.value
+        stopped.take()
+        timeout.cancel()
+        try check(!running.isCancelled, "restart returns to the gateway supervisor without reconnecting")
         shutdown(pair[1], SHUT_RDWR)
         shutdown(helperDescriptor, SHUT_RDWR)
-        _ = await running.value
         print("session checks passed")
     }
 
