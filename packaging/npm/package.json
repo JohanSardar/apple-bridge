@@ -1,0 +1,32 @@
+{
+  "name": "applebridge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lets agents on your Mac read Messages, Contacts, Calendar, Reminders, Notes and Mail, with the actions you approve.",
+  "license": "MIT",
+  "homepage": "https://github.com/JohanSardar/apple-bridge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JohanSardar/apple-bridge.git",
+    "directory": "packaging/npm"
+  },
+  "bugs": "https://github.com/JohanSardar/apple-bridge/issues",
+  "bin": {
+    "bridge": "bin/bridge"
+  },
+  "files": [
+    "bin/bridge",
+    "Apple Bridge.app",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "preferGlobal": true
+}

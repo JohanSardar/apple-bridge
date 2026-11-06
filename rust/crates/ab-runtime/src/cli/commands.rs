@@ -40,7 +40,10 @@ pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
     product_cli::permissions_request(
         Path::new("open"),
         &product_cli::default_report_dir(),
-        helper_app.unwrap_or_default(),
+        &crate::bundle::helper_app(
+            helper_app.unwrap_or_default(),
+            std::env::current_exe().ok().as_deref(),
+        ),
         name,
         None,
     )?;

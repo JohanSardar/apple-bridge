@@ -52,6 +52,33 @@ spctl -a -vv -t open --context context:primary-signature dist/local-0.1.2/AppleB
 
 `evidence.json` contains pass/fail and the DMG digest. Rejection stops the build. Inspect a rejected submission with `notarytool log` and the same ASC key arguments.
 
+## npm package
+
+`packaging/npm` holds a Mac-only package that installs the `bridge` command. The package name is on one line, in `packaging/npm/package.json`. Nothing has been published, and user documentation does not mention npm until it is.
+
+The tarball carries one signed `Apple Bridge.app` from `packaging/build-app.sh`: the Helper, `bridge`, `ab-session` and the gateway LaunchAgent, with no Sparkle and no frameworks. npm tarballs cannot hold symlinks or empty folders, and a code signature only seals file contents, so this flat app survives install byte for byte. `build.py` refuses an app with a symlink, an empty folder or a framework. `bin/bridge` is a small shell launcher that runs the `bridge` inside the app, so that binary finds its app and its Keychain store the same way it does in the DMG. There is no install script.
+
+Signing happens locally because the Developer ID key stays in the release keychain, so a publish is run by hand and has no npm provenance. Users can check a package with `codesign -dv` on the installed app, which names the team.
+
+To publish, on the Mac that holds the release keychain, from a clean checkout of the release commit, with `name` set to the package name and `version` to the workspace version:
+
+```sh
+security unlock-keychain -p "$(cat ~/.config/apple-bridge-release/keychain.password)" "$RELEASE_KEYCHAIN"
+identity=$(security find-identity -v -p codesigning "$RELEASE_KEYCHAIN" | awk '/Developer ID Application/{print $2; exit}')
+out=dist/npm-$version
+APPLE_BRIDGE_SIGNING_GUI=1 packaging/build-app.sh --identity "$identity" "$out/Apple Bridge.app"
+ditto -c -k --keepParent "$out/Apple Bridge.app" "$out/notary.zip"
+xcrun notarytool submit "$out/notary.zip" --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" --wait --timeout 20m
+xcrun stapler staple "$out/Apple Bridge.app"
+python3 packaging/npm/build.py --app "$out/Apple Bridge.app" --identity "$identity" --output "$out/package"
+python3 packaging/npm/check.py --tarball "$out/package/$name-$version.tgz" --app "$out/Apple Bridge.app" --identity "$identity" --require-notarized
+security lock-keychain "$RELEASE_KEYCHAIN"
+npm login
+npm publish "$out/package/$name-$version.tgz" --access public
+```
+
+`build.py` refuses an app that is not Developer ID signed, stapled and accepted by Gatekeeper. With `--proof` it accepts any signature, and keeps `"private": true` so npm refuses to publish the result. `check.py` installs into throwaway folders and runs `bridge` with a throwaway HOME and data folder. A stand-in replaces `open`, so it never launches the app or touches a permission.
+
 ## Update and uninstall checks
 
 Run `packaging/release/check.sh` or the `R1-RELEASE-SIM` scenario for appcast, numeric version, signature/tamper, explicit keychain selection, signing-password protection, export-tool selection, and uninstall failure/cleanup tests.
@@ -88,7 +115,7 @@ The supplied Developer ID Application certificate is installed with its private 
 
 The local update feed uses `example.invalid` intentionally. Replace it with a hosted HTTPS feed and enclosure URL before distributing a public download. No public download or update feed is published by these checks.
 
-The Pro qualification produced `dist/r1c-dmg3/AppleBridge.dmg` and the internal-only IPA at `dist/testflight-r1c-4/export/AppleBridge.ipa`. The DMG's mounted app passes strict signature verification, the Applications link is present, and the real Sparkle build-2-to-build-3 update passes. Apple still reports both the app ZIP and DMG notarization submissions as In Progress after 20-minute waits. Staple and Gatekeeper qualification remain blocked until Apple accepts a submission.
+The Pro qualification produced `dist/r1c-dmg3/AppleBridge.dmg` and the internal-only IPA at `dist/testflight-r1c-4/export/AppleBridge.ipa`. The DMG's mounted app passes strict signature verification, the Applications link is present, and the real Sparkle build-2-to-build-3 update passes. Apple reported both the app ZIP and DMG notarization submissions as In Progress after 20-minute waits. `notarytool history` on 2026-11-05 lists the app ZIP and DMG submissions of 2026-10-31 and 2026-11-04 as Accepted. Staple and Gatekeeper qualification of those DMGs has not been rerun.
 
 TestFlight version 0.1.2 build 4 is independently confirmed as VALID and INTERNAL_ONLY with no beta groups and external testing NOT_APPLICABLE. ASC's internal build state is MISSING_EXPORT_COMPLIANCE; the encryption declaration remains to be completed before assigning internal testers.
 
