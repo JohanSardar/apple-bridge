@@ -132,6 +132,17 @@ fn constant_churn_is_paced_and_the_last_change_is_still_captured() -> Fallible<(
 }
 
 #[test]
+fn an_authenticated_restart_reaches_the_helper_before_the_link_closes() -> Fallible<()> {
+    let mut wire = support::wire(BTreeMap::new(), Options::default(), json!({}))?;
+    support::send(&mut wire.gateway, &json!({"t":"Restart"}))?;
+    assert_eq!(support::receive(&mut wire.link)?.1["t"], "Restart");
+    drop(wire.gateway);
+    drop(wire.link);
+    wire.worker.join().map_err(|_| "worker panicked")??;
+    Ok(())
+}
+
+#[test]
 fn usage_watches_only_the_streams_it_reads() -> Fallible<()> {
     let directory = scratch()?;
     let sources = readers::from_config(&json!({"usage":{"root":directory}}).to_string())?;
