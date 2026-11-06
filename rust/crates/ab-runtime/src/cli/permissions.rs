@@ -466,7 +466,10 @@ mod tests {
     fn running_as(directory: &Path, name: &str, home: &Path) -> Outcome<std::process::Child> {
         use std::os::unix::fs::PermissionsExt;
         let script = directory.join(name);
-        std::fs::write(&script, "#!/bin/sh\nsleep 30 &\nchild=$!\ntrap 'kill $child; exit 0' TERM\nwait $child\n")?;
+        std::fs::write(
+            &script,
+            "#!/bin/sh\nsleep 30 &\nchild=$!\ntrap 'kill $child; exit 0' TERM\nwait $child\n",
+        )?;
         std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))?;
         let child = Command::new(&script)
             .args(["session", "--home"])
