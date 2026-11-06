@@ -69,7 +69,17 @@ struct SessionChecks {
         var refused = false
         do { _ = try await NewPermissions.request("unknown_permission", deadline: .seconds(30), adapters: [:]) } catch { refused = true }
         try check(refused, "an unknown permission is refused, not timed out")
-        try check(NewPermissions.requestDeadline < .seconds(180), "the Helper gives up before the command does")
+        try check(NewPermissions.requestDeadline < NewPermissions.watchdogDeadline, "the deadline gets its chance before the watchdog")
+        try check(NewPermissions.watchdogDeadline < .seconds(180), "the Helper gives up before the command does")
+        try check(watchdogFires(cancelled: false), "the watchdog fires while the main actor is blocked")
+        try check(!watchdogFires(cancelled: true), "a cancelled watchdog stays quiet")
+    }
+
+    private static func watchdogFires(cancelled: Bool) -> Bool {
+        let fired = DispatchSemaphore(value: 0)
+        let watchdog = NewPermissions.armWatchdog(after: .milliseconds(100)) { fired.signal() }
+        if cancelled { watchdog.cancel() }
+        return fired.wait(timeout: .now() + .seconds(1)) == .success
     }
 
     @MainActor

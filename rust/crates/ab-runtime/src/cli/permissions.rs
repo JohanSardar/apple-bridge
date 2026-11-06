@@ -355,25 +355,36 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
 struct Answers {
     asked: Vec<&'static Permission>,
     skipped: Vec<&'static str>,
+    failure: Option<Failure>,
 }
 
-fn ask_each(
-    backend: &Backend<'_>,
-    mut wants: impl FnMut(&Permission) -> Outcome<bool>,
-) -> Outcome<Answers> {
+fn ask_each(backend: &Backend<'_>, mut wants: impl FnMut(&Permission) -> Outcome<bool>) -> Answers {
     let mut answers = Answers::default();
     for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
-        if backend.status(permission)? == "granted" {
-            continue;
-        }
-        if wants(permission)? {
-            backend.ask_macos(permission)?;
-            answers.asked.push(permission);
-        } else {
-            answers.skipped.push(permission.id);
+        if let Err(failure) = ask_one(backend, permission, &mut wants, &mut answers) {
+            answers.failure = Some(failure);
+            break;
         }
     }
-    Ok(answers)
+    answers
+}
+
+fn ask_one(
+    backend: &Backend<'_>,
+    permission: &'static Permission,
+    wants: &mut impl FnMut(&Permission) -> Outcome<bool>,
+    answers: &mut Answers,
+) -> Outcome {
+    if backend.status(permission)? == "granted" {
+        return Ok(());
+    }
+    if wants(permission)? {
+        backend.ask_macos(permission)?;
+        answers.asked.push(permission);
+    } else {
+        answers.skipped.push(permission.id);
+    }
+    Ok(())
 }
 
 enum SessionRestart {
@@ -475,12 +486,16 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
             println!("  Skipped. Other sources still work.");
         }
         Ok(wanted)
-    })?;
-    let new_grants = let_new_grants_settle(&backend, &answers.asked, NEW_GRANT_SETTLES).await?;
-    if let Some(report) = new_grants.report() {
+    });
+    let new_grants = let_new_grants_settle(&backend, &answers.asked, NEW_GRANT_SETTLES).await;
+    if let Some(report) = new_grants.as_ref().ok().and_then(NewGrants::report) {
         println!();
         println!("{report}");
     }
+    if let Some(failure) = answers.failure {
+        return Err(failure);
+    }
+    new_grants?;
     for permission in LEVEL_ONE
         .iter()
         .filter(|permission| !answers.skipped.contains(&permission.id))
@@ -514,7 +529,7 @@ mod tests {
         let answers = ask_each(&backend, |permission| {
             offered.push(permission.id);
             Ok(permission.id != "calendar")
-        })?;
+        });
         assert_eq!(offered, ["contacts", "calendar", "reminders"]);
         assert_eq!(answers.skipped, ["calendar"]);
         assert_eq!(
@@ -554,6 +569,34 @@ mod tests {
         std::fs::write(home.join("helper/helper.pid"), child.id().to_string())?;
         std::thread::sleep(Duration::from_millis(200));
         Ok(child)
+    }
+
+    #[test]
+    fn a_later_failure_keeps_the_grants_already_made() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("fixture.json");
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({
+                "statuses": {"contacts":"unknown","calendar":"unknown","reminders":"unknown"},
+                "grant_when_asked": ["contacts", "calendar", "reminders"],
+            }))?,
+        )?;
+        let backend = Backend::Fixture(path);
+        let answers = ask_each(&backend, |permission| {
+            if permission.id == "calendar" {
+                return Err(Failure::new("macOS did not answer."));
+            }
+            Ok(true)
+        });
+        let asked: Vec<_> = answers
+            .asked
+            .iter()
+            .map(|permission| permission.id)
+            .collect();
+        assert_eq!(asked, ["contacts"]);
+        assert!(answers.failure.is_some());
+        Ok(())
     }
 
     #[test]

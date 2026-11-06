@@ -104,6 +104,14 @@ public enum NewPermissions {
 
     public enum RequestOutcome: Sendable, Equatable { case finished, timedOut }
     public static let requestDeadline: Duration = .seconds(150)
+    public static let watchdogDeadline: Duration = .seconds(155)
+
+    public nonisolated static func armWatchdog(after deadline: Duration, fire: @escaping @Sendable () -> Void) -> DispatchWorkItem {
+        let watchdog = DispatchWorkItem(block: fire)
+        let (seconds, attoseconds) = deadline.components
+        DispatchQueue.global().asyncAfter(deadline: .now() + Double(seconds) + Double(attoseconds) / 1e18, execute: watchdog)
+        return watchdog
+    }
 
     private final class FirstOutcome: @unchecked Sendable {
         private let lock = NSLock()

@@ -47,7 +47,14 @@ public enum HelperCommand {
                         try PrivateReport.write(counts, to: report)
                     } else {
                         guard arguments.count > 1 else { throw ProbeFailure.invalidArguments }
-                        switch try await NewPermissions.request(arguments[1]) {
+                        let name = arguments[1]
+                        let watchdog = NewPermissions.armWatchdog(after: NewPermissions.watchdogDeadline) {
+                            try? PrivateReport.write(["request": name, "outcome": "timed_out"], to: report)
+                            exit(0)
+                        }
+                        let outcome = try await NewPermissions.request(name)
+                        watchdog.cancel()
+                        switch outcome {
                         case .finished:
                             try await Task.sleep(for: .seconds(2))
                             try PrivateReport.write(["request": arguments[1]], to: report)
