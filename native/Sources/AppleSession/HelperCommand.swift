@@ -22,9 +22,9 @@ public enum HelperCommand {
                         try PrivateReport.write(await NewPermissions.status(), to: report)
                     } else if arguments.first == "permission-fake" {
                         var counts: [String: String] = [:]
-                        for name in NewPermissions.names {
-                            var calls = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { ($0, 0) })
-                            let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { selected in
+                        for name in NewPermissions.requestable {
+                            var calls = Dictionary(uniqueKeysWithValues: NewPermissions.requestable.map { ($0, 0) })
+                            let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.requestable.map { selected in
                                 (selected, { @MainActor in calls[selected, default: 0] += 1 } as NewPermissions.RequestAdapter)
                             })
                             let before = NewPermissions.requestAPICalls
@@ -33,7 +33,7 @@ public enum HelperCommand {
                             counts[name] = String(calls[name] ?? 0)
                         }
                         var unknownCalls = 0
-                        let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.names.map { name in
+                        let adapters = Dictionary(uniqueKeysWithValues: NewPermissions.requestable.map { name in
                             (name, { @MainActor in unknownCalls += 1 } as NewPermissions.RequestAdapter)
                         })
                         let before = NewPermissions.requestAPICalls

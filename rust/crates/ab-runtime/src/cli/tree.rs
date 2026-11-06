@@ -301,7 +301,7 @@ pub enum PermissionsAction {
     Guide(GuideArgs),
     #[command(about = "Show permission status. Never asks macOS for anything")]
     Status(GuideStatusArgs),
-    #[command(about = "Ask macOS for one optional permission through the Helper")]
+    #[command(about = "Ask macOS for one permission through the Helper")]
     Request {
         #[arg(help = "Permission name, such as camera")]
         name: String,

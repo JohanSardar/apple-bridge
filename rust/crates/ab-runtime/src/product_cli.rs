@@ -8,7 +8,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const PERMISSIONS: [&str; 11] = [
+pub const PERMISSIONS: [&str; 14] = [
+    "contacts",
+    "calendar",
+    "reminders",
     "location",
     "camera",
     "microphone",
@@ -22,7 +25,6 @@ pub const PERMISSIONS: [&str; 11] = [
     "automation_shortcuts_events",
 ];
 const PERMISSION_TIMEOUT: Duration = Duration::from_secs(180);
-const ONBOARD_TIMEOUT: Duration = Duration::from_secs(320);
 const SELFTEST_TIMEOUT: Duration = Duration::from_secs(600);
 const GATEWAY_PLIST: &str = "Contents/Library/LaunchAgents/dev.applebridge.gateway.plist";
 
@@ -172,23 +174,6 @@ pub fn permissions_request(
     Ok(serde_json::from_slice(&std::fs::read(&report.0)?)?)
 }
 
-pub fn onboard_arguments(app: &str, report: &Path) -> Vec<String> {
-    let mut arguments: Vec<String> = ["-n", "-W", "-g", "-a"]
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
-    arguments.push(helper_or_default(app));
-    arguments.extend(["--args", "onboard", "--report"].map(str::to_owned));
-    arguments.push(report.to_string_lossy().into_owned());
-    arguments
-}
-
-pub fn onboard(program: &Path, report_dir: &Path, app: &str) -> Result<(), Error> {
-    std::fs::create_dir_all(report_dir)?;
-    let report = Report(report_dir.join(format!("onboard-{}.json", run_id())));
-    run_bounded(program, &onboard_arguments(app, &report.0), ONBOARD_TIMEOUT)
-}
-
 #[derive(Debug)]
 pub struct SelfTest {
     pub data: String,
@@ -331,6 +316,33 @@ mod tests {
             )
         );
         assert_eq!(std::fs::read_dir(dir.path())?.count(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn contacts_calendar_and_reminders_are_requested_one_at_a_time() -> Check {
+        let _serial = serial();
+        for name in ["contacts", "calendar", "reminders"] {
+            let dir = tempfile::tempdir()?;
+            let seen = dir.path().join("seen");
+            let program = script(
+                dir.path(),
+                &format!(
+                    "printf '%s\\n' \"$@\" > '{}'\nwhile [ \"$1\" != --report ]; do shift; done\nprintf '{{\"request\":\"{name}\"}}' > \"$2\"\n",
+                    seen.display()
+                ),
+            )?;
+            let states = permissions_request(&program, dir.path(), "/H.app", name, None)?;
+            assert_eq!(states["request"], name);
+            let arguments = std::fs::read_to_string(&seen)?;
+            assert!(
+                arguments.starts_with(&format!(
+                    "-n\n-W\n-g\n-a\n/H.app\n--args\npermission-request\n{name}\n--report\n"
+                )),
+                "{arguments}"
+            );
+            assert!(!arguments.contains("onboard"), "{arguments}");
+        }
         Ok(())
     }
 

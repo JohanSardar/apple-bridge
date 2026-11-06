@@ -33,7 +33,7 @@ pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
     if !product_cli::PERMISSIONS.contains(&name) {
         return Err(Failure::new(format!("`{name}` is not a permission that can be requested."))
             .next(format!(
-                "Choose one of: {}. For Messages, Contacts, Calendar and Reminders run `bridge permissions guide`.",
+                "Choose one of: {}. For Full Disk Access run `bridge permissions guide`.",
                 product_cli::PERMISSIONS.join(", ")
             )));
     }

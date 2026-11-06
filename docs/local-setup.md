@@ -66,11 +66,11 @@ Send the token as `Authorization: Bearer <token>`, to `/mcp` or to the REST API 
 
 ## Mac permissions
 
-`bridge permissions guide` lists Full Disk Access, Contacts, Calendar and Reminders with their status, then walks through any that are missing. For each one it waits for you, then asks macOS or opens the right page in System Settings. You can skip any of them, and the other sources keep working.
+`bridge permissions guide` lists Full Disk Access, Contacts, Calendar and Reminders with their status, then walks through any that are missing. For each one it waits for you, then asks macOS for that permission alone or opens the right page in System Settings. You can skip any of them, and the other sources keep working.
 
 `bridge permissions status` only shows the list and never asks macOS for anything. It reads the status from what each source last reported, so it shows "not known yet" until the Helper has connected. Without a terminal, the guide does the same and changes nothing.
 
-`bridge permissions request <name>` asks for one optional permission such as `camera`.
+`bridge permissions request <name>` asks for one permission, such as `contacts` or `camera`, and nothing else.
 
 ## See what has synced
 

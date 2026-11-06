@@ -1,5 +1,7 @@
 import Foundation
 import MessagesSource
+import Contacts
+import EventKit
 import CoreLocation
 import AVFoundation
 import CoreGraphics
@@ -14,6 +16,8 @@ import Carbon
 public enum NewPermissions {
     public static let automation = ["automation_mail": "com.apple.mail", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
     public static let names = ["location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
+    public static let levelOne = ["contacts", "calendar", "reminders"]
+    public static let requestable = names + levelOne
 
     public static func status() async -> [String: String] {
         var result = Dictionary(uniqueKeysWithValues: names.map { ($0, "unknown") })
@@ -100,6 +104,12 @@ public enum NewPermissions {
 
     public static func requestNative(_ name: String, adapters: [String: RequestAdapter]? = nil) async throws {
         switch name {
+        case "contacts":
+            try await call("contacts", adapters: adapters) { _ = try await CNContactStore().requestAccess(for: .contacts) }
+        case "calendar":
+            try await call("calendar", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToEvents() }
+        case "reminders":
+            try await call("reminders", adapters: adapters) { _ = try await EKEventStore().requestFullAccessToReminders() }
         case "location":
             try await call("location", adapters: adapters) {
                 location = CLLocationManager()

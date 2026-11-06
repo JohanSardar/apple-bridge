@@ -70,7 +70,7 @@ struct Fixture {
     #[serde(default)]
     opened: Vec<String>,
     #[serde(default)]
-    asked: u32,
+    asked: Vec<String>,
 }
 
 enum Backend<'a> {
@@ -142,13 +142,19 @@ impl Backend<'_> {
         }
     }
 
-    fn ask_macos(&self) -> Outcome {
+    fn ask_macos(&self, permission: &Permission) -> Outcome {
         match self {
             Self::Fixture(path) => {
                 let mut fixture = Self::fixture(path)?;
-                fixture.asked += 1;
-                for id in fixture.grant_when_asked.clone() {
-                    fixture.statuses.insert(id, "granted".to_owned());
+                fixture.asked.push(permission.id.to_owned());
+                if fixture
+                    .grant_when_asked
+                    .iter()
+                    .any(|id| id == permission.id)
+                {
+                    fixture
+                        .statuses
+                        .insert(permission.id.to_owned(), "granted".to_owned());
                 }
                 Self::save(path, &fixture)
             }
@@ -157,10 +163,12 @@ impl Backend<'_> {
                     return Err(Failure::new("No Helper app was found to ask macOS with.")
                         .next("Install Apple Bridge, or pass --helper-app."));
                 }
-                product_cli::onboard(
+                product_cli::permissions_request(
                     Path::new("open"),
                     &product_cli::default_report_dir(),
                     helper,
+                    permission.id,
+                    None,
                 )?;
                 Ok(())
             }
@@ -298,6 +306,24 @@ async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool
     Ok(())
 }
 
+fn ask_each(
+    backend: &Backend<'_>,
+    mut wants: impl FnMut(&Permission) -> Outcome<bool>,
+) -> Outcome<Vec<&'static str>> {
+    let mut skipped = Vec::new();
+    for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
+        if backend.status(permission)? == "granted" {
+            continue;
+        }
+        if wants(permission)? {
+            backend.ask_macos(permission)?;
+        } else {
+            skipped.push(permission.id);
+        }
+    }
+    Ok(skipped)
+}
+
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
     println!("Mac permissions for Apple Bridge. You can skip any of them; the rest still work.");
@@ -309,18 +335,22 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         );
         return Ok(());
     }
-    let mut asked = false;
-    for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
-        if backend.status(permission)? != "granted" && !asked {
-            println!();
-            println!("Contacts, Calendar and Reminders: macOS asks you in a small window.");
-            if pause("  Press Enter to ask now, or type s to skip:", args.yes)? {
-                backend.ask_macos()?;
-            }
-            asked = true;
+    let skipped = ask_each(&backend, |permission| {
+        println!();
+        println!(
+            "{}: {}. macOS asks you in a small window.",
+            permission.title, permission.why
+        );
+        let wanted = pause("  Press Enter to ask now, or type s to skip:", args.yes)?;
+        if !wanted {
+            println!("  Skipped. Other sources still work.");
         }
-    }
-    for permission in LEVEL_ONE {
+        Ok(wanted)
+    })?;
+    for permission in LEVEL_ONE
+        .iter()
+        .filter(|permission| !skipped.contains(&permission.id))
+    {
         settings_step(&backend, permission, args.yes).await?;
     }
     println!();
@@ -333,6 +363,33 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_permission_is_asked_on_its_own_and_a_skip_asks_nothing() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("fixture.json");
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({
+                "statuses": {"contacts":"unknown","calendar":"unknown","reminders":"unknown"},
+                "grant_when_asked": ["contacts", "calendar", "reminders"],
+            }))?,
+        )?;
+        let backend = Backend::Fixture(path.clone());
+        let mut offered = Vec::new();
+        let skipped = ask_each(&backend, |permission| {
+            offered.push(permission.id);
+            Ok(permission.id != "calendar")
+        })?;
+        assert_eq!(offered, ["contacts", "calendar", "reminders"]);
+        assert_eq!(skipped, ["calendar"]);
+        let fixture = Backend::fixture(&path)?;
+        assert_eq!(fixture.asked, ["contacts", "reminders"]);
+        assert_eq!(fixture.statuses["contacts"], "granted");
+        assert_eq!(fixture.statuses["calendar"], "unknown");
+        assert_eq!(fixture.statuses["reminders"], "granted");
+        Ok(())
+    }
 
     #[test]
     fn only_a_settings_only_permission_with_a_known_app_gets_the_add_hint() {

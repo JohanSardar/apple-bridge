@@ -557,7 +557,7 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     )?;
     assert!(walked.status.success(), "{}", text(&walked.stderr));
     let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
-    assert_eq!(after["asked"], 1);
+    assert_eq!(after["asked"], serde_json::json!(["contacts", "reminders"]));
     assert_eq!(after["opened"], serde_json::json!(["full_disk_access"]));
     for permission in ["full_disk_access", "contacts", "calendar", "reminders"] {
         assert_eq!(after["statuses"][permission], "granted", "{permission}");
