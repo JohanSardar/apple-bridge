@@ -39,12 +39,14 @@ impl LocalGateway {
         let lock = self.lock(format!("command:{id}"))?;
         let _guard = lock.lock().await;
         let row = self.state.command(id)?;
+        self.verify_photos_preview(&row, approve, &decider)?;
         self.verify_decider(&row, approve, decider).await?;
         let mut record = self.expire(row)?;
         if record.state != State::AwaitingApproval {
             return raw(&record);
         }
         if !approve {
+            self.forget_photos_preview(&record)?;
             return raw(&self.transition(
                 record,
                 State::RejectedByOwner,
@@ -62,7 +64,8 @@ impl LocalGateway {
                 None,
             )?);
         }
-        if record.command.op == "location.current" {
+        if record.command.op == "location.current" || super::photos::mutation(&record.command.op) {
+            self.forget_photos_preview(&record)?;
             return raw(&self.transition(record, State::Admitted, None, None, None)?);
         }
         let principal = if record.principal.contains("/agent:") {
@@ -114,11 +117,7 @@ impl LocalGateway {
         if !(self.peer.available() || record.source == "iphone" && self.phone_notify.is_some()) {
             return Err(Code::Unavailable.into());
         }
-        let ttl = if record.command.expires_at == "0001-01-01T00:00:00Z" {
-            jiff::SignedDuration::from_secs(if record.source == "messages" { 60 } else { 300 })
-        } else {
-            timestamp(&record.command.expires_at)?.duration_since(timestamp(&record.created_at)?)
-        };
+        let ttl = approval_ttl(&record)?;
         let deadline =
             tokio::time::Instant::now() + Duration::try_from(ttl).map_err(|_| Code::Expired)?;
         record.expires_at = self
@@ -134,5 +133,40 @@ impl LocalGateway {
             let _ = gateway.execute(record, principal, deadline).await;
         });
         Ok(result)
+    }
+
+    fn verify_photos_preview(
+        &self,
+        record: &super::CommandRecord,
+        approve: bool,
+        decider: &crate::approval_review::Decider<'_>,
+    ) -> Result<(), Error> {
+        if approve
+            && record.state == State::AwaitingApproval
+            && super::photos::mutation(&record.command.op)
+        {
+            self.photos_preview(record.clone())?;
+            if matches!(decider, crate::approval_review::Decider::Phone(_)) {
+                return Err(Code::Unsupported.into());
+            }
+        }
+        Ok(())
+    }
+
+    fn forget_photos_preview(&self, record: &super::CommandRecord) -> Result<(), Error> {
+        if super::photos::mutation(&record.command.op) {
+            self.photos_previews.remove(&record.command.id)?;
+        }
+        Ok(())
+    }
+}
+
+fn approval_ttl(record: &super::CommandRecord) -> Result<jiff::SignedDuration, Error> {
+    if record.command.expires_at == "0001-01-01T00:00:00Z" {
+        Ok(jiff::SignedDuration::from_secs(
+            if record.source == "messages" { 60 } else { 300 },
+        ))
+    } else {
+        Ok(timestamp(&record.command.expires_at)?.duration_since(timestamp(&record.created_at)?))
     }
 }

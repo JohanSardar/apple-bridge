@@ -280,6 +280,20 @@ pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Read
             "contacts" => contacts(fields),
             "focus" => focus(fields),
             "location" => location(fields),
+            "photos" => {
+                if fields["authorized"] == true {
+                    Readiness::ready(
+                        json!({"fields":"live_only","limited":fields["limited"] == true}),
+                        &[],
+                    )
+                } else {
+                    Readiness::not(
+                        "permission_missing",
+                        json!({"fields":"live_only"}),
+                        "Photos permission is optional; run bridge permissions guide",
+                    )
+                }
+            }
             "vision" => vision(fields),
             "safari" => safari(fields),
             "capture" => Readiness::ready(

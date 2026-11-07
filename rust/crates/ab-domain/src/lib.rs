@@ -39,6 +39,8 @@ pub enum Source {
     Pdf,
     #[serde(rename = "phone")]
     Phone,
+    #[serde(rename = "photos")]
+    Photos,
     #[serde(rename = "print")]
     Print,
     #[serde(rename = "reminders")]

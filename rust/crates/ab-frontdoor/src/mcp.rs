@@ -105,7 +105,8 @@ fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_jso
     let mut tools = ab_catalog::mcp_tools(descriptors)["tools"].take();
     for tool in tools.as_array_mut().into_iter().flatten() {
         let command = descriptors.iter().any(|descriptor| {
-            descriptor.kind == ab_catalog::OperationKind::Command
+            (descriptor.kind == ab_catalog::OperationKind::Command
+                || descriptor.scope.ends_with(":write"))
                 && tool["name"].as_str() == Some(descriptor.name.replace('.', "_").as_str())
         });
         tool["annotations"] = if command {
@@ -262,6 +263,15 @@ mod annotation_tests {
                 .unwrap_or_default()
         };
         assert_eq!(tool("records_query")["annotations"]["readOnlyHint"], true);
+        assert_eq!(tool("photos_search")["annotations"]["readOnlyHint"], true);
+        for operation in descriptors
+            .iter()
+            .filter(|operation| operation.scope == "photos:write")
+        {
+            let name = operation.name.replace('.', "_");
+            assert_eq!(tool(&name)["annotations"]["readOnlyHint"], false);
+            assert_eq!(tool(&name)["annotations"]["destructiveHint"], true);
+        }
         assert_eq!(tool("messages_send")["annotations"]["readOnlyHint"], false);
         assert_eq!(
             tool("messages_send")["annotations"]["destructiveHint"],

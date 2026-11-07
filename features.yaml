@@ -1090,3 +1090,14 @@ features:
     scenarios:
       - {id: APP-CAPTURE-SIM, levels: [sim]}
       - {id: APP-CAPTURE-REAL, levels: [real], status: dropped, reason: "Dropped by the owner on 2026-11-01: needs a live Face ID match."}
+
+  - id: photos.live
+    title: Live public PhotoKit queries and temporary resources without a library copy
+    requirements: [R-API, R-SCOPE, R-RW, R-SAFE-CMD]
+    milestone: G9
+    modules: [native/Sources/PhotosSource, rust/crates/ab-operations, rust/crates/ab-runtime]
+    depends_on: [core.queries, core.permissions]
+    status: in_progress
+    notes: Public PhotoKit only. Live reads use bounded PhotoKit fetches and cursor paging; temporary original transfers, favorite and regular-album changes are implemented. Independent review's fetch-bound and recovery-error findings have regression fixes. Native permission, signed clean-VM, real-library and large-resource qualification remain required. No permanent deletion or private people database.
+    scenarios:
+      - {id: PHOTOS-LIVE, levels: [sim]}

@@ -25,6 +25,7 @@ impl LocalGateway {
             return raw(&record);
         }
         if query.resolve
+            && record.source != "photos"
             && record.admission_era == self.state.admission_era()?
             && resolvable(&record)
         {
@@ -73,6 +74,19 @@ impl LocalGateway {
                 record
                     .as_ref()
                     .map_or(true, |record| record.state == State::AwaitingApproval)
+            })
+            .map(|record| {
+                record.and_then(|record| {
+                    if super::photos::mutation(&record.command.op) {
+                        match self.photos_preview(record.clone()) {
+                            Ok(preview) => Ok(preview),
+                            Err(error) if error.code == Code::Unavailable => Ok(record),
+                            Err(error) => Err(error),
+                        }
+                    } else {
+                        Ok(record)
+                    }
+                })
             })
             .collect()
     }

@@ -103,6 +103,7 @@ fn visibility_map(visibility: &ab_trust::Visibility) -> ab_state::Visibility {
             "notes",
             "pdf",
             "phone",
+            "photos",
             "print",
             "reminders",
             "safari",

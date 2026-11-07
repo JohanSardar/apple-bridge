@@ -238,6 +238,9 @@ impl LocalGateway {
         ))
     }
     pub async fn approval_review(&self, record: &CommandRecord) -> Result<ApprovalReview, Error> {
+        if crate::local::photos::mutation(&record.command.op) {
+            self.photos_preview(self.state.command(&record.command.id)?)?;
+        }
         let mut attachments = Vec::new();
         for (index, file) in files(record).iter().enumerate() {
             attachments.push(self.attachment_head(record, index, file).await?);

@@ -1,0 +1,5 @@
+id: PHOTOS-LIVE
+feature: photos.live
+levels: [sim]
+when:
+  - photos: {}

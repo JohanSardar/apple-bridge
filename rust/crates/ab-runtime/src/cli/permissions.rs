@@ -63,6 +63,14 @@ const LEVEL_ONE: &[Permission] = &[
 
 const OPTIONAL: &[Permission] = &[
     Permission {
+        id: "photos",
+        title: "Photos",
+        why: "Read Photos live and change albums and favorites when asked (optional; no library copy)",
+        source: "photos",
+        pane: "Privacy_Photos",
+        asks: true,
+    },
+    Permission {
         id: "screen_recording",
         title: "Screen & System Audio Recording",
         why: "Take screenshots and record the screen (optional)",
@@ -618,6 +626,7 @@ mod tests {
                 "contacts",
                 "calendar",
                 "reminders",
+                "photos",
                 "camera",
                 "microphone",
                 "location"
@@ -625,7 +634,7 @@ mod tests {
         );
         assert_eq!(
             answers.skipped,
-            ["calendar", "camera", "microphone", "location"]
+            ["calendar", "photos", "camera", "microphone", "location"]
         );
         assert_eq!(
             answers.asked.iter().map(|p| p.id).collect::<Vec<_>>(),

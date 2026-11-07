@@ -28,7 +28,7 @@ const WHEN_FIELDS: &[&str] = &[
 ];
 
 struct Session {
-    authority: Authority,
+    authority: Option<Authority>,
     client: reqwest::Client,
     address: String,
     token: String,
@@ -56,11 +56,27 @@ impl Session {
             .build()
             .map_err(|error| Failure::new(format!("Could not start a request: {error}.")))?;
         Ok(Self {
-            authority,
+            authority: Some(authority),
             client,
             address,
             token,
             principal,
+        })
+    }
+
+    async fn with_token(home: &Path, token: String) -> Outcome<Self> {
+        let address = gateway::running_address(home).await?;
+        let client = reqwest::Client::builder()
+            .timeout(READ_TIMEOUT)
+            .no_proxy()
+            .build()
+            .map_err(|error| Failure::new(format!("Could not start a request: {error}.")))?;
+        Ok(Self {
+            authority: None,
+            client,
+            address,
+            token,
+            principal: String::new(),
         })
     }
 
@@ -91,7 +107,9 @@ impl Session {
     }
 
     fn close(self) {
-        let _ = self.authority.revoke(&self.principal);
+        if let Some(authority) = self.authority {
+            let _ = authority.revoke(&self.principal);
+        }
     }
 }
 
@@ -124,6 +142,7 @@ fn request(args: &ReadArgs) -> Outcome<(&'static str, Value, &'static [&'static 
     }
     let limit = args.limit.min(200);
     Ok(match args.kind {
+        ReadKind::Photos => ("photos.search", json!({"args":{"limit":limit.max(1)}}), &[]),
         ReadKind::Messages => {
             if let Some(chat) = &args.chat {
                 (
@@ -351,6 +370,8 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
             &mut (args.limit.min(200) as usize),
         );
         println!("{answer}");
+    } else if args.kind == ReadKind::Photos {
+        println!("{}", serde_json::to_string_pretty(&answer["result_json"])?);
     } else {
         render(&answer, collections, args.limit as usize);
     }
@@ -368,9 +389,12 @@ pub async fn search(home: &Path, args: &SearchArgs) -> Outcome {
     Ok(())
 }
 
-fn list_operations() -> Outcome {
+fn list_operations(writes: bool) -> Outcome {
     for descriptor in ab_catalog::operations()? {
-        if descriptor.kind != OperationKind::Command {
+        if descriptor.kind != OperationKind::Command
+            && (!descriptor.scope.ends_with(":write")
+                || writes && descriptor.scope == "photos:write")
+        {
             println!("{:<28} {}", descriptor.name, descriptor.description);
         }
     }
@@ -379,7 +403,7 @@ fn list_operations() -> Outcome {
 
 pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
     if args.list {
-        return list_operations();
+        return list_operations(args.write);
     }
     let Some(operation) = &args.operation else {
         return Err(Failure::new("Say which operation to call.")
@@ -392,11 +416,21 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
             Failure::new(format!("There is no operation called `{operation}`."))
                 .next("Run `bridge call --list`.")
         })?;
-    if descriptor.kind == OperationKind::Command {
+    let photos_write = descriptor.scope == "photos:write";
+    if descriptor.kind == OperationKind::Command
+        || descriptor.scope.ends_with(":write") && !(photos_write && args.write)
+    {
         return Err(Failure::new(format!(
             "`{operation}` changes your data, and this command only reads."
         ))
-        .next("Agents make changes through MCP, where you approve them."));
+        .next("Photos organization writes need --write, --token-env and a stable query id. Other changes use MCP."));
+    }
+    if (photos_write || matches!(operation.as_str(), "photos.fetch" | "photos.release"))
+        && args.token_env.is_none()
+    {
+        return Err(Failure::new(
+            "Photos transfers and writes require --token-env for a stable authenticated identity.",
+        ));
     }
     let mut arguments: Value = serde_json::from_str(&args.args).map_err(|error| {
         Failure::new(format!("--args is not valid JSON: {error}."))
@@ -405,7 +439,30 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
     if operation == "helper.version" && arguments == json!({}) {
         arguments = json!({"args": {}});
     }
-    println!("{}", run_call(home, operation, &arguments).await?);
+    if photos_write
+        && arguments["id"]
+            .as_str()
+            .is_none_or(|id| id.trim().is_empty())
+    {
+        return Err(Failure::new(
+            "Photos writes require an explicit stable qry_ id in --args. Never automatically retry an ambiguous write.",
+        ));
+    }
+    let answer = if let Some(name) = &args.token_env {
+        let token = std::env::var(name)
+            .ok()
+            .filter(|token| !token.is_empty())
+            .ok_or_else(|| {
+                Failure::new(
+                    "The requested credential environment variable is empty or unavailable.",
+                )
+            })?;
+        let session = Session::with_token(home, token).await?;
+        session.call(operation, &arguments).await?
+    } else {
+        run_call(home, operation, &arguments).await?
+    };
+    println!("{answer}");
     Ok(())
 }
 

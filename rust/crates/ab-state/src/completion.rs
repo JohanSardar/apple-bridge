@@ -67,7 +67,23 @@ pub(crate) fn completion(r: &CommandRecord) -> bool {
         && e["approval_consumed"] == true
         && e["query_succeeded"] == true
         && e["request_hash"].as_str() == Some(&r.request_hash);
-    runner || maps || playback || mac || capture || location || iphone(r, &e)
+    let photos = r.source == Source::Photos
+        && observed
+        && r.commit_seq == 0
+        && hash
+        && e["approval_consumed"] == true
+        && e["query_succeeded"] == true
+        && e["request_hash"].as_str() == Some(&r.request_hash)
+        && matches!(
+            r.command.op.as_str(),
+            "photos.favorite"
+                | "photos.album_create"
+                | "photos.album_rename"
+                | "photos.album_add"
+                | "photos.album_remove"
+                | "photos.album_delete"
+        );
+    runner || maps || playback || mac || capture || location || photos || iphone(r, &e)
 }
 fn iphone(r: &CommandRecord, e: &Value) -> bool {
     if r.source != Source::Iphone || r.state != CommandState::Observed {

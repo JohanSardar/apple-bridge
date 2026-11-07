@@ -9,13 +9,20 @@ impl LocalGateway {
         principal: &Principal,
         query: &NativeQuery,
     ) -> Result<Option<Box<RawValue>>, Error> {
-        if query.op != "location.current" || !principal.is_agent() {
+        let photos = super::photos::mutation(&query.op);
+        if !photos && (query.op != "location.current" || !principal.is_agent()) {
             return Ok(None);
         }
+        let args = if photos {
+            let canonical = self.codec.json(query.args.get().as_bytes())?;
+            raw(&json!({"request_digest":self.codec.fingerprint(&canonical)}))?
+        } else {
+            raw(query)?
+        };
         let command = Command {
             id: query.id.clone(),
             op: query.op.clone(),
-            args: raw(query)?,
+            args,
             origin: String::new(),
             expected_version: 0,
             expires_at: "0001-01-01T00:00:00Z".into(),
@@ -42,6 +49,9 @@ impl LocalGateway {
                 }
                 match record.state {
                     State::AwaitingApproval => {
+                        if photos {
+                            self.photos_previews.remember(&query.id, &query.args)?;
+                        }
                         return Ok(Some(raw(
                             &json!({"id":query.id,"state":"awaiting_approval"}),
                         )?));
@@ -58,12 +68,15 @@ impl LocalGateway {
             Err(error) => return Err(error),
         }
         let now = self.clock.now();
-        self.state.transition(
+        if photos && principal.is_agent() {
+            self.photos_previews.remember(&query.id, &query.args)?;
+        }
+        let record = self.state.transition(
             None,
             CommandRecord {
                 command,
                 principal: principal.id.clone(),
-                source: "location".into(),
+                source: if photos { "photos" } else { "location" }.into(),
                 request_hash: hash,
                 state: State::AwaitingApproval,
                 admission_era: self.state.admission_era()?,
@@ -83,6 +96,12 @@ impl LocalGateway {
                 history: Vec::new(),
             },
         )?;
+        if photos && !principal.is_agent() {
+            let record = self.transition(record, State::Admitted, None, None, None)?;
+            let record = self.transition(record, State::Prepared, None, None, None)?;
+            self.transition(record, State::Dispatched, None, None, None)?;
+            return Ok(None);
+        }
         Ok(Some(raw(
             &json!({"id":query.id,"state":"awaiting_approval"}),
         )?))
@@ -95,7 +114,8 @@ impl LocalGateway {
         operation: &str,
         succeeded: bool,
     ) -> Result<(), Error> {
-        if operation == "location.current" && principal.is_agent() {
+        let photos = super::photos::mutation(operation);
+        if photos || operation == "location.current" && principal.is_agent() {
             let record = self.state.command(id)?;
             let evidence = raw(
                 &json!({"approval_consumed":true,"query_succeeded":succeeded,"request_hash":record.request_hash}),
@@ -104,6 +124,8 @@ impl LocalGateway {
                 record,
                 if succeeded {
                     State::Observed
+                } else if photos {
+                    State::Indeterminate
                 } else {
                     State::Failed
                 },

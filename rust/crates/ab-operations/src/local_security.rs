@@ -4,6 +4,8 @@ use crate::approval_review::{OwnerReview, Preview, phone_decision_hash};
 use crate::{GatewayStore, LocalQueryStore};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::sync::Mutex as StdMutex;
+#[path = "local_security/photos_tests.rs"]
+mod photos_tests;
 
 #[derive(Debug)]
 struct TestIdentity(Principal);
@@ -62,7 +64,7 @@ impl ApplePeer for TestPeer {
                 self.0.staged.lock().map_err(|_| Code::Corrupt)?.push(bytes);
             }
             self.0.frames.lock().map_err(|_| Code::Corrupt)?.push(args);
-            if f.id == "qry_location_failure" {
+            if f.id == "qry_location_failure" || f.id == "qry_photos_failure" {
                 return Ok(IpcFrame {
                     t: "QueryError".into(),
                     code: "unavailable".into(),
@@ -77,6 +79,14 @@ impl ApplePeer for TestPeer {
             } else {
                 IpcFrame {
                     t: "QueryResult".into(),
+                    blobs: (f.id == "qry_photos_blobs").then(|| {
+                        vec![
+                            serde_json::value::to_raw_value(
+                                &json!({"digest":"00".repeat(32),"size":1,"handle":"synthetic"}),
+                            )
+                            .expect("blob"),
+                        ]
+                    }),
                     result_json: Some(
                         serde_json::value::to_raw_value(&json!({"ok":true}))
                             .map_err(|_| Code::Corrupt)?,

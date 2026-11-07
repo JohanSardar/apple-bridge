@@ -33,6 +33,7 @@ impl LocalGateway {
             }
         }
         let args: Value = serde_json::from_str(query.args.get()).map_err(|_| Code::Invalid)?;
+        super::photos::validate(&query, &args)?;
         if matches!(
             query.op.as_str(),
             "helper.version"
@@ -107,6 +108,10 @@ impl LocalGateway {
             .await;
         self.finish_location(&principal, &id, &operation, result.is_ok())?;
         let recorded = audit.finish();
+        if super::photos::mutation(&operation) && result.is_err() {
+            recorded?;
+            return Err(Code::Indeterminate.into());
+        }
         match (result, recorded) {
             (Ok(_), Err(error)) => Err(error),
             (result, _) => result,
@@ -122,6 +127,17 @@ impl LocalGateway {
         audit: &mut crate::QueryAudit,
     ) -> Result<Box<RawValue>, Error> {
         let args: Value = serde_json::from_str(query.args.get()).map_err(|_| Code::Invalid)?;
+        let photos = query.op.starts_with("photos.");
+        if photos {
+            let mut args = args.clone();
+            args.as_object_mut()
+                .ok_or(Code::Invalid)?
+                .insert("_principal".into(), Value::String(principal.id.clone()));
+            args.as_object_mut()
+                .ok_or(Code::Invalid)?
+                .insert("_request".into(), Value::String(query.id.clone()));
+            query.args = raw(&args)?;
+        }
         let document = if matches!(
             query.op.as_str(),
             "vision.ocr" | "pdf.text" | "pdf.search" | "audio.transcribe"
@@ -170,6 +186,9 @@ impl LocalGateway {
                 (true, "unavailable") => {
                     "No current location fix is available on this Mac. Check that Location Services is enabled and try again."
                 }
+                (_, "forbidden") if photos => {
+                    "Photos permission is not allowed. Run bridge permissions guide and choose the optional Photos step. Other sources still work."
+                }
                 _ => "query failed",
             };
             return Err(serde_json::from_value(
@@ -185,6 +204,9 @@ impl LocalGateway {
                 .is_some_and(|value| value.get().len() > 1 << 20)
             || frame.blobs.as_ref().is_some_and(|value| value.len() > 16)
         {
+            return Err(Code::Corrupt.into());
+        }
+        if photos && frame.blobs.as_ref().is_some_and(|blobs| !blobs.is_empty()) {
             return Err(Code::Corrupt.into());
         }
         audit.result_bytes = frame

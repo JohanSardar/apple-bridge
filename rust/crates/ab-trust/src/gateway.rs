@@ -402,6 +402,7 @@ impl Authority {
                 "notes",
                 "usage",
                 "phone",
+                "photos",
                 "location",
                 "audio",
                 "capture",

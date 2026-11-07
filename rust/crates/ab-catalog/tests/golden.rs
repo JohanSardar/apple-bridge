@@ -4,9 +4,9 @@ use serde_json::Value;
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn all_147_descriptors_equal_go() -> Result {
+fn all_descriptors_equal_published_contract() -> Result {
     let descriptors = operations()?;
-    assert_eq!(descriptors.len(), 147);
+    assert_eq!(descriptors.len(), 158);
     let expected: Value =
         serde_json::from_str(include_str!("../../../../contracts/golden/catalog.json"))?;
     assert_eq!(serde_json::to_value(descriptors)?, expected);

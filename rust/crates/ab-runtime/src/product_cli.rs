@@ -8,10 +8,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const PERMISSIONS: [&str; 14] = [
+pub const PERMISSIONS: [&str; 15] = [
     "contacts",
     "calendar",
     "reminders",
+    "photos",
     "location",
     "camera",
     "microphone",

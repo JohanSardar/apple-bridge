@@ -34,6 +34,11 @@ struct Described {
 
 const DESCRIBED: &[Described] = &[
     Described {
+        source: "photos",
+        label: "Photos",
+        nouns: &[],
+    },
+    Described {
         source: "messages",
         label: "Messages",
         nouns: &[
@@ -127,6 +132,9 @@ pub struct Snapshot {
 
 impl SourceStats {
     fn phrase(&self) -> String {
+        if self.source == "photos" {
+            return "live queries · no local library copy".to_owned();
+        }
         let described = DESCRIBED.iter().find(|entry| entry.source == self.source);
         let mut parts = Vec::new();
         if let Some(described) = described {

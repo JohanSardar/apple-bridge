@@ -72,6 +72,7 @@ const SOURCES: &[(&str, &str)] = &[
     ("safari", "Safari"),
     ("files", "Files"),
     ("phone", "Phone"),
+    ("photos", "Photos"),
     ("voicemail", "Voicemail"),
     ("voice_memos", "Voice Memos"),
     ("health", "Health"),
