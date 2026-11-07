@@ -25,6 +25,7 @@ public enum PhotosChecks {
         for limit in [1, 50, 200] {
             try require(photoSearchOptions(limit: limit, locationFiltered: false).fetchLimit == limit + 1)
             try require(photoSearchOptions(limit: limit, locationFiltered: true).fetchLimit == 1001)
+            try require(photoSearchOptions(limit: limit, locationFiltered: false).sortDescriptors?.map(\.key) == ["creationDate"])
         }
     }
 
@@ -42,21 +43,35 @@ public enum PhotosChecks {
         for limit in [1, 2, 200] {
             var cursor: PhotoSearchCursor?
             var seen: [NSDictionary] = []
-            for _ in 0...fixtures.count {
-                let options = photoSearchOptions(limit: limit, locationFiltered: false, cursor: cursor)
-                let candidates = fixtures.filter { options.predicate?.evaluate(with: $0) ?? true }
+            var excluded: [NSDictionary] = []
+            var boundary: Date?
+            for iteration in 0...fixtures.count {
+                let options = photoSearchOptions(limit: limit, locationFiltered: false, cursor: cursor, excluded: excluded)
+                let candidates = fixtures.filter { options.predicate?.evaluate(with: $0) ?? true }.sorted {
+                    let left = $0["creationDate"] as? Date
+                    let right = $1["creationDate"] as? Date
+                    if left != right { return (left ?? .distantPast) > (right ?? .distantPast) }
+                    let leftID = $0["localIdentifier"] as? String ?? ""
+                    let rightID = $1["localIdentifier"] as? String ?? ""
+                    return iteration % 2 == 0 ? leftID < rightID : leftID > rightID
+                }
                 let fetched = Array(candidates.prefix(options.fetchLimit))
                 let page = Array(fetched.prefix(limit))
                 seen.append(contentsOf: page)
+                for value in page {
+                    let date = value["creationDate"] as? Date
+                    if date != boundary { excluded.removeAll(); boundary = date }
+                    excluded.append(value)
+                }
                 if fetched.count <= page.count { break }
                 guard let last = page.last, let id = last["localIdentifier"] as? String else { throw SourceFailure.corrupt }
                 cursor = try PhotoSearchCursor.decode(PhotoSearchCursor(date: last["creationDate"] as? Date, id: id).encode())
             }
-            try require(seen == fixtures)
+            try require(seen.count == fixtures.count && Set(seen) == Set(fixtures))
         }
         let boundary = try PhotoSearchCursor.decode(PhotoSearchCursor(date: date, id: "b").encode())
         try require(boundary.date == date && boundary.id == "b")
-        let options = photoSearchOptions(limit: 1, locationFiltered: true, cursor: boundary)
+        let options = photoSearchOptions(limit: 1, locationFiltered: true, cursor: boundary, excluded: Array(fixtures[1...2]))
         try require(fixtures.filter { options.predicate?.evaluate(with: $0) ?? false } == Array(fixtures[3...]))
         try rejects(try PhotoSearchCursor.decode("not-base64"))
         try rejects(try PhotoSearchCursor.decode(Data("{}".utf8).base64EncodedString()))

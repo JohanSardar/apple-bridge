@@ -8,18 +8,24 @@ public actor PhotosSource: Source {
     public nonisolated let name = "photos"
     public static let operations = ["photos.search", "photos.get", "photos.albums", "photos.fetch", "photos.release", "photos.favorite", "photos.album_create", "photos.album_rename", "photos.album_add", "photos.album_remove", "photos.album_delete"]
     private let transfers: PhotoTransfers
+    private var searches: [String: PhotoSearchContinuation] = [:]
+    private var searchExpiryTask: Task<Void, Never>?
 
     public init(home: URL) { transfers = PhotoTransfers(home: home) }
 
     public func status() async -> JSON? {
         let state = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        if state != .authorized && state != .limited { await transfers.cancelAll() }
+        if state != .authorized && state != .limited {
+            searches.removeAll()
+            await transfers.cancelAll()
+        }
         return .object(["authorized": .bool(state == .authorized || state == .limited), "limited": .bool(state == .limited)])
     }
 
     public func query(_ operation: String, args input: JSON) async throws -> JSON {
         let authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         guard authorization == .authorized || authorization == .limited else {
+            searches.removeAll()
             await transfers.cancelAll()
             throw SourceFailure.permissionMissing
         }
@@ -45,7 +51,16 @@ public actor PhotosSource: Source {
         try fields(args, ["start", "end", "type", "album_id", "favorite", "include_hidden", "near", "radius_m", "cursor", "limit"])
         let limit = try integer(args, "limit", default: 50, maximum: 200, minimum: 1)
         let cursor = args["cursor"] == .null ? nil : try PhotoSearchCursor.decode(string(args, "cursor", maximum: 2048))
-        let options = photoSearchOptions(limit: limit, locationFiltered: args["near"] != .null, cursor: cursor)
+        let now = ContinuousClock().now
+        searches = searches.filter { $0.value.started.duration(to: now) < .seconds(600) }
+        var filters = args.object
+        filters.removeValue(forKey: "cursor")
+        let continuation: PhotoSearchContinuation?
+        if let cursor {
+            guard let saved = searches[cursor.id], saved.filters == .object(filters) else { throw SourceFailure.expired }
+            continuation = saved
+        } else { continuation = nil }
+        let options = photoSearchOptions(limit: limit, locationFiltered: args["near"] != .null, cursor: continuation?.cursor, excluded: continuation?.excluded ?? [])
         options.includeHiddenAssets = try boolean(args, "include_hidden", default: false)
         var predicates = options.predicate.map { [$0] } ?? []
         for (key, relation) in [("start", ">="), ("end", "<")] where args[key] != .null {
@@ -94,18 +109,41 @@ public actor PhotosSource: Source {
         var rows: [JSON] = []
         var index = 0
         let stop = min(results.count, options.fetchLimit - 1)
-        var last: PhotoSearchCursor?
+        var boundary = continuation?.cursor.date
+        var excluded = continuation?.excluded ?? []
         while index < stop && rows.count < limit {
             try Task.checkCancellation()
             let value = results.object(at: index)
             index += 1
-            last = PhotoSearchCursor(date: value.creationDate, id: value.localIdentifier)
+            if value.creationDate != boundary { excluded.removeAll(); boundary = value.creationDate }
+            excluded.append(value)
             if let near {
                 guard let location = value.location, near.distance(from: location) <= radius else { continue }
             }
             rows.append(summary(value))
         }
-        return .object(["assets": .array(rows), "examined_count": .number(Double(index)), "next_cursor": index < results.count ? try last.map { .string(try $0.encode()) } ?? .null : .null, "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited)])
+        var next: JSON = .null
+        if index < results.count {
+            guard excluded.count <= 131_072 else { throw SourceFailure.unavailable }
+            while searches.count >= 128 || searches.values.reduce(0, { $0 + $1.excluded.count }) + excluded.count > 131_072 {
+                guard let oldest = searches.min(by: { $0.value.started < $1.value.started })?.key else { throw SourceFailure.unavailable }
+                searches.removeValue(forKey: oldest)
+            }
+            let cursor = PhotoSearchCursor(date: boundary, id: UUID().uuidString)
+            searches[cursor.id] = PhotoSearchContinuation(cursor: cursor, excluded: excluded, filters: .object(filters), started: now)
+            if searchExpiryTask == nil {
+                searchExpiryTask = Task {
+                    while !self.searches.isEmpty {
+                        try? await Task.sleep(for: .seconds(15))
+                        let now = ContinuousClock().now
+                        self.searches = self.searches.filter { $0.value.started.duration(to: now) < .seconds(600) }
+                    }
+                    self.searchExpiryTask = nil
+                }
+            }
+            next = .string(try cursor.encode())
+        }
+        return .object(["assets": .array(rows), "examined_count": .number(Double(index)), "next_cursor": next, "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited)])
     }
 
     private func albums(_ args: JSON) throws -> JSON {
@@ -239,16 +277,23 @@ struct PhotoSearchCursor: Codable {
     }
 }
 
-func photoSearchOptions(limit: Int, locationFiltered: Bool, cursor: PhotoSearchCursor? = nil) -> PHFetchOptions {
+private struct PhotoSearchContinuation {
+    let cursor: PhotoSearchCursor
+    let excluded: [PHAsset]
+    let filters: JSON
+    let started: ContinuousClock.Instant
+}
+
+func photoSearchOptions(limit: Int, locationFiltered: Bool, cursor: PhotoSearchCursor? = nil, excluded: [Any] = []) -> PHFetchOptions {
     let options = PHFetchOptions()
     options.fetchLimit = (locationFiltered ? 1000 : limit) + 1
-    options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false), NSSortDescriptor(key: "localIdentifier", ascending: true)]
+    options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
     options.includeAllBurstAssets = true
     if let cursor {
         if let date = cursor.date {
-            options.predicate = NSPredicate(format: "creationDate < %@ OR (creationDate == %@ AND localIdentifier > %@) OR creationDate == nil", date as NSDate, date as NSDate, cursor.id)
+            options.predicate = NSPredicate(format: "creationDate < %@ OR (creationDate == %@ AND NOT (SELF IN %@)) OR creationDate == nil", date as NSDate, date as NSDate, excluded)
         } else {
-            options.predicate = NSPredicate(format: "creationDate == nil AND localIdentifier > %@", cursor.id)
+            options.predicate = NSPredicate(format: "creationDate == nil AND NOT (SELF IN %@)", excluded)
         }
     }
     return options
