@@ -45,9 +45,7 @@ public actor PhotosSource: Source {
         try fields(args, ["start", "end", "type", "album_id", "favorite", "include_hidden", "near", "radius_m", "offset", "limit"])
         let offset = try integer(args, "offset", default: 0, maximum: 100_000_000)
         let limit = try integer(args, "limit", default: 50, maximum: 200, minimum: 1)
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false), NSSortDescriptor(key: "localIdentifier", ascending: true)]
-        options.includeAllBurstAssets = true
+        let options = photoSearchOptions(limit: limit, locationFiltered: args["near"] != .null)
         options.includeHiddenAssets = try boolean(args, "include_hidden", default: false)
         var predicates: [NSPredicate] = []
         for (key, relation) in [("start", ">="), ("end", "<")] where args[key] != .null {
@@ -218,6 +216,13 @@ public actor PhotosSource: Source {
         }
         return .object(["completed": .bool(true), "affected_count": .number(Double(max(1, members.count)))])
     }
+}
+
+func photoSearchOptions(limit: Int, locationFiltered: Bool) -> PHFetchOptions {
+    let options = PHFetchOptions()
+    options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false), NSSortDescriptor(key: "localIdentifier", ascending: true)]
+    options.includeAllBurstAssets = true
+    return options
 }
 
 func resourceKey(_ resource: PHAssetResource, asset: PHAsset) throws -> String {

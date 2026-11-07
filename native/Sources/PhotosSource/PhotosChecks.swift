@@ -13,10 +13,18 @@ public enum PhotosChecks {
     }
 
     public static func run() throws {
+        try testPhotoKitFetchIsBoundedBeforeEnumeration()
         try testTransferLifetimeUsesIdleAndHardMonotonicDeadlines()
         try testStrictBoundaries()
         try testStreamedOriginalAndBoundedRead()
         try testCapacityAndFailureRemovePartialFiles()
+    }
+
+    static func testPhotoKitFetchIsBoundedBeforeEnumeration() throws {
+        for limit in [1, 50, 200] {
+            try require(photoSearchOptions(limit: limit, locationFiltered: false).fetchLimit == limit + 1)
+            try require(photoSearchOptions(limit: limit, locationFiltered: true).fetchLimit == 1001)
+        }
     }
 
     static func testTransferLifetimeUsesIdleAndHardMonotonicDeadlines() throws {
