@@ -60,6 +60,7 @@ class InstallScript(unittest.TestCase):
     def make_package(self, marker):
         source = self.root / f"source-{marker}"
         write_executable(source / "package/bin/bridge", f'#!/bin/sh\necho "{marker} $*" >>"{self.calls}"\n')
+        (source / "package/Apple Bridge.app").mkdir()
         tarball = self.root / f"{marker}.tgz"
         subprocess.run(["tar", "-czf", tarball, "-C", source, "package"], check=True)
         return tarball
@@ -70,10 +71,10 @@ class InstallScript(unittest.TestCase):
         lines = [f"SHA256={digest}" if line.startswith("SHA256=") else f"URL=file://{tarball}" if line.startswith("URL=") else line for line in text.splitlines()]
         return "\n".join(lines) + "\n"
 
-    def install(self, script, path=None):
+    def install(self, script, path=None, shell="/bin/zsh"):
         fake = self.root / "fake-bin"
         write_executable(fake / "uname", '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; -r) echo 25.0.0;; esac\n')
-        env = {"HOME": str(self.home), "SHELL": "/bin/zsh", "PATH": f"{fake}:{path or os.environ['PATH']}"}
+        env = {"HOME": str(self.home), "SHELL": shell, "PATH": f"{fake}:{path or os.environ['PATH']}"}
         return subprocess.run(["sh"], input=script, env=env, capture_output=True, text=True)
 
     def leftovers(self):
@@ -120,6 +121,25 @@ class InstallScript(unittest.TestCase):
         self.assertIn("already exists", result.stderr)
         self.assertEqual(other.read_text(), "#!/bin/sh\nmine\n")
         self.assertFalse((self.home / ".applebridge").exists())
+
+    def test_an_unrelated_applebridge_folder_is_not_deleted(self):
+        notes = self.home / ".applebridge/user-notes.txt"
+        notes.parent.mkdir()
+        notes.write_text("mine")
+        result = self.install(self.script_for(self.tarball))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("isn't an Apple Bridge install", result.stderr)
+        self.assertEqual(notes.read_text(), "mine")
+        self.assertFalse((self.home / ".local/bin/bridge").exists())
+
+    def test_bash_keeps_using_an_existing_profile(self):
+        profile = self.home / ".profile"
+        profile.write_text("export MINE=1\n")
+        result = self.install(self.script_for(self.tarball), shell="/bin/bash")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".bash_profile").exists())
+        self.assertIn('export PATH="$HOME/.local/bin:$PATH"', profile.read_text())
+        self.assertIn("export MINE=1", profile.read_text())
 
     def test_a_failed_stop_keeps_the_old_version(self):
         self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)

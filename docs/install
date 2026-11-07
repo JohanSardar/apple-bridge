@@ -18,7 +18,15 @@ add_to_path() {
     esac
     case "${SHELL:-}" in
         */zsh) profile=${ZDOTDIR:-$HOME}/.zshrc ;;
-        */bash) profile=$HOME/.bash_profile ;;
+        */bash)
+            profile=$HOME/.bash_profile
+            for candidate in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile"; do
+                if [ -e "$candidate" ]; then
+                    profile=$candidate
+                    break
+                fi
+            done
+            ;;
         *)
             echo "Add this to your shell startup file: export PATH=\"$bin_dir:\$PATH\""
             return 0
@@ -45,6 +53,10 @@ main() {
         [ -L "$link" ] && [ "$(readlink "$link")" = "$root/bin/bridge" ] ||
             fail "$link already exists and isn't from this installer. Move it, then run this again."
     fi
+    if [ -e "$root" ] || [ -L "$root" ]; then
+        [ ! -L "$root" ] && [ -x "$root/bin/bridge" ] && [ -d "$root/Apple Bridge.app" ] ||
+            fail "$root already exists and isn't an Apple Bridge install. Move it, then run this again."
+    fi
 
     work=$(mktemp -d "$HOME/.applebridge-install.XXXXXX")
     trap 'rm -rf "$work"' EXIT
@@ -55,10 +67,8 @@ main() {
     [ "$actual" = "$SHA256" ] || fail "the download doesn't match the expected checksum. Nothing was changed."
     tar -xzf "$work/package.tgz" -C "$work"
 
-    if [ -x "$root/bin/bridge" ]; then
-        "$root/bin/bridge" down || fail "couldn't stop the running version. Nothing was changed."
-    fi
     if [ -e "$root" ]; then
+        "$root/bin/bridge" down || fail "couldn't stop the running version. Nothing was changed."
         mv "$root" "$work/previous"
     fi
     mv "$work/package" "$root"
