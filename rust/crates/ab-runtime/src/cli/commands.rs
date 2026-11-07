@@ -29,7 +29,7 @@ fn grants(scope: &str) -> Outcome<Vec<Grant>> {
         .collect()
 }
 
-pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
+pub async fn permission_request(home: &Path, name: &str, helper_app: Option<&str>) -> Outcome {
     if !product_cli::PERMISSIONS.contains(&name) {
         return Err(Failure::new(format!(
             "`{name}` is not a permission that can be requested."
@@ -54,8 +54,9 @@ pub fn permission_request(name: &str, helper_app: Option<&str>) -> Outcome {
         .is_some_and(|outcome| outcome == "denied")
     {
         println!("{}", permissions::declined(name));
+        return Ok(());
     }
-    Ok(())
+    permissions::after_request(home, name, helper_app).await
 }
 
 pub fn selftest(args: &SelftestArgs) -> Outcome {

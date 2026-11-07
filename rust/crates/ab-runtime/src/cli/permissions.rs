@@ -557,6 +557,22 @@ async fn let_new_grants_settle(
     }
 }
 
+fn guided(name: &str) -> Option<&'static Permission> {
+    permissions().find(|permission| permission.id == name)
+}
+
+pub async fn after_request(home: &Path, name: &str, helper: Option<&str>) -> Outcome {
+    let Some(permission) = guided(name) else {
+        return Ok(());
+    };
+    let backend = backend_for(home, None, helper);
+    let settled = let_new_grants_settle(&backend, &[permission], NEW_GRANT_SETTLES).await?;
+    if let Some(report) = settled.report() {
+        println!("{report}");
+    }
+    Ok(())
+}
+
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
     println!("Mac permissions for Apple Bridge. You can skip any of them; the rest still work.");
@@ -726,6 +742,32 @@ mod tests {
             assert!(report.contains("bridge up"), "{report}");
         }
         assert_eq!(NewGrants::Reading.report(), None);
+        Ok(())
+    }
+
+    #[test]
+    fn each_requestable_permission_the_guide_offers_restarts_the_helper_after_a_request() {
+        for name in [
+            "contacts",
+            "calendar",
+            "reminders",
+            "photos",
+            "camera",
+            "microphone",
+            "location",
+        ] {
+            assert!(product_cli::PERMISSIONS.contains(&name), "{name}");
+            assert_eq!(guided(name).map(|permission| permission.id), Some(name));
+        }
+        assert!(guided("bluetooth").is_none());
+    }
+
+    #[tokio::test]
+    async fn a_request_with_nothing_running_restarts_nothing() -> Outcome {
+        let directory = tempfile::tempdir()?;
+        after_request(directory.path(), "photos", Some("Fixture.app")).await?;
+        after_request(directory.path(), "bluetooth", Some("Fixture.app")).await?;
+        assert!(!directory.path().join("run").exists());
         Ok(())
     }
 
