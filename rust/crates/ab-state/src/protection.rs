@@ -168,7 +168,7 @@ mod tests {
             std::env::temp_dir().join(format!("source-bytes-{}", crate::gateway::new_id("")?));
         let mut state = crate::State::<crate::Gateway>::open(&home)?;
         let coverage = ab_domain::Coverage {
-            permissions: Default::default(),
+            permissions: std::collections::BTreeMap::new(),
             pack_version: String::new(),
             operations: Vec::new(),
             fields: "full".into(),
@@ -212,7 +212,7 @@ mod tests {
             ab_domain::Source::Contacts,
             "ready",
             ab_domain::Coverage {
-                permissions: Default::default(),
+                permissions: std::collections::BTreeMap::new(),
                 pack_version: String::new(),
                 operations: Vec::new(),
                 fields: "full".into(),

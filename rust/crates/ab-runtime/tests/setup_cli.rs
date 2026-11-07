@@ -74,7 +74,7 @@ fn fake_tool(directory: &Path, name: &str) -> Result<PathBuf, std::io::Error> {
 fn seed_sources(home: &Path) -> Check {
     use ab_trust::domain::{Coverage, Source};
     let coverage = || Coverage {
-        permissions: Default::default(),
+        permissions: std::collections::BTreeMap::new(),
         pack_version: String::new(),
         operations: Vec::new(),
         fields: "complete".into(),

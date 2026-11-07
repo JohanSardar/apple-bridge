@@ -46,7 +46,7 @@ fn gateway_with_contacts(home: &Path) -> State<Gateway> {
             Source::Contacts,
             "ready",
             Coverage {
-                permissions: Default::default(),
+                permissions: std::collections::BTreeMap::new(),
                 pack_version: String::new(),
                 operations: Vec::new(),
                 fields: "full".into(),
@@ -230,7 +230,7 @@ fn source_state_never_overwrites_a_row_it_cannot_read() {
         Source::Contacts,
         "denied",
         Coverage {
-            permissions: Default::default(),
+            permissions: std::collections::BTreeMap::new(),
             pack_version: String::new(),
             operations: Vec::new(),
             fields: "full".into(),
