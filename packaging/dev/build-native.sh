@@ -25,6 +25,9 @@ else
     python3 "$root/packaging/dev/build-native.py" "$package"
     if [[ $lab == 1 ]]; then output="$package/.build/clt-release"; else output="$package/.build/clt-product-release"; fi
 fi
+if [[ $lab == 1 && $package == "$root/native" && ( -z ${APPLE_BRIDGE_NATIVE_TARGET:-} || ${APPLE_BRIDGE_NATIVE_TARGET:-} == PhotosChecks ) ]]; then
+    "$output/PhotosChecks"
+fi
 rm -f "$package/.build/native-output"
 printf '%s\n' "$output" > "$package/.build/native-output-$lab.$$"
 mv "$package/.build/native-output-$lab.$$" "$package/.build/native-output-$lab"
