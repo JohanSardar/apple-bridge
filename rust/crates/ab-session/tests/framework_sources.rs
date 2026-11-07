@@ -243,6 +243,13 @@ fn focus_combines_the_framework_fact_with_the_assertions_file() -> Fallible<()> 
     Ok(())
 }
 
+fn write_listing(directory: &Path, text: impl AsRef<[u8]>) -> Fallible<()> {
+    let staged = directory.join("listing.new");
+    std::fs::write(&staged, text)?;
+    std::fs::rename(staged, directory.join("listing"))?;
+    Ok(())
+}
+
 fn fake_shortcuts(directory: &Path, shortcut: &str) -> Fallible<PathBuf> {
     use std::os::unix::fs::PermissionsExt;
     let path = directory.join("shortcuts");
@@ -261,7 +268,7 @@ fn shortcuts_inventory_runs_off_the_capture_loop_and_diffs_in_rust() -> Fallible
     let directory = temporary("shortcuts")?;
     let echo = "Echo (bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)";
     let other = "Other (cccccccc-cccc-cccc-cccc-cccccccccccc)";
-    std::fs::write(directory.join("listing"), format!("{echo}\n{other}\n"))?;
+    write_listing(&directory, format!("{echo}\n{other}\n"))?;
     let executable = fake_shortcuts(&directory, echo)?;
     let config = json!({"shortcuts":{"root":directory,"executable":executable,"facts_poll_ms":20}});
     let mut session = support::wire(
@@ -292,7 +299,7 @@ fn shortcuts_inventory_runs_off_the_capture_loop_and_diffs_in_rust() -> Fallible
     session.commit("shortcuts", &first, size)?;
     expect_silence(&mut session.gateway)?;
 
-    std::fs::write(directory.join("listing"), format!("{echo}\n"))?;
+    write_listing(&directory, format!("{echo}\n"))?;
     let (size, second) = receive(&mut session.gateway)?;
     assert_eq!(
         keys(&second),
@@ -310,7 +317,7 @@ fn shortcuts_inventory_runs_off_the_capture_loop_and_diffs_in_rust() -> Fallible
 fn a_broken_shortcuts_listing_removes_nothing() -> Fallible<()> {
     let directory = temporary("shortcuts-broken")?;
     let echo = "Echo (bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)";
-    std::fs::write(directory.join("listing"), format!("{echo}\n"))?;
+    write_listing(&directory, format!("{echo}\n"))?;
     let executable = fake_shortcuts(&directory, echo)?;
     let config = json!({"shortcuts":{"root":directory,"executable":executable,"facts_poll_ms":20}});
     let mut session = support::wire(
@@ -323,7 +330,7 @@ fn a_broken_shortcuts_listing_removes_nothing() -> Fallible<()> {
     )?;
     let (size, first) = receive(&mut session.gateway)?;
     session.commit("shortcuts", &first, size)?;
-    std::fs::write(directory.join("listing"), "this is not a listing\n")?;
+    write_listing(&directory, "this is not a listing\n")?;
     expect_silence(&mut session.gateway)?;
     session.finish()?;
     Ok(())
