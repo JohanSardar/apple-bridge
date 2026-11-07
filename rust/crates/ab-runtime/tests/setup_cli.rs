@@ -954,6 +954,70 @@ fn capture_status_never_infers_camera_or_microphone_from_screen_access() -> Chec
 }
 
 #[test]
+fn photos_permission_request_reaches_the_helper_and_cleans_reports() -> Check {
+    let home = tempfile::tempdir()?;
+    let bin = home.path().join("bin");
+    std::fs::create_dir(&bin)?;
+    std::fs::create_dir_all(
+        home.path()
+            .join("Library/Application Support/AppleBridgeDev"),
+    )?;
+    let open = bin.join("open");
+    let log = home.path().join("arguments");
+    for denied in [false, true] {
+        let report = if denied {
+            r#"{"request":"photos","outcome":"denied"}"#
+        } else {
+            r#"{"request":"photos"}"#
+        };
+        std::fs::write(
+            &open,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\nwhile [ \"$1\" != --report ]; do shift; done\nprintf '%s' '{}' > \"$2\"\n",
+                log.display(),
+                report,
+            ),
+        )?;
+        std::fs::set_permissions(&open, std::fs::Permissions::from_mode(0o755))?;
+        let output = bridge()
+            .args([
+                "permissions",
+                "request",
+                "photos",
+                "--helper-app",
+                "/PhotosProof.app",
+            ])
+            .env("HOME", home.path())
+            .env("PATH", &bin)
+            .output()?;
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
+        assert_eq!(
+            text(&output.stdout).contains("permission was declined"),
+            denied
+        );
+        let arguments = std::fs::read_to_string(&log)?;
+        let arguments: Vec<_> = arguments.lines().collect();
+        assert_eq!(
+            &arguments[..9],
+            [
+                "-n",
+                "-W",
+                "-g",
+                "-a",
+                "/PhotosProof.app",
+                "--args",
+                "permission-request",
+                "photos",
+                "--report",
+            ]
+        );
+        assert!(!Path::new(arguments[9]).exists());
+    }
+    Ok(())
+}
+
+#[test]
 fn a_declined_permission_request_exits_cleanly_including_on_retry() -> Check {
     let home = tempfile::tempdir()?;
     let bin = home.path().join("bin");
