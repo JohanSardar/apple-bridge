@@ -6,6 +6,7 @@ import SourceSupport
 import Contacts
 import EventKit
 import UserNotifications
+import ScreenCaptureKit
 
 final class Once: @unchecked Sendable {
     private let lock = NSLock()
@@ -87,7 +88,8 @@ struct SessionChecks {
             ("contacts", CNErrorDomain, CNError.Code.authorizationDenied.rawValue),
             ("calendar", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
             ("reminders", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
-            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue)
+            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue),
+            ("screen_recording", SCStreamErrorDomain, SCStreamError.Code.userDeclined.rawValue)
         ] {
             for attempt in 0..<2 {
                 let report = home.appendingPathComponent("\(name)-\(attempt).json")

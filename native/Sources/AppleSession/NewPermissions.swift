@@ -5,6 +5,7 @@ import EventKit
 import CoreLocation
 import AVFoundation
 import CoreGraphics
+import ScreenCaptureKit
 import Speech
 import Intents
 import CoreBluetooth
@@ -115,6 +116,7 @@ public enum NewPermissions {
         return (error.domain == CNErrorDomain && error.code == CNError.Code.authorizationDenied.rawValue)
             || (error.domain == EKErrorDomain && error.code == EKError.Code.eventStoreNotAuthorized.rawValue)
             || (error.domain == UNErrorDomain && error.code == UNError.Code.notificationsNotAllowed.rawValue)
+            || (error.domain == SCStreamErrorDomain && error.code == SCStreamError.Code.userDeclined.rawValue)
     }
     public static let requestDeadline: Duration = .seconds(150)
     public static let watchdogDeadline: Duration = .seconds(155)
@@ -180,7 +182,9 @@ public enum NewPermissions {
         case "microphone":
             try await call("microphone", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .audio)) }
         case "screen_recording":
-            try await call("screen_recording", adapters: adapters) { try requireAccess(CGRequestScreenCaptureAccess()) }
+            try await call("screen_recording", adapters: adapters) {
+                _ = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+            }
         case "speech_recognition":
             try await call("speech_recognition", adapters: adapters) {
                 let status = await withCheckedContinuation { continuation in
