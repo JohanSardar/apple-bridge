@@ -141,6 +141,25 @@ class InstallScript(unittest.TestCase):
         self.assertIn('export PATH="$HOME/.local/bin:$PATH"', profile.read_text())
         self.assertIn("export MINE=1", profile.read_text())
 
+    def assert_failed_swap_restores_the_old_version(self, fail_with):
+        self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)
+        write_executable(self.root / "fake-bin/mv", f'''#!/bin/sh
+case "$1" in
+    */package) {fail_with} ;;
+esac
+exec /bin/mv "$@"
+''')
+        result = self.install(self.script_for(self.make_package("second")))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("first", (self.home / ".applebridge/bin/bridge").read_text())
+        self.assertEqual(self.leftovers(), [])
+
+    def test_a_failed_swap_restores_the_old_version(self):
+        self.assert_failed_swap_restores_the_old_version("exit 1")
+
+    def test_an_interrupted_swap_restores_the_old_version(self):
+        self.assert_failed_swap_restores_the_old_version('kill -TERM "$PPID"; sleep 1; exit 1')
+
     def test_a_failed_stop_keeps_the_old_version(self):
         self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)
         write_executable(self.home / ".applebridge/bin/bridge", "#!/bin/sh\nexit 1\n")

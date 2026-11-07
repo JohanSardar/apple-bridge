@@ -12,6 +12,14 @@ fail() {
     exit 1
 }
 
+clean_up() {
+    if [ -e "$work/previous" ] && [ ! -e "$root" ]; then
+        mv "$work/previous" "$root" || echo "Apple Bridge: your previous install is still in $work/previous." >&2
+        [ -e "$root" ] || return 0
+    fi
+    rm -rf "$work"
+}
+
 add_to_path() {
     case ":$PATH:" in
         *":$bin_dir:"*) return 0 ;;
@@ -59,7 +67,8 @@ main() {
     fi
 
     work=$(mktemp -d "$HOME/.applebridge-install.XXXXXX")
-    trap 'rm -rf "$work"' EXIT
+    trap clean_up EXIT
+    trap 'exit 1' HUP INT TERM
 
     echo "Downloading Apple Bridge $VERSION..."
     curl -fsSL "$URL" -o "$work/package.tgz" || fail "the download failed. Nothing was changed."
@@ -67,12 +76,12 @@ main() {
     [ "$actual" = "$SHA256" ] || fail "the download doesn't match the expected checksum. Nothing was changed."
     tar -xzf "$work/package.tgz" -C "$work"
 
+    mkdir -p "$bin_dir"
     if [ -e "$root" ]; then
         "$root/bin/bridge" down || fail "couldn't stop the running version. Nothing was changed."
         mv "$root" "$work/previous"
     fi
     mv "$work/package" "$root"
-    mkdir -p "$bin_dir"
     ln -sfn "$root/bin/bridge" "$link"
 
     echo "Apple Bridge $VERSION is installed."
