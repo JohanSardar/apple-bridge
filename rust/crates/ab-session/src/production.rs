@@ -243,22 +243,22 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
     ]))
 }
 
-fn staged_blobs(home: &Path, user: Option<&Path>) -> Vec<(&'static str, Arc<StagedBlobs>)> {
+fn staged_blobs(
+    home: &Path,
+    user: Option<&Path>,
+) -> Result<Vec<(&'static str, Arc<StagedBlobs>)>, Error> {
     let caches = user.map_or_else(
         || home.join("session/blobs"),
         |user| user.join("Library/Caches/AppleBridge"),
     );
-    vec![
+    Ok(vec![
         (
             FILES_BLOB,
             Arc::new(StagedBlobs::new(FILES_BLOB, caches.join("files-blobs"))),
         ),
         (
             CAPTURE_BLOB,
-            Arc::new(StagedBlobs::new(
-                CAPTURE_BLOB,
-                home.join("capture-artifacts"),
-            )),
+            StagedBlobs::capture(home.join("capture-artifacts"))?,
         ),
         (
             PDF_BLOB,
@@ -267,7 +267,7 @@ fn staged_blobs(home: &Path, user: Option<&Path>) -> Vec<(&'static str, Arc<Stag
                 home.join("Library/Caches/AppleBridge/pdf-blobs"),
             )),
         ),
-    ]
+    ])
 }
 
 fn read_file(home: &Path) -> Result<Option<File>, Error> {
@@ -382,7 +382,7 @@ pub fn load(home: &Path, user: Option<&Path>) -> Result<Option<Loaded>, Error> {
             queries: NativeQueries {
                 mail_bodies,
                 shortcut_roots: user.map(ab_native::shortcut_actions::default_roots),
-                staged: staged_blobs(home, user),
+                staged: staged_blobs(home, user)?,
             },
         },
     };
