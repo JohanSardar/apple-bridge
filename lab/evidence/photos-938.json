@@ -1,12 +1,13 @@
 {
   "issue": 938,
-  "status": "security_findings_fixed_native_qualification_pending",
+  "status": "native_qualification_partial_keep_draft",
   "feature_status": "in_progress",
   "native_permission_proof_preceded_implementation": false,
-  "native_permission_proof_missing_reason": "intermittent_mac_host_access; SDK_probe_compile_failed; corrected_probe_retry_blocked",
+  "native_permission_proof_missing_reason": null,
+  "implementation_sequence_limitation": "permission_proof_was_completed_after_implementation_not_before",
   "pro_retry_window": {
     "required_seconds": 7200,
-    "status": "completed_without_usable_native_qualification",
+    "status": "historical_completed_without_usable_native_qualification",
     "count_scope": "automated retry loops, excluding manual SSH checks",
     "attempt_count": 39,
     "elapsed_seconds": 7210,
@@ -83,23 +84,170 @@
     "qualifies_photokit_or_macos_permissions": false
   },
   "native": {
-    "sdk_permission_probe": {
-      "status": "compile_failed_correction_not_executed",
-      "failure": "temporary_probe_main_actor_entry_point",
-      "successful_build_count": 0,
-      "permission_request_count": 0
+    "status": "partial",
+    "source_head": "9635a4b132ddac7c2d7d983986d4e31c771cc884",
+    "signed_package": {
+      "status": "passed",
+      "clean_checkout": true,
+      "command": "packaging/npm/publish.sh --no-publish",
+      "detached_build_exit": 0,
+      "signed_notarized_stapled": true,
+      "package_checks_failed": 0,
+      "sha256": "c54939d2afba9a5259332cf1dde6021b8e6a0a7bad8467ac7fb93e532f040b3c"
     },
     "compiled": true,
-    "verified_operation_count": 0,
-    "disposable_vm_created_count": 0,
-    "signed_package_created_count": 0,
-    "real_library_read_count": 0,
+    "verified_operation_count": 11,
+    "disposable_vm_created_count": 2,
     "real_library_write_count": 0,
-    "permission_change_count": 0,
-    "status": "blocked"
+    "permissions": {
+      "prompt_source_head": "7def1d113",
+      "test_identity": "dev.applebridge.helper",
+      "vm_attributed_prompt_approved_with_computer_use": true,
+      "vm_attributed_prompt_declined_with_computer_use": true,
+      "real_attributed_prompt_approved_with_computer_use": true,
+      "real_prompt_approval_count": 1,
+      "final_artifact_reused_existing_grants_without_another_prompt": true,
+      "final_artifact_denied_photos_search": true,
+      "final_artifact_other_source_helper_version": true,
+      "final_artifact_status_request_api_calls": 0,
+      "final_artifact_status_prompt_window_increase": 0,
+      "initial_undetermined_status_request_api_calls": 0,
+      "initial_undetermined_status_prompt_window_increase": 0,
+      "observed_vm_prompt_choices": ["full_access", "deny"],
+      "limited_selection_observed": false
+    },
+    "vm": {
+      "counts_equal_independent_photokit": {"total": 10004, "images": 10002, "videos": 2, "live": 2},
+      "search": {
+        "page_count": 51,
+        "page_size": 200,
+        "max_examined_per_regular_page": 200,
+        "duplicate_asset_count": 0,
+        "cold_first_run_ms": {"first": 201.420292, "p50": 15.225084, "p95": 18.000167, "max": 201.420292},
+        "fresh_helper_privacy_run_ms": {"first": 181.989542, "p50": 13.54475, "p95": 18.603708, "max": 181.989542},
+        "coordinate_empty_page_examined": 1000,
+        "empty_page_continuation": "passed",
+        "changed_cursor_filters": "expired"
+      },
+      "originals_equal_independent_photokit": [
+        {"kind": "image", "resource_type": 1, "size": 2140, "sha256": "536053a1e70e4eb1889b1d2b9030b622c5fe4544f0be4a4986a46e61b04018ba"},
+        {"kind": "video", "resource_type": 2, "size": 3756, "sha256": "61d996bd17f442a62dfe9d5849f9f7e407e23545ff74547d22f845aae4ad3423"},
+        {"kind": "live_still", "resource_type": 1, "size": 2140, "sha256": "536053a1e70e4eb1889b1d2b9030b622c5fe4544f0be4a4986a46e61b04018ba"},
+        {"kind": "live_paired_video", "resource_type": 9, "size": 3756, "sha256": "61d996bd17f442a62dfe9d5849f9f7e407e23545ff74547d22f845aae4ad3423"}
+      ],
+      "operation_evidence": {
+        "photos.search": ["complete_unique_enumeration", "bounded_coordinate_continuation", "album_membership_readback"],
+        "photos.get": ["resource_inventory", "favorite_readback", "asset_survives_album_remove_and_delete"],
+        "photos.albums": ["approval_does_not_create_album", "deleted_album_absence"],
+        "photos.fetch": ["four_original_hash_matches", "offline_local_original", "expiry"],
+        "photos.release": ["released_every_original_transfer"],
+        "photos.favorite": ["owner_set_and_restore", "approved_agent_retry_and_restore"],
+        "photos.album_create": ["pending_without_effect", "owner_approval_without_effect", "identical_agent_retry_creates"],
+        "photos.album_rename": ["renamed_album_readback"],
+        "photos.album_add": ["membership_readback"],
+        "photos.album_remove": ["empty_album_readback", "asset_preserved"],
+        "photos.album_delete": ["native_confirmation_clicked", "album_absent", "asset_preserved"]
+      },
+      "organization": {
+        "final_run_owner_writes": 8,
+        "final_run_approved_agent_writes": 2,
+        "agent_level": "full",
+        "approval_transport": "existing_owner_web_API_with_software_test_WebAuthn_authenticator",
+        "premature_effects": 0,
+        "native_album_delete_confirmation_count": 1,
+        "independent_asset_count_after_writes": 10004,
+        "earlier_indeterminate_delete": "confirmation_completed_then_absence_read_back_without_replaying_consumed_write"
+      },
+      "offline": {
+        "status": "passed_for_local_original_only",
+        "guest_external_interface_up": false,
+        "size": 2140,
+        "sha256": "536053a1e70e4eb1889b1d2b9030b622c5fe4544f0be4a4986a46e61b04018ba"
+      },
+      "lifecycle": {
+        "ready_unlinked_media_descriptors": 1,
+        "idle_wait_seconds": 137,
+        "expired_transfer_code": "expired",
+        "expired_open_media_descriptors": 0,
+        "helper_crash_signal": "SIGKILL",
+        "crash_open_media_descriptors": 0,
+        "gateway_restarted_for_final_privacy_scan": true
+      },
+      "persistence_scan": {
+        "status": "passed",
+        "scope": "regular_Bridge_home_files_all_enumerated_asset_IDs_and_selected_resource_names_and_128_byte_chunk_prefixes",
+        "checked_files": 28,
+        "checked_bytes": 2231872,
+        "photo_identifier_matches": 0,
+        "selected_resource_name_or_prefix_matches": 0
+      }
+    },
+    "real_library": {
+      "status": "passed_read_only_counts_and_one_local_original",
+      "counts_equal_independent_photokit": {"total": 11082, "images": 9556, "videos": 1526, "live": 1832},
+      "page_count": 56,
+      "max_examined_per_page": 200,
+      "cold_run_paging_ms": {"first": 202.669625, "p50": 17.9925, "p95": 27.571292, "max": 202.669625},
+      "privacy_rerun_paging_ms": {"first": 99.626584, "p50": 28.493875, "p95": 81.719667, "max": 99.626584},
+      "original_equal_independent_photokit": {"resource_type": 1, "size": 6587372, "sha256": "8c2428ca937f469637430fa9fd07c51f71af853dd377bbc3d10dcafe28534d26"},
+      "requested_chunk_bytes": 524288,
+      "returned_chunk_max_bytes": 65536,
+      "writes": 0,
+      "persistence_scan": {
+        "status": "passed",
+        "scope": "regular_Bridge_home_files_all_enumerated_asset_IDs_and_selected_resource_names_and_128_byte_chunk_prefixes",
+        "checked_files": 442,
+        "checked_bytes": 1166848879,
+        "photo_identifier_matches": 0,
+        "selected_resource_name_or_prefix_matches": 0
+      },
+      "successful_resume_exit": 0
+    },
+    "proof_execution": {
+      "single_monolithic_runner_pass_claimed": false,
+      "component_proofs": "all_reported_passes_have_completed_assertions_on_the_signed_code_head",
+      "harness_failures_corrected": ["desktop_ref_key_and_permission_label", "npm_PATH", "approval_form_selection", "offline_route_validation_replaced_with_guest_interface_down", "quadratic_privacy_scan_replaced_with_fixed_string_matcher"],
+      "superseded_read_only_scans": "terminated_then_repeated_successfully",
+      "real_photo_records_or_bytes_in_public_evidence": 0
+    }
   },
-  "independent_security_review": "external_P2_and_P3_findings_reported_and_fixed; no_self_review_substituted",
-  "continuation": {
+  "proof_discovered_repairs": {
+    "hardened_helper_entitlement": {"head": "7def1d113", "red": "missing_Photos_entitlement_assertion_and_tccd_prompt_refusal", "green": "packaging_34_tests_and_actual_prompt"},
+    "explicit_cli_permission_allowlist": {"head": "75925c455", "red": "photos_permission_request_test_rejected_photos", "green_setup_cli_tests": 27},
+    "public_photokit_cursor_ties": {"head": "2aa57cf8a", "red": "restored_localIdentifier_sort_failed_with_SourceFailure_corrupt", "green": "native_checks_and_exact_large_library_enumeration"},
+    "transfer_native_frame_bound": {
+      "head": "9635a4b132ddac7c2d7d983986d4e31c771cc884",
+      "observed_bug": "supported_512_KiB_request_produced_a_response_above_the_256_KiB_native_frame_limit_and_timed_out",
+      "regression": "maximum_requested_read_with_all_255_bytes_exercises_worst_case_base64_slash_escaping_and_complete_EOF_assembly",
+      "red_exit": 133,
+      "green_exit": 0,
+      "native_frame_bytes_unchanged": 262144,
+      "max_returned_chunk_bytes": 65536,
+      "native_photos_check_count": 7
+    }
+  },
+  "current_checks": {
+    "source_head": "9635a4b132ddac7c2d7d983986d4e31c771cc884",
+    "make_lint": "passed",
+    "make_features": "passed",
+    "make_rust_lab_independence": "passed",
+    "npm_packaging_tests": {"passed": 34},
+    "setup_cli_tests": {"passed": 27, "scope": "75925c455_Rust_change_unchanged_since"},
+    "swift_native_photos_checks": {"passed": 7},
+    "required_ci": {
+      "rust_run": 42403418011,
+      "swift_run": 42403418068,
+      "Gates": "passed",
+      "Clippy (Linux)": "passed",
+      "Clippy (macOS)": "passed",
+      "Tests (Linux)": "passed",
+      "Tests (macOS)": "passed",
+      "Search update": "passed",
+      "Swift native": "passed"
+    }
+  },
+  "independent_security_review": "external_initial_P2_and_P3_findings_fixed; newer_proof_repairs_not_independently_accepted; delegated_review_daemon_unavailable; no_self_review_substituted",
+  "historical_continuation_before_native_proofs": {
     "pro_retry_window": {
       "status": "completed_without_usable_native_qualification",
       "required_seconds": 7200,
@@ -169,26 +317,30 @@
     }
   },
   "cleanup": {
-    "pro_owned_probe_scratch": "blocked_by_host_connectivity",
-    "pro_cleanup_attempt_count": 3,
-    "pro_keepawake_max_seconds": 10800,
-    "ubuntu_owned_source_scratch": "removed",
-    "build_outputs_and_dependency_caches": "retained"
+    "status": "completed_with_build_output_cache_exception",
+    "owned_pro_jobs_removed": 17,
+    "remaining_owned_pro_jobs": 0,
+    "owned_vm_clones_deleted": 2,
+    "base_vm": "stopped_never_started_or_modified",
+    "owned_pro_sources_installs_homes_media_scripts_and_desktop_state": "removed_and_absence_verified",
+    "owned_empty_media_directories_removed": 2,
+    "owned_status_reports_removed": 1,
+    "owned_crash_reports_removed": 2,
+    "owned_pro_desktop_process_matches": 0,
+    "owned_keepawake": "removed_and_process_absence_verified",
+    "preexisting_keepawake": "left_running",
+    "owned_linux_source_directories_removed": 2,
+    "owned_air_helpers_and_screenshot_removed": 11,
+    "pro_build_output_directories_retained": 8,
+    "build_outputs_and_dependency_caches": "retained_outside_deleted_scratch_per_environment_workflow",
+    "unrelated_review_cache": "untouched"
   },
   "unproven": [
-    "signed Helper launch and Photos prompt attribution in a disposable VM",
-    "native permission denial and other-source isolation",
-    "seeded native per-operation counts and original-byte digest equality",
     "limited-selection removal invalidating an active transfer",
-    "native coordinate filtering, burst and edited resource behavior",
-    "iCloud-only, offline, video and paired Live Photo original transfers",
-    "native large-library and large-resource responsiveness and resource limits",
-    "isolated read-only real-library proof",
-    "signed no-publish package build and clean installation",
-    "external acceptance of the independent security review fixes",
-    "owned macOS SDK-probe files and keepawake cleanup, blocked by SSH connectivity",
-    "native no-unsolicited-prompt observation and Bridge data-folder inspection",
-    "native transfer-expiry and crash cleanup"
+    "iCloud-only download cancellation and offline failure for cloud-only content; disposable VMs have no iCloud Photos account",
+    "native burst and edited resource variants",
+    "native multi_gigabyte_original_resource_limits; 128_MiB_stream_is_synthetic_not_a_PhotoKit_original",
+    "independent acceptance of the proof-discovered repairs"
   ],
   "safety": {
     "live_gateway_changes": 0,
