@@ -4,6 +4,7 @@ use super::{
 };
 
 impl LocalGateway {
+    #[allow(clippy::too_many_lines)]
     pub async fn query(
         &self,
         principal: &Principal,
@@ -13,7 +14,7 @@ impl LocalGateway {
         if descriptor.kind != ab_catalog::OperationKind::Query {
             return Err(Code::Unsupported.into());
         }
-        self.authorize(principal, &query.op).map_err(|error| {
+        let principal = self.authorize(principal, &query.op).map_err(|error| {
             if error.code == Code::Unauthorized {
                 Code::Forbidden.into()
             } else {
@@ -76,10 +77,20 @@ impl LocalGateway {
         if query.deadline_ms == 0 {
             query.deadline_ms = 1000;
         }
+        if query.op == "location.current"
+            && !args.as_object().is_some_and(serde_json::Map::is_empty)
+        {
+            return Err(Code::Invalid.into());
+        }
+        if let Some(pending) = self.location_approval(&principal, &query).await? {
+            return Ok(pending);
+        }
+        let id = query.id.clone();
+        let operation = query.op.clone();
         let deadline = tokio::time::Instant::now() + Duration::from_millis(query.deadline_ms);
         let mut audit = crate::query_audit::AuditGuard::new(
             self.query_audit.clone(),
-            principal,
+            &principal,
             &query.id,
             &query.op,
             query.args.get().len(),
@@ -87,19 +98,21 @@ impl LocalGateway {
         );
         let result = self
             .route_query(
-                principal,
+                &principal,
                 query,
                 &descriptor.scope,
                 deadline,
                 &mut audit.stats,
             )
             .await;
+        self.finish_location(&principal, &id, &operation, result.is_ok())?;
         let recorded = audit.finish();
         match (result, recorded) {
             (Ok(_), Err(error)) => Err(error),
             (result, _) => result,
         }
     }
+    #[allow(clippy::too_many_lines)]
     pub(super) async fn route_query(
         &self,
         principal: &Principal,
@@ -135,6 +148,7 @@ impl LocalGateway {
                 .mail_args(principal, &args)?;
             audit.argument_bytes = query.args.get().len();
         }
+        let current_location = query.op == "location.current";
         let frame = tokio::time::timeout_at(
             deadline,
             self.peer.exchange(IpcFrame {
@@ -149,8 +163,17 @@ impl LocalGateway {
         .await
         .map_err(|_| Code::Deadline)??;
         if frame.t == "QueryError" {
+            let message = match (current_location, frame.code.as_str()) {
+                (true, "forbidden") => {
+                    "Location Services permission is not allowed. Run bridge permissions guide, or enable Apple Bridge in System Settings > Privacy & Security > Location Services. Other sources still work."
+                }
+                (true, "unavailable") => {
+                    "No current location fix is available on this Mac. Check that Location Services is enabled and try again."
+                }
+                _ => "query failed",
+            };
             return Err(serde_json::from_value(
-                json!({"code": frame.code, "message": "query failed", "retryable": false}),
+                json!({"code": frame.code, "message": message, "retryable": false}),
             )
             .map_err(|_| Code::Corrupt)?);
         }

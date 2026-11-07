@@ -1163,7 +1163,7 @@ Operate app-owned iPhone AlarmKit alarms and timers
 
 ### location.current
 
-Transient location.current result
+Read the device location. Every agent request, local or remote, first returns {id,state:awaiting_approval}; after owner approval, retry the identical request ID once. The approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.
 
 - Kind: `query`
 - Scope: `location:read`
@@ -1177,7 +1177,7 @@ Transient location.current result
 
 ### location.geocode
 
-Transient location.geocode result
+Geocode an explicit address; never requests or returns the device current location
 
 - Kind: `query`
 - Scope: `location:read`
@@ -1191,7 +1191,7 @@ Transient location.geocode result
 
 ### location.reverse_geocode
 
-Transient location.reverse_geocode result
+Reverse geocode explicit coordinates; never requests or returns the device current location
 
 - Kind: `query`
 - Scope: `location:read`

@@ -60,7 +60,14 @@ pub(crate) fn completion(r: &CommandRecord) -> bool {
             .as_str()
             .is_some_and(crate::projection::valid_digest)
         && e["size"].as_i64().is_some_and(|n| n > 0 && n <= 128 << 20);
-    runner || maps || playback || mac || capture || iphone(r, &e)
+    let location = r.command.op == "location.current"
+        && r.source == Source::Location
+        && observed
+        && r.commit_seq == 0
+        && e["approval_consumed"] == true
+        && e["query_succeeded"] == true
+        && e["request_hash"].as_str() == Some(&r.request_hash);
+    runner || maps || playback || mac || capture || location || iphone(r, &e)
 }
 fn iphone(r: &CommandRecord, e: &Value) -> bool {
     if r.source != Source::Iphone || r.state != CommandState::Observed {

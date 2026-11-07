@@ -6,6 +6,8 @@ import SourceSupport
 import Contacts
 import EventKit
 import UserNotifications
+import ScreenCaptureKit
+import MapsSource
 
 final class Once: @unchecked Sendable {
     private let lock = NSLock()
@@ -87,7 +89,8 @@ struct SessionChecks {
             ("contacts", CNErrorDomain, CNError.Code.authorizationDenied.rawValue),
             ("calendar", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
             ("reminders", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
-            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue)
+            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue),
+            ("screen_recording", SCStreamErrorDomain, SCStreamError.Code.userDeclined.rawValue)
         ] {
             for attempt in 0..<2 {
                 let report = home.appendingPathComponent("\(name)-\(attempt).json")
@@ -122,6 +125,17 @@ struct SessionChecks {
         }
         try await permissionRequestDeadline()
         try await permissionDenials()
+        for (operation, args) in [
+            ("location.geocode", JSON.object(["address": .string("")])),
+            ("location.geocode", JSON.object(["address": .string("[ab-test]"), "current": .bool(true)])),
+            ("location.reverse_geocode", JSON.object([:])),
+            ("location.reverse_geocode", JSON.object(["lat": .number(0), "lon": .number(0), "current": .bool(true)]))
+        ] {
+            var invalid = false
+            do { _ = try await MapsQueries.run(operation, args: args) }
+            catch SourceFailure.invalid { invalid = true }
+            try check(invalid, "geocoding needs explicit caller input and cannot fall back to device location")
+        }
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("ab-session-checks-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let session = try AppleSession(socket: home.appendingPathComponent("none.sock").path, secretFile: home.appendingPathComponent("none").path, home: home, gatewayPID: getpid(), commandsEnabled: true)

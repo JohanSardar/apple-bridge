@@ -21,11 +21,13 @@ actor Fake: CaptureProvider {
         defer { try? FileManager.default.removeItem(at: directory) }
         let provider = Fake()
         let source = CaptureSource(provider: provider)
+        guard let status = await source.status(), ["camera", "microphone", "screen_recording"].allSatisfy({ status["permissions"][$0] == .bool(true) }) else { throw SourceFailure.corrupt }
         let produced = try await source.primitive("capture.produce", args: .object(["op": .string("capture.record_audio"), "args": .object(["seconds": .number(2)]), "directory": .string(directory.path)]))
         guard produced["duration"] == .number(2), produced["width"] == .number(2), FileManager.default.fileExists(atPath: produced["path"].string) else { throw SourceFailure.corrupt }
         guard try await source.primitive("capture.authorized", args: .object(["op": .string("capture.camera_photo")]))["authorized"] == .bool(true) else { throw SourceFailure.corrupt }
         await provider.deny()
         guard try await source.primitive("capture.authorized", args: .object(["op": .string("capture.camera_photo")]))["authorized"] == .bool(false) else { throw SourceFailure.corrupt }
+        guard let denied = await source.status(), ["camera", "microphone", "screen_recording"].allSatisfy({ denied["permissions"][$0] == .bool(false) }) else { throw SourceFailure.corrupt }
         guard case .array = try await source.primitive("capture.printers", args: .object([:]))["printers"] else { throw SourceFailure.corrupt }
         do { _ = try await source.primitive("capture.other", args: .object([:])); throw SourceFailure.corrupt } catch SourceFailure.unsupported {}
         let pdf = PDFDocument()

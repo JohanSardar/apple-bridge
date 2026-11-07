@@ -140,6 +140,27 @@ pub fn reset_signals() {
 
 pub const O_NOFOLLOW: i32 = libc::O_NOFOLLOW;
 pub const O_NONBLOCK: i32 = libc::O_NONBLOCK;
+pub const O_DIRECTORY: i32 = libc::O_DIRECTORY;
+
+#[allow(unsafe_code)]
+pub fn remove_file_in(directory: &std::fs::File, name: &std::ffi::OsStr) -> io::Result<()> {
+    use std::{
+        ffi::CString,
+        os::{fd::AsRawFd, unix::ffi::OsStrExt},
+        path::{Component, Path},
+    };
+    let mut components = Path::new(name).components();
+    if !matches!(components.next(), Some(Component::Normal(_))) || components.next().is_some() {
+        return Err(io::ErrorKind::InvalidInput.into());
+    }
+    let name = CString::new(name.as_bytes()).map_err(|_| io::ErrorKind::InvalidInput)?;
+    // SAFETY: unlinkat receives a live borrowed directory and one NUL-terminated basename; it never follows a final symlink.
+    if unsafe { libc::unlinkat(directory.as_raw_fd(), name.as_ptr(), 0) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
 
 #[allow(unsafe_code)]
 pub fn rename_exclusive(from: &std::path::Path, to: &std::path::Path) -> io::Result<()> {

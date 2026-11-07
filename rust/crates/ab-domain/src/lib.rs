@@ -495,6 +495,8 @@ pub struct OperationCapability {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Coverage {
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub permissions: std::collections::BTreeMap<String, bool>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub pack_version: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
