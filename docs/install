@@ -1,0 +1,99 @@
+#!/bin/sh
+# Installs Apple Bridge for this user. Run again to update.
+# https://github.com/JohanSardar/apple-bridge/blob/main/docs/local-setup.md
+set -eu
+
+VERSION=0.1.2
+SHA256=092f12d846df833dddb19ba46466d98008b7b283d76a28d41a6f2bebb5c05ac6
+URL=https://github.com/JohanSardar/apple-bridge/releases/download/v$VERSION/applebridge-$VERSION.tgz
+
+fail() {
+    echo "Apple Bridge: $*" >&2
+    exit 1
+}
+
+clean_up() {
+    if [ -e "$work/previous" ] && [ ! -e "$root" ]; then
+        mv "$work/previous" "$root" || echo "Apple Bridge: your previous install is still in $work/previous." >&2
+        [ -e "$root" ] || return 0
+    fi
+    rm -rf "$work"
+}
+
+add_to_path() {
+    case ":$PATH:" in
+        *":$bin_dir:"*) return 0 ;;
+    esac
+    case "${SHELL:-}" in
+        */zsh) profile=${ZDOTDIR:-$HOME}/.zshrc ;;
+        */bash)
+            profile=$HOME/.bash_profile
+            for candidate in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile"; do
+                if [ -e "$candidate" ]; then
+                    profile=$candidate
+                    break
+                fi
+            done
+            ;;
+        *)
+            echo "Add this to your shell startup file: export PATH=\"$bin_dir:\$PATH\""
+            return 0
+            ;;
+    esac
+    line='export PATH="$HOME/.local/bin:$PATH"'
+    if ! grep -Fqx "$line" "$profile" 2>/dev/null; then
+        printf '\n%s\n' "$line" >>"$profile"
+        echo "Added ~/.local/bin to your PATH in $profile."
+    fi
+    echo "Open a new terminal, or run this in the current one: $line"
+}
+
+main() {
+    [ "$(id -u)" != 0 ] || fail "run this without sudo."
+    [ "$(uname -s)" = Darwin ] && [ "$(uname -m)" = arm64 ] || fail "this needs a Mac with Apple silicon."
+    release=$(uname -r)
+    [ "${release%%.*}" -ge 25 ] || fail "this needs macOS 26 or later."
+
+    root=$HOME/.applebridge
+    bin_dir=$HOME/.local/bin
+    link=$bin_dir/bridge
+    if [ -e "$link" ] || [ -L "$link" ]; then
+        [ -L "$link" ] && [ "$(readlink "$link")" = "$root/bin/bridge" ] ||
+            fail "$link already exists and isn't from this installer. Move it, then run this again."
+    fi
+    if [ -e "$root" ] || [ -L "$root" ]; then
+        [ ! -L "$root" ] && [ -x "$root/bin/bridge" ] && [ -d "$root/Apple Bridge.app" ] ||
+            fail "$root already exists and isn't an Apple Bridge install. Move it, then run this again."
+    fi
+
+    work=$(mktemp -d "$HOME/.applebridge-install.XXXXXX")
+    trap clean_up EXIT
+    trap 'exit 1' HUP INT TERM
+
+    echo "Downloading Apple Bridge $VERSION..."
+    curl -fsSL "$URL" -o "$work/package.tgz" || fail "the download failed. Nothing was changed."
+    actual=$(shasum -a 256 "$work/package.tgz" | cut -d ' ' -f 1)
+    [ "$actual" = "$SHA256" ] || fail "the download doesn't match the expected checksum. Nothing was changed."
+    tar -xzf "$work/package.tgz" -C "$work"
+
+    mkdir -p "$bin_dir"
+    if [ -e "$root" ]; then
+        "$root/bin/bridge" down || fail "couldn't stop the running version. Nothing was changed."
+        mv "$root" "$work/previous"
+    fi
+    mv "$work/package" "$root"
+    ln -sfn "$root/bin/bridge" "$link"
+
+    echo "Apple Bridge $VERSION is installed."
+    add_to_path
+    cat <<'NEXT'
+
+Next:
+  bridge up                   # start Apple Bridge. It asks nothing
+  bridge link claude          # connect Claude Code. Or: bridge link codex
+  bridge permissions guide    # allow the Mac permissions you want
+  bridge stats --watch        # counts per source, as each one finishes
+NEXT
+}
+
+main "$@"

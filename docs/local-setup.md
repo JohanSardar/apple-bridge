@@ -2,22 +2,25 @@
 
 Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on remote use yourself, though an agent you connect may send what it reads to its own service.
 
-## Install, update and uninstall with npm
+## Install
 
 ```sh
-npm install -g applebridge
+curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
 ```
 
-Node installed with the nodejs.org `.pkg` has a root-owned global prefix, so global npm changes can fail with `EACCES`. With that Node, use `sudo npm install -g applebridge`, `sudo npm update -g applebridge` and `sudo npm uninstall -g applebridge`. Run `bridge down` before updating or uninstalling, and `bridge up` after updating. Never run `bridge` with sudo.
+It needs no Node, Homebrew or `sudo`. [The script](install) puts Apple Bridge in `~/.applebridge`, links `bridge` into `~/.local/bin` and adds that folder to your PATH if it's missing. It checks the download's SHA-256 before changing anything.
 
-Alternatively, choose a user-writable prefix and use npm without sudo for install, update and uninstall:
+To update, run the same command, then `bridge up`. It stops the running version first, and your Mac permissions carry over.
+
+To uninstall, disconnect your agents and remove the files:
 
 ```sh
-npm config set prefix "$HOME/.npm-global"
-export PATH="$HOME/.npm-global/bin:$PATH"
+bridge unlink claude        # and: bridge unlink codex, for the agents you connected
+bridge down
+rm -rf ~/.applebridge ~/.local/bin/bridge
 ```
 
-Add the PATH line to your shell startup file, such as `~/.zshrc`, for future terminals. See the [npm package README](../packaging/npm/README.md) for the full update and uninstall steps.
+Your data stays in `~/Library/Application Support/AppleBridge`, including a copy of your private messages and mail and Apple Bridge's credentials. Delete that folder when you no longer want them. Turn off Mac permissions in System Settings under Privacy & Security.
 
 ## Quick start
 

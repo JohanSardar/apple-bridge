@@ -18,7 +18,7 @@ import check
 
 class Documentation(unittest.TestCase):
     def test_root_owned_node_prefix_has_install_update_and_uninstall_advice(self):
-        for path, name in [(HERE / "README.md", "PACKAGE_NAME"), (HERE.parent.parent / "docs/local-setup.md", "applebridge")]:
+        for path, name in [(HERE / "README.md", "PACKAGE_NAME")]:
             with self.subTest(path=path):
                 text = path.read_text()
                 for phrase in ["nodejs.org", "`.pkg`", "root-owned", "EACCES", "user-writable prefix", 'npm config set prefix "$HOME/.npm-global"', 'export PATH="$HOME/.npm-global/bin:$PATH"']:
@@ -43,6 +43,129 @@ def write_executable(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     path.chmod(0o755)
+
+
+class InstallScript(unittest.TestCase):
+    SCRIPT = HERE.parent.parent / "docs/install"
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR"))
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.home = self.root / "home"
+        self.home.mkdir()
+        self.calls = self.root / "bridge-calls"
+        self.tarball = self.make_package("first")
+
+    def make_package(self, marker):
+        source = self.root / f"source-{marker}"
+        write_executable(source / "package/bin/bridge", f'#!/bin/sh\necho "{marker} $*" >>"{self.calls}"\n')
+        (source / "package/Apple Bridge.app").mkdir()
+        tarball = self.root / f"{marker}.tgz"
+        subprocess.run(["tar", "-czf", tarball, "-C", source, "package"], check=True)
+        return tarball
+
+    def script_for(self, tarball, sha=None):
+        digest = sha or subprocess.run(["shasum", "-a", "256", tarball], check=True, capture_output=True, text=True).stdout.split()[0]
+        text = self.SCRIPT.read_text()
+        lines = [f"SHA256={digest}" if line.startswith("SHA256=") else f"URL=file://{tarball}" if line.startswith("URL=") else line for line in text.splitlines()]
+        return "\n".join(lines) + "\n"
+
+    def install(self, script, path=None, shell="/bin/zsh"):
+        fake = self.root / "fake-bin"
+        write_executable(fake / "uname", '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; -r) echo 25.0.0;; esac\n')
+        env = {"HOME": str(self.home), "SHELL": shell, "PATH": f"{fake}:{path or os.environ['PATH']}"}
+        return subprocess.run(["sh"], input=script, env=env, capture_output=True, text=True)
+
+    def leftovers(self):
+        return list(self.home.glob(".applebridge-install.*"))
+
+    def test_the_real_script_pins_a_version_checksum_and_release_url(self):
+        text = self.SCRIPT.read_text()
+        self.assertRegex(text, r"\nVERSION=\d+\.\d+\.\d+\n")
+        self.assertRegex(text, r"\nSHA256=[0-9a-f]{64}\n")
+        self.assertIn("\nURL=https://github.com/JohanSardar/apple-bridge/releases/download/v$VERSION/", text)
+
+    def test_a_fresh_install_links_bridge_and_adds_path_once(self):
+        result = self.install(self.script_for(self.tarball))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        link = self.home / ".local/bin/bridge"
+        self.assertEqual(os.readlink(link), str(self.home / ".applebridge/bin/bridge"))
+        self.assertTrue(os.access(link, os.X_OK))
+        self.assertFalse(self.calls.exists())
+        second = self.install(self.script_for(self.tarball))
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual((self.home / ".zshrc").read_text().count('export PATH="$HOME/.local/bin:$PATH"'), 1)
+        self.assertEqual(self.leftovers(), [])
+
+    def test_an_update_stops_the_old_version_before_replacing_it(self):
+        self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)
+        result = self.install(self.script_for(self.make_package("second")))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls.read_text(), "first down\n")
+        self.assertIn("second", (self.home / ".applebridge/bin/bridge").read_text())
+
+    def test_a_bad_checksum_changes_nothing(self):
+        result = self.install(self.script_for(self.tarball, "0" * 64))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("checksum", result.stderr)
+        self.assertFalse((self.home / ".applebridge").exists())
+        self.assertFalse((self.home / ".local/bin/bridge").exists())
+        self.assertEqual(self.leftovers(), [])
+
+    def test_an_unrelated_bridge_command_is_not_overwritten(self):
+        other = self.home / ".local/bin/bridge"
+        write_executable(other, "#!/bin/sh\nmine\n")
+        result = self.install(self.script_for(self.tarball))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already exists", result.stderr)
+        self.assertEqual(other.read_text(), "#!/bin/sh\nmine\n")
+        self.assertFalse((self.home / ".applebridge").exists())
+
+    def test_an_unrelated_applebridge_folder_is_not_deleted(self):
+        notes = self.home / ".applebridge/user-notes.txt"
+        notes.parent.mkdir()
+        notes.write_text("mine")
+        result = self.install(self.script_for(self.tarball))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("isn't an Apple Bridge install", result.stderr)
+        self.assertEqual(notes.read_text(), "mine")
+        self.assertFalse((self.home / ".local/bin/bridge").exists())
+
+    def test_bash_keeps_using_an_existing_profile(self):
+        profile = self.home / ".profile"
+        profile.write_text("export MINE=1\n")
+        result = self.install(self.script_for(self.tarball), shell="/bin/bash")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".bash_profile").exists())
+        self.assertIn('export PATH="$HOME/.local/bin:$PATH"', profile.read_text())
+        self.assertIn("export MINE=1", profile.read_text())
+
+    def assert_failed_swap_restores_the_old_version(self, fail_with):
+        self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)
+        write_executable(self.root / "fake-bin/mv", f'''#!/bin/sh
+case "$1" in
+    */package) {fail_with} ;;
+esac
+exec /bin/mv "$@"
+''')
+        result = self.install(self.script_for(self.make_package("second")))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("first", (self.home / ".applebridge/bin/bridge").read_text())
+        self.assertEqual(self.leftovers(), [])
+
+    def test_a_failed_swap_restores_the_old_version(self):
+        self.assert_failed_swap_restores_the_old_version("exit 1")
+
+    def test_an_interrupted_swap_restores_the_old_version(self):
+        self.assert_failed_swap_restores_the_old_version('kill -TERM "$PPID"; sleep 1; exit 1')
+
+    def test_a_failed_stop_keeps_the_old_version(self):
+        self.assertEqual(self.install(self.script_for(self.tarball)).returncode, 0)
+        write_executable(self.home / ".applebridge/bin/bridge", "#!/bin/sh\nexit 1\n")
+        result = self.install(self.script_for(self.make_package("second")))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("exit 1", (self.home / ".applebridge/bin/bridge").read_text())
 
 
 class Definition(unittest.TestCase):
