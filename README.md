@@ -8,13 +8,12 @@
 
 > **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on remote use, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
 
-Requires an Apple Silicon Mac on macOS 26 or later. **Early access, by invite:** there is no public installer yet.
+Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 
 ## Quick start
 
-With Apple Bridge installed through your invitation:
-
 ```sh
+curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
