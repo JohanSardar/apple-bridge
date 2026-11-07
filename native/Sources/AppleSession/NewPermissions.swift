@@ -90,8 +90,22 @@ public enum NewPermissions {
 
     public typealias RequestAdapter = @MainActor () async throws -> Void
     public private(set) static var requestAPICalls = 0
-    private static var location: CLLocationManager?
+    private static var location: LocationRequest?
     private static var bluetooth: CBCentralManager?
+
+    @MainActor
+    private final class LocationRequest: NSObject, @preconcurrency CLLocationManagerDelegate {
+        let manager = CLLocationManager()
+        private(set) var status: CLAuthorizationStatus
+        override init() {
+            status = manager.authorizationStatus
+            super.init()
+            manager.delegate = self
+        }
+        func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+            status = manager.authorizationStatus
+        }
+    }
 
     private static func call(_ name: String, adapters: [String: RequestAdapter]?, native: RequestAdapter) async throws {
         requestAPICalls += 1
@@ -169,13 +183,13 @@ public enum NewPermissions {
             try await call("reminders", adapters: adapters) { try requireAccess(try await EKEventStore().requestFullAccessToReminders()) }
         case "location":
             try await call("location", adapters: adapters) {
-                location = CLLocationManager()
-                location?.requestWhenInUseAuthorization()
-                for _ in 0..<240 {
-                    if location?.authorizationStatus != .notDetermined { break }
+                let request = LocationRequest()
+                location = request
+                request.manager.requestWhenInUseAuthorization()
+                while request.status == .notDetermined {
                     try await Task.sleep(for: .milliseconds(250))
                 }
-                try requireAccess(![.denied, .restricted].contains(location?.authorizationStatus))
+                try requireAccess(![.denied, .restricted].contains(request.status))
             }
         case "camera":
             try await call("camera", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .video)) }
