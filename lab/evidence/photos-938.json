@@ -100,7 +100,8 @@
     "disposable_vm_created_count": 2,
     "real_library_write_count": 0,
     "permissions": {
-      "prompt_source_head": "7def1d113",
+      "vm_prompt_source_head": "7def1d113",
+      "real_prompt_source_head": "2aa57cf8a",
       "test_identity": "dev.applebridge.helper",
       "vm_attributed_prompt_approved_with_computer_use": true,
       "vm_attributed_prompt_declined_with_computer_use": true,
