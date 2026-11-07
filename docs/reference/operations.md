@@ -2206,7 +2206,7 @@ Create an annotated PDF artifact
 
 ### photos.search
 
-Live PhotoKit search. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. candidate_count is before the place filter. Follow next_offset, even on empty pages. No library metadata is stored. Pages are live, not snapshots.
+Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.
 
 - Kind: `query`
 - Scope: `photos:read`
