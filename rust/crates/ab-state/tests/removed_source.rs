@@ -108,6 +108,138 @@ fn a_collection_from_a_removed_source_does_not_stop_a_snapshot() {
 }
 
 #[test]
+fn legacy_photos_collections_are_not_served_to_photos_principals_after_restart() {
+    for collection in ["photos.asset", "photos.album"] {
+        let home = tempfile::tempdir().expect("home");
+        let mut state = gateway_with_contacts(home.path());
+        plant_record(
+            home.path(),
+            "photos",
+            collection,
+            &removed_row("photos", collection),
+        );
+        let mut visible = visibility();
+        visible.insert("photos".into(), true);
+        assert_eq!(
+            state.freeze_snapshot(&visible, 0).expect("snapshot").count,
+            1
+        );
+        let state = reopened(state, home.path());
+        assert_eq!(
+            state
+                .read(&visible, &ReadQuery::default())
+                .expect("read")
+                .records
+                .len(),
+            1
+        );
+        assert_eq!(
+            stored_rows(home.path()),
+            1,
+            "legacy data is retained, never migrated or deleted"
+        );
+    }
+}
+
+#[test]
+fn legacy_photos_changes_advance_without_exporting_metadata() {
+    let home = tempfile::tempdir().expect("home");
+    let state = gateway_with_contacts(home.path());
+    let head = state.head().expect("head");
+    let sequence = head.sequence + 1;
+    let database = Connection::open(home.path().join("state.db")).expect("database");
+    let change = format!(
+        r#"{{"sequence":{sequence},"op":"upsert","record":{}}}"#,
+        removed_row("photos", "photos.asset")
+    );
+    database
+        .execute(
+            "INSERT INTO journal(seq,epoch,source,payload,committed_at) VALUES(?,?,'photos',?,0)",
+            params![
+                i64::try_from(sequence).expect("sequence"),
+                head.epoch,
+                change.as_bytes()
+            ],
+        )
+        .expect("journal");
+    let advanced = Cursor {
+        sequence,
+        ..head.clone()
+    };
+    database
+        .execute(
+            "UPDATE meta SET value=? WHERE key='cursor'",
+            [serde_json::to_string(&advanced).expect("cursor")],
+        )
+        .expect("advance");
+    drop(database);
+    let state = reopened(state, home.path());
+    let mut visible = visibility();
+    visible.insert("photos".into(), true);
+    let mut changes = state.changes(visible, head).expect("changes");
+    let batch = state
+        .next_changes(&mut changes)
+        .expect("feed")
+        .expect("batch");
+    assert_eq!(batch.through, sequence);
+    assert!(batch.changes.is_some_and(|changes| changes.is_empty()));
+}
+
+#[test]
+fn photos_live_readiness_is_served_but_damaged_known_records_still_fail() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = gateway_with_contacts(home.path());
+    state
+        .source_state(
+            Source::Photos,
+            "ready",
+            Coverage {
+                fields: "live_only".into(),
+                permissions: std::collections::BTreeMap::new(),
+                pack_version: String::new(),
+                operations: Vec::new(),
+                missing: None,
+            },
+            Some(&[]),
+            "",
+        )
+        .expect("readiness");
+    let mut visible = visibility();
+    visible.insert("photos".into(), true);
+    let page = state.read(&visible, &ReadQuery::default()).expect("read");
+    assert!(
+        page.records
+            .iter()
+            .any(|record| record.source == Source::Photos
+                && record.collection == ab_domain::Collection::SystemSource)
+    );
+    let mut damaged: serde_json::Value =
+        serde_json::from_str(&removed_row("photos", "system.source")).expect("row");
+    damaged["version"] = json!("invalid");
+    plant_record(home.path(), "photos", "system.source", &damaged.to_string());
+    assert!(state.freeze_snapshot(&visible, 0).is_err());
+}
+
+#[test]
+fn unknown_sources_still_skip_stored_records_with_explicit_visibility() {
+    let home = tempfile::tempdir().expect("home");
+    let mut state = gateway_with_contacts(home.path());
+    plant_record(
+        home.path(),
+        "retired_fixture",
+        "retired_fixture.asset",
+        &removed_row("retired_fixture", "retired_fixture.asset"),
+    );
+    let mut visible = visibility();
+    visible.insert("retired_fixture".into(), true);
+    assert_eq!(
+        state.freeze_snapshot(&visible, 0).expect("snapshot").count,
+        1
+    );
+    assert_eq!(stored_rows(home.path()), 1);
+}
+
+#[test]
 fn a_removed_source_change_does_not_stop_the_journal() {
     let home = tempfile::tempdir().expect("home");
     let mut state = gateway_with_contacts(home.path());

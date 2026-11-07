@@ -47,11 +47,11 @@ pub enum Command {
     Unlink(UnlinkArgs),
     #[command(about = "Show how much each source has synced. Counts only, never content")]
     Stats(StatsArgs),
-    #[command(about = "Read synced data in the terminal")]
+    #[command(about = "Read source data in the terminal; Photos is queried live")]
     Read(ReadArgs),
     #[command(about = "Search synced data in the terminal")]
     Search(SearchArgs),
-    #[command(about = "Call any read operation by name, the same way an agent does")]
+    #[command(about = "Call read operations; Photos organization writes require explicit --write")]
     Call(CallArgs),
     #[command(about = "Show agent instructions built into this binary")]
     Skills(SkillsCommand),
@@ -225,6 +225,7 @@ pub struct StatsArgs {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum ReadKind {
+    Photos,
     Messages,
     Chats,
     Contacts,
@@ -272,8 +273,19 @@ pub struct CallArgs {
         help = "Arguments as JSON"
     )]
     pub args: String,
-    #[arg(long, help = "List read operations")]
+    #[arg(long, help = "List reads, and Photos writes with --write")]
     pub list: bool,
+    #[arg(
+        long,
+        help = "Explicitly allow Photos organization writes; requires --token-env and a stable query id"
+    )]
+    pub write: bool,
+    #[arg(
+        long,
+        value_name = "NAME",
+        help = "Read an existing scoped credential from this environment variable; never revoke it"
+    )]
+    pub token_env: Option<String>,
 }
 
 #[derive(Debug, Args)]

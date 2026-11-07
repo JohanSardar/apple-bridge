@@ -48,6 +48,7 @@ pub fn visibility(input: &Visibility) -> ab_state::Visibility {
             "notes",
             "pdf",
             "phone",
+            "photos",
             "print",
             "reminders",
             "safari",

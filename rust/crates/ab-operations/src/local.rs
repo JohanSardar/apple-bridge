@@ -26,6 +26,7 @@ mod execution;
 mod location;
 mod message_parts;
 mod outcomes;
+pub(crate) mod photos;
 mod queries;
 mod status;
 use message_parts::resolvable;
@@ -43,6 +44,7 @@ pub struct LocalGateway {
     pub reauthorize: Option<Arc<dyn ab_trust::ApprovalReauthorizer>>,
     pub phone_notify: Option<Arc<tokio::sync::Notify>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
+    photos_previews: photos::Previews,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
     stopping: std::sync::atomic::AtomicBool,
 }
@@ -88,6 +90,7 @@ impl LocalGateway {
             phone_notify: None,
             reauthorize: None,
             query_rates: Mutex::default(),
+            photos_previews: photos::Previews::default(),
             locks: Mutex::default(),
             stopping: std::sync::atomic::AtomicBool::new(false),
         }

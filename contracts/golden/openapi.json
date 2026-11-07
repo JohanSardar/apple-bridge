@@ -4751,6 +4751,7 @@
                   },
                   "args": {
                     "additionalProperties": false,
+                    "minProperties": 1,
                     "properties": {
                       "birthday": {
                         "additionalProperties": false,
@@ -5053,8 +5054,7 @@
                       }
                     },
                     "required": [],
-                    "type": "object",
-                    "minProperties": 1
+                    "type": "object"
                   },
                   "command_id": {
                     "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
@@ -7959,6 +7959,7 @@
                   },
                   "args": {
                     "additionalProperties": false,
+                    "minProperties": 2,
                     "properties": {
                       "birthday": {
                         "additionalProperties": false,
@@ -8267,8 +8268,7 @@
                     "required": [
                       "id"
                     ],
-                    "type": "object",
-                    "minProperties": 2
+                    "type": "object"
                   },
                   "command_id": {
                     "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
@@ -21958,23 +21958,23 @@
                       "type": "object"
                     },
                     {
-                      "type": "object",
                       "additionalProperties": false,
-                      "required": [
-                        "id",
-                        "state"
-                      ],
                       "properties": {
                         "id": {
                           "type": "string"
                         },
                         "state": {
-                          "type": "string",
                           "enum": [
                             "awaiting_approval"
-                          ]
+                          ],
+                          "type": "string"
                         }
-                      }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
                     }
                   ]
                 }
@@ -37712,11 +37712,11 @@
                     "type": "object"
                   },
                   "command_id": {
-                    "type": "string",
                     "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
                     "maxLength": 128,
                     "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
+                    "pattern": "^[A-Za-z0-9._:-]+$",
+                    "type": "string"
                   },
                   "expected_version": {
                     "type": "integer"
@@ -38068,11 +38068,11 @@
                     "type": "object"
                   },
                   "command_id": {
-                    "type": "string",
                     "description": "Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only.",
                     "maxLength": 128,
                     "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
+                    "pattern": "^[A-Za-z0-9._:-]+$",
+                    "type": "string"
                   },
                   "expected_version": {
                     "type": "integer"
@@ -39352,6 +39352,1401 @@
         }
       }
     },
+    "/v1/op/photos.album_add": {
+      "post": {
+        "description": "Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write with owner approval for every agent.",
+        "operationId": "photos.album_add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "album_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "asset_ids": {
+                        "items": {
+                          "maxLength": 1024,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 200,
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "album_id",
+                      "asset_ids"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.album_create": {
+      "post": {
+        "description": "Create a regular user album. Transient write with a hash-only approval for every agent; reissue the identical ID after approval. No automatic retries.",
+        "operationId": "photos.album_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "title": {
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.album_delete": {
+      "post": {
+        "description": "Delete an editable regular album, never its assets. Transient write with owner approval for every agent. Asset deletion and permanent deletion are unavailable.",
+        "operationId": "photos.album_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "album_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "album_id"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.album_remove": {
+      "post": {
+        "description": "Remove up to 200 memberships from an editable regular album, never from the library. Transient write with owner approval for every agent.",
+        "operationId": "photos.album_remove",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "album_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "asset_ids": {
+                        "items": {
+                          "maxLength": 1024,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 200,
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "album_id",
+                      "asset_ids"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.album_rename": {
+      "post": {
+        "description": "Rename an editable regular album. Transient write with owner approval for every agent and no automatic retry.",
+        "operationId": "photos.album_rename",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "album_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": {
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "album_id",
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.albums": {
+      "post": {
+        "description": "Page through user albums or smart albums, with PhotoKit editing capabilities. No album index is stored.",
+        "operationId": "photos.albums",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "limit": {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "offset": {
+                        "maximum": 100000000,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "smart": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.favorite": {
+      "post": {
+        "description": "Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
+        "operationId": "photos.favorite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "asset_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "favorite": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "asset_id",
+                      "favorite"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.fetch": {
+      "post": {
+        "description": "Start a temporary original-resource transfer with asset_id, optional resource_index, resource_key from photos.get to detect changed metadata, and network_access (default false, allows iCloud downloads). Poll/read with transfer_id/offset/length only. Returns downloading or ready with SHA-256, size and base64 bytes. Read at most 512 KiB per call. Default cap 8 GiB, configurable up to 64 GiB, subject to disk space. Four transfers; poll within 120 seconds to retain one, with a 24-hour hard lifetime. Release explicitly. Never put photo bytes into Bridge blobs or replication.",
+        "operationId": "photos.fetch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "asset_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "length": {
+                        "maximum": 524288,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "max_bytes": {
+                        "maximum": 68719476736,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "network_access": {
+                        "type": "boolean"
+                      },
+                      "offset": {
+                        "maximum": 68719476736,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "resource_index": {
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "resource_key": {
+                        "maxLength": 64,
+                        "minLength": 64,
+                        "type": "string"
+                      },
+                      "transfer_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.get": {
+      "post": {
+        "description": "Live asset details, location and all public PhotoKit resources, including video, paired Live Photo video, adjustment data and edited/original representations. Resource indexes are local to this response.",
+        "operationId": "photos.get",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "asset_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "asset_id"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.release": {
+      "post": {
+        "description": "Cancel and delete this principal's temporary Photos transfer. Expired or foreign transfer IDs fail closed.",
+        "operationId": "photos.release",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "transfer_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "transfer_id"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.search": {
+      "post": {
+        "description": "Live PhotoKit search. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. candidate_count is before the place filter. Follow next_offset, even on empty pages. No library metadata is stored. Pages are live, not snapshots.",
+        "operationId": "photos.search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "album_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "end": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "favorite": {
+                        "type": "boolean"
+                      },
+                      "include_hidden": {
+                        "type": "boolean"
+                      },
+                      "limit": {
+                        "maximum": 200,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "near": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "lat": {
+                            "maximum": 90,
+                            "minimum": -90,
+                            "type": "number"
+                          },
+                          "lon": {
+                            "maximum": 180,
+                            "minimum": -180,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lon"
+                        ],
+                        "type": "object"
+                      },
+                      "offset": {
+                        "maximum": 100000000,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "radius_m": {
+                        "exclusiveMinimum": 0,
+                        "maximum": 100000,
+                        "type": "number"
+                      },
+                      "start": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": {
+                        "enum": [
+                          "image",
+                          "video",
+                          "audio",
+                          "live_photo",
+                          "screenshot",
+                          "panorama",
+                          "hdr",
+                          "depth",
+                          "slow_motion",
+                          "timelapse"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
     "/v1/op/print.document": {
       "post": {
         "description": "Print an authorized blob or supplied PDF bytes to PDF or a named printer",
@@ -39367,6 +40762,18 @@
                   },
                   "args": {
                     "additionalProperties": false,
+                    "oneOf": [
+                      {
+                        "required": [
+                          "data_base64"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "blob"
+                        ]
+                      }
+                    ],
                     "properties": {
                       "blob": {
                         "additionalProperties": false,
@@ -39390,29 +40797,17 @@
                         ],
                         "type": "object"
                       },
-                      "printer": {
+                      "data_base64": {
                         "type": "string"
                       },
-                      "data_base64": {
+                      "printer": {
                         "type": "string"
                       }
                     },
                     "required": [
                       "printer"
                     ],
-                    "type": "object",
-                    "oneOf": [
-                      {
-                        "required": [
-                          "data_base64"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "blob"
-                        ]
-                      }
-                    ]
+                    "type": "object"
                   },
                   "command_id": {
                     "type": "string"

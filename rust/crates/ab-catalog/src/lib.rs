@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod descriptors;
+mod photos;
 mod reference;
 use ab_domain::Source;
 pub use reference::operations_reference_markdown;
@@ -59,7 +60,9 @@ mod optional_source {
 
 pub fn operations() -> Result<Vec<OperationDescriptor>, serde_json::Error> {
     let schemas: Vec<Value> = serde_json::from_str(include_str!("schemas.json"))?;
-    Ok(descriptors::descriptors(&schemas))
+    let mut operations = descriptors::descriptors(&schemas);
+    operations.extend(photos::descriptors(&schemas[47]));
+    Ok(operations)
 }
 
 pub fn json_schema(descriptor: &OperationDescriptor) -> &Value {

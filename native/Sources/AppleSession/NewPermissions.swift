@@ -1,4 +1,5 @@
 import Foundation
+import Photos
 import MessagesSource
 import Contacts
 import EventKit
@@ -16,7 +17,7 @@ import Carbon
 @MainActor
 public enum NewPermissions {
     public static let automation = ["automation_mail": "com.apple.mail", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
-    public static let names = ["location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
+    public static let names = ["photos", "location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
     public static let levelOne = ["contacts", "calendar", "reminders"]
     public static let requestable = names + levelOne
 
@@ -26,6 +27,13 @@ public enum NewPermissions {
             value == 0 ? "not_determined" : authorized.contains(value) ? "authorized" : [1, 2].contains(value) ? "denied" : "unknown"
         }
         result["location"] = state(Int(CLLocationManager().authorizationStatus.rawValue), authorized: [3, 4])
+        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
+        case .notDetermined: result["photos"] = "not_determined"
+        case .authorized: result["photos"] = "authorized"
+        case .limited: result["photos"] = "limited"
+        case .denied, .restricted: result["photos"] = "denied"
+        @unknown default: result["photos"] = "unknown"
+        }
         result["camera"] = state(AVCaptureDevice.authorizationStatus(for: .video).rawValue, authorized: [3])
         result["microphone"] = state(AVCaptureDevice.authorizationStatus(for: .audio).rawValue, authorized: [3])
         result["speech_recognition"] = state(SFSpeechRecognizer.authorizationStatus().rawValue, authorized: [3])
@@ -175,6 +183,11 @@ public enum NewPermissions {
 
     public static func requestNative(_ name: String, adapters: [String: RequestAdapter]? = nil) async throws {
         switch name {
+        case "photos":
+            try await call("photos", adapters: adapters) {
+                let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+                try requireAccess(status == .authorized || status == .limited)
+            }
         case "contacts":
             try await call("contacts", adapters: adapters) { try requireAccess(try await CNContactStore().requestAccess(for: .contacts)) }
         case "calendar":

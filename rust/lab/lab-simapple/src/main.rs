@@ -13,6 +13,7 @@ mod messages_commands;
 mod native;
 mod native_bridge;
 mod notes;
+mod photos;
 mod query;
 mod reminders;
 mod shortcuts;
@@ -642,6 +643,7 @@ struct Session<'a> {
     credit: usize,
     tickets: BTreeMap<String, Ticket>,
     blobs: BTreeMap<String, Vec<u8>>,
+    photos: photos::Library,
     sleeping: BTreeMap<String, query::Cancel>,
     finished: mpsc::Sender<(String, Value)>,
     finished_rx: mpsc::Receiver<(String, Value)>,
@@ -1101,6 +1103,8 @@ impl Session<'_> {
                     reply
                 } else if let Some(reply) = maps::query(&mut self.blobs, &frame) {
                     reply
+                } else if let Some(reply) = self.photos.query(state, &frame)? {
+                    reply
                 } else if let Some(reply) = vision::query(state, &mut self.blobs, &frame)? {
                     reply
                 } else {
@@ -1298,6 +1302,7 @@ fn session(
         credit: usize::try_from(credit).map_err(|_| invalid("credit"))?,
         tickets: BTreeMap::new(),
         blobs: BTreeMap::new(),
+        photos: photos::Library::default(),
         sleeping: BTreeMap::new(),
         finished: finished_tx,
         finished_rx,

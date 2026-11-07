@@ -16,6 +16,7 @@
 <key>NSLocationUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSCameraUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
+<key>NSPhotoLibraryUsageDescription</key><string>Apple Bridge reads Photos and changes albums and favorites only when you ask. Photos are not synchronized into Bridge.</string>
 <key>NSMicrophoneUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSSpeechRecognitionUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>
 <key>NSFocusStatusUsageDescription</key><string>Apple Bridge requests access when you explicitly request this permission.</string>

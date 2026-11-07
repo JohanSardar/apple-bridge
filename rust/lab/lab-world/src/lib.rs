@@ -366,12 +366,16 @@ impl World {
         Ok(())
     }
     pub fn gateway_cli(&self, args: &[&str]) -> Result<String> {
+        self.gateway_cli_env(args, &[])
+    }
+    pub fn gateway_cli_env(&self, args: &[&str], environment: &[(&str, &str)]) -> Result<String> {
         let mut command = Command::new(&self.config.gateway);
         command
             .args(args)
             .arg("--home")
             .arg(&self.gateway_home)
-            .env("APPLE_BRIDGE_SECRET_STORE", "file");
+            .env("APPLE_BRIDGE_SECRET_STORE", "file")
+            .envs(environment.iter().copied());
         output(command)
     }
     pub fn control(&self, route: &str, input: &Value) -> Result<Value> {
