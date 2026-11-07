@@ -4,6 +4,8 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-07
+
 ### Changed
 
 - Self-hosted relays run accounts, control and relay as separate system users. Run the installer again to upgrade. To go back, stop control and accounts, run `chown -R ab-relay:ab-relay /var/lib/ab-relay-control /var/lib/ab-accounts`, then run the previous release's installer.
@@ -23,6 +25,9 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ### Added
 
+- Voicemail records include Apple's transcript and the recording, through the MCP API and `bridge read voicemail`.
+- `bridge permissions guide` offers Screen Recording, Camera, Microphone and Location as optional steps. Agents need a fresh owner approval for every capture and current-location read.
+- A one-line install: `curl -fsSL https://johansardar.github.io/apple-bridge/install | sh`.
 - `bridge up` starts Apple Bridge for agents on this Mac with no account, server, domain or questions. `bridge down` stops it.
 - `bridge link claude` and `bridge link codex` connect an agent to the local MCP address, and `bridge unlink` removes it.
 - `bridge stats` shows counts per source, never content. `--watch` follows a first sync as each source finishes.
