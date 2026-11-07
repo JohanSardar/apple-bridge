@@ -832,7 +832,8 @@ fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_wor
         serde_json::to_vec(&serde_json::json!({
             "statuses": {"full_disk_access":"granted","contacts":"granted","calendar":"granted","reminders":"granted"},
             "deny_when_asked": ["camera"],
-            "grant_when_asked": ["screen_recording", "microphone", "location"]
+            "grant_when_asked": ["microphone", "location"],
+            "grant_when_opened": ["screen_recording"]
         }))?,
     )?;
     let home = directory.path().join("home");
@@ -852,9 +853,9 @@ fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_wor
     let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
     assert_eq!(
         after["asked"],
-        serde_json::json!(["screen_recording", "camera", "microphone", "location"])
+        serde_json::json!(["camera", "microphone", "location"])
     );
-    assert_eq!(after["opened"], serde_json::json!([]));
+    assert_eq!(after["opened"], serde_json::json!(["screen_recording"]));
     let output = run(
         &home,
         &[

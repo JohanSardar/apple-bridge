@@ -68,7 +68,7 @@ const OPTIONAL: &[Permission] = &[
         why: "Take screenshots and record the screen (optional)",
         source: "capture",
         pane: "Privacy_ScreenCapture",
-        asks: true,
+        asks: false,
     },
     Permission {
         id: "camera",
@@ -618,7 +618,6 @@ mod tests {
                 "contacts",
                 "calendar",
                 "reminders",
-                "screen_recording",
                 "camera",
                 "microphone",
                 "location"
@@ -626,13 +625,7 @@ mod tests {
         );
         assert_eq!(
             answers.skipped,
-            [
-                "calendar",
-                "screen_recording",
-                "camera",
-                "microphone",
-                "location"
-            ]
+            ["calendar", "camera", "microphone", "location"]
         );
         assert_eq!(
             answers.asked.iter().map(|p| p.id).collect::<Vec<_>>(),
