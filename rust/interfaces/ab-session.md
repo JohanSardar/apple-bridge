@@ -64,7 +64,7 @@ Configuration in a lab world: `AB_LAB_SESSION_SOURCES=a,b` writes `session-home/
 - A scan is split into frames like the Swift sink: 16000 bytes of observations per frame (64000 when
   `live`), absences last, one scan id throughout. Every frame but the last carries a derived checkpoint,
   waits for its own `Committed`, and uses the previous frame's checkpoint as `predecessor`. Only the
-  final frame's `Committed` calls `CaptureReader::commit`.
+  final frame's `Committed` calls `CaptureReader::commit`. Each chunk keeps only handles referenced by its observations. The complete native-encoded frame, including handles, header and derived checkpoint/predecessor, must fit 262144 bytes; the observation targets remain soft so Messages' pre-sized history pages are preserved.
 - A reader error or unchanged input yields no frame; absence is never invented. A new connection
   builds fresh readers, so the first scan is full (`live` false) and replays under the gateway's
   committed predecessor; a generation change is one rescan.
@@ -96,7 +96,7 @@ Rolling out another source (what to copy, in order):
 Calls, Voicemail and Voice Memos (`phone`, `voicemail`, `voice_memos`) follow the same pattern. Their
 fixture databases live in the source root as `CallHistory.storedata`, `voicemail.db` and
 `CloudRecordings.db`; voicemail prefers `FaceTimeMessageStore-local.sqlitedb` when present. The readers
-skip unchanged database/`-wal` input; voicemail also compares current audio versions against the versions captured around staging, including missing paths. Native staging conflicts retry without caching a failed signature. Arrival/replacement after capture changes the next signature even if it precedes acceptance; acceptance never resamples audio for the committed signature.
+skip unchanged database/`-wal` input; voicemail also compares current audio versions against the versions captured around staging, including missing paths. Native source races and transient staging errors retry without caching a failed signature. Pending transcripts override unchanged-input skipping until later passes finish enrichment. Arrival/replacement after capture changes the next signature even if it precedes acceptance; acceptance never resamples audio for the committed signature.
 Voicemail deliberately declines persisted input tokens and scans once after each restart, rebuilding
 asset tracking and refreshing older metadata-only captures even when the database has not changed.
 Voice Memos and voicemail serve content-addressed audio through session-owned blob handles. The lab

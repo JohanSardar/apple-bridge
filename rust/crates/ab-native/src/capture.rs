@@ -23,6 +23,8 @@ pub enum Error {
     Incomplete,
     #[error("source changed during scan")]
     Conflict,
+    #[error("asset staging temporarily unavailable")]
+    Staging,
     #[error("unsupported source schema or value")]
     Unsupported,
     #[error("native Helper fact required: {0}")]
@@ -440,6 +442,17 @@ struct Stored {
     native_key: String,
     scoped_alias: Option<String>,
     data: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    fingerprint: bool,
+}
+impl Stored {
+    fn matches(&self, data: &str) -> bool {
+        if self.fingerprint {
+            self.data == crate::body_digest(data.as_bytes())
+        } else {
+            data_equal(&self.data, data)
+        }
+    }
 }
 #[derive(Debug, serde::Serialize)]
 pub struct Pending {
@@ -462,12 +475,30 @@ pub struct ScanInput<'a> {
 }
 impl State {
     pub fn prepare(&self, input: ScanInput<'_>) -> Result<Pending> {
-        self.build(input, true)
+        self.build(input, true, false)
     }
     pub fn prepare_incomplete(&self, input: ScanInput<'_>) -> Result<Pending> {
-        self.build(input, false)
+        self.build(input, false, false)
     }
-    fn build(&self, input: ScanInput<'_>, complete: bool) -> Result<Pending> {
+    pub fn prepare_fingerprinted(&self, input: ScanInput<'_>) -> Result<Pending> {
+        self.build(input, true, true)
+    }
+    pub fn reuse(&self, generation: &str, row: &mut Observation) -> bool {
+        let key = format!("{}/{}", row.collection, row.native_key);
+        if self.generation == generation
+            && row.data.as_ref().is_some_and(|data| {
+                self.records
+                    .get(&key)
+                    .is_some_and(|old| old.matches(data.get()))
+            })
+        {
+            row.kind = "unchanged";
+            row.data = None;
+            return true;
+        }
+        false
+    }
+    fn build(&self, input: ScanInput<'_>, complete: bool, fingerprints: bool) -> Result<Pending> {
         let ScanInput {
             source,
             generation,
@@ -494,26 +525,33 @@ impl State {
         let mut changes = Vec::new();
         for row in records {
             let key = format!("{}/{}", row.collection, row.native_key);
-            let data = row.data.as_ref().ok_or(Error::Corrupt)?.get().to_owned();
             if current.contains_key(&key)
                 || row.native_key.is_empty()
                 || !scope.contains(&row.collection)
             {
                 return Err(Error::Corrupt);
             }
+            if fingerprints && same && row.kind == "unchanged" && row.data.is_none() {
+                current.insert(
+                    key.clone(),
+                    self.records.get(&key).ok_or(Error::Corrupt)?.clone(),
+                );
+                continue;
+            }
+            let raw = row.data.as_ref().ok_or(Error::Corrupt)?.get();
+            let same_data = self.records.get(&key).is_some_and(|old| old.matches(raw));
             let stored = Stored {
                 collection: row.collection.clone(),
                 native_key: row.native_key.clone(),
                 scoped_alias: row.scoped_alias.clone(),
-                data,
+                data: if fingerprints {
+                    crate::body_digest(raw.as_bytes())
+                } else {
+                    raw.to_owned()
+                },
+                fingerprint: fingerprints,
             };
-            if !live
-                || !same
-                || self
-                    .records
-                    .get(&key)
-                    .is_none_or(|old| !data_equal(&old.data, &stored.data))
-            {
+            if !live || !same || !same_data {
                 changes.push(row);
             }
             current.insert(key, stored);

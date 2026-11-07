@@ -2,6 +2,50 @@
 use super::*;
 
 #[test]
+fn voicemail_retries_a_restored_staging_directory_without_source_changes() {
+    let root = std::env::temp_dir().join(format!(
+        "ab-vm-stage-retry-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(root.join("store/Assets/00")).unwrap();
+    let store = root.join("store/voicemail.db");
+    let db = rusqlite::Connection::open(&store).unwrap();
+    db.execute_batch("CREATE TABLE Z_METADATA(Z_UUID TEXT);INSERT INTO Z_METADATA VALUES('synthetic');CREATE TABLE ZSTOREDMESSAGE(Z_PK INTEGER,ZRECORDUUID BLOB,ZFROM TEXT,ZDATECREATED REAL,ZDURATION REAL,ZISREAD INTEGER,ZFILETYPE TEXT);INSERT INTO ZSTOREDMESSAGE VALUES(1,x'00112233445566778899AABBCCDDEEFF','Synthetic',10,2,0,'m4a');").unwrap();
+    drop(db);
+    std::fs::write(
+        root.join("store/Assets/00/00112233-4455-6677-8899-AABBCCDDEEFF.m4a"),
+        b"synthetic",
+    )
+    .unwrap();
+    let staging = root.join("staging");
+    let mut reader = TelephonyReader::voicemail(&root.join("store"), &staging).unwrap();
+    reader.assets().unwrap();
+    std::fs::remove_dir(&staging).unwrap();
+    let context = ScanContext {
+        checkpoint: "retry".into(),
+        scan_id: "retry".into(),
+        now: 1_767_225_600.0,
+        fence: 1,
+    };
+    assert!(reader.next(&context).unwrap().is_none());
+    assert!(reader.failed.is_none());
+    assert!(reader.committed.is_none());
+    std::fs::create_dir(&staging).unwrap();
+    let captured = reader.next(&context).unwrap().unwrap();
+    assert_eq!(
+        captured["observations"][0]["data"]["audio_state"],
+        "present"
+    );
+    reader.commit().unwrap();
+    assert!(reader.next(&context).unwrap().is_none());
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn voicemail_caches_the_captured_asset_version_not_a_later_sample() {
     for replacement in [false, true] {
         let root = std::env::temp_dir().join(format!(

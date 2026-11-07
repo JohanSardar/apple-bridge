@@ -296,6 +296,13 @@ a new database/schema/metadata UUID generation emits a full scan without absence
 plist resolver, sharing a 1 MiB string/data/key-byte budget between decoding and UID resolution.
 The default shared plist budget is 16 MiB. Native-encoded voicemail observations are limited to
 128 KiB; over-budget transcript content is omitted and marked unsupported without dropping metadata or audio.
+Each scan retains at most 4 MiB of encoded transcript-bearing records. Excess content is pending;
+`needs_retry` keeps enrichment eligible without a changed input signature. Voicemail uses
+`capture::State::prepare_fingerprinted` and `reuse`: unchanged rows keep digest-only acknowledgement
+state and emit no update, so later passes have budget for pending rows without removing old content.
+Temporary staging failures return `capture::Error::Staging` without committing asset versions.
+The asset store repairs an existing corrupt digest-addressed file by atomically replacing it with
+verified staged bytes, distinct from source-change conflicts.
 Optional schema columns do not suppress metadata. `audio_signature` retains the versions observed
 around each staging attempt, including missing paths. `AudioSignature::current` samples the same
 paths for change detection. Changed versions or staging conflicts abort the scan for retry;

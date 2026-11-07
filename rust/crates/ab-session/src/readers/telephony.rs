@@ -172,7 +172,11 @@ impl CaptureReader for TelephonyReader {
         }
         let store = file_signature(&self.path);
         let current = self.signature();
-        if store.is_empty() || self.committed.as_ref() == Some(&current) {
+        let retry = self
+            .assets
+            .as_ref()
+            .is_some_and(telephony::VoicemailReader::needs_retry);
+        if store.is_empty() || self.committed.as_ref() == Some(&current) && !retry {
             return Ok(None);
         }
         let read = context_for(context)?;
@@ -182,13 +186,16 @@ impl CaptureReader for TelephonyReader {
         let scanned = if self.name == "voicemail" {
             let path = self.path.clone();
             let warm = self.warm;
-            self.assets()?.scan(&path, &read, warm, MAX_ROWS)
+            let Ok(reader) = self.assets() else {
+                return Ok(None);
+            };
+            reader.scan(&path, &read, warm, MAX_ROWS)
         } else {
             telephony::calls(&self.path, &self.state, &read, self.warm, MAX_ROWS)
         };
         let pending = match scanned {
             Ok(pending) => pending,
-            Err(capture::Error::Conflict) => return Ok(None),
+            Err(capture::Error::Conflict | capture::Error::Staging) => return Ok(None),
             Err(error) if error.is_busy() => return Ok(None),
             Err(error) => {
                 eprintln!("ab-session: {} scan: {error}", self.name);

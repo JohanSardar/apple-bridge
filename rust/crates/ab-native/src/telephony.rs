@@ -4,6 +4,7 @@ use std::{path::Path, time::Duration};
 const GENERATION: &str = "SELECT Z_UUID FROM Z_METADATA";
 const TRANSCRIPT_DECODE_BYTES: usize = 1024 * 1024;
 const VOICEMAIL_RECORD_BYTES: usize = 128 * 1024;
+const SCAN_TRANSCRIPT_BYTES: usize = 4 * 1024 * 1024;
 type Stage<'a> =
     dyn FnMut(&mut crate::assets::Store, &Path, &Path) -> Result<crate::assets::Reference> + 'a;
 
@@ -240,6 +241,7 @@ pub struct VoicemailReader {
     state: State,
     assets: crate::assets::Store,
     tracked: AudioSignature,
+    retry: bool,
 }
 
 impl VoicemailReader {
@@ -248,7 +250,41 @@ impl VoicemailReader {
             state: State::default(),
             assets: crate::assets::Store::open(staging, "voicemail-blob:")?,
             tracked: AudioSignature::default(),
+            retry: false,
         })
+    }
+
+    #[must_use]
+    pub const fn needs_retry(&self) -> bool {
+        self.retry
+    }
+
+    fn retain_transcript(
+        &self,
+        observation: &mut capture::Observation,
+        generation: &str,
+        live: bool,
+        remaining: &mut usize,
+    ) -> Result<bool> {
+        if live && self.state.reuse(generation, observation) {
+            return Ok(false);
+        }
+        let raw = observation.data.as_ref().ok_or(Error::Corrupt)?.get();
+        let mut data: serde_json::Value = serde_json::from_str(raw)?;
+        if data.get("transcript").is_none() {
+            return Ok(false);
+        }
+        if raw.len() <= *remaining {
+            *remaining -= raw.len();
+            return Ok(false);
+        }
+        let fields = data.as_object_mut().ok_or(Error::Corrupt)?;
+        fields.remove("transcript");
+        fields.insert("transcript_state".into(), json!("pending"));
+        observation.data = Some(serde_json::from_slice(&crate::native_json::record_data(
+            &data,
+        )?)?);
+        Ok(true)
     }
 
     pub fn audio_signature(&self) -> &AudioSignature {
@@ -312,6 +348,16 @@ impl VoicemailReader {
         let staged = stage(&mut self.assets, &file, root);
         if before != audio_version(&file) || matches!(staged, Err(Error::Conflict)) {
             return Err(Error::Conflict);
+        }
+        if let Err(error) = &staged {
+            let missing = matches!(error, Error::Io(error) if error.kind() == std::io::ErrorKind::NotFound)
+                && before.is_none()
+                && std::fs::symlink_metadata(&file)
+                    .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound);
+            let unavailable = matches!(error, Error::Corrupt | Error::Incomplete);
+            if !missing && !unavailable {
+                return Err(Error::Staging);
+            }
         }
         self.tracked.0.insert(file, before);
         if let Ok(reference) = staged {
@@ -388,6 +434,8 @@ impl VoicemailReader {
         self.tracked.0.clear();
         let mut handles = std::collections::BTreeMap::new();
         let mut observations = Vec::new();
+        let mut remaining = SCAN_TRANSCRIPT_BYTES;
+        let mut retry = false;
         for row in rows {
             let n = |key| capture::number(&row, key);
             let t = |key| capture::text(&row, key);
@@ -430,16 +478,14 @@ impl VoicemailReader {
             }
             self.audio(&row, &root, &mut data, &mut handles, stage)?;
             let id = t("id");
-            observations.push(voicemail_observation(
-                id,
-                &reader.generation,
-                data,
-                context,
-            )?);
+            let mut observation = voicemail_observation(id, &reader.generation, data, context)?;
+            retry |=
+                self.retain_transcript(&mut observation, &reader.generation, live, &mut remaining)?;
+            observations.push(observation);
         }
         observations.sort_by(|a, b| a.native_key.cmp(&b.native_key));
         reader.finish(GENERATION)?;
-        let mut pending = self.state.prepare(ScanInput {
+        let mut pending = self.state.prepare_fingerprinted(ScanInput {
             source: "voicemail",
             generation: &reader.generation,
             records: observations,
@@ -449,6 +495,7 @@ impl VoicemailReader {
             live,
         })?;
         pending.batch.blob_handles = handles;
+        self.retry = retry;
         Ok(pending)
     }
 

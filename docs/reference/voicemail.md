@@ -4,7 +4,7 @@
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `transcript_state` | string | `present`, `missing`, `unavailable` or `unsupported` |
+| `transcript_state` | string | `present`, `pending`, `missing`, `unavailable` or `unsupported` |
 | `transcript` | object, optional | Present only after successful archive decoding |
 | `transcript.text` | string | Flattened carrier text, or joined segment text |
 | `transcript.segments` | array | Ordered `{text, confidence?}` objects; confidence is a number |
@@ -18,7 +18,7 @@
 
 `missing` means no transcript bytes or no readable local recording. `unavailable` means the store lacks the relevant optional column/value. `unsupported` means a transcript cannot be decoded within its budgets or the recording format is not supported. Missing mailbox/provider columns produce `unknown`, not an invented inbox or carrier classification. A transcript can be present without audio, and vice versa. Fields containing unavailable content are omitted, not null.
 
-Transcript decoding shares a 1 MiB cumulative string/data/key-byte budget across plist parsing and UID resolution, in addition to depth and node limits. Each native-encoded observation is limited to 128 KiB, including JSON escaping and metadata. An over-budget transcript is omitted and marked `unsupported`; metadata and local audio remain. If the metadata alone cannot fit, the scan fails without establishing absence. Audio changes during staging retry the scan; later changes are compared against the captured asset version, not a post-scan sample.
+Transcript decoding shares a 1 MiB cumulative string/data/key-byte budget across plist parsing and UID resolution, in addition to depth and node limits. Each native-encoded observation is limited to 128 KiB, including JSON escaping and metadata. An over-budget transcript is omitted and marked `unsupported`; metadata and local audio remain. If the metadata alone cannot fit, the scan fails without establishing absence. A scan retains at most 4 MiB of encoded transcript-bearing data; excess transcripts are `pending`, not permanently unsupported. Unchanged acknowledged rows keep only fingerprints in reader memory and consume no later transcript budget. Further scans enrich pending rows even without source changes, without erasing already captured transcripts. Audio changes and temporary staging failures retry without caching missing audio. Corrupt digest-addressed staged files are atomically replaced with verified original bytes; only source races return a conflict.
 
 Download an authorized recording with `GET /v1/blobs/<audio.digest>?record=<record.id>` using the same credentials as the record read. An MCP client can use the gateway's authenticated blob endpoint after `records_query`. Audio bytes are not embedded in record JSON or MCP text. Blob availability follows the normal staging/replication lifecycle; do not treat metadata presence as successful playback or transcoding. AMR support depends on the player's codecs.
 
