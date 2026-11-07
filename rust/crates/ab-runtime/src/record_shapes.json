@@ -164,6 +164,16 @@
     ]
   },
   "voicemail.message": {
+    "transcript": [
+      "Object",
+      false,
+      false
+    ],
+    "audio": [
+      "Object",
+      false,
+      false
+    ],
     "sender": [
       "String",
       true,

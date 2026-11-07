@@ -1,0 +1,36 @@
+{
+  "issue": 930,
+  "date": "2026-11-07",
+  "level": "real_reader_snapshot",
+  "status": "passed",
+  "build": {
+    "host": "Ubuntu",
+    "target": "aarch64-apple-darwin",
+    "command": "rust/check.sh build --locked -p ab-native --example voicemail-proof --target aarch64-apple-darwin"
+  },
+  "proof": {
+    "host": "Pro (macOS)",
+    "command": "python3 packaging/dev/prove-voicemail.py /path/to/voicemail-proof",
+    "exit_code": 0,
+    "store": {"messages": 98, "transcripts": 74, "audio": 98},
+    "reader": {"messages": 98, "transcripts": 74, "audio": 98},
+    "counts_match": true,
+    "fetched_sha256_matches_original": true,
+    "fetched_recordings": 1
+  },
+  "safety": {
+    "apple_store_access": "read_only_file_copy",
+    "database_and_audio_processing": "private_temporary_snapshot_removed_on_exit",
+    "output": "aggregate_counts_and_hash_equality_only",
+    "permission_changes": false,
+    "voicemail_mutations": false,
+    "calls_placed": false,
+    "live_gateway_touched": false
+  },
+  "unverified": [
+    "signed Helper launch and TCC attribution",
+    "real-data MCP/CLI delivery through a running gateway",
+    "real-data replica delivery",
+    "audio playback and transcoding"
+  ]
+}

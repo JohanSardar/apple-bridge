@@ -232,6 +232,7 @@ pub enum ReadKind {
     Reminders,
     Notes,
     Mail,
+    Voicemail,
 }
 
 #[derive(Debug, Args)]

@@ -43,11 +43,19 @@ impl Value {
     }
 }
 
-struct Reader<'a> {
+const MAX_DECODE_BYTES: usize = 16 * 1024 * 1024;
+
+fn charge(remaining: &mut usize, bytes: usize) -> Result<()> {
+    *remaining = remaining.checked_sub(bytes).ok_or(DecodeError::Limit)?;
+    Ok(())
+}
+
+struct Reader<'a, 'b> {
     bytes: &'a [u8],
     offsets: Vec<usize>,
     reference_size: usize,
     remaining: usize,
+    bytes_left: &'b mut usize,
 }
 
 fn integer(bytes: &[u8], start: usize, size: usize) -> Result<u64> {
@@ -62,7 +70,7 @@ fn index(value: u64) -> Result<usize> {
     usize::try_from(value).map_err(|_| DecodeError::Limit)
 }
 
-impl Reader<'_> {
+impl Reader<'_, '_> {
     fn integer(&self, start: usize, size: usize) -> Result<u64> {
         if start < 8 {
             return Err(DecodeError::Malformed);
@@ -114,10 +122,14 @@ impl Reader<'_> {
             )))),
             2 if count == 3 => Ok(Value::Real(f64::from_bits(self.integer(body, 8)?))),
             3 => Ok(Value::Date(f64::from_bits(self.integer(body, 8)?))),
-            4 => Ok(Value::Data(
-                slice(count).ok_or(DecodeError::Malformed)?.to_vec(),
-            )),
+            4 => {
+                charge(self.bytes_left, count)?;
+                Ok(Value::Data(
+                    slice(count).ok_or(DecodeError::Malformed)?.to_vec(),
+                ))
+            }
             5 => {
+                charge(self.bytes_left, count)?;
                 let bytes = slice(count).ok_or(DecodeError::Malformed)?;
                 if !bytes.is_ascii() {
                     return Err(DecodeError::Malformed);
@@ -127,6 +139,10 @@ impl Reader<'_> {
                 ))
             }
             6 => {
+                charge(
+                    self.bytes_left,
+                    count.checked_mul(5).ok_or(DecodeError::Limit)?,
+                )?;
                 let units = slice(count * 2)
                     .ok_or(DecodeError::Malformed)?
                     .as_chunks::<2>()
@@ -166,6 +182,7 @@ fn portable(
     events: &mut impl Iterator<Item = std::result::Result<::plist::stream::OwnedEvent, ::plist::Error>>,
     depth: usize,
     remaining: &mut usize,
+    bytes_left: &mut usize,
 ) -> Result<Value> {
     use ::plist::stream::Event;
     if depth >= 64 || *remaining == 0 {
@@ -183,7 +200,7 @@ fn portable(
                 if matches!(event, Event::EndCollection) {
                     break;
                 }
-                values.push(portable(event, events, depth + 1, remaining)?);
+                values.push(portable(event, events, depth + 1, remaining, bytes_left)?);
             }
             Value::Array(values)
         }
@@ -204,14 +221,21 @@ fn portable(
                     .next()
                     .ok_or(DecodeError::Malformed)?
                     .map_err(|_| DecodeError::Malformed)?;
-                let value = portable(event, events, depth + 1, remaining)?;
+                charge(bytes_left, key.len())?;
+                let value = portable(event, events, depth + 1, remaining, bytes_left)?;
                 values.insert(key.into_owned(), value);
             }
             Value::Dictionary(values)
         }
         Event::Boolean(v) => Value::Bool(v),
-        Event::Data(v) => Value::Data(v.into_owned()),
-        Event::String(v) => Value::String(v.into_owned()),
+        Event::Data(v) => {
+            charge(bytes_left, v.len())?;
+            Value::Data(v.into_owned())
+        }
+        Event::String(v) => {
+            charge(bytes_left, v.len())?;
+            Value::String(v.into_owned())
+        }
         Event::Real(v) => Value::Real(v),
         Event::Integer(v) => Value::Integer(v.as_signed().ok_or(DecodeError::Limit)?),
         Event::Date(v) => {
@@ -228,6 +252,14 @@ fn portable(
 }
 
 pub fn decode(data: &[u8]) -> Result<Value> {
+    let mut bytes_left = MAX_DECODE_BYTES;
+    decode_bounded(data, &mut bytes_left)
+}
+
+fn decode_bounded(data: &[u8], bytes_left: &mut usize) -> Result<Value> {
+    if data.len() > *bytes_left {
+        return Err(DecodeError::Limit);
+    }
     if !data.starts_with(b"bplist00") {
         if data.len() > 16 * 1024 * 1024 {
             return Err(DecodeError::Limit);
@@ -237,7 +269,7 @@ pub fn decode(data: &[u8]) -> Result<Value> {
             .next()
             .ok_or(DecodeError::Malformed)?
             .map_err(|_| DecodeError::Malformed)?;
-        let value = portable(event, &mut events, 0, &mut 200_000)?;
+        let value = portable(event, &mut events, 0, &mut 200_000, bytes_left)?;
         if events.next().is_some() {
             return Err(DecodeError::Malformed);
         }
@@ -271,6 +303,7 @@ pub fn decode(data: &[u8]) -> Result<Value> {
         offsets,
         reference_size,
         remaining: 200_000,
+        bytes_left,
     }
     .object(top, 0)
 }
@@ -281,6 +314,7 @@ fn resolve(
     visited: &[usize],
     depth: usize,
     remaining: &mut usize,
+    bytes_left: &mut usize,
 ) -> Result<Value> {
     if depth >= 64 || *remaining == 0 {
         return Err(DecodeError::Limit);
@@ -300,27 +334,30 @@ fn resolve(
                 &path,
                 depth + 1,
                 remaining,
+                bytes_left,
             )
         }
         Value::Array(values) => Ok(Value::Array(
             values
                 .iter()
-                .map(|v| resolve(v, objects, visited, depth + 1, remaining))
+                .map(|v| resolve(v, objects, visited, depth + 1, remaining, bytes_left))
                 .collect::<Result<_>>()?,
         )),
         Value::Dictionary(values) => {
             let mut result = BTreeMap::new();
             for (k, v) in values {
                 if k != "$class" {
+                    charge(bytes_left, k.len())?;
                     result.insert(
                         k.clone(),
-                        resolve(v, objects, visited, depth + 1, remaining)?,
+                        resolve(v, objects, visited, depth + 1, remaining, bytes_left)?,
                     );
                 }
             }
             if let Some(Value::Data(bytes)) = result.get("NS.uuidbytes")
                 && bytes.len() == 16
             {
+                charge(bytes_left, 36)?;
                 return Ok(Value::String(crate::reminders_store::uuid_text(bytes)));
             }
             if let (Some(Value::Array(keys)), Some(Value::Array(values))) =
@@ -328,28 +365,53 @@ fn resolve(
                 && keys.len() == values.len()
                 && keys.iter().all(|k| k.string().is_some())
             {
+                let Some(Value::Array(keys)) = result.remove("NS.keys") else {
+                    return Err(DecodeError::Malformed);
+                };
+                let Some(Value::Array(values)) = result.remove("NS.objects") else {
+                    return Err(DecodeError::Malformed);
+                };
                 return Ok(Value::Dictionary(
-                    keys.iter()
+                    keys.into_iter()
                         .zip(values)
-                        .map(|(k, v)| (k.string().unwrap_or_default().to_owned(), v.clone()))
-                        .collect(),
+                        .map(|(key, value)| {
+                            if let Value::String(key) = key {
+                                Ok((key, value))
+                            } else {
+                                Err(DecodeError::Malformed)
+                            }
+                        })
+                        .collect::<Result<_>>()?,
                 ));
             }
-            if let Some(v @ Value::Array(_)) = result.get("NS.objects") {
-                return Ok(v.clone());
+            if matches!(result.get("NS.objects"), Some(Value::Array(_))) {
+                return result.remove("NS.objects").ok_or(DecodeError::Malformed);
             }
             for key in ["NS.relative", "NS.string"] {
-                if let Some(v @ Value::String(_)) = result.get(key) {
-                    return Ok(v.clone());
+                if matches!(result.get(key), Some(Value::String(_))) {
+                    return result.remove(key).ok_or(DecodeError::Malformed);
                 }
             }
             Ok(Value::Dictionary(result))
+        }
+        Value::String(text) => {
+            charge(bytes_left, text.len())?;
+            Ok(Value::String(text.clone()))
+        }
+        Value::Data(bytes) => {
+            charge(bytes_left, bytes.len())?;
+            Ok(Value::Data(bytes.clone()))
         }
         _ => Ok(value.clone()),
     }
 }
 pub fn archive_root(data: &[u8]) -> Result<Value> {
-    let Value::Dictionary(raw) = decode(data)? else {
+    archive_root_limited(data, MAX_DECODE_BYTES)
+}
+
+pub fn archive_root_limited(data: &[u8], max_bytes: usize) -> Result<Value> {
+    let mut bytes_left = max_bytes.min(MAX_DECODE_BYTES);
+    let Value::Dictionary(raw) = decode_bounded(data, &mut bytes_left)? else {
         return Err(DecodeError::Malformed);
     };
     let (Some(Value::Array(objects)), Some(Value::Dictionary(top))) =
@@ -361,7 +423,7 @@ pub fn archive_root(data: &[u8]) -> Result<Value> {
         .get("root")
         .or_else(|| top.get("NSKeyedArchiveRootObjectKey"))
         .unwrap_or(&Value::Null);
-    resolve(value, objects, &[], 0, &mut 100_000)
+    resolve(value, objects, &[], 0, &mut 100_000, &mut bytes_left)
 }
 
 pub fn archive(data: &[u8]) -> Result<BTreeMap<String, Value>> {

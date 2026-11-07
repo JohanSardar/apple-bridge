@@ -173,6 +173,11 @@ fn request(args: &ReadArgs) -> Outcome<(&'static str, Value, &'static [&'static 
             json!({"collection": "mail.message", "limit": limit}),
             &["mail.message"],
         ),
+        ReadKind::Voicemail => (
+            "records.query",
+            json!({"collection": "voicemail.message", "limit": limit}),
+            &["voicemail.message"],
+        ),
     })
 }
 
@@ -257,6 +262,7 @@ fn render(answer: &Value, wanted: &[&str], limit: usize) {
     for record in records.iter().take(limit) {
         let data = &record["data"];
         let headline = text_field(data, HEADLINE_FIELDS)
+            .or_else(|| data["sender"].as_str())
             .map(str::to_owned)
             .or_else(|| contact_name(data))
             .unwrap_or_else(|| "(no title)".to_owned());
@@ -266,6 +272,28 @@ fn render(answer: &Value, wanted: &[&str], limit: usize) {
             println!("{}  [{id}]", one_line(&headline, 100));
         } else {
             println!("{when}  {}  [{id}]", one_line(&headline, 100));
+        }
+        if record["collection"] == "voicemail.message" {
+            if let Some(text) = data["transcript"]["text"].as_str() {
+                println!("  Transcript: {text}");
+            } else {
+                println!(
+                    "  Transcript: {}",
+                    data["transcript_state"].as_str().unwrap_or("unavailable")
+                );
+            }
+            if let Some(digest) = data["audio"]["digest"].as_str() {
+                println!(
+                    "  Audio: {digest} ({}, {} bytes)",
+                    data["audio"]["mime_type"].as_str().unwrap_or("unknown"),
+                    data["audio"]["size"]
+                );
+            } else {
+                println!(
+                    "  Audio: {}",
+                    data["audio_state"].as_str().unwrap_or("unavailable")
+                );
+            }
         }
     }
     if total > limit {

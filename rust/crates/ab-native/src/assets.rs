@@ -136,7 +136,7 @@ impl Store {
                     hash.update(&buffer[..count]);
                 }
                 if actual != size || format!("{:x}", hash.finalize()) != digest {
-                    return Err(Error::Conflict);
+                    std::fs::rename(&temporary.0, &destination)?;
                 }
             }
             Err(error) => return Err(error.into()),
@@ -161,7 +161,7 @@ impl Store {
         {
             return Err(Error::Conflict);
         }
-        let (temporary, mut output) = self.temporary()?;
+        let (temporary, mut output) = self.temporary().map_err(|_| Error::Staging)?;
         let mut hash = Sha256::new();
         let mut size = 0_u64;
         let mut buffer = vec![0; 131_072];
@@ -177,12 +177,15 @@ impl Store {
                 return Err(Error::Conflict);
             }
             hash.update(&buffer[..count]);
-            output.write_all(&buffer[..count])?;
+            output
+                .write_all(&buffer[..count])
+                .map_err(|_| Error::Staging)?;
         }
         if size != before.len() || !stable(&before, &input.metadata()?) {
             return Err(Error::Conflict);
         }
         self.finish(&temporary, &output, hash, size)
+            .map_err(|_| Error::Staging)
     }
     pub fn bytes(&mut self, bytes: &[u8]) -> Result<Reference> {
         let (temporary, mut output) = self.temporary()?;

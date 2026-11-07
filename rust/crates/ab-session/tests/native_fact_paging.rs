@@ -416,14 +416,17 @@ fn contacts_pull_all_three_collections_over_the_socket_link() -> Fallible<()> {
             },
         )?;
     }
+    let mut pictured = contact("contacts.contact", "p1");
+    pictured["data"]["image"] = json!({"digest":"d1"});
     set(
         &facts,
         "contacts.contacts",
         Operation {
             generation: "contacts-v1",
             ..operation(vec![
-                contact("contacts.contact", "p1"),
+                pictured,
                 json!({"kind":"blob_handle","digest":"d1","handle":"1:d1"}),
+                json!({"kind":"blob_handle","digest":"orphan","handle":"1:orphan"}),
             ])
         },
     )?;

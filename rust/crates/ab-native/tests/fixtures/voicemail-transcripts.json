@@ -1,0 +1,57 @@
+[
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGGBtZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKlBwgPEBRVJG51bGzTCQoLDA0OWmNvbmZpZGVuY2VYc2VnbWVudHNfEBN0cmFuc2NyaXB0aW9uU3RyaW5nIz/szMzMzMzNgAOAAl8QE1N5bnRoZXRpYyB2b2ljZW1haWzRERJaTlMub2JqZWN0c6ETgATSCRUWF1R0ZXh0Iz/pmZmZmZmagALRGRpUcm9vdIABEgABhqAIERskKTJESlBXYmuBioyOpKeytLa7wMnLztPVAAAAAAAAAQEAAAAAAAAAHAAAAAAAAAAAAAAAAAAAANo=",
+    "transcript": {
+      "text": "Synthetic voicemail",
+      "segments": [
+        {
+          "text": "Synthetic voicemail",
+          "confidence": 0.8
+        }
+      ],
+      "confidence": 0.9
+    }
+  },
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGFhlZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKmBwgNEhQVVSRudWxs0QkKWk5TLm9iamVjdHOiCwyAAoAD0g4PEBFaY29uZmlkZW5jZVR0ZXh0Iz/mZmZmZmZmgATRDxOABVlTeW50aGV0aWNYRmFjZVRpbWXRFxhUcm9vdIABEgABhqAIERskKTJES1FUX2JkZmt2e4SGiYuVnqGmqAAAAAAAAAEBAAAAAAAAABoAAAAAAAAAAAAAAAAAAACt",
+    "transcript": {
+      "text": "Synthetic FaceTime",
+      "segments": [
+        {
+          "text": "Synthetic",
+          "confidence": 0.7
+        },
+        {
+          "text": "FaceTime"
+        }
+      ]
+    }
+  },
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGERRZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKkBwgPEFUkbnVsbNIJCgsNV05TLmtleXNaTlMub2JqZWN0c6EMgAKhDoADXxATdHJhbnNjcmlwdGlvblN0cmluZ18QFURpY3Rpb25hcnkgdHJhbnNjcmlwdNESE1Ryb290gAESAAGGoAgRGyQpMkRJT1RcZ2lrbW+FnaClpwAAAAAAAAEBAAAAAAAAABUAAAAAAAAAAAAAAAAAAACs",
+    "transcript": {
+      "text": "Dictionary transcript",
+      "segments": []
+    }
+  },
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGCw5ZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKiBwhVJG51bGzRCQpYc2VnbWVudHOAAdEMDVRyb290gAESAAGGoAgRGyQpMkRHTVBZW15jZQAAAAAAAAEBAAAAAAAAAA8AAAAAAAAAAAAAAAAAAABq",
+    "error": true
+  },
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGCw5ZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKiBwhVJG51bGzRCQpfEBN0cmFuc2NyaXB0aW9uU3RyaW5ngGPRDA1Ucm9vdIABEgABhqAIERskKTJER01QZmhrcHIAAAAAAAABAQAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAdw==",
+    "error": true
+  },
+  {
+    "archive": "YnBsaXN0MDDUAQIDBAUGFRhZJGFyY2hpdmVyWCRvYmplY3RzVCR0b3BYJHZlcnNpb25fEA9OU0tleWVkQXJjaGl2ZXKlBwgNDhJVJG51bGzSCQoLDFhzZWdtZW50c18QE3RyYW5zY3JpcHRpb25TdHJpbmeAA4ACXxAWU3ludGhldGljIGNhcnJpZXIgdGV4dNEPEFpOUy5vYmplY3RzoRGABNETFFpjb25maWRlbmNlIz/gAAAAAAAA0RYXVHJvb3SAARIAAYagCBEbJCkyREpQVV50dniRlJ+ho6axur3CxAAAAAAAAAEBAAAAAAAAABkAAAAAAAAAAAAAAAAAAADJ",
+    "transcript": {
+      "text": "Synthetic carrier text",
+      "segments": [
+        {
+          "text": "",
+          "confidence": 0.5
+        }
+      ]
+    }
+  }
+]

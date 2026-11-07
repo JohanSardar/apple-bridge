@@ -280,6 +280,59 @@ fn gateway_flow(world: &World, evidence: &mut Evidence) -> Result<()> {
     }
     Ok(())
 }
+fn voicemail_checks(evidence: &mut Evidence) {
+    rust_tests(
+        evidence,
+        "voicemail_archives_and_local_audio",
+        "ab-native",
+        &[
+            "--test",
+            "voicemail",
+            "--test",
+            "voicemail_limits",
+            "--test",
+            "voicemail_scan_budget",
+        ],
+    );
+    rust_tests(
+        evidence,
+        "voicemail_staging_races",
+        "ab-native",
+        &["--lib", "telephony::tests"],
+    );
+    rust_tests(
+        evidence,
+        "voicemail_frame_budget_keeps_producer_alive",
+        "ab-session",
+        &[
+            "--test",
+            "voicemail_limits",
+            "--test",
+            "capture_handle_budget",
+            "--test",
+            "voicemail_scan_budget",
+        ],
+    );
+    rust_tests(
+        evidence,
+        "voicemail_captured_asset_signatures",
+        "ab-session",
+        &["--lib", "readers::telephony::tests"],
+    );
+    rust_tests(
+        evidence,
+        "voicemail_blob_restart_and_late_assets",
+        "ab-session",
+        &["--test", "capture_producer", "rust_voicemail"],
+    );
+    rust_tests(
+        evidence,
+        "voicemail_cli_mcp_and_audio_download",
+        "ab-runtime",
+        &["--test", "voicemail"],
+    );
+}
+
 pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     match id.as_str() {
@@ -301,7 +354,8 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
         ),
         "CALLS-REPLICA" => calls_replica(world, evidence)?,
         "CALL-READ-REAL" => calls_real(world, evidence)?,
-        "VM-CAPTURE" | "VMEMO-CAPTURE" => rust_tests(
+        "VM-CAPTURE" => voicemail_checks(evidence),
+        "VMEMO-CAPTURE" => rust_tests(
             evidence,
             "metadata_wal_insert_update_delete",
             "ab-session",

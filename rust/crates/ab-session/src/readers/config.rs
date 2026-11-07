@@ -197,7 +197,10 @@ pub fn from_config_linked(
                 config.local_name,
             )),
             "phone" => Box::new(TelephonyReader::calls(&config.root)),
-            "voicemail" => Box::new(TelephonyReader::voicemail(&config.root)),
+            "voicemail" => {
+                let staging = config.staging.clone().ok_or(Error::Invalid)?;
+                Box::new(TelephonyReader::voicemail(&config.root, &staging)?)
+            }
             "voice_memos" => {
                 let staging = config.staging.clone().ok_or(Error::Invalid)?;
                 Box::new(VoiceMemosReader::new(&config.root, &staging)?)

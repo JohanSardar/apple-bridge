@@ -285,13 +285,30 @@ and stale Safari acknowledgements. Real-data comparison remains orchestrator wor
 
 ## Calls and Voicemail
 
-`telephony::calls` / `voicemail` accept an explicit database path, acknowledged
-`capture::State`, scan context, live flag and row bound. Their pending batches
-include scoped aliases, coverage and complete-scan evidence. They preserve the
-Swift ordering and numeric mappings. `State::commit` rejects stale/duplicate
-acknowledgements; source or collection changes require a fresh State. Scan
-failure leaves the committed state untouched. A new database/schema/metadata
-UUID generation emits a full scan without absence from the prior generation.
+`telephony::calls` accepts an explicit database path, acknowledged
+`capture::State`, scan context, live flag and row bound. `telephony::VoicemailReader::open(staging)`
+owns voicemail state and private content-addressed audio staging; `scan(path, context, live, max_rows)`
+returns pending batches with scoped aliases, blob handles, coverage and complete-scan evidence.
+`commit` rejects stale/duplicate acknowledgements. Failed scans leave committed state untouched;
+a new database/schema/metadata UUID generation emits a full scan without absence from the prior generation.
+
+`telephony::voicemail_transcript` decodes bounded carrier/FaceTime keyed archives using the existing
+plist resolver, sharing a 1 MiB string/data/key-byte budget between decoding and UID resolution.
+The default shared plist budget is 16 MiB. Native-encoded voicemail observations are limited to
+128 KiB; over-budget transcript content is omitted and marked unsupported without dropping metadata or audio.
+Each scan retains at most 4 MiB of encoded transcript-bearing records. Excess content is pending;
+`needs_retry` keeps enrichment eligible without a changed input signature. Voicemail uses
+`capture::State::prepare_fingerprinted` and `reuse`: unchanged rows keep digest-only acknowledgement
+state and emit no update, so later passes have budget for pending rows without removing old content.
+Temporary staging failures return `capture::Error::Staging` without committing asset versions.
+The asset store repairs an existing corrupt digest-addressed file by atomically replacing it with
+verified staged bytes, distinct from source-change conflicts.
+Optional schema columns do not suppress metadata. `audio_signature` retains the versions observed
+around each staging attempt, including missing paths. `AudioSignature::current` samples the same
+paths for change detection. Changed versions or staging conflicts abort the scan for retry;
+the session caches the captured signature rather than a new sample. `read_blob` serves bounded ranges
+of privately staged AMR/M4A/audio-only MOV originals, including after restart. Source paths cannot
+escape the configured root; dataless files are not downloaded. See the [voicemail API contract](../../docs/reference/voicemail.md).
 
 The lab CLI accepts `calls` and `voicemail` with store.db + context.json under
 its explicit fixture directory. Interactive input is a row limit (or scan for

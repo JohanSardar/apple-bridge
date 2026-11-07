@@ -64,7 +64,7 @@ Configuration in a lab world: `AB_LAB_SESSION_SOURCES=a,b` writes `session-home/
 - A scan is split into frames like the Swift sink: 16000 bytes of observations per frame (64000 when
   `live`), absences last, one scan id throughout. Every frame but the last carries a derived checkpoint,
   waits for its own `Committed`, and uses the previous frame's checkpoint as `predecessor`. Only the
-  final frame's `Committed` calls `CaptureReader::commit`.
+  final frame's `Committed` calls `CaptureReader::commit`. Each chunk keeps only handles referenced by its observations. The complete native-encoded frame, including handles, header and derived checkpoint/predecessor, must fit 262144 bytes; the observation targets remain soft so Messages' pre-sized history pages are preserved.
 - A reader error or unchanged input yields no frame; absence is never invented. A new connection
   builds fresh readers, so the first scan is full (`live` false) and replays under the gateway's
   committed predecessor; a generation change is one rescan.
@@ -95,8 +95,11 @@ Rolling out another source (what to copy, in order):
 
 Calls, Voicemail and Voice Memos (`phone`, `voicemail`, `voice_memos`) follow the same pattern. Their
 fixture databases live in the source root as `CallHistory.storedata`, `voicemail.db` and
-`CloudRecordings.db`; the reader skips unchanged input by the database and `-wal` signature. Voice Memos
-returns no frame when a scan would carry blob handles, because the session cannot serve blobs yet. The lab
+`CloudRecordings.db`; voicemail prefers `FaceTimeMessageStore-local.sqlitedb` when present. The readers
+skip unchanged database/`-wal` input; voicemail also compares current audio versions against the versions captured around staging, including missing paths. Native source races and transient staging errors retry without caching a failed signature. Pending transcripts override unchanged-input skipping until later passes finish enrichment. Arrival/replacement after capture changes the next signature even if it precedes acceptance; acceptance never resamples audio for the committed signature.
+Voicemail deliberately declines persisted input tokens and scans once after each restart, rebuilding
+asset tracking and refreshing older metadata-only captures even when the database has not changed.
+Voice Memos and voicemail serve content-addressed audio through session-owned blob handles. The lab
 world writes these databases in place (`World.StageSessionMedia`) from `verifyNativeMediaGateway` when the
 source is in `AB_LAB_SESSION_SOURCES`; the version travels in `duration` (100 + version).
 `AB_LAB_SESSION_CONTROL=empty` skips the writes and is the negative control. `AB_SESSION_RUST_POLL_MS` is
@@ -125,7 +128,7 @@ Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thum
 ## Readers across restarts
 
 - **Checkpoint persistence.** With a state directory (`<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
-- **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos (`voice_memos`, config `root` and required `staging`) produces `voice-memo-blob:<digest>` handles; the asset store re-adopts staged files on open, so handles keep resolving after a restart.
+- **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos and voicemail (config `root` and required `staging`) produce `voice-memo-blob:<digest>` and `voicemail-blob:<digest>` handles respectively; their asset stores re-adopt staged files on open, so handles keep resolving after a restart.
 - **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. `watch` in the config file (default true).
 - **Override file.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`), for example `{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`. A source outside `production::SUPPORTED` fails startup.
 
@@ -147,7 +150,7 @@ removes them on purpose.
 
 Bundling: `AB_SESSION_BINARY=<path>` or `AB_SESSION_BUILD=1` (builds `ab-session` through `packaging/dev/build-session.sh`) makes `packaging/dev/build-helper.sh` copy it to `Contents/MacOS/ab-session`; `sign.sh` signs it with the identity of the app before the app itself, so the app's designated requirement is unchanged. Both values are part of the signed-app cache key.
 
-Staging never lives in an Apple container. `voice_memos` and `notes` need a `staging` path that is not inside or above the source root (symlinks and `..` resolved); `production::load` fills `<home>/session/staging/<source>` when it is absent and `from_config` fails without one. `tests/staging_confinement.rs` fails if a scan, commit or blob read creates any path under the root. Staged files are copied to a temp name and hard-linked into place inside the staging directory, so no rename crosses a device.
+Staging never lives in an Apple container. `voice_memos`, `voicemail` and `notes` need a `staging` path that is not inside or above the source root (symlinks and `..` resolved); `production::load` fills `<home>/session/staging/<source>` when it is absent and `from_config` fails without one. `tests/staging_confinement.rs` fails if a scan, commit or blob read creates any path under the root. Staged files are copied to a temp name and hard-linked into place inside the staging directory, so no rename crosses a device.
 
 Open items: watcher-driven scheduling and persistence are proven for Screen Time in the sim; blob reads and effects plus capture are proven by socketpair tests only (simapple has no native/1 endpoint and no Voice Memos file fixture world); the other sources still need readers.
 

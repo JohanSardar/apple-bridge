@@ -658,21 +658,16 @@ impl Hub {
                 adopts,
             )
         };
-        let checkpoint = text(capture, "checkpoint")?.to_owned();
-        let chunks = split(capture)?;
+        let mut capture = capture.clone();
+        capture["generation"] = Value::String(generation.clone());
+        capture["predecessor"] =
+            Value::String(self.core()?.flights.predecessor(source, &generation));
+        capture["t"] = json!("Capture");
+        let chunks = split(&capture)?;
         let final_index = chunks.len() - 1;
-        for (index, mut chunk) in chunks.into_iter().enumerate() {
+        for (index, chunk) in chunks.into_iter().enumerate() {
             let last = index == final_index;
-            let chunk_checkpoint = if last {
-                checkpoint.clone()
-            } else {
-                format!("{checkpoint}-{index}")
-            };
-            chunk["checkpoint"] = Value::String(chunk_checkpoint.clone());
-            chunk["generation"] = Value::String(generation.clone());
-            let predecessor = self.core()?.flights.predecessor(source, &generation);
-            chunk["predecessor"] = Value::String(predecessor);
-            chunk["t"] = json!("Capture");
+            let chunk_checkpoint = text(&chunk, "checkpoint")?.to_owned();
             let bytes = frame_bytes(&chunk)?;
             let size = u64::try_from(bytes.len()).map_err(|_| Error::Invalid)?;
             let observations: &[Value] =

@@ -48,7 +48,7 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 | Files | Metadata, search, read (opt-in) | Create, write, move, rename, trash, tag |
 | Safari | History, bookmarks, tabs, Reading List | None |
 | Screen Time | Estimated use per app, per day | None |
-| Phone and voicemail | Call history, voicemail details | None |
+| Phone and voicemail | Call history, [voicemail transcripts and local audio](docs/reference/voicemail.md) | None |
 | Voice Memos | Recordings | None |
 | Mac | Battery, display, network, Bluetooth and more | Volume, appearance, apps, clipboard, notifications and more |
 | Shortcuts | Installed shortcuts and actions | Run a shortcut |
@@ -69,7 +69,7 @@ An iPhone app adds health, location, alarms, Face ID approvals and more. It is i
 | | `bridge connector allow` | Allow an app that is waiting to connect |
 | | `bridge agent create`, `list`, `revoke` | Manage agent access |
 | Read | `bridge stats` | Counts per source, never content |
-| | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes` and `mail` |
+| | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes`, `mail` and `voicemail` |
 | | `bridge search "dinner"` | Search everything synced |
 | | `bridge call --list` | List every read operation you can call |
 | Remote | `bridge remote on`, `bridge remote off` | Use it from other computers. Off by default |

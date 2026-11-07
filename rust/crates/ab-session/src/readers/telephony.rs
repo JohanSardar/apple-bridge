@@ -1,50 +1,89 @@
 use super::{
     CaptureReader, Debug, Error, MAX_ROWS, Path, PathBuf, Readiness, ReadinessContext, ScanContext,
-    Signature, Value, capture_value, context_for, decode, encode, file_signature, json,
-    reader_error,
+    Signature, Value, capture_value, confine_staging, context_for, decode, encode, file_signature,
+    json, reader_error,
 };
 use ab_native::{capture, telephony};
 
-type TelephonyScan =
-    fn(&Path, &capture::State, &capture::Context, bool, usize) -> capture::Result<capture::Pending>;
+#[cfg(test)]
+mod tests;
+
+type InputSignature = (Signature, telephony::AudioSignature);
 
 #[derive(Debug)]
 pub struct TelephonyReader {
     name: &'static str,
     path: PathBuf,
     preferred: Option<PathBuf>,
-    scan: TelephonyScan,
     state: capture::State,
-    pending: Option<(capture::Pending, Signature)>,
-    committed: Option<Signature>,
-    failed: Option<Signature>,
+    staging: Option<PathBuf>,
+    assets: Option<telephony::VoicemailReader>,
+    pending: Option<(capture::Pending, InputSignature)>,
+    committed: Option<InputSignature>,
+    failed: Option<InputSignature>,
     warm: bool,
 }
 
 impl TelephonyReader {
     #[must_use]
     pub fn calls(root: &Path) -> Self {
-        Self::new(
-            "phone",
-            root.join("CallHistory.storedata"),
-            telephony::calls,
+        Self::new("phone", root.join("CallHistory.storedata"))
+    }
+
+    pub fn voicemail(root: &Path, staging: &Path) -> Result<Self, Error> {
+        confine_staging(root, staging)?;
+        let mut reader = Self::new("voicemail", root.join("voicemail.db"));
+        reader.preferred = Some(root.join("FaceTimeMessageStore-local.sqlitedb"));
+        reader.staging = Some(staging.to_owned());
+        Ok(reader)
+    }
+
+    fn assets(&mut self) -> Result<&mut telephony::VoicemailReader, Error> {
+        if self.assets.is_none() {
+            let staging = self.staging.as_ref().ok_or(Error::Invalid)?;
+            self.assets = Some(telephony::VoicemailReader::open(staging).map_err(reader_error)?);
+        }
+        self.assets.as_mut().ok_or(Error::Conflict)
+    }
+
+    fn signature(&self) -> InputSignature {
+        (
+            file_signature(&self.path),
+            self.assets
+                .as_ref()
+                .map(|reader| reader.audio_signature().current())
+                .unwrap_or_default(),
         )
     }
 
-    #[must_use]
-    pub fn voicemail(root: &Path) -> Self {
-        let mut reader = Self::new("voicemail", root.join("voicemail.db"), telephony::voicemail);
-        reader.preferred = Some(root.join("FaceTimeMessageStore-local.sqlitedb"));
-        reader
+    fn accept(
+        &mut self,
+        pending: capture::Pending,
+        store: Signature,
+    ) -> Result<Option<Value>, Error> {
+        if file_signature(&self.path) != store {
+            return Ok(None);
+        }
+        let current = (
+            store,
+            self.assets
+                .as_ref()
+                .map(|reader| reader.audio_signature().clone())
+                .unwrap_or_default(),
+        );
+        let value = capture_value(&pending)?;
+        self.pending = Some((pending, current));
+        Ok(Some(value))
     }
 
-    fn new(name: &'static str, path: PathBuf, scan: TelephonyScan) -> Self {
+    fn new(name: &'static str, path: PathBuf) -> Self {
         Self {
             name,
             path,
             preferred: None,
-            scan,
             state: capture::State::default(),
+            staging: None,
+            assets: None,
             pending: None,
             committed: None,
             failed: None,
@@ -63,12 +102,33 @@ impl CaptureReader for TelephonyReader {
     }
 
     fn token(&self) -> Option<String> {
-        self.committed.as_ref().map(encode)
+        if self.name == "voicemail" {
+            return None;
+        }
+        self.committed.as_ref().map(|(store, _)| encode(store))
     }
 
     fn resume(&mut self, token: &str) -> bool {
-        self.committed = decode(token);
+        if self.name == "voicemail" {
+            self.committed = None;
+            return false;
+        }
+        self.committed = decode(token).map(|store| (store, telephony::AudioSignature::default()));
         self.committed.is_some()
+    }
+
+    fn owns(&self, handle: &str) -> bool {
+        self.name == "voicemail" && handle.starts_with("voicemail-blob:")
+    }
+
+    fn handle_prefix(&self) -> Option<&'static str> {
+        (self.name == "voicemail").then_some("voicemail-blob:")
+    }
+
+    fn blob(&mut self, handle: &str, offset: u64, length: usize) -> Result<Value, Error> {
+        self.assets()?
+            .read_blob(handle, offset, length)
+            .map_err(reader_error)
     }
 
     fn readiness(&mut self, _context: &ReadinessContext<'_>) -> Option<Readiness> {
@@ -94,10 +154,7 @@ impl CaptureReader for TelephonyReader {
         } else if !store.exists() {
             Readiness::not("unavailable", unknown, "store not present")
         } else if telephony::voicemail_readable(store) {
-            Readiness::ready(
-                json!({"fields": "metadata_only", "transcript": "unavailable", "audio": "unavailable"}),
-                &[],
-            )
+            Readiness::ready(telephony::voicemail_coverage(), &[])
         } else {
             Readiness::not("unavailable", unknown, "store_access_or_schema_unavailable")
         })
@@ -113,16 +170,32 @@ impl CaptureReader for TelephonyReader {
             self.path = preferred.clone();
             self.preferred = None;
         }
-        let current = file_signature(&self.path);
-        if current.is_empty() || self.committed.as_ref() == Some(&current) {
+        let store = file_signature(&self.path);
+        let current = self.signature();
+        let retry = self
+            .assets
+            .as_ref()
+            .is_some_and(telephony::VoicemailReader::needs_retry);
+        if store.is_empty() || self.committed.as_ref() == Some(&current) && !retry {
             return Ok(None);
         }
         let read = context_for(context)?;
         if self.failed.as_ref() == Some(&current) {
             return Ok(None);
         }
-        let pending = match (self.scan)(&self.path, &self.state, &read, self.warm, MAX_ROWS) {
+        let scanned = if self.name == "voicemail" {
+            let path = self.path.clone();
+            let warm = self.warm;
+            let Ok(reader) = self.assets() else {
+                return Ok(None);
+            };
+            reader.scan(&path, &read, warm, MAX_ROWS)
+        } else {
+            telephony::calls(&self.path, &self.state, &read, self.warm, MAX_ROWS)
+        };
+        let pending = match scanned {
             Ok(pending) => pending,
+            Err(capture::Error::Conflict | capture::Error::Staging) => return Ok(None),
             Err(error) if error.is_busy() => return Ok(None),
             Err(error) => {
                 eprintln!("ab-session: {} scan: {error}", self.name);
@@ -131,17 +204,16 @@ impl CaptureReader for TelephonyReader {
             }
         };
         self.failed = None;
-        if file_signature(&self.path) != current {
-            return Ok(None);
-        }
-        let value = capture_value(&pending)?;
-        self.pending = Some((pending, current));
-        Ok(Some(value))
+        self.accept(pending, store)
     }
 
     fn commit(&mut self) -> Result<(), Error> {
         let (pending, current) = self.pending.take().ok_or(Error::Conflict)?;
-        self.state.commit(pending).map_err(reader_error)?;
+        if self.name == "voicemail" {
+            self.assets()?.commit(pending).map_err(reader_error)?;
+        } else {
+            self.state.commit(pending).map_err(reader_error)?;
+        }
         self.committed = Some(current);
         self.warm = true;
         Ok(())
