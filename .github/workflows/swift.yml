@@ -46,6 +46,7 @@ jobs:
           "$output/SourceSupportChecks"
           "$output/NativeChecks" lab/fixtures/native-1/facts.json
           "$output/CaptureChecks"
+          "$output/PhotosChecks"
           "$output/FilesChecks"
           "$output/MessagesSafetyChecks"
           "$output/SessionChecks"

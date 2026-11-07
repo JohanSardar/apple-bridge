@@ -26,7 +26,7 @@ let package = Package(
     platforms: [.macOS("26.0")],
     products: [.executable(name: "AppleBridgeHelper", targets: ["AppleBridgeHelper"])],
     targets: sourceTargets + [
-        .testTarget(name: "PhotosTests", dependencies: ["PhotosSource", "SourceSupport"], path: "Tests/PhotosTests"),
+        .executableTarget(name: "PhotosChecks", dependencies: ["PhotosSource"]),
         .target(name: "SourceSupport"),
         .target(name: "NativeProtocol", dependencies: ["SourceSupport"]),
         .executableTarget(name: "MessagesSafetyChecks", dependencies: ["MessagesSource", "SourceSupport"]),
