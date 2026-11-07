@@ -103,7 +103,9 @@ fn queries(client: &Client, evidence: &mut Evidence) -> Result<()> {
     )?;
     evidence.check(
         "cursor_enumeration_ends_without_full_count",
-        last["assets"].as_array().is_some_and(|rows| rows.len() == 1)
+        last["assets"]
+            .as_array()
+            .is_some_and(|rows| rows.len() == 1)
             && last["assets"][0]["id"] != next["assets"][0]["id"]
             && last["assets"][0]["id"] != search["assets"][0]["id"]
             && last["next_cursor"].is_null()

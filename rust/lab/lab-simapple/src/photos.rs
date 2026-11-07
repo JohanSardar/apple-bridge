@@ -69,10 +69,9 @@ impl Library {
                         })
                 });
                 if let Some(cursor) = args["cursor"].as_str() {
-                    let cursor: Value = serde_json::from_slice(
-                        &STANDARD.decode(cursor).map_err(|_| "invalid")?,
-                    )
-                    .map_err(|_| "invalid")?;
+                    let cursor: Value =
+                        serde_json::from_slice(&STANDARD.decode(cursor).map_err(|_| "invalid")?)
+                            .map_err(|_| "invalid")?;
                     let date = cursor["created_at"].as_str().ok_or("invalid")?;
                     let id = cursor["id"].as_str().ok_or("invalid")?;
                     assets.retain(|asset| {
@@ -87,19 +86,19 @@ impl Library {
                 let end = assets.len().min(if near { 1000 } else { limit });
                 let next = if end < assets.len() {
                     let last = &assets[end - 1];
-                    json!(STANDARD.encode(
-                        serde_json::to_vec(
-                            &json!({"created_at":last["created_at"],"id":last["id"]}),
+                    json!(
+                        STANDARD.encode(
+                            serde_json::to_vec(
+                                &json!({"created_at":last["created_at"],"id":last["id"]}),
+                            )
+                            .map_err(|_| "invalid")?,
                         )
-                        .map_err(|_| "invalid")?,
-                    ))
+                    )
                 } else {
                     Value::Null
                 };
                 let rows = if near { &assets[..0] } else { &assets[..end] };
-                Ok(
-                    json!({"assets":rows,"examined_count":end,"next_cursor":next,"limited":false}),
-                )
+                Ok(json!({"assets":rows,"examined_count":end,"next_cursor":next,"limited":false}))
             }
             "photos.get" => {
                 let mut asset = self
