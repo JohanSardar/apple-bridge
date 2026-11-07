@@ -261,10 +261,12 @@ fn source_status(home: &Path, permission: &Permission) -> Outcome<String> {
     if permission.source == "capture" {
         let mut statement = connection.prepare(
             "SELECT json_extract(CAST(payload AS TEXT),'$.data.coverage.permissions') FROM records WHERE collection='system.source' AND deleted=0 AND json_extract(CAST(payload AS TEXT),'$.data.source')='capture'",
-        )?;
-        let rows = statement.query_map([], |row| row.get::<_, Option<String>>(0))?;
+        ).map_err(|_| Failure::not_set_up(home))?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, Option<String>>(0))
+            .map_err(|_| Failure::not_set_up(home))?;
         for row in rows {
-            if let Some(value) = row? {
+            if let Some(value) = row.map_err(|_| Failure::not_set_up(home))? {
                 let states: Option<BTreeMap<String, bool>> = serde_json::from_str(&value)?;
                 if let Some(allowed) = states.as_ref().and_then(|states| states.get(permission.id))
                 {
