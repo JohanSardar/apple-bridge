@@ -16,7 +16,9 @@
 | `audio.state` | string | `present` |
 | `audio.mime_type` | string | `audio/amr` for AMR; `audio/mp4` for M4A or audio-only MOV |
 
-`missing` means no transcript bytes or no readable local recording. `unavailable` means the store lacks the relevant optional column/value. `unsupported` means a transcript cannot be decoded or the recording format is not supported. Missing mailbox/provider columns produce `unknown`, not an invented inbox or carrier classification. A transcript can be present without audio, and vice versa. Fields containing unavailable content are omitted, not null.
+`missing` means no transcript bytes or no readable local recording. `unavailable` means the store lacks the relevant optional column/value. `unsupported` means a transcript cannot be decoded within its budgets or the recording format is not supported. Missing mailbox/provider columns produce `unknown`, not an invented inbox or carrier classification. A transcript can be present without audio, and vice versa. Fields containing unavailable content are omitted, not null.
+
+Transcript decoding shares a 1 MiB cumulative string/data/key-byte budget across plist parsing and UID resolution, in addition to depth and node limits. Each native-encoded observation is limited to 128 KiB, including JSON escaping and metadata. An over-budget transcript is omitted and marked `unsupported`; metadata and local audio remain. If the metadata alone cannot fit, the scan fails without establishing absence. Audio changes during staging retry the scan; later changes are compared against the captured asset version, not a post-scan sample.
 
 Download an authorized recording with `GET /v1/blobs/<audio.digest>?record=<record.id>` using the same credentials as the record read. An MCP client can use the gateway's authenticated blob endpoint after `records_query`. Audio bytes are not embedded in record JSON or MCP text. Blob availability follows the normal staging/replication lifecycle; do not treat metadata presence as successful playback or transcoding. AMR support depends on the player's codecs.
 

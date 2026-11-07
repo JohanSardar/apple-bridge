@@ -96,7 +96,7 @@ Rolling out another source (what to copy, in order):
 Calls, Voicemail and Voice Memos (`phone`, `voicemail`, `voice_memos`) follow the same pattern. Their
 fixture databases live in the source root as `CallHistory.storedata`, `voicemail.db` and
 `CloudRecordings.db`; voicemail prefers `FaceTimeMessageStore-local.sqlitedb` when present. The readers
-skip unchanged database/`-wal` input; voicemail also tracks local audio paths for late arrival/removal.
+skip unchanged database/`-wal` input; voicemail also compares current audio versions against the versions captured around staging, including missing paths. Native staging conflicts retry without caching a failed signature. Arrival/replacement after capture changes the next signature even if it precedes acceptance; acceptance never resamples audio for the committed signature.
 Voicemail deliberately declines persisted input tokens and scans once after each restart, rebuilding
 asset tracking and refreshing older metadata-only captures even when the database has not changed.
 Voice Memos and voicemail serve content-addressed audio through session-owned blob handles. The lab

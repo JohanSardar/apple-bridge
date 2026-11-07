@@ -778,7 +778,7 @@ features:
       - {id: VMEMO-CAPTURE, levels: [sim]}
       - {id: VM-CAPTURE, levels: [sim]}
       - {id: VMEMO-LATE-ASSETS, levels: [sim]}
-    notes: "Voicemail supports archived carrier/FaceTime transcripts and local AMR/M4A/audio-only MOV originals through MCP and bridge read voicemail. Real snapshot proof matched 98 messages, 74 transcripts and 98 audio files with one fetched SHA-256 match; signed Helper/TCC attribution and real-data gateway/replica delivery remain unverified. See lab/evidence/voicemail-930.json. Voice Memos real/new-recording qualification was not repeated in this run."
+    notes: "Voicemail supports archived carrier/FaceTime transcripts and local AMR/M4A/audio-only MOV originals through MCP and bridge read voicemail. Original-head real snapshot proof (fbd6984) matched 98 messages, 74 transcripts and 98 audio files with one fetched SHA-256 match. Transcript byte/record limits and asset races are synthetic-verified; the real snapshot was not repeated after hardening. Signed Helper/TCC attribution and real-data gateway/replica delivery remain unverified. See lab/evidence/voicemail-930.json. Voice Memos real/new-recording qualification was not repeated in this run."
 
   - id: shortcuts.actions
     title: Bounded installed App Intents discovery

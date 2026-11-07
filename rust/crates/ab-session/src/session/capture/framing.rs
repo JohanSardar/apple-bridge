@@ -32,7 +32,10 @@ pub(super) fn split(capture: &Value) -> Result<Vec<Value>, Error> {
     let mut groups: Vec<Vec<Value>> = vec![Vec::new()];
     let mut bytes = 0;
     for row in ordered {
-        let size = serde_json::to_vec(row)?.len() + 1;
+        let size = ab_native::native_json::record_data(row)
+            .map_err(|error| Error::Reader(error.to_string()))?
+            .len()
+            + 1;
         if bytes + size > limit && groups.last().is_some_and(|group| !group.is_empty()) {
             groups.push(Vec::new());
             bytes = 0;
@@ -79,6 +82,21 @@ mod tests {
         let mut live = capture;
         live["live"] = json!(true);
         assert_eq!(split(&live)?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn chunks_budget_native_json_escaping_before_grouping() -> Result<(), crate::Error> {
+        let capture = json!({"source":"voicemail", "live":true, "observations":[
+            {"kind":"upsert", "id":"one", "text":"<".repeat(16_000)},
+            {"kind":"upsert", "id":"two", "text":"<".repeat(16_000)},
+            {"kind":"upsert", "id":"three", "text":"<".repeat(16_000)}
+        ]});
+        let chunks = split(&capture)?;
+        assert_eq!(chunks.len(), 3);
+        for chunk in chunks {
+            assert!(frame_bytes(&chunk).is_ok());
+        }
         Ok(())
     }
 

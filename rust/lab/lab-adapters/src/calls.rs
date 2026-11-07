@@ -306,7 +306,25 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
                 evidence,
                 "voicemail_archives_and_local_audio",
                 "ab-native",
-                &["--test", "voicemail"],
+                &["--test", "voicemail", "--test", "voicemail_limits"],
+            );
+            rust_tests(
+                evidence,
+                "voicemail_staging_races",
+                "ab-native",
+                &["--lib", "telephony::tests"],
+            );
+            rust_tests(
+                evidence,
+                "voicemail_frame_budget_keeps_producer_alive",
+                "ab-session",
+                &["--test", "voicemail_limits"],
+            );
+            rust_tests(
+                evidence,
+                "voicemail_captured_asset_signatures",
+                "ab-session",
+                &["--lib", "readers::telephony::tests"],
             );
             rust_tests(
                 evidence,

@@ -5,6 +5,11 @@ use super::{
 };
 use ab_native::{capture, telephony};
 
+#[cfg(test)]
+mod tests;
+
+type InputSignature = (Signature, telephony::AudioSignature);
+
 #[derive(Debug)]
 pub struct TelephonyReader {
     name: &'static str,
@@ -13,9 +18,9 @@ pub struct TelephonyReader {
     state: capture::State,
     staging: Option<PathBuf>,
     assets: Option<telephony::VoicemailReader>,
-    pending: Option<(capture::Pending, Signature)>,
-    committed: Option<Signature>,
-    failed: Option<Signature>,
+    pending: Option<(capture::Pending, InputSignature)>,
+    committed: Option<InputSignature>,
+    failed: Option<InputSignature>,
     warm: bool,
 }
 
@@ -41,14 +46,34 @@ impl TelephonyReader {
         self.assets.as_mut().ok_or(Error::Conflict)
     }
 
-    fn signature(&self) -> Signature {
-        let mut signature = file_signature(&self.path);
-        if let Some(reader) = &self.assets {
-            for path in reader.tracked_audio() {
-                signature.extend(file_signature(path));
-            }
+    fn signature(&self) -> InputSignature {
+        (
+            file_signature(&self.path),
+            self.assets
+                .as_ref()
+                .map(|reader| reader.audio_signature().current())
+                .unwrap_or_default(),
+        )
+    }
+
+    fn accept(
+        &mut self,
+        pending: capture::Pending,
+        store: Signature,
+    ) -> Result<Option<Value>, Error> {
+        if file_signature(&self.path) != store {
+            return Ok(None);
         }
-        signature
+        let current = (
+            store,
+            self.assets
+                .as_ref()
+                .map(|reader| reader.audio_signature().clone())
+                .unwrap_or_default(),
+        );
+        let value = capture_value(&pending)?;
+        self.pending = Some((pending, current));
+        Ok(Some(value))
     }
 
     fn new(name: &'static str, path: PathBuf) -> Self {
@@ -80,7 +105,7 @@ impl CaptureReader for TelephonyReader {
         if self.name == "voicemail" {
             return None;
         }
-        self.committed.as_ref().map(encode)
+        self.committed.as_ref().map(|(store, _)| encode(store))
     }
 
     fn resume(&mut self, token: &str) -> bool {
@@ -88,7 +113,7 @@ impl CaptureReader for TelephonyReader {
             self.committed = None;
             return false;
         }
-        self.committed = decode(token);
+        self.committed = decode(token).map(|store| (store, telephony::AudioSignature::default()));
         self.committed.is_some()
     }
 
@@ -163,6 +188,7 @@ impl CaptureReader for TelephonyReader {
         };
         let pending = match scanned {
             Ok(pending) => pending,
+            Err(capture::Error::Conflict) => return Ok(None),
             Err(error) if error.is_busy() => return Ok(None),
             Err(error) => {
                 eprintln!("ab-session: {} scan: {error}", self.name);
@@ -171,13 +197,7 @@ impl CaptureReader for TelephonyReader {
             }
         };
         self.failed = None;
-        if file_signature(&self.path) != store {
-            return Ok(None);
-        }
-        let current = self.signature();
-        let value = capture_value(&pending)?;
-        self.pending = Some((pending, current));
-        Ok(Some(value))
+        self.accept(pending, store)
     }
 
     fn commit(&mut self) -> Result<(), Error> {

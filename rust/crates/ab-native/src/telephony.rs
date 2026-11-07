@@ -2,6 +2,13 @@ use crate::capture::{self, Context, Error, Pending, Result, ScanInput, Snapshot,
 use serde_json::json;
 use std::{path::Path, time::Duration};
 const GENERATION: &str = "SELECT Z_UUID FROM Z_METADATA";
+const TRANSCRIPT_DECODE_BYTES: usize = 1024 * 1024;
+const VOICEMAIL_RECORD_BYTES: usize = 128 * 1024;
+type Stage<'a> =
+    dyn FnMut(&mut crate::assets::Store, &Path, &Path) -> Result<crate::assets::Reference> + 'a;
+
+#[cfg(test)]
+mod tests;
 
 const CALL_COLUMNS: &[&str] = &[
     "Z_PK",
@@ -96,7 +103,7 @@ pub fn calls(
 
 pub fn voicemail_transcript(bytes: &[u8]) -> Result<serde_json::Value> {
     use crate::plist::{self, Value};
-    let root = plist::archive_root(bytes)?;
+    let root = plist::archive_root_limited(bytes, TRANSCRIPT_DECODE_BYTES)?;
     let (text, elements, confidence) = match &root {
         Value::Dictionary(fields)
             if fields.contains_key("transcriptionString") || fields.contains_key("segments") =>
@@ -151,16 +158,88 @@ pub fn voicemail_transcript(bytes: &[u8]) -> Result<serde_json::Value> {
     Ok(result)
 }
 
+fn voicemail_observation(
+    id: &str,
+    generation: &str,
+    data: serde_json::Value,
+    context: &Context,
+) -> Result<capture::Observation> {
+    let mut observation = capture::upsert(
+        "voicemail.message",
+        id,
+        Some(format!("voicemail/{generation}/{id}")),
+        data,
+        context,
+    )?;
+    let size = |observation: &capture::Observation| -> Result<usize> {
+        Ok(crate::native_json::record_data(&serde_json::to_value(observation)?)?.len())
+    };
+    if size(&observation)? > VOICEMAIL_RECORD_BYTES {
+        let mut data: serde_json::Value =
+            serde_json::from_str(observation.data.as_ref().ok_or(Error::Corrupt)?.get())?;
+        let fields = data.as_object_mut().ok_or(Error::Corrupt)?;
+        if fields.remove("transcript").is_none() {
+            return Err(Error::Unsupported);
+        }
+        fields.insert("transcript_state".into(), json!("unsupported"));
+        observation.data = Some(serde_json::from_slice(&crate::native_json::record_data(
+            &data,
+        )?)?);
+    }
+    if size(&observation)? > VOICEMAIL_RECORD_BYTES {
+        return Err(Error::Unsupported);
+    }
+    Ok(observation)
+}
+
 #[must_use]
 pub fn voicemail_coverage() -> serde_json::Value {
     json!({"fields":"metadata_and_local_assets","transcript":"archived_if_present","audio":"local_if_present"})
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct AudioVersion {
+    device: u64,
+    inode: u64,
+    size: u64,
+    modified: Option<std::time::SystemTime>,
+    changed: (i64, i64),
+    dataless: bool,
+}
+
+fn audio_version(path: &Path) -> Option<AudioVersion> {
+    use std::os::unix::fs::MetadataExt;
+    let metadata = std::fs::metadata(path).ok()?;
+    Some(AudioVersion {
+        device: metadata.dev(),
+        inode: metadata.ino(),
+        size: metadata.len(),
+        modified: metadata.modified().ok(),
+        changed: (metadata.ctime(), metadata.ctime_nsec()),
+        dataless: crate::assets::dataless(&metadata),
+    })
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AudioSignature(std::collections::BTreeMap<std::path::PathBuf, Option<AudioVersion>>);
+
+impl AudioSignature {
+    #[must_use]
+    pub fn current(&self) -> Self {
+        Self(
+            self.0
+                .keys()
+                .map(|path| (path.clone(), audio_version(path)))
+                .collect(),
+        )
+    }
 }
 
 #[derive(Debug)]
 pub struct VoicemailReader {
     state: State,
     assets: crate::assets::Store,
-    tracked: std::collections::BTreeSet<std::path::PathBuf>,
+    tracked: AudioSignature,
 }
 
 impl VoicemailReader {
@@ -168,12 +247,12 @@ impl VoicemailReader {
         Ok(Self {
             state: State::default(),
             assets: crate::assets::Store::open(staging, "voicemail-blob:")?,
-            tracked: std::collections::BTreeSet::new(),
+            tracked: AudioSignature::default(),
         })
     }
 
-    pub fn tracked_audio(&self) -> impl Iterator<Item = &Path> {
-        self.tracked.iter().map(std::path::PathBuf::as_path)
+    pub fn audio_signature(&self) -> &AudioSignature {
+        &self.tracked
     }
 
     pub fn read_blob(&self, handle: &str, offset: u64, length: usize) -> Result<serde_json::Value> {
@@ -186,6 +265,7 @@ impl VoicemailReader {
         root: &Path,
         data: &mut serde_json::Value,
         handles: &mut std::collections::BTreeMap<String, String>,
+        stage: &mut Stage<'_>,
     ) -> Result<()> {
         use capture::Cell;
         let Some(Cell::Text(extension)) = row.get("ZFILETYPE") else {
@@ -228,8 +308,13 @@ impl VoicemailReader {
             .join("Assets")
             .join(&uuid[..2])
             .join(format!("{uuid}.{extension}"));
-        self.tracked.insert(file.clone());
-        if let Ok(reference) = self.assets.stage(&file, root) {
+        let before = audio_version(&file);
+        let staged = stage(&mut self.assets, &file, root);
+        if before != audio_version(&file) || matches!(staged, Err(Error::Conflict)) {
+            return Err(Error::Conflict);
+        }
+        self.tracked.0.insert(file, before);
+        if let Ok(reference) = staged {
             handles.insert(
                 reference.digest.clone(),
                 self.assets
@@ -250,6 +335,23 @@ impl VoicemailReader {
         context: &Context,
         live: bool,
         max_rows: usize,
+    ) -> Result<Pending> {
+        self.scan_staged(
+            path,
+            context,
+            live,
+            max_rows,
+            &mut crate::assets::Store::stage,
+        )
+    }
+
+    fn scan_staged(
+        &mut self,
+        path: &Path,
+        context: &Context,
+        live: bool,
+        max_rows: usize,
+        stage: &mut Stage<'_>,
     ) -> Result<Pending> {
         use capture::Cell;
         let reader = Snapshot::open(path, GENERATION)?;
@@ -283,7 +385,7 @@ impl VoicemailReader {
         };
         let rows = reader.query(&format!("SELECT CASE WHEN typeof(ZRECORDUUID)='blob' THEN lower(hex(ZRECORDUUID)) ELSE COALESCE(NULLIF(ZRECORDUUID,''),CAST(Z_PK AS TEXT)) END AS id,ZRECORDUUID,ZFROM,ZDATECREATED,ZDURATION,ZISREAD,{optional} FROM ZSTOREDMESSAGE{filter}"), &[], max_rows, Duration::from_secs(5))?;
         let root = path.parent().ok_or(Error::Corrupt)?.canonicalize()?;
-        self.tracked.clear();
+        self.tracked.0.clear();
         let mut handles = std::collections::BTreeMap::new();
         let mut observations = Vec::new();
         for row in rows {
@@ -326,12 +428,11 @@ impl VoicemailReader {
                     }
                 }
             }
-            self.audio(&row, &root, &mut data, &mut handles)?;
+            self.audio(&row, &root, &mut data, &mut handles, stage)?;
             let id = t("id");
-            observations.push(capture::upsert(
-                "voicemail.message",
+            observations.push(voicemail_observation(
                 id,
-                Some(format!("voicemail/{}/{id}", reader.generation)),
+                &reader.generation,
                 data,
                 context,
             )?);
