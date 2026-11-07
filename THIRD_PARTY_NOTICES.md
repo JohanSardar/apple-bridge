@@ -42,6 +42,8 @@ Sim video/audio use these fixed codec fixtures rather than transcoding inputs.
 
 The Calendar/Reminders sim date fixtures in the Rust lab adapters under `rust/lab/lab-adapters/src` adapt the date-only, local-time and zoned-time cases from iMCP’s `App/Extensions/Foundation+Extensions.swift` and Calendar/Reminders services at the pinned commit above. DST and month-end expectations are Bridge regression fixtures.
 
+The voicemail archive shape and UUID-addressed asset layout in `rust/crates/ab-native/src/telephony.rs` follow [`App/Services/VoicemailStore.swift`](https://github.com/mattt/iMCP/blob/c30e84cef24e2554ba5e128b1b8280e09586d5b4/App/Services/VoicemailStore.swift) at commit `c30e84cef24e2554ba5e128b1b8280e09586d5b4`, under the same MIT license below. Rust reuses Bridge's bounded plist resolver rather than instantiating archived native objects.
+
 MIT License
 
 Copyright 2025 Mattt (https://mat.tt)

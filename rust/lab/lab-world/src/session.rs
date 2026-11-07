@@ -109,7 +109,7 @@ impl World {
                 entry["facts"] = json!({"socket": socket});
                 entry["facts_poll_ms"] = json!(3_600_000);
             }
-            if matches!(source.as_str(), "notes" | "voice_memos") {
+            if matches!(source.as_str(), "notes" | "voice_memos" | "voicemail") {
                 let staging = self.directory.join(format!("session-staging-{source}"));
                 fs::create_dir_all(&staging)?;
                 entry["staging"] = json!(staging);

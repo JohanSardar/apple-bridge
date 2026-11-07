@@ -285,13 +285,18 @@ and stale Safari acknowledgements. Real-data comparison remains orchestrator wor
 
 ## Calls and Voicemail
 
-`telephony::calls` / `voicemail` accept an explicit database path, acknowledged
-`capture::State`, scan context, live flag and row bound. Their pending batches
-include scoped aliases, coverage and complete-scan evidence. They preserve the
-Swift ordering and numeric mappings. `State::commit` rejects stale/duplicate
-acknowledgements; source or collection changes require a fresh State. Scan
-failure leaves the committed state untouched. A new database/schema/metadata
-UUID generation emits a full scan without absence from the prior generation.
+`telephony::calls` accepts an explicit database path, acknowledged
+`capture::State`, scan context, live flag and row bound. `telephony::VoicemailReader::open(staging)`
+owns voicemail state and private content-addressed audio staging; `scan(path, context, live, max_rows)`
+returns pending batches with scoped aliases, blob handles, coverage and complete-scan evidence.
+`commit` rejects stale/duplicate acknowledgements. Failed scans leave committed state untouched;
+a new database/schema/metadata UUID generation emits a full scan without absence from the prior generation.
+
+`telephony::voicemail_transcript` decodes bounded carrier/FaceTime keyed archives using the existing
+plist resolver. Optional schema columns do not suppress metadata. `tracked_audio` includes missing
+recording paths so the session detects late files and removals. `read_blob` serves bounded ranges
+of privately staged AMR/M4A/audio-only MOV originals, including after restart. Source paths cannot
+escape the configured root; dataless files are not downloaded. See the [voicemail API contract](../../docs/reference/voicemail.md).
 
 The lab CLI accepts `calls` and `voicemail` with store.db + context.json under
 its explicit fixture directory. Interactive input is a row limit (or scan for

@@ -438,8 +438,7 @@ fn readiness_of_a_rust_decided_source_replaces_what_the_helper_said() -> Fallibl
     let root = temporary("ready-root")?;
     let sessions = temporary("ready-sessions")?;
     let staging = temporary("ready-staging")?;
-    let config =
-        json!({"voicemail":{"root":root},"voice_memos":{"root":sessions,"staging":staging}});
+    let config = json!({"voicemail":{"root":root,"staging":staging.join("voicemail")},"voice_memos":{"root":sessions,"staging":staging.join("voice_memos")}});
     let started = Instant::now();
     let mut session = support::wire(
         readers::from_config(&config.to_string())?,

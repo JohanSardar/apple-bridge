@@ -179,7 +179,10 @@ fn a_voicemail_record_uuid_stored_as_a_blob_is_a_usable_key() -> Fallible<()> {
          INSERT INTO ZSTOREDMESSAGE VALUES(1,x'00AB',  'Synthetic',946684800,12.0,0,0,'com.apple.coretelephony',0);",
     )?;
     drop(connection);
-    let sources = readers::from_config(&json!({"voicemail":{"root":directory}}).to_string())?;
+    let staging = temporary("voicemail-blob-staging")?;
+    let sources = readers::from_config(
+        &json!({"voicemail":{"root":directory,"staging":staging}}).to_string(),
+    )?;
     let mut session = wire(
         sources,
         Options {
@@ -269,24 +272,43 @@ fn voice_memo_fixture(directory: &Path, audio: &[u8]) -> Fallible<()> {
 
 #[test]
 fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
-    let directory = temporary("voice")?;
+    staged_audio_serves_blob_reads_across_restart("voice_memos")
+}
+
+#[test]
+fn rust_voicemail_serves_blob_reads_across_restart() -> Fallible<()> {
+    staged_audio_serves_blob_reads_across_restart("voicemail")
+}
+
+fn staged_audio_serves_blob_reads_across_restart(source: &str) -> Fallible<()> {
+    let directory = temporary(source)?;
     let audio: Vec<u8> = (0..200_000_u32)
         .map(|n| u8::try_from(n % 251).unwrap_or(0))
         .collect();
-    voice_memo_fixture(&directory, &audio)?;
-    let staging = temporary("voice-staging")?;
-    let config = json!({"voice_memos":{"root":directory,"staging":staging}}).to_string();
+    if source == "voice_memos" {
+        voice_memo_fixture(&directory, &audio)?;
+    } else {
+        media_fixture("voicemail", &directory, Some(101))?;
+        let connection =
+            rusqlite::Connection::open(directory.join("FaceTimeMessageStore-local.sqlitedb"))?;
+        connection.execute_batch("ALTER TABLE ZSTOREDMESSAGE ADD COLUMN ZFILETYPE TEXT;UPDATE ZSTOREDMESSAGE SET ZRECORDUUID=x'00112233445566778899AABBCCDDEEFF',ZFILETYPE='m4a';")?;
+        let path = directory.join("Assets/00/00112233-4455-6677-8899-AABBCCDDEEFF.m4a");
+        std::fs::create_dir_all(path.parent().ok_or("parent")?)?;
+        std::fs::write(path, &audio)?;
+    }
+    let staging = temporary(&format!("{source}-staging"))?;
+    let config = json!({source:{"root":directory,"staging":staging}}).to_string();
     let build = || readers::from_config(&config);
 
     let mut first = wire(build()?, polling(None), json!({}))?;
     let (size, capture) = receive(&mut first.gateway)?;
-    assert_eq!(capture["source"], "voice_memos");
+    assert_eq!(capture["source"], source);
     let handles = capture["blob_handles"].as_object().ok_or("blob_handles")?;
     assert_eq!(handles.len(), 1);
     let (digest, handle) = handles.iter().next().ok_or("handle")?;
     let handle = handle.as_str().ok_or("handle text")?.to_owned();
     let digest = digest.clone();
-    commit(&mut first, "voice_memos", &capture, size)?;
+    commit(&mut first, source, &capture, size)?;
     let mut bytes = Vec::new();
     let mut offset = 0_usize;
     loop {
@@ -307,7 +329,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     assert_eq!(bytes, audio);
     send(
         &mut first.gateway,
-        &json!({"t":"BlobRead","handle":"voice-memo-blob:missing","offset":0,"length":10}),
+        &json!({"t":"BlobRead","handle":handle.replace(&digest, "missing"),"offset":0,"length":10}),
     )?;
     assert_eq!(receive(&mut first.gateway)?.1["t"], "BlobUnavailable");
     drop(first.gateway);
@@ -317,7 +339,7 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     let mut second = wire(
         build()?,
         polling(None),
-        json!({"voice_memos":{"generation":capture["generation"],"checkpoint":capture["checkpoint"]}}),
+        json!({source:{"generation":capture["generation"],"checkpoint":capture["checkpoint"]}}),
     )?;
     send(
         &mut second.gateway,
@@ -334,6 +356,62 @@ fn rust_voice_memos_serve_blob_reads_across_restart() -> Fallible<()> {
     drop(second.link);
     let _ = second.worker.join();
     std::fs::remove_dir_all(directory)?;
+    Ok(())
+}
+
+#[test]
+fn rust_voicemail_refreshes_legacy_checkpoints_and_captures_late_audio() -> Fallible<()> {
+    let directory = temporary("voicemail-late")?;
+    media_fixture("voicemail", &directory, Some(101))?;
+    let db = rusqlite::Connection::open(directory.join("FaceTimeMessageStore-local.sqlitedb"))?;
+    db.execute_batch("ALTER TABLE ZSTOREDMESSAGE ADD COLUMN ZFILETYPE TEXT;UPDATE ZSTOREDMESSAGE SET ZRECORDUUID=x'00112233445566778899AABBCCDDEEFF',ZFILETYPE='amr';")?;
+    drop(db);
+    let staging = temporary("voicemail-late-staging")?;
+    let mut sources = readers::from_config(
+        &json!({"voicemail":{"root":directory,"staging":staging}}).to_string(),
+    )?;
+    let reader = sources.get_mut("voicemail").ok_or("reader")?;
+    let database = directory.join("FaceTimeMessageStore-local.sqlitedb");
+    let metadata = std::fs::metadata(&database)?;
+    let legacy = json!([[
+        database,
+        metadata.len(),
+        metadata.modified()?.duration_since(UNIX_EPOCH)?.as_nanos()
+    ]])
+    .to_string();
+    assert!(!reader.resume(&legacy));
+    let context = |id: &str| readers::ScanContext {
+        checkpoint: id.into(),
+        scan_id: id.into(),
+        now: 1_767_225_600.0,
+        fence: 1,
+    };
+    let first = reader.next(&context("one"))?.ok_or("first scan")?;
+    assert_eq!(first["observations"][0]["data"]["audio_state"], "missing");
+    reader.commit()?;
+    assert!(reader.token().is_none());
+    assert!(reader.next(&context("idle"))?.is_none());
+    let audio = directory.join("Assets/00/00112233-4455-6677-8899-AABBCCDDEEFF.amr");
+    std::fs::create_dir_all(audio.parent().ok_or("parent")?)?;
+    std::fs::write(&audio, b"synthetic audio")?;
+    let second = reader.next(&context("two"))?.ok_or("late audio")?;
+    assert_eq!(second["observations"][0]["data"]["audio_state"], "present");
+    assert_eq!(
+        first["observations"][0]["native_key"],
+        second["observations"][0]["native_key"]
+    );
+    reader.commit()?;
+    std::fs::remove_file(audio)?;
+    let third = reader.next(&context("three"))?.ok_or("removed audio")?;
+    assert_eq!(third["observations"][0]["data"]["audio_state"], "missing");
+    assert!(
+        readers::from_config(
+            &json!({"voicemail":{"root":directory,"staging":directory.join("Assets")}}).to_string()
+        )
+        .is_err()
+    );
+    std::fs::remove_dir_all(directory)?;
+    std::fs::remove_dir_all(staging)?;
     Ok(())
 }
 

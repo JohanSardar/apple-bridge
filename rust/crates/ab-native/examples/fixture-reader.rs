@@ -233,17 +233,26 @@ fn telephony(
         telephony,
     };
     let mut state = State::default();
+    let mut voicemail = if kind == "voicemail" {
+        Some(telephony::VoicemailReader::open(&root.join("rust-blobs"))?)
+    } else {
+        None
+    };
     let frames = options.iter().any(|o| o == "--frames");
     let mut scan = |limit: usize, live: bool| -> Result<(), Box<dyn std::error::Error>> {
         let context: Context = serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
-        let scan = if kind == "calls" {
-            telephony::calls
+        let scanned = if let Some(reader) = &mut voicemail {
+            reader.scan(&root.join("store.db"), &context, live, limit)
         } else {
-            telephony::voicemail
+            telephony::calls(&root.join("store.db"), &state, &context, live, limit)
         };
-        if let Ok(pending) = scan(&root.join("store.db"), &state, &context, live, limit) {
+        if let Ok(pending) = scanned {
             emit_capture(&pending.batch, frames)?;
-            state.commit(pending)?;
+            if let Some(reader) = &mut voicemail {
+                reader.commit(pending)?;
+            } else {
+                state.commit(pending)?;
+            }
         } else {
             let mut output = std::io::stdout().lock();
             write_json(&mut output, &serde_json::json!({"kind":"failed_scan"}))?;

@@ -68,6 +68,15 @@ fn voice_memos(root: &Path) -> Fallible<()> {
     Ok(())
 }
 
+fn voicemail(root: &Path) -> Fallible<()> {
+    let connection = rusqlite::Connection::open(root.join("FaceTimeMessageStore-local.sqlitedb"))?;
+    connection.execute_batch("CREATE TABLE Z_METADATA(Z_UUID TEXT);INSERT INTO Z_METADATA VALUES('synthetic');CREATE TABLE ZSTOREDMESSAGE(Z_PK INTEGER,ZRECORDUUID BLOB,ZFROM TEXT,ZDATECREATED REAL,ZDURATION REAL,ZISREAD INTEGER,ZFILETYPE TEXT);INSERT INTO ZSTOREDMESSAGE VALUES(1,x'00112233445566778899AABBCCDDEEFF','Synthetic',10,2,0,'m4a');")?;
+    let audio = root.join("Assets/00/00112233-4455-6677-8899-AABBCCDDEEFF.m4a");
+    std::fs::create_dir_all(audio.parent().ok_or("parent")?)?;
+    std::fs::write(audio, vec![7_u8; 4096])?;
+    Ok(())
+}
+
 fn notes_store(root: &Path) -> Fallible<()> {
     let db = rusqlite::Connection::open(root.join("NoteStore.sqlite"))?;
     db.execute_batch("CREATE TABLE Z_METADATA(Z_UUID TEXT);INSERT INTO Z_METADATA VALUES('synthetic');CREATE TABLE Z_PRIMARYKEY(Z_ENT INTEGER,Z_NAME TEXT);INSERT INTO Z_PRIMARYKEY VALUES(1,'ICFolder'),(2,'ICNote'),(3,'ICAccount');CREATE TABLE ZICNOTEDATA(Z_PK INTEGER PRIMARY KEY,ZDATA BLOB,Z_OPT INTEGER);CREATE TABLE ZICCLOUDSYNCINGOBJECT(Z_PK INTEGER PRIMARY KEY,Z_ENT INTEGER,ZIDENTIFIER TEXT,ZTITLE1 TEXT,ZTITLE2 TEXT,ZNAME TEXT,ZACCOUNT8 INTEGER,ZPARENT INTEGER,ZFOLDER INTEGER,ZNOTEDATA INTEGER,ZMARKEDFORDELETION INTEGER DEFAULT 0,ZFOLDERTYPE INTEGER DEFAULT 0,ZISPASSWORDPROTECTED INTEGER DEFAULT 0,ZISPINNED INTEGER DEFAULT 0,Z_OPT INTEGER DEFAULT 1,ZNOTE1 INTEGER,ZPARENTATTACHMENT INTEGER,ZMEDIA INTEGER,ZTYPEUTI1 TEXT);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZNAME) VALUES(1,3,'account','Synthetic');INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE2,ZACCOUNT8) VALUES(10,1,'folder','Synthetic',1);INSERT INTO ZICCLOUDSYNCINGOBJECT(Z_PK,Z_ENT,ZIDENTIFIER,ZTITLE1,ZFOLDER,ZNOTEDATA) VALUES(20,2,'note','Synthetic',10,1);")?;
@@ -94,14 +103,27 @@ fn drive(reader: &mut dyn CaptureReader) -> Fallible<Vec<Value>> {
 
 #[test]
 fn voice_memos_never_write_inside_the_source_container() -> Fallible<()> {
+    staged_source_never_writes_inside_the_container("voice_memos")
+}
+
+#[test]
+fn voicemail_never_writes_inside_the_source_container() -> Fallible<()> {
+    staged_source_never_writes_inside_the_container("voicemail")
+}
+
+fn staged_source_never_writes_inside_the_container(source: &str) -> Fallible<()> {
     let root = temporary("vm-root")?;
     let home = temporary("vm-home")?;
-    voice_memos(&root)?;
-    let staging = home.join("session/staging/voice_memos");
-    let config = json!({"voice_memos":{"root":root,"staging":staging}}).to_string();
+    if source == "voice_memos" {
+        voice_memos(&root)?;
+    } else {
+        voicemail(&root)?;
+    }
+    let staging = home.join("session/staging").join(source);
+    let config = json!({source:{"root":root,"staging":staging}}).to_string();
     let before = tree(&root)?;
     let mut readers = readers::from_config(&config)?;
-    let reader = readers.get_mut("voice_memos").ok_or("reader")?;
+    let reader = readers.get_mut(source).ok_or("reader")?;
     let frames = drive(reader.as_mut())?;
     let handles = frames
         .first()

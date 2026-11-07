@@ -301,7 +301,27 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
         ),
         "CALLS-REPLICA" => calls_replica(world, evidence)?,
         "CALL-READ-REAL" => calls_real(world, evidence)?,
-        "VM-CAPTURE" | "VMEMO-CAPTURE" => rust_tests(
+        "VM-CAPTURE" => {
+            rust_tests(
+                evidence,
+                "voicemail_archives_and_local_audio",
+                "ab-native",
+                &["--test", "voicemail"],
+            );
+            rust_tests(
+                evidence,
+                "voicemail_blob_restart_and_late_assets",
+                "ab-session",
+                &["--test", "capture_producer", "rust_voicemail"],
+            );
+            rust_tests(
+                evidence,
+                "voicemail_cli_mcp_and_audio_download",
+                "ab-runtime",
+                &["--test", "voicemail"],
+            );
+        }
+        "VMEMO-CAPTURE" => rust_tests(
             evidence,
             "metadata_wal_insert_update_delete",
             "ab-session",

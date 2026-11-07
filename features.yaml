@@ -768,7 +768,7 @@ features:
       - {id: FOC-STATUS-REAL, levels: [real]}
       - {id: FOC-PHONE-SYNC, levels: [sim, real]}
   - id: recordings.read
-    title: Voice Memos assets and voicemail metadata
+    title: Voice Memos and voicemail transcripts and audio
     requirements: [R-API, R-SCOPE]
     milestone: G4
     modules: [rust/crates/ab-native, rust/crates/ab-domain]
@@ -778,7 +778,7 @@ features:
       - {id: VMEMO-CAPTURE, levels: [sim]}
       - {id: VM-CAPTURE, levels: [sim]}
       - {id: VMEMO-LATE-ASSETS, levels: [sim]}
-    notes: "VMEMO-READ-REAL and VM-READ-REAL: no data on this Mac. VMEMO-NEW-REAL needs the owner to record a memo. Real idle qualification blocked by existing Helper Messages CPU issue T53."
+    notes: "Voicemail supports archived carrier/FaceTime transcripts and local AMR/M4A/audio-only MOV originals through MCP and bridge read voicemail. Real snapshot proof matched 98 messages, 74 transcripts and 98 audio files with one fetched SHA-256 match; signed Helper/TCC attribution and real-data gateway/replica delivery remain unverified. See lab/evidence/voicemail-930.json. Voice Memos real/new-recording qualification was not repeated in this run."
 
   - id: shortcuts.actions
     title: Bounded installed App Intents discovery
