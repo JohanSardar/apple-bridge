@@ -29,6 +29,10 @@ class Documentation(unittest.TestCase):
 
 
 class SignatureFacts(unittest.TestCase):
+    def test_hardened_helper_can_request_photos(self):
+        entitlements = plistlib.loads((HERE.parent / "dev/Helper.entitlements").read_bytes())
+        self.assertIs(entitlements.get("com.apple.security.personal-information.photos-library"), True)
+
     def test_explicit_and_inferred_requirements_are_recorded(self):
         for prefix in ["", "# "]:
             with patch("check.code_paths", return_value={"ab-session": Path("fixture")}):
