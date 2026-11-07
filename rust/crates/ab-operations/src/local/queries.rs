@@ -100,6 +100,7 @@ impl LocalGateway {
             (result, _) => result,
         }
     }
+    #[allow(clippy::too_many_lines)]
     pub(super) async fn route_query(
         &self,
         principal: &Principal,
@@ -150,12 +151,14 @@ impl LocalGateway {
         .await
         .map_err(|_| Code::Deadline)??;
         if frame.t == "QueryError" {
-            let message = if current_location && frame.code == "forbidden" {
-                "Location Services permission is not allowed. Run bridge permissions guide, or enable Apple Bridge in System Settings > Privacy & Security > Location Services. Other sources still work."
-            } else if current_location && frame.code == "unavailable" {
-                "No current location fix is available on this Mac. Check that Location Services is enabled and try again."
-            } else {
-                "query failed"
+            let message = match (current_location, frame.code.as_str()) {
+                (true, "forbidden") => {
+                    "Location Services permission is not allowed. Run bridge permissions guide, or enable Apple Bridge in System Settings > Privacy & Security > Location Services. Other sources still work."
+                }
+                (true, "unavailable") => {
+                    "No current location fix is available on this Mac. Check that Location Services is enabled and try again."
+                }
+                _ => "query failed",
             };
             return Err(serde_json::from_value(
                 json!({"code": frame.code, "message": message, "retryable": false}),
