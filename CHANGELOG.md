@@ -4,6 +4,12 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-07
+
+### Added
+
+- Photos: agents can search the library by date, place, kind and album, read originals, and add photos to albums or favorites after approval. Bridge reads PhotoKit live and keeps no copy of the library. Nothing is deleted.
+
 ## [0.1.3] - 2026-11-07
 
 ### Changed
