@@ -62,6 +62,9 @@ impl LocalGateway {
                 None,
             )?);
         }
+        if record.command.op == "location.current" {
+            return raw(&self.transition(record, State::Admitted, None, None, None)?);
+        }
         let principal = if record.principal.contains("/agent:") {
             let reauthorize = self.reauthorize.as_ref().ok_or(Code::Unavailable)?;
             reauthorize

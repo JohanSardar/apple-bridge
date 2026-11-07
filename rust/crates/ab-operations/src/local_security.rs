@@ -15,7 +15,7 @@ impl Identity for TestIdentity {
         Ok(p.clone())
     }
     fn sign(&self, _: &Principal, _: &str, _: &str) -> Result<String, Error> {
-        Err(Code::Unsupported.into())
+        Ok("synthetic-delegation".into())
     }
     fn approval_principal(&self, _: &str, _: &str, _: &str) -> Result<Principal, Error> {
         Ok(self.0.clone())
@@ -62,6 +62,13 @@ impl ApplePeer for TestPeer {
                 self.0.staged.lock().map_err(|_| Code::Corrupt)?.push(bytes);
             }
             self.0.frames.lock().map_err(|_| Code::Corrupt)?.push(args);
+            if f.id == "qry_location_failure" {
+                return Ok(IpcFrame {
+                    t: "QueryError".into(),
+                    code: "unavailable".into(),
+                    ..Default::default()
+                });
+            }
             Ok(if f.t == "Prepare" {
                 IpcFrame {
                     t: "Rejected".into(),
@@ -221,6 +228,304 @@ async fn every_agent_capture_requires_a_fresh_owner_approval() {
                 assert_eq!(queries_reaching_native(&f), 0, "{level} {op}");
             }
         }
+    }
+}
+
+#[tokio::test]
+async fn current_location_requires_one_owner_approval_per_local_or_remote_agent_query() {
+    for remote in [false, true] {
+        for level in ["read", "approve", "full"] {
+            let mut f = fixture();
+            let mut p = principal(
+                if remote {
+                    "replica:fixture/agent:location"
+                } else {
+                    "agent:location"
+                },
+                if remote { "delegated" } else { "agent" },
+                level,
+                &["location:read"],
+            );
+            p.remote = remote;
+            Arc::get_mut(&mut f.gateway)
+                .expect("exclusive gateway")
+                .identity = Arc::new(TestIdentity(p.clone()));
+            let mut request = query("location.current", &json!({}));
+            request.id = "qry_location_one".into();
+            let pending = f
+                .gateway
+                .query(&p, request.clone())
+                .await
+                .expect("pending approval");
+            let pending: Value = serde_json::from_str(pending.get()).expect("pending JSON");
+            assert_eq!(pending["state"], "awaiting_approval", "{remote} {level}");
+            assert!(pending["result_json"].is_null());
+            assert_eq!(queries_reaching_native(&f), 0);
+            let review = OwnerReview {
+                binding: "",
+                accepted_unpreviewable: false,
+            };
+            f.gateway
+                .decide(&owner(), &request.id, true, &review)
+                .await
+                .expect("owner approves");
+            assert_eq!(
+                queries_reaching_native(&f),
+                0,
+                "approval itself must not capture"
+            );
+            let (first, duplicate) = tokio::join!(
+                f.gateway.query(&p, request.clone()),
+                f.gateway.query(&p, request.clone())
+            );
+            assert_ne!(
+                first.is_ok(),
+                duplicate.is_ok(),
+                "only one concurrent retry consumes approval"
+            );
+            let result = first.or(duplicate).expect("one approved read");
+            assert_eq!(
+                serde_json::from_str::<Value>(result.get()).expect("result")["result_json"]["ok"],
+                true
+            );
+            assert_eq!(queries_reaching_native(&f), 1);
+            assert!(
+                f.gateway.query(&p, request.clone()).await.is_err(),
+                "approval cannot be reused"
+            );
+            assert_eq!(queries_reaching_native(&f), 1);
+            let rows = serde_json::to_string(&f.gateway.state.commands().expect("ledger"))
+                .expect("ledger JSON");
+            assert!(
+                !rows.contains("result_json"),
+                "query results stay out of the ledger"
+            );
+            request.id = "qry_location_two".into();
+            let next = f
+                .gateway
+                .query(&p, request.clone())
+                .await
+                .expect("new approval");
+            assert_eq!(
+                serde_json::from_str::<Value>(next.get()).expect("pending")["state"],
+                "awaiting_approval"
+            );
+            f.gateway
+                .decide(&owner(), &request.id, false, &review)
+                .await
+                .expect("owner declines");
+            assert!(f.gateway.query(&p, request).await.is_err());
+            assert_eq!(queries_reaching_native(&f), 1);
+            for operation in ["location.geocode", "location.reverse_geocode"] {
+                f.gateway
+                    .query(&p, query(operation, &json!({})))
+                    .await
+                    .expect("non-device location query");
+            }
+            assert_eq!(queries_reaching_native(&f), 3);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ApprovalClock(StdMutex<jiff::Timestamp>);
+impl crate::clock::Clock for ApprovalClock {
+    fn now(&self) -> jiff::Timestamp {
+        *self.0.lock().expect("clock")
+    }
+}
+
+#[tokio::test]
+async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
+    let mut f = fixture();
+    let p = principal("agent:location", "agent", "read", &["location:read"]);
+    let clock = Arc::new(ApprovalClock(StdMutex::new(jiff::Timestamp::now())));
+    Arc::get_mut(&mut f.gateway).expect("exclusive").clock = clock.clone();
+    let mut request = query("location.current", &json!({}));
+    request.id = "qry_bound_location".into();
+    f.gateway.query(&p, request.clone()).await.expect("pending");
+    let other = principal("agent:other", "agent", "full", &["location:read"]);
+    assert_eq!(
+        f.gateway
+            .query(&other, request.clone())
+            .await
+            .expect_err("identity bound")
+            .code,
+        Code::IdReused
+    );
+    let mut changed = request.clone();
+    changed.deadline_ms += 1;
+    assert_eq!(
+        f.gateway
+            .query(&p, changed)
+            .await
+            .expect_err("request bound")
+            .code,
+        Code::IdReused
+    );
+    let review = OwnerReview {
+        binding: "",
+        accepted_unpreviewable: false,
+    };
+    f.gateway
+        .decide(&owner(), &request.id, true, &review)
+        .await
+        .expect("approved");
+    *clock.0.lock().expect("clock") = jiff::Timestamp::now()
+        .checked_add(jiff::SignedDuration::from_mins(11))
+        .expect("later");
+    assert_eq!(
+        f.gateway
+            .query(&p, request)
+            .await
+            .expect_err("expired")
+            .code,
+        Code::Expired
+    );
+    assert_eq!(queries_reaching_native(&f), 0);
+}
+
+#[tokio::test]
+async fn failed_location_dispatch_also_consumes_approval() {
+    let f = fixture();
+    let p = principal("agent:location", "agent", "full", &["location:read"]);
+    let mut request = query("location.current", &json!({}));
+    request.id = "qry_location_failure".into();
+    f.gateway.query(&p, request.clone()).await.expect("pending");
+    f.gateway
+        .decide(
+            &owner(),
+            &request.id,
+            true,
+            &OwnerReview {
+                binding: "",
+                accepted_unpreviewable: false,
+            },
+        )
+        .await
+        .expect("approved");
+    assert_eq!(
+        f.gateway
+            .query(&p, request.clone())
+            .await
+            .expect_err("native failure")
+            .code,
+        Code::Unavailable
+    );
+    assert_eq!(queries_reaching_native(&f), 1);
+    assert!(f.gateway.query(&p, request).await.is_err());
+    assert_eq!(queries_reaching_native(&f), 1);
+}
+
+#[derive(Debug)]
+struct LocationReads;
+impl crate::ReadStore for LocationReads {
+    fn head(&self) -> Result<Cursor, Error> {
+        Err(Code::Unsupported.into())
+    }
+    fn read(&self, _: &crate::Visibility, _: &crate::ReadQuery) -> Result<Box<RawValue>, Error> {
+        Err(Code::Unsupported.into())
+    }
+    fn read_model(
+        &self,
+        _: &crate::Visibility,
+        _: &str,
+        _: &Value,
+    ) -> Result<Box<RawValue>, Error> {
+        Err(Code::Unsupported.into())
+    }
+    fn changes(&self, _: &crate::Visibility, _: &Cursor) -> Result<Option<Box<RawValue>>, Error> {
+        Err(Code::Unsupported.into())
+    }
+}
+
+#[derive(Debug)]
+struct LocationForward {
+    gateway: Arc<LocalGateway>,
+    principal: Principal,
+}
+impl crate::GatewayTransport for LocationForward {
+    fn connected(&self) -> bool {
+        true
+    }
+    fn exchange<'a>(
+        &'a self,
+        _: &'a crate::GatewayRoute,
+        _: String,
+        body: Vec<u8>,
+    ) -> crate::Task<'a, crate::ForwardReply> {
+        Box::pin(async move {
+            let request: Value = serde_json::from_slice(&body).map_err(|_| Code::Invalid)?;
+            assert_eq!(request["method"], "query");
+            let query = serde_json::from_value(request["native_query"].clone())
+                .map_err(|_| Code::Invalid)?;
+            Ok(crate::ForwardReply {
+                result: self.gateway.query(&self.principal, query).await?,
+                lookup_only: false,
+            })
+        })
+    }
+}
+
+#[tokio::test]
+async fn forwarded_current_location_uses_the_same_single_use_owner_gate() {
+    for level in ["read", "approve", "full"] {
+        let f = fixture();
+        let mut delegated = principal(
+            "replica:fixture/agent:location",
+            "delegated",
+            level,
+            &["location:read"],
+        );
+        delegated.remote = true;
+        let p = principal("agent:location", "agent", level, &["location:read"]);
+        let identity = Arc::new(TestIdentity(p.clone()));
+        let reads = Arc::new(LocationReads);
+        let codec = Arc::new(TestCodec);
+        let remote = crate::RemoteGateway {
+            route: crate::GatewayRoute::Feed,
+            transport: Arc::new(LocationForward {
+                gateway: f.gateway.clone(),
+                principal: delegated,
+            }),
+            identity: identity.clone(),
+            store: reads.clone(),
+            codec: codec.clone(),
+        };
+        let service = crate::Service {
+            store: reads,
+            identity,
+            codec,
+            target: crate::CommandTarget::Remote(Arc::new(remote)),
+        };
+        let input = br#"{"id":"qry_forwarded_location","args":{},"deadline_ms":5000}"#;
+        let pending = service
+            .invoke(&p, "location.current", input)
+            .await
+            .expect("pending");
+        assert_eq!(
+            serde_json::from_str::<Value>(pending.get()).expect("pending JSON")["state"],
+            "awaiting_approval"
+        );
+        assert_eq!(queries_reaching_native(&f), 0);
+        f.gateway
+            .decide(
+                &owner(),
+                "qry_forwarded_location",
+                true,
+                &OwnerReview {
+                    binding: "",
+                    accepted_unpreviewable: false,
+                },
+            )
+            .await
+            .expect("approved");
+        service
+            .invoke(&p, "location.current", input)
+            .await
+            .expect("one forwarded read");
+        assert!(service.invoke(&p, "location.current", input).await.is_err());
+        assert_eq!(queries_reaching_native(&f), 1);
     }
 }
 

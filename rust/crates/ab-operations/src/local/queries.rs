@@ -4,6 +4,7 @@ use super::{
 };
 
 impl LocalGateway {
+    #[allow(clippy::too_many_lines)]
     pub async fn query(
         &self,
         principal: &Principal,
@@ -13,7 +14,7 @@ impl LocalGateway {
         if descriptor.kind != ab_catalog::OperationKind::Query {
             return Err(Code::Unsupported.into());
         }
-        self.authorize(principal, &query.op).map_err(|error| {
+        let principal = self.authorize(principal, &query.op).map_err(|error| {
             if error.code == Code::Unauthorized {
                 Code::Forbidden.into()
             } else {
@@ -76,10 +77,20 @@ impl LocalGateway {
         if query.deadline_ms == 0 {
             query.deadline_ms = 1000;
         }
+        if query.op == "location.current"
+            && !args.as_object().is_some_and(serde_json::Map::is_empty)
+        {
+            return Err(Code::Invalid.into());
+        }
+        if let Some(pending) = self.location_approval(&principal, &query).await? {
+            return Ok(pending);
+        }
+        let id = query.id.clone();
+        let operation = query.op.clone();
         let deadline = tokio::time::Instant::now() + Duration::from_millis(query.deadline_ms);
         let mut audit = crate::query_audit::AuditGuard::new(
             self.query_audit.clone(),
-            principal,
+            &principal,
             &query.id,
             &query.op,
             query.args.get().len(),
@@ -87,13 +98,14 @@ impl LocalGateway {
         );
         let result = self
             .route_query(
-                principal,
+                &principal,
                 query,
                 &descriptor.scope,
                 deadline,
                 &mut audit.stats,
             )
             .await;
+        self.finish_location(&principal, &id, &operation, result.is_ok())?;
         let recorded = audit.finish();
         match (result, recorded) {
             (Ok(_), Err(error)) => Err(error),

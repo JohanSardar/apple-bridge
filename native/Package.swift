@@ -41,7 +41,7 @@ let package = Package(
         .executableTarget(name: "NativeChecks", dependencies: ["NativeProtocol", "SourceSupport"]),
         .executableTarget(name: "HelperIdentityChecks", dependencies: ["AppleSession", "SourceSupport"]),
         .executableTarget(name: "HelperIdentityFixture"),
-        .executableTarget(name: "SessionChecks", dependencies: ["AppleSession", "NativeProtocol", "SourceSupport"]),
+        .executableTarget(name: "SessionChecks", dependencies: ["AppleSession", "NativeProtocol", "SourceSupport", "MapsSource"]),
         .executableTarget(name: "CalendarChecks", dependencies: ["CalendarSource"], path: "Tests/CalendarChecks"),
         .executableTarget(name: "AppleBridgeHelper", dependencies: ["AppleSession", "MediaDerivatives", "SourceSupport"])
     ]

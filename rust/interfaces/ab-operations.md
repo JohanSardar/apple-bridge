@@ -33,6 +33,12 @@ Set `LocalGateway.query_audit = Some(Arc::new(QueryActivity::open(home)?))` afte
 G-A: `State::save_query_blobs` currently ends with generic `crate::commit(tx)`; route it through the installed BlobProtection hook as Go commitProtected does. This must include expired query-owner deletion. G-B2 publishes a new query owner before saving its grant and releasing staging pins, preventing loss, but conservative orphan/expired protection may remain until State owns that transaction.
 
 G-F: current source adapters and message staging are preserved. Install query audit and use the session-bound capture-blob interface in ab-applepeer.md. The library fixtures use a synthetic action resolver; source codec corpus success alone is not full gateway scenario qualification.
+# Current-location approval
+
+`location.current` remains a transient query with `location:read`. All agent levels, including delegated agents arriving through replica query forwarding, first receive `{id,state:"awaiting_approval"}` and no native dispatch. The existing approval ledger stores the exact query envelope and principal for ten minutes. An owner decision admits that single request but does not sample location. The same principal retries the identical envelope and ID; a durable transition to dispatched consumes approval before awaiting the Helper. Concurrent retries, failure, cancellation and restart cannot reuse it. A later fix needs a new ID and owner decision. Approval records and their history contain completion booleans and the request hash only, never the query result or coordinates. Owner queries retain the existing direct response.
+
+Geocoding accepts only an explicit address; reverse geocoding accepts only explicit coordinates. Neither calls `CurrentFix`, `requestLocation` or a current-location fallback. Invalid or missing caller input fails before MapKit requests.
+
 # Gateway blob grant parity
 
 Blob reads return Unauthorized when the supplied record is absent, invisible, deleted, or does not reference the requested digest. Authorized records whose bytes are unavailable still return NotFound. This preserves the Go frontdoor's HTTP 401 behavior for invalid record grants without changing record reads or the wire format.
