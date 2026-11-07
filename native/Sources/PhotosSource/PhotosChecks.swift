@@ -14,6 +14,7 @@ public enum PhotosChecks {
 
     public static func run() throws {
         try testPhotoKitFetchIsBoundedBeforeEnumeration()
+        try testCursorPredicatesPreserveTiesAndUndatedAssets()
         try testTransferLifetimeUsesIdleAndHardMonotonicDeadlines()
         try testStrictBoundaries()
         try testStreamedOriginalAndBoundedRead()
@@ -25,6 +26,42 @@ public enum PhotosChecks {
             try require(photoSearchOptions(limit: limit, locationFiltered: false).fetchLimit == limit + 1)
             try require(photoSearchOptions(limit: limit, locationFiltered: true).fetchLimit == 1001)
         }
+    }
+
+    static func testCursorPredicatesPreserveTiesAndUndatedAssets() throws {
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000.123456)
+        let fixtures: [NSDictionary] = [
+            ["localIdentifier": "a", "creationDate": date.addingTimeInterval(1)],
+            ["localIdentifier": "a", "creationDate": date],
+            ["localIdentifier": "b", "creationDate": date],
+            ["localIdentifier": "c", "creationDate": date],
+            ["localIdentifier": "a", "creationDate": date.addingTimeInterval(-1)],
+            ["localIdentifier": "a"],
+            ["localIdentifier": "b"]
+        ]
+        for limit in [1, 2, 200] {
+            var cursor: PhotoSearchCursor?
+            var seen: [NSDictionary] = []
+            for _ in 0...fixtures.count {
+                let options = photoSearchOptions(limit: limit, locationFiltered: false, cursor: cursor)
+                let candidates = fixtures.filter { options.predicate?.evaluate(with: $0) ?? true }
+                let fetched = Array(candidates.prefix(options.fetchLimit))
+                let page = Array(fetched.prefix(limit))
+                seen.append(contentsOf: page)
+                if fetched.count <= page.count { break }
+                guard let last = page.last, let id = last["localIdentifier"] as? String else { throw SourceFailure.corrupt }
+                cursor = try PhotoSearchCursor.decode(PhotoSearchCursor(date: last["creationDate"] as? Date, id: id).encode())
+            }
+            try require(seen == fixtures)
+        }
+        let boundary = try PhotoSearchCursor.decode(PhotoSearchCursor(date: date, id: "b").encode())
+        try require(boundary.date == date && boundary.id == "b")
+        let options = photoSearchOptions(limit: 1, locationFiltered: true, cursor: boundary)
+        try require(fixtures.filter { options.predicate?.evaluate(with: $0) ?? false } == Array(fixtures[3...]))
+        try rejects(try PhotoSearchCursor.decode("not-base64"))
+        try rejects(try PhotoSearchCursor.decode(Data("{}".utf8).base64EncodedString()))
+        try rejects(try PhotoSearchCursor.decode(PhotoSearchCursor(date: nil, id: "").encode()))
+        try rejects(try PhotoSearchCursor.decode(String(repeating: "A", count: 2049)))
     }
 
     static func testTransferLifetimeUsesIdleAndHardMonotonicDeadlines() throws {

@@ -42,12 +42,12 @@ public actor PhotosSource: Source {
     }
 
     private func search(_ args: JSON) throws -> JSON {
-        try fields(args, ["start", "end", "type", "album_id", "favorite", "include_hidden", "near", "radius_m", "offset", "limit"])
-        let offset = try integer(args, "offset", default: 0, maximum: 100_000_000)
+        try fields(args, ["start", "end", "type", "album_id", "favorite", "include_hidden", "near", "radius_m", "cursor", "limit"])
         let limit = try integer(args, "limit", default: 50, maximum: 200, minimum: 1)
-        let options = photoSearchOptions(limit: limit, locationFiltered: args["near"] != .null)
+        let cursor = args["cursor"] == .null ? nil : try PhotoSearchCursor.decode(string(args, "cursor", maximum: 2048))
+        let options = photoSearchOptions(limit: limit, locationFiltered: args["near"] != .null, cursor: cursor)
         options.includeHiddenAssets = try boolean(args, "include_hidden", default: false)
-        var predicates: [NSPredicate] = []
+        var predicates = options.predicate.map { [$0] } ?? []
         for (key, relation) in [("start", ">="), ("end", "<")] where args[key] != .null {
             guard let date = parseTimestamp(try string(args, key)) else { throw SourceFailure.invalid }
             predicates.append(NSPredicate(format: "creationDate \(relation) %@", date as NSDate))
@@ -68,13 +68,6 @@ public actor PhotosSource: Source {
                 predicates.append(NSPredicate(format: "mediaType == %d", type.rawValue))
             }
         }
-        options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-        let results: PHFetchResult<PHAsset>
-        if args["album_id"] != .null {
-            results = PHAsset.fetchAssets(in: try album(string(args, "album_id")), options: options)
-        } else {
-            results = PHAsset.fetchAssets(with: options)
-        }
         let near: CLLocation?
         let radius: Double
         if args["near"] != .null {
@@ -89,19 +82,30 @@ public actor PhotosSource: Source {
             near = nil
             radius = 0
         }
+        options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        try Task.checkCancellation()
+        let results: PHFetchResult<PHAsset>
+        if args["album_id"] != .null {
+            results = PHAsset.fetchAssets(in: try album(string(args, "album_id")), options: options)
+        } else {
+            results = PHAsset.fetchAssets(with: options)
+        }
+        try Task.checkCancellation()
         var rows: [JSON] = []
-        var index = min(offset, results.count)
-        let stop = min(results.count, index + 1000)
+        var index = 0
+        let stop = min(results.count, options.fetchLimit - 1)
+        var last: PhotoSearchCursor?
         while index < stop && rows.count < limit {
             try Task.checkCancellation()
             let value = results.object(at: index)
             index += 1
+            last = PhotoSearchCursor(date: value.creationDate, id: value.localIdentifier)
             if let near {
                 guard let location = value.location, near.distance(from: location) <= radius else { continue }
             }
             rows.append(summary(value))
         }
-        return .object(["assets": .array(rows), "candidate_count": .number(Double(results.count)), "next_offset": index < results.count ? .number(Double(index)) : .null, "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited)])
+        return .object(["assets": .array(rows), "examined_count": .number(Double(index)), "next_cursor": index < results.count ? try last.map { .string(try $0.encode()) } ?? .null : .null, "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited)])
     }
 
     private func albums(_ args: JSON) throws -> JSON {
@@ -218,10 +222,35 @@ public actor PhotosSource: Source {
     }
 }
 
-func photoSearchOptions(limit: Int, locationFiltered: Bool) -> PHFetchOptions {
+struct PhotoSearchCursor: Codable {
+    let date: Date?
+    let id: String
+
+    func encode() throws -> String {
+        try JSONEncoder().encode(self).base64EncodedString()
+    }
+
+    static func decode(_ text: String) throws -> Self {
+        guard text.utf8.count <= 2048, let data = Data(base64Encoded: text),
+              let cursor = try? JSONDecoder().decode(Self.self, from: data),
+              !cursor.id.isEmpty, cursor.id.utf8.count <= 1024,
+              cursor.date?.timeIntervalSinceReferenceDate.isFinite != false else { throw SourceFailure.invalid }
+        return cursor
+    }
+}
+
+func photoSearchOptions(limit: Int, locationFiltered: Bool, cursor: PhotoSearchCursor? = nil) -> PHFetchOptions {
     let options = PHFetchOptions()
+    options.fetchLimit = (locationFiltered ? 1000 : limit) + 1
     options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false), NSSortDescriptor(key: "localIdentifier", ascending: true)]
     options.includeAllBurstAssets = true
+    if let cursor {
+        if let date = cursor.date {
+            options.predicate = NSPredicate(format: "creationDate < %@ OR (creationDate == %@ AND localIdentifier > %@) OR creationDate == nil", date as NSDate, date as NSDate, cursor.id)
+        } else {
+            options.predicate = NSPredicate(format: "creationDate == nil AND localIdentifier > %@", cursor.id)
+        }
+    }
     return options
 }
 
