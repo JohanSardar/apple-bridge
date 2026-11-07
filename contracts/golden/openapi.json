@@ -40571,7 +40571,7 @@
     },
     "/v1/op/photos.search": {
       "post": {
-        "description": "Live PhotoKit search. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. candidate_count is before the place filter. Follow next_offset, even on empty pages. No library metadata is stored. Pages are live, not snapshots.",
+        "description": "Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.",
         "operationId": "photos.search",
         "requestBody": {
           "content": {
@@ -40584,6 +40584,11 @@
                     "properties": {
                       "album_id": {
                         "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "cursor": {
+                        "maxLength": 2048,
                         "minLength": 1,
                         "type": "string"
                       },
@@ -40622,11 +40627,6 @@
                           "lon"
                         ],
                         "type": "object"
-                      },
-                      "offset": {
-                        "maximum": 100000000,
-                        "minimum": 0,
-                        "type": "integer"
                       },
                       "radius_m": {
                         "exclusiveMinimum": 0,

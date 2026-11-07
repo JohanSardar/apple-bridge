@@ -330,6 +330,8 @@ async fn photos_reads_are_transient_and_transfer_identity_cannot_be_spoofed() {
             json!({"asset_id":"synthetic","_request":"foreign"}),
         ),
         ("photos.search", json!({"limit":201})),
+        ("photos.search", json!({"offset":1})),
+        ("photos.search", json!({"cursor":"x".repeat(2049)})),
         ("photos.search", json!({"near":{"lat":91,"lon":0}})),
         ("photos.search", json!({"start":"not-a-date"})),
         (

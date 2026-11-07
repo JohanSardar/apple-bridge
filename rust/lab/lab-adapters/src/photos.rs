@@ -77,19 +77,37 @@ fn queries(client: &Client, evidence: &mut Evidence) -> Result<()> {
         search["assets"]
             .as_array()
             .is_some_and(|rows| rows.len() == 1)
-            && search["next_offset"] == 1
-            && search["candidate_count"] == 3,
+            && search["next_cursor"].is_string()
+            && search["examined_count"] == 1
+            && search.get("candidate_count").is_none(),
         "",
     );
     let next = call(
         client,
         "photos.search",
-        json!({"limit":1,"offset":search["next_offset"]}),
+        json!({"limit":1,"cursor":search["next_cursor"]}),
         true,
     )?;
     evidence.check(
         "next_page_advances",
-        next["assets"][0]["id"] != search["assets"][0]["id"] && next["next_offset"] == 2,
+        next["assets"][0]["id"] != search["assets"][0]["id"]
+            && next["next_cursor"].is_string()
+            && next["examined_count"] == 1,
+        "",
+    );
+    let last = call(
+        client,
+        "photos.search",
+        json!({"limit":1,"cursor":next["next_cursor"]}),
+        false,
+    )?;
+    evidence.check(
+        "cursor_enumeration_ends_without_full_count",
+        last["assets"].as_array().is_some_and(|rows| rows.len() == 1)
+            && last["assets"][0]["id"] != next["assets"][0]["id"]
+            && last["assets"][0]["id"] != search["assets"][0]["id"]
+            && last["next_cursor"].is_null()
+            && last["examined_count"] == 1,
         "",
     );
     let search = call(client, "photos.search", json!({"type":"video"}), true)?;
@@ -130,6 +148,16 @@ fn queries(client: &Client, evidence: &mut Evidence) -> Result<()> {
 }
 
 fn originals(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()> {
+    let stale = client.call_raw(
+        "photos.fetch",
+        &json!({"args":{"asset_id":"photo-fixture","resource_key":"1".repeat(64)}}),
+        10,
+    )?;
+    evidence.check(
+        "stale_resource_key_is_conflict",
+        stale.is_some_and(|(_, value)| value["error"]["code"] == "conflict"),
+        "",
+    );
     let transfer = call(
         client,
         "photos.fetch",
@@ -198,8 +226,8 @@ fn originals(world: &World, client: &Client, evidence: &mut Evidence) -> Result<
         10,
     )?;
     evidence.check(
-        "released_transfer_unavailable",
-        released.is_some_and(|(_, value)| !value["error"].is_null()),
+        "released_transfer_is_expired",
+        released.is_some_and(|(_, value)| value["error"]["code"] == "expired"),
         "",
     );
     Ok(())
@@ -265,7 +293,9 @@ fn albums(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()>
     evidence.check(
         "album_deleted_without_assets",
         albums["count"] == 0
-            && call(client, "photos.search", json!({}), false)?["candidate_count"] == 3,
+            && call(client, "photos.search", json!({}), false)?["assets"]
+                .as_array()
+                .is_some_and(|rows| rows.len() == 3),
         "",
     );
     let read_only = Client::new(world, "photos:read")?;

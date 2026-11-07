@@ -14,7 +14,7 @@ For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --args
 
 | Operation | Arguments and effect |
 |---|---|
-| `photos.search` | Half-open RFC3339 `start`/`end`, `type`, `album_id`, `favorite`, explicit `include_hidden`, optional `near: {lat,lon}` and `radius_m`; `offset` and `limit` (1–200). |
+| `photos.search` | Half-open RFC3339 `start`/`end`, `type`, `album_id`, `favorite`, explicit `include_hidden`, optional `near: {lat,lon}` and `radius_m`; `cursor` and `limit` (1–200). |
 | `photos.get` | `asset_id`; current dimensions, duration, dates, favorite/hidden flags, coordinates if present, burst identity, and the complete public resource inventory. |
 | `photos.albums` | `smart` selects smart versus user albums. Page with `offset`/`limit`. Each album reports editing capabilities. |
 | `photos.fetch` | Start with `asset_id`, optional `resource_index`, `resource_key`, `network_access` (default false), `max_bytes` (default 8 GiB, at most 64 GiB). Without an index, select the first original photo/video/audio resource by public type. Poll/read with only `transfer_id`, `offset`, `length`. |
@@ -25,7 +25,7 @@ For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --args
 | `photos.album_add` / `photos.album_remove` | `album_id`, unique `asset_ids` (1–200); change memberships and read back. Removal does not delete assets. |
 | `photos.album_delete` | Delete an editable regular album, not its assets; verify album absence. |
 
-Search examines at most 1,000 candidates per page. PhotoKit applies date, media and album predicates; coordinate-radius filtering runs on those candidates. `candidate_count` is before the coordinate filter. Follow `next_offset` even if the current page is empty. Results are live, sorted newest first, not snapshot-consistent. Concurrent library edits can shift offset pages.
+Search bounds the PhotoKit fetch itself: `limit + 1` candidates without a coordinate filter, or 1,001 with one. At most 1,000 candidates are examined per page; the extra candidate detects whether another page exists without counting the full library. `examined_count` counts only this page's examined candidates, before coordinate filtering. Follow `next_cursor` with unchanged filters even if the current page is empty. A null cursor ends enumeration. The cursor carries the last examined creation date and identifier, preserving equal-date ties and including undated assets last. Results are live, sorted newest first then by identifier, not snapshot-consistent. Concurrent edits can change membership, but later pages do not refetch and skip the earlier prefix. Search no longer accepts numeric offsets or reports an exact full-library count.
 
 Place search uses explicit coordinates, not Photos' inferred place names. Use the existing geocoding operation to turn an address into coordinates. Types include image, video, audio, Live Photo, screenshot, panorama, HDR, depth, slow motion and time lapse. Unknown media subtype bits remain visible in details.
 
@@ -34,6 +34,8 @@ Place search uses explicit coordinates, not Photos' inferred place names. Use th
 Inspect `resources` from `photos.get` first. PhotoKit exposes original photos/videos/audio, alternate RAW/JPEG representations, paired Live Photo video, full-size edited representations and adjustment resources. Choose the resource index from that response. Pass its `resource_key` to reject a changed resource inventory or asset modification time at transfer start. This is a metadata precondition, not a byte digest or a library snapshot. Fetch the still and paired video separately for a Live Photo; nothing silently converts or flattens it.
 
 The start call returns a transfer ID immediately. Poll until `state` is `ready`; each read returns SHA-256, total size, offset, base64 `bytes`, and `eof`. Read chunks of at most 512 KiB. Verify the assembled SHA-256 and call `photos.release`, including on failure. `network_access:true` allows PhotoKit to obtain iCloud-only resources; offline or unavailable content fails rather than appearing empty.
+
+An expired or invalidated transfer returns `expired`; start a new transfer. A stale `resource_key` returns `conflict`; refresh `photos.get` before choosing the resource again. These are distinct from an unavailable resource.
 
 Four transfers may exist per Helper. Poll or read within 120 seconds to retain one, including during an iCloud download; every transfer has a monotonic 24-hour hard lifetime. A 15-second sweep closes abandoned transfers. Native resource callbacks write directly to private temporary files and incrementally hash bytes. Files open in read/write mode with permissions verified as `0600`, then unlink before receiving any photo bytes. Only open descriptors retain the data, so release, failure, expiry or process exit removes it, including a crash. iCloud progress and received byte counts are reported while downloading.
 

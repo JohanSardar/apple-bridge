@@ -68,18 +68,37 @@ impl Library {
                             })
                         })
                 });
-                let count = assets.len();
-                if args.get("near").is_some() {
-                    assets.clear();
+                if let Some(cursor) = args["cursor"].as_str() {
+                    let cursor: Value = serde_json::from_slice(
+                        &STANDARD.decode(cursor).map_err(|_| "invalid")?,
+                    )
+                    .map_err(|_| "invalid")?;
+                    let date = cursor["created_at"].as_str().ok_or("invalid")?;
+                    let id = cursor["id"].as_str().ok_or("invalid")?;
+                    assets.retain(|asset| {
+                        let created = asset["created_at"].as_str().unwrap_or_default();
+                        created < date
+                            || created == date && asset["id"].as_str().unwrap_or_default() > id
+                    });
                 }
-                let offset = usize::try_from(args["offset"].as_u64().unwrap_or(0))
-                    .map_err(|_| "invalid")?
-                    .min(assets.len());
                 let limit =
                     usize::try_from(args["limit"].as_u64().unwrap_or(50)).map_err(|_| "invalid")?;
-                let end = (offset + limit).min(assets.len());
+                let near = args.get("near").is_some();
+                let end = assets.len().min(if near { 1000 } else { limit });
+                let next = if end < assets.len() {
+                    let last = &assets[end - 1];
+                    json!(STANDARD.encode(
+                        serde_json::to_vec(
+                            &json!({"created_at":last["created_at"],"id":last["id"]}),
+                        )
+                        .map_err(|_| "invalid")?,
+                    ))
+                } else {
+                    Value::Null
+                };
+                let rows = if near { &assets[..0] } else { &assets[..end] };
                 Ok(
-                    json!({"assets":assets[offset..end],"candidate_count":count,"next_offset":if end < assets.len() {json!(end)} else {Value::Null},"limited":false}),
+                    json!({"assets":rows,"examined_count":end,"next_cursor":next,"limited":false}),
                 )
             }
             "photos.get" => {
@@ -88,13 +107,16 @@ impl Library {
                     .into_iter()
                     .find(|asset| asset["id"] == args["asset_id"])
                     .ok_or("invalid")?;
-                let resources = if args["asset_id"] == "live-fixture" {
+                let mut resources = if args["asset_id"] == "live-fixture" {
                     vec![json!({"index":0,"type":1}), json!({"index":1,"type":9})]
                 } else {
                     vec![
                         json!({"index":0,"type":if args["asset_id"] == "video-fixture" {2} else {1}}),
                     ]
                 };
+                for resource in &mut resources {
+                    resource["resource_key"] = json!("0".repeat(64));
+                }
                 asset["resources"] = json!(resources);
                 Ok(asset)
             }
@@ -104,7 +126,7 @@ impl Library {
             "photos.fetch" => {
                 if let Some(transfer) = args["transfer_id"].as_str() {
                     if self.transfers.get(transfer).map(String::as_str) != Some(principal) {
-                        return Err("unavailable");
+                        return Err("expired");
                     }
                     let offset = usize::try_from(args["offset"].as_u64().unwrap_or(0))
                         .map_err(|_| "invalid")?;
@@ -125,6 +147,12 @@ impl Library {
                 {
                     return Err("invalid");
                 }
+                if args["resource_key"]
+                    .as_str()
+                    .is_some_and(|key| key != "0".repeat(64))
+                {
+                    return Err("conflict");
+                }
                 let transfer = id("photo").map_err(|_| "unavailable")?;
                 self.transfers.insert(transfer.clone(), principal.into());
                 Ok(
@@ -134,7 +162,7 @@ impl Library {
             "photos.release" => {
                 let transfer = args["transfer_id"].as_str().ok_or("invalid")?;
                 if self.transfers.get(transfer).map(String::as_str) != Some(principal) {
-                    return Err("unavailable");
+                    return Err("expired");
                 }
                 self.transfers.remove(transfer);
                 Ok(json!({"released":true}))

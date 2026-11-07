@@ -12,9 +12,9 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
     for (name, description, write, properties, required) in [
         (
             "photos.search",
-            "Live PhotoKit search. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. candidate_count is before the place filter. Follow next_offset, even on empty pages. No library metadata is stored. Pages are live, not snapshots.",
+            "Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.",
             false,
-            json!({"start":text,"end":text,"type":{"type":"string","enum":["image","video","audio","live_photo","screenshot","panorama","hdr","depth","slow_motion","timelapse"]},"album_id":text,"favorite":boolean,"include_hidden":boolean,"near":{"type":"object","additionalProperties":false,"required":["lat","lon"],"properties":{"lat":{"type":"number","minimum":-90,"maximum":90},"lon":{"type":"number","minimum":-180,"maximum":180}}},"radius_m":{"type":"number","exclusiveMinimum":0,"maximum":100_000},"offset":offset,"limit":limit}),
+            json!({"start":text,"end":text,"type":{"type":"string","enum":["image","video","audio","live_photo","screenshot","panorama","hdr","depth","slow_motion","timelapse"]},"album_id":text,"favorite":boolean,"include_hidden":boolean,"near":{"type":"object","additionalProperties":false,"required":["lat","lon"],"properties":{"lat":{"type":"number","minimum":-90,"maximum":90},"lon":{"type":"number","minimum":-180,"maximum":180}}},"radius_m":{"type":"number","exclusiveMinimum":0,"maximum":100_000},"cursor":{"type":"string","minLength":1,"maxLength":2048},"limit":limit}),
             vec![],
         ),
         (
