@@ -11,6 +11,16 @@ bridge permissions guide    # allow the Mac permissions you want
 bridge stats --watch        # counts per source, as each one finishes
 ```
 
+## Optional capture and location permissions
+
+`bridge permissions guide` offers Screen & System Audio Recording (screenshots and screen recording), Camera, Microphone and Location Services separately. Skip anything you do not want; declining does not disable other sources. `bridge up` and capture operations never request these permissions themselves. If you declined, enable Apple Bridge under System Settings > Privacy & Security for that permission, then run `bridge down` and `bridge up`.
+
+A camera photo needs an available camera, audio recording needs an available microphone, and current location needs a real location fix. Permission alone does not provide a missing device or a location fix. Every agent capture, including a full-level agent's capture, needs a separate owner approval. Captured file contents and location coordinates are not included in permission status or capture evidence.
+
+Every agent `location.current` query (read, approve or full; local or remote) first returns `{ "id": "qry_...", "state": "awaiting_approval" }` without dispatching. After the owner approves that request in Approvals, retry the identical query with that `id`. It dispatches once; success, failure, cancellation or a lost response consumes the approval. Use a new ID and a new approval for a later fix. Requests expire after ten minutes. Coordinates are returned only to the query caller, never stored in the approval ledger. `location.geocode` and `location.reverse_geocode` use only the supplied address or coordinates, not the device's location.
+
+Native originals in `capture-artifacts` are deleted ninety seconds after their last transfer chunk, allowing recovery from a lost final reply. Abandoned originals expire after five minutes, with cleanup every five seconds and at Helper startup. A transfer already in progress retains its original until it completes or has no progress for ninety seconds. Restarted Helpers retain only unexpired recovery files. Gateway blob retention is separate; this cleanup does not remove the retrieved gateway copy.
+
 ## Installing
 
 ```sh

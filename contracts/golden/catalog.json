@@ -24608,7 +24608,7 @@
   },
   {
     "capability": "",
-    "description": "Transient location.current result",
+    "description": "Read the device location. Every agent request, local or remote, first returns {id,state:awaiting_approval}; after owner approval, retry the identical request ID once. The approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -24639,50 +24639,73 @@
     "kind": "query",
     "name": "location.current",
     "output": {
-      "additionalProperties": false,
-      "properties": {
-        "blobs": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "digest": {
-                "type": "string"
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "blobs": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "digest": {
+                    "type": "string"
+                  },
+                  "handle": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "digest",
+                  "size"
+                ],
+                "type": "object"
               },
-              "handle": {
-                "type": "string"
-              },
-              "size": {
-                "type": "integer"
-              }
+              "type": "array"
             },
-            "required": [
-              "digest",
-              "size"
-            ],
-            "type": "object"
+            "id": {
+              "type": "string"
+            },
+            "result_json": {}
           },
-          "type": "array"
+          "required": [
+            "id",
+            "result_json",
+            "blobs"
+          ],
+          "type": "object"
         },
-        "id": {
-          "type": "string"
-        },
-        "result_json": {}
-      },
-      "required": [
-        "id",
-        "result_json",
-        "blobs"
-      ],
-      "type": "object"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "state"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "awaiting_approval"
+              ]
+            }
+          }
+        }
+      ]
     },
     "read_model": false,
     "scope": "location:read",
     "source": "location",
-    "version": 1
+    "version": 2
   },
   {
     "capability": "",
-    "description": "Transient location.geocode result",
+    "description": "Geocode an explicit address; never requests or returns the device current location",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -24756,7 +24779,7 @@
   },
   {
     "capability": "",
-    "description": "Transient location.reverse_geocode result",
+    "description": "Reverse geocode explicit coordinates; never requests or returns the device current location",
     "examples": null,
     "input": {
       "additionalProperties": false,

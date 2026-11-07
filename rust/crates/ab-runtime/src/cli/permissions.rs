@@ -61,6 +61,45 @@ const LEVEL_ONE: &[Permission] = &[
     },
 ];
 
+const OPTIONAL: &[Permission] = &[
+    Permission {
+        id: "screen_recording",
+        title: "Screen & System Audio Recording",
+        why: "Take screenshots and record the screen (optional)",
+        source: "capture",
+        pane: "Privacy_ScreenCapture",
+        asks: false,
+    },
+    Permission {
+        id: "camera",
+        title: "Camera",
+        why: "Take a camera photo (optional; needs a camera)",
+        source: "capture",
+        pane: "Privacy_Camera",
+        asks: true,
+    },
+    Permission {
+        id: "microphone",
+        title: "Microphone",
+        why: "Record audio (optional; needs a microphone)",
+        source: "capture",
+        pane: "Privacy_Microphone",
+        asks: true,
+    },
+    Permission {
+        id: "location",
+        title: "Location Services",
+        why: "Get the current location (optional; needs a location fix)",
+        source: "location",
+        pane: "Privacy_LocationServices",
+        asks: true,
+    },
+];
+
+fn permissions() -> impl Iterator<Item = &'static Permission> {
+    LEVEL_ONE.iter().chain(OPTIONAL)
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct Fixture {
     statuses: BTreeMap<String, String>,
@@ -105,7 +144,7 @@ impl Backend<'_> {
                 .get(permission.id)
                 .cloned()
                 .unwrap_or_else(|| "unknown".to_owned())),
-            Self::Mac { home, .. } => source_status(home, permission.source),
+            Self::Mac { home, .. } => source_status(home, permission),
         }
     }
 
@@ -210,7 +249,7 @@ impl Backend<'_> {
     }
 }
 
-fn source_status(home: &Path, source: &str) -> Outcome<String> {
+fn source_status(home: &Path, permission: &Permission) -> Outcome<String> {
     if !home.join("state.db").exists() {
         return Ok("unknown".to_owned());
     }
@@ -219,8 +258,31 @@ fn source_status(home: &Path, source: &str) -> Outcome<String> {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .map_err(|_| Failure::not_set_up(home))?;
+    if permission.source == "capture" {
+        let mut statement = connection.prepare(
+            "SELECT json_extract(CAST(payload AS TEXT),'$.data.coverage.permissions') FROM records WHERE collection='system.source' AND deleted=0 AND json_extract(CAST(payload AS TEXT),'$.data.source')='capture'",
+        ).map_err(|_| Failure::not_set_up(home))?;
+        let rows = statement
+            .query_map([], |row| row.get::<_, Option<String>>(0))
+            .map_err(|_| Failure::not_set_up(home))?;
+        for row in rows {
+            if let Some(value) = row.map_err(|_| Failure::not_set_up(home))? {
+                let states: Option<BTreeMap<String, bool>> = serde_json::from_str(&value)?;
+                if let Some(allowed) = states.as_ref().and_then(|states| states.get(permission.id))
+                {
+                    return Ok(if *allowed {
+                        "granted"
+                    } else {
+                        "needs_permission"
+                    }
+                    .to_owned());
+                }
+            }
+        }
+        return Ok("unknown".to_owned());
+    }
     let snapshot = stats::read_states(&connection)?;
-    Ok(match snapshot.get(source).map(String::as_str) {
+    Ok(match snapshot.get(permission.source).map(String::as_str) {
         Some("ready" | "degraded") => "granted",
         Some("permission_missing") => "needs_permission",
         _ => "unknown",
@@ -229,8 +291,7 @@ fn source_status(home: &Path, source: &str) -> Outcome<String> {
 }
 
 pub(super) fn declined(name: &str) -> String {
-    let title = LEVEL_ONE
-        .iter()
+    let title = permissions()
         .find(|permission| permission.id == name)
         .map_or_else(
             || match name {
@@ -268,7 +329,7 @@ fn mark(status: &str) -> &'static str {
 }
 
 fn print_checklist(backend: &Backend<'_>) -> Outcome {
-    for permission in LEVEL_ONE {
+    for permission in permissions() {
         let status = backend.status(permission)?;
         println!(
             "  {} {:<18} {:<18} {}",
@@ -297,7 +358,7 @@ pub fn status(home: &Path, args: &GuideStatusArgs) -> Outcome {
     let backend = backend_for(home, args.fixture.as_ref(), None);
     if args.json {
         let mut statuses = BTreeMap::new();
-        for permission in LEVEL_ONE {
+        for permission in permissions() {
             statuses.insert(permission.id, backend.status(permission)?);
         }
         println!("{}", serde_json::to_string(&statuses)?);
@@ -380,7 +441,7 @@ struct Answers {
 
 fn ask_each(backend: &Backend<'_>, mut wants: impl FnMut(&Permission) -> Outcome<bool>) -> Answers {
     let mut answers = Answers::default();
-    for permission in LEVEL_ONE.iter().filter(|permission| permission.asks) {
+    for permission in permissions().filter(|permission| permission.asks) {
         if let Err(failure) = ask_one(backend, permission, &mut wants, &mut answers) {
             answers.failure = Some(failure);
             break;
@@ -520,10 +581,7 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         return Err(failure);
     }
     new_grants?;
-    for permission in LEVEL_ONE
-        .iter()
-        .filter(|permission| !answers.skipped.contains(&permission.id))
-    {
+    for permission in permissions().filter(|permission| !answers.skipped.contains(&permission.id)) {
         settings_step(&backend, permission, args.yes).await?;
     }
     println!();
@@ -552,10 +610,23 @@ mod tests {
         let mut offered = Vec::new();
         let answers = ask_each(&backend, |permission| {
             offered.push(permission.id);
-            Ok(permission.id != "calendar")
+            Ok(matches!(permission.id, "contacts" | "reminders"))
         });
-        assert_eq!(offered, ["contacts", "calendar", "reminders"]);
-        assert_eq!(answers.skipped, ["calendar"]);
+        assert_eq!(
+            offered,
+            [
+                "contacts",
+                "calendar",
+                "reminders",
+                "camera",
+                "microphone",
+                "location"
+            ]
+        );
+        assert_eq!(
+            answers.skipped,
+            ["calendar", "camera", "microphone", "location"]
+        );
         assert_eq!(
             answers.asked.iter().map(|p| p.id).collect::<Vec<_>>(),
             ["contacts", "reminders"]

@@ -23,6 +23,7 @@ pub use contracts::*;
 mod admission;
 mod approvals;
 mod execution;
+mod location;
 mod message_parts;
 mod outcomes;
 mod queries;

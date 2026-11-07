@@ -5,6 +5,7 @@ import EventKit
 import CoreLocation
 import AVFoundation
 import CoreGraphics
+import ScreenCaptureKit
 import Speech
 import Intents
 import CoreBluetooth
@@ -89,8 +90,22 @@ public enum NewPermissions {
 
     public typealias RequestAdapter = @MainActor () async throws -> Void
     public private(set) static var requestAPICalls = 0
-    private static var location: CLLocationManager?
+    private static var location: LocationRequest?
     private static var bluetooth: CBCentralManager?
+
+    @MainActor
+    private final class LocationRequest: NSObject, @preconcurrency CLLocationManagerDelegate {
+        let manager = CLLocationManager()
+        private(set) var status: CLAuthorizationStatus
+        override init() {
+            status = manager.authorizationStatus
+            super.init()
+            manager.delegate = self
+        }
+        func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+            status = manager.authorizationStatus
+        }
+    }
 
     private static func call(_ name: String, adapters: [String: RequestAdapter]?, native: RequestAdapter) async throws {
         requestAPICalls += 1
@@ -115,6 +130,7 @@ public enum NewPermissions {
         return (error.domain == CNErrorDomain && error.code == CNError.Code.authorizationDenied.rawValue)
             || (error.domain == EKErrorDomain && error.code == EKError.Code.eventStoreNotAuthorized.rawValue)
             || (error.domain == UNErrorDomain && error.code == UNError.Code.notificationsNotAllowed.rawValue)
+            || (error.domain == SCStreamErrorDomain && error.code == SCStreamError.Code.userDeclined.rawValue)
     }
     public static let requestDeadline: Duration = .seconds(150)
     public static let watchdogDeadline: Duration = .seconds(155)
@@ -167,20 +183,22 @@ public enum NewPermissions {
             try await call("reminders", adapters: adapters) { try requireAccess(try await EKEventStore().requestFullAccessToReminders()) }
         case "location":
             try await call("location", adapters: adapters) {
-                location = CLLocationManager()
-                location?.requestWhenInUseAuthorization()
-                for _ in 0..<240 {
-                    if location?.authorizationStatus != .notDetermined { break }
+                let request = LocationRequest()
+                location = request
+                request.manager.requestWhenInUseAuthorization()
+                while request.status == .notDetermined {
                     try await Task.sleep(for: .milliseconds(250))
                 }
-                try requireAccess(![.denied, .restricted].contains(location?.authorizationStatus))
+                try requireAccess(![.denied, .restricted].contains(request.status))
             }
         case "camera":
             try await call("camera", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .video)) }
         case "microphone":
             try await call("microphone", adapters: adapters) { try requireAccess(await AVCaptureDevice.requestAccess(for: .audio)) }
         case "screen_recording":
-            try await call("screen_recording", adapters: adapters) { try requireAccess(CGRequestScreenCaptureAccess()) }
+            try await call("screen_recording", adapters: adapters) {
+                _ = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+            }
         case "speech_recognition":
             try await call("speech_recognition", adapters: adapters) {
                 let status = await withCheckedContinuation { continuation in

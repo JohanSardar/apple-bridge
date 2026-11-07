@@ -31,7 +31,13 @@ public struct CaptureSource: Source {
     public init(provider: any CaptureProvider = SystemCaptureProvider()) {
         self.provider = provider
     }
-    public func status() async -> JSON? { .object([:]) }
+    public func status() async -> JSON? {
+        .object(["permissions": .object([
+            "screen_recording": .bool(await provider.authorized("capture.screenshot")),
+            "camera": .bool(await provider.authorized("capture.camera_photo")),
+            "microphone": .bool(await provider.authorized("capture.record_audio"))
+        ])])
+    }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         switch operation {
         case "capture.play_sound":
@@ -90,6 +96,7 @@ public struct SystemCaptureProvider: CaptureProvider {
         }
         if operation == "capture.record_audio" {
             guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { throw SourceFailure.permissionMissing }
+            guard AVCaptureDevice.default(for: .audio) != nil else { throw SourceFailure.unavailable }
             let output = directory.appendingPathComponent(UUID().uuidString + ".m4a")
             let recorder = try AVAudioRecorder(url: output, settings: [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 44100, AVNumberOfChannelsKey: 1, AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue])
             defer { recorder.stop() }

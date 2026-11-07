@@ -282,7 +282,10 @@ pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Read
             "location" => location(fields),
             "vision" => vision(fields),
             "safari" => safari(fields),
-            "capture" => Readiness::ready(json!({"fields": "partial"}), &CAPTURE),
+            "capture" => Readiness::ready(
+                json!({"fields": "partial", "permissions": fields["permissions"].as_object().cloned().unwrap_or_default()}),
+                &CAPTURE,
+            ),
             "maps" => Readiness::ready(json!({"fields": "complete"}), &["maps.open"]),
             "speech" => Readiness::ready(json!({"fields": "complete"}), &["speech.say"]),
             "pdf" => Readiness::ready(json!({"fields": "complete"}), &["pdf.annotate"]),
@@ -375,6 +378,19 @@ mod tests {
             assert_eq!(told["location"].state, state);
             assert_eq!(told["location"].reason, reason);
         }
+    }
+
+    #[test]
+    fn capture_reports_individual_grants_without_disabling_other_operations() {
+        let permissions = json!({"camera":false,"microphone":true,"screen_recording":false});
+        let told = framework(&json!({"capture":{"permissions":permissions}}), "b");
+        assert_eq!(told["capture"].coverage["permissions"], permissions);
+        assert_eq!(told["capture"].state, "ready");
+        assert!(
+            told["capture"]
+                .capabilities
+                .contains(&"capture.record_audio".to_owned())
+        );
     }
 
     #[test]
