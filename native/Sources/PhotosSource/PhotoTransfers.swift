@@ -246,7 +246,7 @@ final class PhotoDownload: @unchecked Sendable {
         guard offset <= size else { throw SourceFailure.invalid }
         guard let reader = file else { throw SourceFailure.unavailable }
         try reader.seek(toOffset: UInt64(offset))
-        let bytes = try reader.read(upToCount: min(length, size - offset)) ?? Data()
+        let bytes = try reader.read(upToCount: min(length, 64 << 10, size - offset)) ?? Data()
         return .object(["transfer_id": .string(id), "state": .string("ready"), "digest": .string(digest), "size": .number(Double(size)), "offset": .number(Double(offset)), "bytes": .string(bytes.base64EncodedString()), "eof": .bool(offset + bytes.count == size)])
     }
 

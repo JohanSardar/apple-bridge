@@ -18,6 +18,7 @@ public enum PhotosChecks {
         try testTransferLifetimeUsesIdleAndHardMonotonicDeadlines()
         try testStrictBoundaries()
         try testStreamedOriginalAndBoundedRead()
+        try testMaximumReadFitsNativeQueryFrame()
         try testCapacityAndFailureRemovePartialFiles()
     }
 
@@ -126,6 +127,26 @@ public enum PhotosChecks {
         download.cancel()
         try require(!FileManager.default.fileExists(atPath: file.path))
         try rejects(try download.read(id: "synthetic", offset: 0, length: 1))
+    }
+
+    static func testMaximumReadFitsNativeQueryFrame() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ab-photos-test-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let download = try PhotoDownload(url: directory.appendingPathComponent("resource"), maximum: 512 << 10)
+        download.append(Data(repeating: 255, count: 512 << 10))
+        download.finish(failed: false)
+        var offset = 0
+        while offset < 512 << 10 {
+            let response = try download.read(id: UUID().uuidString, offset: offset, length: 512 << 10)
+            let frame: JSON = .object(["t": .string("QueryResult"), "id": .string(UUID().uuidString), "result_json": response, "blobs": .array([])])
+            try require(try JSONEncoder().encode(frame).count <= 256 << 10)
+            let bytes = Data(base64Encoded: response["bytes"].string) ?? Data()
+            try require(!bytes.isEmpty && bytes == Data(repeating: 255, count: bytes.count))
+            offset += bytes.count
+            try require(response["eof"] == .bool(offset == 512 << 10))
+        }
+        try require(offset == 512 << 10)
     }
 
     static func testCapacityAndFailureRemovePartialFiles() throws {

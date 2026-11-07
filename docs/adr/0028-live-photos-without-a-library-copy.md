@@ -2,6 +2,8 @@
 
 Status: Proposed, native qualification and independent security review pending.
 
+Transfer read lengths are upper bounds, not promised chunk sizes. Reads return at most 64 KiB so worst-case slash escaping in base64 plus the query envelope stays below the existing 256 KiB native frame limit. Clients advance by decoded bytes until `eof`. The frame limit and accepted request lengths remain unchanged.
+
 Photos follows `location.current` rather than the replicated source model. Swift owns PhotoKit authorization, fetches, resources and native change/readback. Rust owns source scopes, argument validation, agent approvals, identity binding, single dispatch and gateway/replica routing. Frontdoor only translates the shared operation descriptors.
 
 No photo or album collection is added to the domain or state schema. Query results and original bytes do not enter state, snapshots, durable query blobs or replication. Readiness contains only permission state. Large originals use asynchronous private temporary transfers and bounded reads under the same authenticated query channel. Temporary files unlink before any photo bytes arrive; only open descriptors retain data, which the kernel removes on process exit or a crash.
