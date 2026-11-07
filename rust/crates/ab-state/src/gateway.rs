@@ -502,6 +502,7 @@ impl State<Gateway> {
                 observed_at: o.observed_at.as_str().into(),
                 deleted,
                 coverage: Coverage {
+                    permissions: Default::default(),
                     pack_version: String::new(),
                     operations: Vec::new(),
                     fields: "complete".into(),

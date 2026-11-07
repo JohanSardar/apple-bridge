@@ -81,6 +81,7 @@ impl State<Gateway> {
                 observed_at: crate::replay::now().to_string(),
                 deleted: sample.is_none(),
                 coverage: Coverage {
+                    permissions: Default::default(),
                     pack_version: String::new(),
                     operations: Vec::new(),
                     fields: "complete".into(),

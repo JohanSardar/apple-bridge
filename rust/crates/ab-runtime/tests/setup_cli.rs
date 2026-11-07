@@ -74,6 +74,7 @@ fn fake_tool(directory: &Path, name: &str) -> Result<PathBuf, std::io::Error> {
 fn seed_sources(home: &Path) -> Check {
     use ab_trust::domain::{Coverage, Source};
     let coverage = || Coverage {
+        permissions: Default::default(),
         pack_version: String::new(),
         operations: Vec::new(),
         fields: "complete".into(),
@@ -735,7 +736,7 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     std::fs::write(
         &fixture,
         serde_json::to_vec(&serde_json::json!({
-            "statuses": {"full_disk_access":"denied","contacts":"not_determined","calendar":"granted","reminders":"not_determined"},
+            "statuses": {"full_disk_access":"denied","contacts":"not_determined","calendar":"granted","reminders":"not_determined","screen_recording":"granted","camera":"granted","microphone":"granted","location":"granted"},
             "grant_when_opened": ["full_disk_access"],
             "grant_when_asked": ["contacts", "reminders"],
         }))?,
@@ -782,7 +783,7 @@ fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() ->
     std::fs::write(
         &fixture,
         serde_json::to_vec(&serde_json::json!({
-            "statuses":{"full_disk_access":"granted","contacts":"not_determined","calendar":"not_determined","reminders":"not_determined"},
+            "statuses":{"full_disk_access":"granted","contacts":"not_determined","calendar":"not_determined","reminders":"not_determined","screen_recording":"granted","camera":"granted","microphone":"granted","location":"granted"},
             "deny_when_asked":["contacts"],
             "grant_when_asked":["calendar","reminders"]
         }))?,
@@ -819,6 +820,78 @@ fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() ->
     assert_eq!(after["opened"], serde_json::json!([]));
     assert_eq!(after["statuses"]["calendar"], "granted");
     assert_eq!(after["statuses"]["reminders"], "granted");
+    Ok(())
+}
+
+#[test]
+fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_working() -> Check {
+    let directory = tempfile::tempdir()?;
+    let fixture = directory.path().join("fixture.json");
+    std::fs::write(
+        &fixture,
+        serde_json::to_vec(&serde_json::json!({
+            "statuses": {"full_disk_access":"granted","contacts":"granted","calendar":"granted","reminders":"granted"},
+            "deny_when_asked": ["camera"],
+            "grant_when_asked": ["screen_recording", "microphone", "location"]
+        }))?,
+    )?;
+    let home = directory.path().join("home");
+    let arguments = [
+        "permissions",
+        "guide",
+        "--yes",
+        "--fixture",
+        fixture.to_str().ok_or("path")?,
+    ];
+    let output = run(&home, &arguments)?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let shown = text(&output.stdout);
+    assert!(shown.contains("optional"), "{shown}");
+    assert!(shown.contains("Camera permission was declined"), "{shown}");
+    assert!(shown.contains("Other sources still work"), "{shown}");
+    let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
+    assert_eq!(
+        after["asked"],
+        serde_json::json!(["screen_recording", "camera", "microphone", "location"])
+    );
+    assert_eq!(after["opened"], serde_json::json!([]));
+    let output = run(
+        &home,
+        &[
+            "permissions",
+            "status",
+            "--json",
+            "--fixture",
+            fixture.to_str().ok_or("path")?,
+        ],
+    )?;
+    let status: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(status["camera"], "denied");
+    for id in ["screen_recording", "microphone", "location", "contacts"] {
+        assert_eq!(status[id], "granted", "{id}");
+    }
+    Ok(())
+}
+
+#[test]
+fn capture_status_never_infers_camera_or_microphone_from_screen_access() -> Check {
+    use ab_trust::domain::{Coverage, Source};
+    let home = tempfile::tempdir()?;
+    let mut state = ab_state::State::<ab_state::Gateway>::open(home.path())?;
+    let mut coverage: Coverage = serde_json::from_value(serde_json::json!({
+        "fields":"partial", "permissions":{"screen_recording":true,"camera":false,"microphone":false}
+    }))?;
+    state.source_state(Source::Capture, "ready", coverage.clone(), None, "")?;
+    let output = run(home.path(), &["permissions", "status", "--json"])?;
+    let statuses: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(statuses["screen_recording"], "granted");
+    assert_eq!(statuses["camera"], "needs_permission");
+    assert_eq!(statuses["microphone"], "needs_permission");
+    coverage = serde_json::from_value(serde_json::json!({"fields":"partial"}))?;
+    state.source_state(Source::Capture, "ready", coverage, None, "")?;
+    let output = run(home.path(), &["permissions", "status", "--json"])?;
+    let statuses: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(statuses["camera"], "unknown");
     Ok(())
 }
 

@@ -119,7 +119,7 @@ public actor AppleSession {
 
                 transmit(.object(["t": .string("QueryResult"), "id": id, "result_json": result, "blobs": .array(blobs)]))
             } catch {
-                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable"))
+                let code = error is CancellationError ? "deadline" : (error as? SourceFailure == .permissionMissing ? "forbidden" : (error as? SourceFailure == .invalid ? "invalid" : (error as? SourceFailure == .unsupported ? "unsupported" : "unavailable")))
                 transmit(.object(["t": .string("QueryError"), "id": id, "code": .string(code)]))
             }
             return

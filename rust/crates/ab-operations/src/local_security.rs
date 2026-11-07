@@ -179,6 +179,51 @@ fn queries_reaching_native(f: &Fixture) -> usize {
     f.peer.0.frames.lock().expect("frames").len()
 }
 
+#[tokio::test]
+async fn every_agent_capture_requires_a_fresh_owner_approval() {
+    for level in ["read", "approve", "full"] {
+        for (op, scope, args) in [
+            ("capture.screenshot", "capture:write", json!({})),
+            ("capture.camera_photo", "capture:write", json!({})),
+            (
+                "capture.record_audio",
+                "capture:write",
+                json!({"seconds": 1}),
+            ),
+            ("mac.screen_record", "mac:write", json!({"seconds": 1})),
+        ] {
+            let f = fixture();
+            let p = principal("agent:capture", "agent", level, &[scope]);
+            for id in ["capture_one", "capture_two"] {
+                let answer = f.gateway.submit(&p, command(id, op, &args)).await;
+                if level == "read" {
+                    assert_eq!(
+                        answer.expect_err("read cannot capture").code,
+                        Code::Unauthorized
+                    );
+                } else {
+                    assert_eq!(state_of(&answer.expect("pending")), "awaiting_approval");
+                    let row = f.gateway.state.command(id).expect("row");
+                    let review = f.gateway.approval_review(&row).await.expect("review");
+                    f.gateway
+                        .decide(
+                            &owner(),
+                            id,
+                            false,
+                            &OwnerReview {
+                                binding: &review.binding,
+                                accepted_unpreviewable: false,
+                            },
+                        )
+                        .await
+                        .expect("declined");
+                }
+                assert_eq!(queries_reaching_native(&f), 0, "{level} {op}");
+            }
+        }
+    }
+}
+
 const DOCUMENT_QUERIES: [(&str, &str); 4] = [
     ("pdf.text", "pdf:read"),
     ("pdf.search", "pdf:read"),

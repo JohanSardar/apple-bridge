@@ -5,6 +5,7 @@ type Check = Result<(), Box<dyn std::error::Error>>;
 
 fn coverage(fields: &str) -> Coverage {
     Coverage {
+        permissions: Default::default(),
         pack_version: String::new(),
         operations: Vec::new(),
         fields: fields.into(),

@@ -135,6 +135,7 @@ impl LocalGateway {
                 .mail_args(principal, &args)?;
             audit.argument_bytes = query.args.get().len();
         }
+        let current_location = query.op == "location.current";
         let frame = tokio::time::timeout_at(
             deadline,
             self.peer.exchange(IpcFrame {
@@ -149,8 +150,15 @@ impl LocalGateway {
         .await
         .map_err(|_| Code::Deadline)??;
         if frame.t == "QueryError" {
+            let message = if current_location && frame.code == "forbidden" {
+                "Location Services permission is not allowed. Run bridge permissions guide, or enable Apple Bridge in System Settings > Privacy & Security > Location Services. Other sources still work."
+            } else if current_location && frame.code == "unavailable" {
+                "No current location fix is available on this Mac. Check that Location Services is enabled and try again."
+            } else {
+                "query failed"
+            };
             return Err(serde_json::from_value(
-                json!({"code": frame.code, "message": "query failed", "retryable": false}),
+                json!({"code": frame.code, "message": message, "retryable": false}),
             )
             .map_err(|_| Code::Corrupt)?);
         }

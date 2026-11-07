@@ -291,7 +291,18 @@ fn capture_checked(probe: &dyn Probe, action: &Value) -> Result<(), Refusal> {
     if answer["authorized"] == true {
         Ok(())
     } else {
-        Err(refuse("forbidden"))
+        let permission = match text(action, "op") {
+            "capture.screenshot" | "mac.screen_record" => "Screen & System Audio Recording",
+            "capture.camera_photo" => "Camera",
+            "capture.record_audio" => "Microphone",
+            _ => return Err(refuse("forbidden")),
+        };
+        Err(Refusal {
+            message: Some(format!(
+                "{permission} permission is not allowed. Run bridge permissions guide, or enable Apple Bridge in System Settings > Privacy & Security > {permission}, then run bridge down and bridge up. Other sources still work."
+            )),
+            ..refuse("forbidden")
+        })
     }
 }
 
@@ -834,6 +845,38 @@ mod tests {
                 .expect_err("refused")
                 .code,
             "forbidden"
+        );
+    }
+
+    #[test]
+    fn denied_captures_name_the_permission_without_producing_a_file() {
+        let probe = Fake::new(false);
+        for (op, args, permission) in [
+            (
+                "capture.screenshot",
+                json!({}),
+                "Screen & System Audio Recording",
+            ),
+            (
+                "mac.screen_record",
+                json!({"seconds":1}),
+                "Screen & System Audio Recording",
+            ),
+            ("capture.camera_photo", json!({}), "Camera"),
+            ("capture.record_audio", json!({"seconds":1}), "Microphone"),
+        ] {
+            let refusal = capture_checked(&probe, &action(op, args)).expect_err("no permission");
+            assert_eq!(refusal.code, "forbidden");
+            let message = refusal.message.expect("helpful message");
+            assert!(message.contains(permission), "{message}");
+            assert!(message.contains("bridge permissions guide"), "{message}");
+        }
+        assert!(
+            probe
+                .calls
+                .borrow()
+                .iter()
+                .all(|op| op == "capture.authorized")
         );
     }
 
