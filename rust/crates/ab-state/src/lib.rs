@@ -214,9 +214,13 @@ pub fn digest(records: &[Record]) -> String {
     }
     format!("{:x}", h.finalize())
 }
-fn names_unknown_source(record: &serde_json::Value) -> bool {
+fn names_retired_data(record: &serde_json::Value) -> bool {
     record["source"].is_string()
-        && serde_json::from_value::<Source>(record["source"].clone()).is_err()
+        && (serde_json::from_value::<Source>(record["source"].clone()).is_err()
+            || record["source"] == "photos"
+                && record["collection"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("photos.")))
 }
 fn report_unknown_source(record: &serde_json::Value) {
     static REPORTED: std::sync::Mutex<std::collections::BTreeSet<String>> =
@@ -231,7 +235,7 @@ fn report_unknown_source(record: &serde_json::Value) {
         .is_ok_and(|mut reported| reported.insert(origin.clone()))
     {
         eprintln!(
-            "state: keeping but not serving stored rows from {origin}: this build does not know that source"
+            "state: keeping but not serving stored rows from {origin}: this build does not serve that stored source/collection"
         );
     }
 }
@@ -247,7 +251,7 @@ fn stored_row<T: serde::de::DeserializeOwned>(
         return Err(error.into());
     };
     let record = record_of(&row);
-    if !names_unknown_source(record) {
+    if !names_retired_data(record) {
         return Err(error.into());
     }
     report_unknown_source(record);

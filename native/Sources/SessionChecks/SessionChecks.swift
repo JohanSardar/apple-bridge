@@ -140,6 +140,8 @@ struct SessionChecks {
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let session = try AppleSession(socket: home.appendingPathComponent("none.sock").path, secretFile: home.appendingPathComponent("none").path, home: home, gatewayPID: getpid(), commandsEnabled: true)
         try await session.register(FakeSource(observes: true))
+        try await session.registerQuery("photos.expired") { _ in throw SourceFailure.expired }
+        try await session.registerQuery("photos.conflict") { _ in throw SourceFailure.conflict }
         var pair: [Int32] = [-1, -1]
         guard socketpair(AF_UNIX, SOCK_STREAM, 0, &pair) == 0 else { throw CheckFailure.failed("socketpair") }
         let helperDescriptor = pair[0]
@@ -159,6 +161,12 @@ struct SessionChecks {
         try peer.wire.send(.object(["t": .string("Query"), "id": .string("q2"), "op": .string("no.such"), "args": .object([:]), "deadline_ms": .integer(1000)]))
         let failure = try await peer.next("QueryError")
         try check(failure["id"] == .string("q2") && failure["code"] == .string("unsupported"), "unknown query is unsupported")
+
+        for code in ["expired", "conflict"] {
+            try peer.wire.send(.object(["t": .string("Query"), "id": .string(code), "op": .string("photos." + code), "args": .object([:]), "deadline_ms": .integer(1000)]))
+            let failure = try await peer.next("QueryError")
+            try check(failure["id"] == .string(code) && failure["code"] == .string(code), "Photos recovery errors survive the native query link")
+        }
 
         try peer.wire.send(.object(["t": .string("Primitive"), "id": .string("p1"), "op": .string("phone.echo"), "args": .object(["value": .integer(3)])]))
         let answer = try await peer.next("PrimitiveResult")

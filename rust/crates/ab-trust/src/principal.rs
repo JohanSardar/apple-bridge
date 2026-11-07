@@ -124,6 +124,7 @@ impl Visibility {
                 "notes",
                 "pdf",
                 "phone",
+                "photos",
                 "print",
                 "reminders",
                 "safari",

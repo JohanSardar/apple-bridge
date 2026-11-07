@@ -62,6 +62,7 @@ pub mod packaging;
 pub mod pair;
 pub mod permission_status;
 pub mod phone;
+pub mod photos;
 pub mod pkginstall;
 pub mod poster;
 pub mod private;
@@ -255,6 +256,7 @@ pub fn registry() -> Registry {
     register_pim(&mut registry);
     registry.register("usage", usage::cases);
     registry.register("phone", calls::phone);
+    registry.register("photos", photos::sim);
     registry.register("native_media_yield", native::media_yield);
     registry.register("native_media_posters", native::media_posters);
     registry.register("native_media_export_safety", native::media_export_safety);

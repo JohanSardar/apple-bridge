@@ -52,8 +52,9 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 | Voice Memos | Recordings | None |
 | Mac | Battery, display, network, Bluetooth and more | Volume, appearance, apps, clipboard, notifications and more |
 | Shortcuts | Installed shortcuts and actions | Run a shortcut |
+| Photos (native qualification pending) | [Live PhotoKit search, details and temporary original downloads](docs/reference/photos.md), no synced library copy | Favorites and regular albums, always approved for agents |
 
-An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. Changes wait for your approval unless you give an agent full access. The [operations reference](docs/reference/operations.md) lists all 147 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
+An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. Changes wait for your approval unless you give an agent full access. Photos changes always require agent approval. The [operations reference](docs/reference/operations.md) lists all 158 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
 
 ## Commands
 
@@ -69,7 +70,7 @@ An iPhone app adds health, location, alarms, Face ID approvals and more. It is i
 | | `bridge connector allow` | Allow an app that is waiting to connect |
 | | `bridge agent create`, `list`, `revoke` | Manage agent access |
 | Read | `bridge stats` | Counts per source, never content |
-| | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes`, `mail` and `voicemail` |
+| | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes`, `mail`, `voicemail` and live `photos` |
 | | `bridge search "dinner"` | Search everything synced |
 | | `bridge call --list` | List every read operation you can call |
 | Remote | `bridge remote on`, `bridge remote off` | Use it from other computers. Off by default |

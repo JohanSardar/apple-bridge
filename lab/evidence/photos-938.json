@@ -1,0 +1,200 @@
+{
+  "issue": 938,
+  "status": "security_findings_fixed_native_qualification_pending",
+  "feature_status": "in_progress",
+  "native_permission_proof_preceded_implementation": false,
+  "native_permission_proof_missing_reason": "intermittent_mac_host_access; SDK_probe_compile_failed; corrected_probe_retry_blocked",
+  "pro_retry_window": {
+    "required_seconds": 7200,
+    "status": "completed_without_usable_native_qualification",
+    "count_scope": "automated retry loops, excluding manual SSH checks",
+    "attempt_count": 39,
+    "elapsed_seconds": 7210,
+    "reachable_count": 2,
+    "minimum_duration_met": true,
+    "phases": [
+      {"attempt_count": 28, "elapsed_seconds": 5136, "reachable_count": 1},
+      {"attempt_count": 7, "elapsed_seconds": 6598, "reachable_count": 1},
+      {"attempt_count": 4, "elapsed_seconds": 7210, "reachable_count": 0}
+    ]
+  },
+  "existing_checks": {
+    "provenance": "pre_review_checks_retained_from_d02127d91; continuation_checks_are_recorded_separately",
+    "make_lint": "passed",
+    "make_features": "passed",
+    "make_rust_ci": "passed",
+    "make_rust_golden": "passed",
+    "source_registration_tests": {
+      "status": "passed",
+      "count": 4
+    },
+    "search_regression_not_photos_performance": {
+      "status": "passed",
+      "capture_after_migration_ms": 49.0,
+      "fixture_startup_ms": 2.0,
+      "fixture_seed_ms": 15431.8,
+      "hundred_record_capture_commit_max_ms": 16.6,
+      "migration_startup_and_rebuild_ms": 1834.4
+    }
+  },
+  "new_checks": {
+    "rust_photos_policy_and_approval_tests": "passed",
+    "rust_preview_expiry_capacity_and_redaction_test": "passed",
+    "rust_cli_identity_and_write_opt_in_test": "passed",
+    "rust_all_six_writes_require_explicit_ids_before_local_or_remote_dispatch": "passed",
+    "rust_retired_photos_data_regressions": "passed",
+    "mcp_write_annotation_regression": "passed",
+    "swift_tests": {
+      "status": "passed_in_native_ci",
+      "count": 6,
+      "stream_fixture_bytes": 134217728,
+      "independently_calculated_expected_sha256": "ec5223559dc61ecef215c97e5b6c1a0fad4cab8530aed3de1608c6cd47892ef9"
+    }
+  },
+  "compatibility": {
+    "unchanged_existing_operation_descriptors": 147,
+    "added_operation_descriptors": 11,
+    "existing_openapi_paths_and_nonpath_fields_unchanged": true,
+    "existing_mcp_tools_unchanged": true,
+    "existing_operation_reference_unchanged": true,
+    "golden_formatting_recheck": "passed"
+  },
+  "sim": {
+    "scenario": "PHOTOS-LIVE",
+    "status": "passed",
+    "assertion_count": 21,
+    "fixture_asset_count": 3,
+    "original_bytes": 24,
+    "original_sha256": "6227f0512550e6e852fe771528203afbb5ea78ef72d5477c5d6c105de2bbc748",
+    "operation_evidence": {
+      "photos.search": ["bounded_first_page", "next_page_advances", "cursor_enumeration_ends_without_full_count", "mcp_video_filter", "half_open_dates", "cli_live_read", "permission_denial_has_own_hint"],
+      "photos.get": ["live_photo_resource_pair"],
+      "photos.albums": ["album_created_and_renamed", "album_deleted_without_assets"],
+      "photos.fetch": ["stale_resource_key_is_conflict", "transfer_principal_bound", "cli_transfer_preserves_identity", "original_sha256"],
+      "photos.release": ["released_transfer_is_expired"],
+      "photos.favorite": ["cli_write_scope_enforced", "favorite_readback"],
+      "photos.album_create": ["album_created_and_renamed"],
+      "photos.album_rename": ["album_created_and_renamed"],
+      "photos.album_add": ["album_membership_added"],
+      "photos.album_remove": ["album_membership_removed"],
+      "photos.album_delete": ["album_deleted_without_assets"]
+    },
+    "denial_isolation": ["permission_denial_has_own_hint", "other_source_remains_available"],
+    "qualifies_photokit_or_macos_permissions": false
+  },
+  "native": {
+    "sdk_permission_probe": {
+      "status": "compile_failed_correction_not_executed",
+      "failure": "temporary_probe_main_actor_entry_point",
+      "successful_build_count": 0,
+      "permission_request_count": 0
+    },
+    "compiled": true,
+    "verified_operation_count": 0,
+    "disposable_vm_created_count": 0,
+    "signed_package_created_count": 0,
+    "real_library_read_count": 0,
+    "real_library_write_count": 0,
+    "permission_change_count": 0,
+    "status": "blocked"
+  },
+  "independent_security_review": "external_P2_and_P3_findings_reported_and_fixed; no_self_review_substituted",
+  "continuation": {
+    "pro_retry_window": {
+      "status": "completed_without_usable_native_qualification",
+      "required_seconds": 7200,
+      "minimum_duration_met": true,
+      "count_scope": "automated_retry_loops_excluding_manual_checks",
+      "attempt_count": 41,
+      "elapsed_seconds": 7215,
+      "reachable_count": 3,
+      "phases": [
+        {"attempt_count": 17, "elapsed_seconds": 3126, "reachable_count": 1},
+        {"attempt_count": 9, "elapsed_seconds": 4731, "reachable_count": 1},
+        {"attempt_count": 4, "elapsed_seconds": 5376, "reachable_count": 1},
+        {"attempt_count": 11, "elapsed_seconds": 7215, "reachable_count": 0}
+      ]
+    },
+    "security_regressions": {
+      "bounded_fetch": {
+        "red_head": "d5e36ed26f59fedaf8df21225be45c34a756ca8f",
+        "red_native_ci_run": 42368775154,
+        "passing_build_step_in_native_ci_run": 42368922326,
+        "fetch_limits_without_location": [2, 51, 201],
+        "fetch_limit_with_location": 1001,
+        "cursor_cases": ["equal_dates", "fractional_date_precision", "undated_assets", "invalid_cursors"],
+        "qualifies_large_library_performance": false
+      },
+      "recovery_errors": {
+        "red_head": "6aa8ff12eefd7bc87e181152f70fa5e287ff710a",
+        "red_native_ci_run": 42368922326,
+        "green_native_ci_run": 42369088396,
+        "native_link_codes": ["expired", "conflict"]
+      }
+    },
+    "linux_checks": {
+      "source_head": "52c638c9bdc55d647f588697a1cc4f6bbd3f3d04",
+      "make_lint": "passed",
+      "make_rust_ci": "passed",
+      "make_features": "passed",
+      "make_rust_golden": "passed",
+      "make_rust_lab_independence": "passed",
+      "catalog_and_reference_tests": {"status": "passed", "count": 5},
+      "photos_policy_tests": {"status": "passed", "count": 9},
+      "photos_sim_assertions": {"status": "passed", "count": 21},
+      "clippy_and_legacy_wire_recheck": "passed"
+    },
+    "required_ci": {
+      "source_head": "52c638c9bdc55d647f588697a1cc4f6bbd3f3d04",
+      "rust_run": 42369783548,
+      "swift_run": 42369783422,
+      "Gates": "passed",
+      "Clippy (Linux)": "passed",
+      "Clippy (macOS)": "passed",
+      "Tests (Linux)": "passed",
+      "Tests (macOS)": "passed",
+      "Search update": "passed",
+      "Swift native": "passed"
+    },
+    "cleanup": {
+      "earlier_pro_vm_clones": "none_present_on_inventory",
+      "base_vm": "observed_stopped_never_started_or_modified",
+      "earlier_pro_probe_job": "unloaded_before_keepawake_safety_check",
+      "earlier_pro_probe_files": "remain_removal_blocked_by_connectivity_and_unverified_keepawake_identity",
+      "earlier_pro_keepawake": "active_at_safety_check; identity_and_exit_unverified; no_unconfirmed_process_killed",
+      "pro_objects_created_this_continuation": 0,
+      "ubuntu_source_scratch": "removed_and_absence_verified",
+      "ubuntu_sim_scratch_removed_and_absence_verified_count": 3,
+      "ubuntu_build_outputs_and_dependency_caches": "retained_per_environment_workflow"
+    }
+  },
+  "cleanup": {
+    "pro_owned_probe_scratch": "blocked_by_host_connectivity",
+    "pro_cleanup_attempt_count": 3,
+    "pro_keepawake_max_seconds": 10800,
+    "ubuntu_owned_source_scratch": "removed",
+    "build_outputs_and_dependency_caches": "retained"
+  },
+  "unproven": [
+    "signed Helper launch and Photos prompt attribution in a disposable VM",
+    "native permission denial and other-source isolation",
+    "seeded native per-operation counts and original-byte digest equality",
+    "limited-selection removal invalidating an active transfer",
+    "native coordinate filtering, burst and edited resource behavior",
+    "iCloud-only, offline, video and paired Live Photo original transfers",
+    "native large-library and large-resource responsiveness and resource limits",
+    "isolated read-only real-library proof",
+    "signed no-publish package build and clean installation",
+    "external acceptance of the independent security review fixes",
+    "owned macOS SDK-probe files and keepawake cleanup, blocked by SSH connectivity",
+    "native no-unsolicited-prompt observation and Bridge data-folder inspection",
+    "native transfer-expiry and crash cleanup"
+  ],
+  "safety": {
+    "live_gateway_changes": 0,
+    "air_permission_requests": 0,
+    "npm_publications": 0,
+    "merges": 0,
+    "public_evidence": "synthetic_counts_hashes_and_verification_status_only"
+  }
+}

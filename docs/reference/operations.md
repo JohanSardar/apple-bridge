@@ -6,7 +6,7 @@ This lists the catalog only: whether an operation is usable depends on its sourc
 
 `bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.
 
-147 operations.
+158 operations.
 
 ## audio
 
@@ -2201,6 +2201,151 @@ Create an annotated PDF artifact
 | `op` | string | no |  |
 | `origin` | string | no |  |
 | `wait_ms` | integer | no |  |
+
+## photos
+
+### photos.search
+
+Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.get
+
+Live asset details, location and all public PhotoKit resources, including video, paired Live Photo video, adjustment data and edited/original representations. Resource indexes are local to this response.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.albums
+
+Page through user albums or smart albums, with PhotoKit editing capabilities. No album index is stored.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.fetch
+
+Start a temporary original-resource transfer with asset_id, optional resource_index, resource_key from photos.get to detect changed metadata, and network_access (default false, allows iCloud downloads). Poll/read with transfer_id/offset/length only. Returns downloading or ready with SHA-256, size and base64 bytes. Read at most 512 KiB per call. Default cap 8 GiB, configurable up to 64 GiB, subject to disk space. Four transfers; poll within 120 seconds to retain one, with a 24-hour hard lifetime. Release explicitly. Never put photo bytes into Bridge blobs or replication.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.release
+
+Cancel and delete this principal's temporary Photos transfer. Expired or foreign transfer IDs fail closed.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.favorite
+
+Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
+
+### photos.album_create
+
+Create a regular user album. Transient write with a hash-only approval for every agent; reissue the identical ID after approval. No automatic retries.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
+
+### photos.album_rename
+
+Rename an editable regular album. Transient write with owner approval for every agent and no automatic retry.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
+
+### photos.album_add
+
+Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write with owner approval for every agent.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
+
+### photos.album_remove
+
+Remove up to 200 memberships from an editable regular album, never from the library. Transient write with owner approval for every agent.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
+
+### photos.album_delete
+
+Delete an editable regular album, never its assets. Transient write with owner approval for every agent. Asset deletion and permanent deletion are unavailable.
+
+- Kind: `query`
+- Scope: `photos:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | yes |  |
 
 ## print
 

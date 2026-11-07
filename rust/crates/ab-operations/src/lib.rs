@@ -606,6 +606,9 @@ impl Service {
             return Err(Code::Invalid.into());
         }
         query.op = name.into();
+        if local::photos::mutation(name) && query.id.is_empty() {
+            return Err(Code::Invalid.into());
+        }
         if query.id.is_empty() {
             query.id = format!("qry_{}", ulid::Ulid::new());
         }
@@ -644,6 +647,10 @@ impl Service {
         .map_err(|_| Code::Deadline)?
         .map(|reply| reply.result)?;
         let output: Value = serde_json::from_str(result.get()).map_err(|_| Code::Corrupt)?;
+        if name.starts_with("photos.") && output["blobs"].as_array().is_some_and(|b| !b.is_empty())
+        {
+            return Err(Code::Corrupt.into());
+        }
         if output["blobs"].as_array().is_some_and(|b| !b.is_empty()) {
             self.store
                 .save_query_blobs(&principal.id, &query.id, scope, &output["blobs"])?;

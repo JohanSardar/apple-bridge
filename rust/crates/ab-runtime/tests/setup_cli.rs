@@ -618,8 +618,56 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     let listed = run(home.path(), &["call", "--list"])?;
     let listed = text(&listed.stdout);
     assert!(listed.contains("sources.status"));
+    assert!(listed.contains("photos.search"));
     assert!(!listed.contains("messages.send"));
+    assert!(!listed.contains("photos.favorite"));
+    let photos = run(home.path(), &["read", "photos", "--json"])?;
+    assert!(!photos.status.success());
+    assert!(text(&photos.stderr).contains("unavailable"));
+    let write = run(home.path(), &["call", "photos.favorite", "--args", "{}"])?;
+    assert!(!write.status.success());
     assert_eq!(principals(home.path())?, before);
+    Ok(())
+}
+
+#[test]
+fn photos_cli_requires_explicit_writes_and_a_stable_credential()
+-> Result<(), Box<dyn std::error::Error>> {
+    let home = tempfile::tempdir()?;
+    let listed = run(home.path(), &["call", "--list", "--write"])?;
+    assert!(listed.status.success());
+    let listed = text(&listed.stdout);
+    assert!(!listed.contains("messages.send"));
+    for operation in ab_catalog::operations()?
+        .into_iter()
+        .filter(|operation| operation.scope == "photos:write")
+    {
+        assert!(listed.contains(&operation.name));
+        let missing_token = run(home.path(), &["call", &operation.name, "--write"])?;
+        assert!(!missing_token.status.success());
+        assert!(text(&missing_token.stderr).contains("--token-env"));
+        let missing_id = run(
+            home.path(),
+            &[
+                "call",
+                &operation.name,
+                "--write",
+                "--token-env",
+                "AB_PHOTOS_PROOF_TOKEN",
+            ],
+        )?;
+        assert!(!missing_id.status.success());
+        assert!(text(&missing_id.stderr).contains("stable qry_"));
+    }
+    for operation in ["photos.fetch", "photos.release"] {
+        let transfer = run(home.path(), &["call", operation])?;
+        assert!(!transfer.status.success());
+        assert!(text(&transfer.stderr).contains("stable authenticated identity"));
+    }
+    let other = run(home.path(), &["call", "messages.send", "--write"])?;
+    assert!(!other.status.success());
+    assert!(text(&other.stderr).contains("only reads"));
+    assert_eq!(std::fs::read_dir(home.path())?.count(), 0);
     Ok(())
 }
 
@@ -738,7 +786,7 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
         serde_json::to_vec(&serde_json::json!({
             "statuses": {"full_disk_access":"denied","contacts":"not_determined","calendar":"granted","reminders":"not_determined","screen_recording":"granted","camera":"granted","microphone":"granted","location":"granted"},
             "grant_when_opened": ["full_disk_access"],
-            "grant_when_asked": ["contacts", "reminders"],
+            "grant_when_asked": ["contacts", "reminders", "photos"],
         }))?,
     )?;
     let fixture_arg = fixture.to_string_lossy().into_owned();
@@ -764,9 +812,18 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     )?;
     assert!(walked.status.success(), "{}", text(&walked.stderr));
     let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
-    assert_eq!(after["asked"], serde_json::json!(["contacts", "reminders"]));
+    assert_eq!(
+        after["asked"],
+        serde_json::json!(["contacts", "reminders", "photos"])
+    );
     assert_eq!(after["opened"], serde_json::json!(["full_disk_access"]));
-    for permission in ["full_disk_access", "contacts", "calendar", "reminders"] {
+    for permission in [
+        "full_disk_access",
+        "contacts",
+        "calendar",
+        "reminders",
+        "photos",
+    ] {
         assert_eq!(after["statuses"][permission], "granted", "{permission}");
     }
     assert!(text(&walked.stdout).contains("Full Disk Access allowed"));
@@ -785,7 +842,7 @@ fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() ->
         serde_json::to_vec(&serde_json::json!({
             "statuses":{"full_disk_access":"granted","contacts":"not_determined","calendar":"not_determined","reminders":"not_determined","screen_recording":"granted","camera":"granted","microphone":"granted","location":"granted"},
             "deny_when_asked":["contacts"],
-            "grant_when_asked":["calendar","reminders"]
+            "grant_when_asked":["calendar","reminders","photos"]
         }))?,
     )?;
     let home = directory.path().join("home");
@@ -815,7 +872,7 @@ fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() ->
     let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
     assert_eq!(
         after["asked"],
-        serde_json::json!(["contacts", "calendar", "reminders", "contacts"])
+        serde_json::json!(["contacts", "calendar", "reminders", "photos", "contacts"])
     );
     assert_eq!(after["opened"], serde_json::json!([]));
     assert_eq!(after["statuses"]["calendar"], "granted");
@@ -832,7 +889,7 @@ fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_wor
         serde_json::to_vec(&serde_json::json!({
             "statuses": {"full_disk_access":"granted","contacts":"granted","calendar":"granted","reminders":"granted"},
             "deny_when_asked": ["camera"],
-            "grant_when_asked": ["microphone", "location"],
+            "grant_when_asked": ["photos", "microphone", "location"],
             "grant_when_opened": ["screen_recording"]
         }))?,
     )?;
@@ -853,7 +910,7 @@ fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_wor
     let after: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
     assert_eq!(
         after["asked"],
-        serde_json::json!(["camera", "microphone", "location"])
+        serde_json::json!(["photos", "camera", "microphone", "location"])
     );
     assert_eq!(after["opened"], serde_json::json!(["screen_recording"]));
     let output = run(

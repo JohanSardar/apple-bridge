@@ -22,6 +22,7 @@ bridge stats --watch       # counts per source as each one finishes
 
 - `bridge up --json` prints the address and whether the Helper was found.
 - `bridge permissions status --json` shows permissions and never prompts.
+- Photos is an optional guide step. Skipping or declining it leaves other sources working. `bridge read photos` queries PhotoKit live; Photos has no synced records or library count in `bridge stats`.
 - `bridge doctor` checks the data folder.
 - `claude mcp list` or `codex mcp list` shows the agent's view of the connection.
 

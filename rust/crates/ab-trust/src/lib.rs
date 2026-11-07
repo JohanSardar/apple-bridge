@@ -104,6 +104,7 @@ impl Grant {
         "notes",
         "pdf",
         "phone",
+        "photos",
         "print",
         "reminders",
         "safari",
