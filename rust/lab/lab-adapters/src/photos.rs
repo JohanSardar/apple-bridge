@@ -300,6 +300,10 @@ fn albums(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()>
                 .is_some_and(|rows| rows.len() == 3),
         "",
     );
+    favorite(world, client, evidence)
+}
+
+fn favorite(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()> {
     let read_only = Client::new(world, "photos:read")?;
     let forbidden =
         json!({"id":random_id("qry")?,"args":{"asset_id":"photo-fixture","favorite":true}})

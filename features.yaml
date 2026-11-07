@@ -1098,6 +1098,6 @@ features:
     modules: [native/Sources/PhotosSource, rust/crates/ab-operations, rust/crates/ab-runtime]
     depends_on: [core.queries, core.permissions]
     status: in_progress
-    notes: Public PhotoKit only. Live reads, bounded temporary original transfers, favorite and regular-album changes are implemented. Native permission, signed clean-VM, real-library and large-resource qualification and independent security review remain required. No permanent deletion or private people database.
+    notes: Public PhotoKit only. Live reads use bounded PhotoKit fetches and cursor paging; temporary original transfers, favorite and regular-album changes are implemented. Independent review's fetch-bound and recovery-error findings have regression fixes. Native permission, signed clean-VM, real-library and large-resource qualification remain required. No permanent deletion or private people database.
     scenarios:
       - {id: PHOTOS-LIVE, levels: [sim]}
