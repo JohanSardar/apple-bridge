@@ -1,71 +1,20 @@
 import assert from 'node:assert/strict';
-import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { open } from '../src/auth.ts';
 
-const oldOrigin = 'https://app.old.example';
-const newOrigin = 'https://app.new.example';
-const cookie = (response: Response) => response.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
-const hash = (data: string | Buffer) => createHash('sha256').update(data).digest();
-const b64 = (data: Buffer) => data.toString('base64url');
-
-function cbor(value: any): Buffer {
-  const head = (major: number, length: number) => length < 24 ? Buffer.from([major * 32 + length]) : length < 256 ? Buffer.from([major * 32 + 24, length]) : Buffer.from([major * 32 + 25, length >> 8, length & 255]);
-  if (typeof value === 'number') return head(value < 0 ? 1 : 0, value < 0 ? -1 - value : value);
-  if (Buffer.isBuffer(value)) return Buffer.concat([head(2, value.length), value]);
-  if (typeof value === 'string') return Buffer.concat([head(3, Buffer.byteLength(value)), Buffer.from(value)]);
-  const entries = value instanceof Map ? [...value] : Object.entries(value);
-  return Buffer.concat([head(5, entries.length), ...entries.flatMap(([key, item]) => [cbor(key), cbor(item)])]);
-}
-
-async function request(accounts: ReturnType<typeof open>, origin: string, path: string, cookies = '', body?: any) {
-  return accounts.auth.handler(new Request(`${origin}/api/auth${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: { origin, cookie: cookies, 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.9' },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  }));
-}
-
-async function enroll(accounts: ReturnType<typeof open>, origin: string, session: string) {
-  const options = await request(accounts, origin, '/passkey/generate-register-options', session);
-  assert.equal(options.status, 200);
-  const challenge = (await options.json()).challenge;
-  const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
-  const jwk = key.publicKey.export({ format: 'jwk' });
-  const id = randomBytes(32);
-  const cose = cbor(new Map<any, any>([[1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x!, 'base64url')], [-3, Buffer.from(jwk.y!, 'base64url')]]));
-  const authData = Buffer.concat([hash(new URL(origin).hostname), Buffer.from([0x45, 0, 0, 0, 0]), Buffer.alloc(16), Buffer.from([0, id.length]), id, cose]);
-  const response = await request(accounts, origin, '/passkey/verify-registration', `${session}; ${cookie(options)}`, { name: origin, response: {
-    id: b64(id), rawId: b64(id), type: 'public-key', clientExtensionResults: {}, response: {
-      clientDataJSON: b64(Buffer.from(JSON.stringify({ type: 'webauthn.create', challenge, origin }))),
-      attestationObject: b64(cbor({ fmt: 'none', attStmt: {}, authData })), transports: ['internal'],
-    },
-  } });
-  assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
-  return { id, key };
-}
-
-async function authenticate(accounts: ReturnType<typeof open>, origin: string, credential: Awaited<ReturnType<typeof enroll>>, rpOrigin = origin) {
-  const options = await request(accounts, origin, '/passkey/generate-authenticate-options');
-  const challenge = (await options.json()).challenge;
-  const data = Buffer.from(JSON.stringify({ type: 'webauthn.get', challenge, origin }));
-  const authData = Buffer.concat([hash(new URL(rpOrigin).hostname), Buffer.from([5, 0, 0, 0, 1])]);
-  return request(accounts, origin, '/passkey/verify-authentication', cookie(options), { response: {
-    id: b64(credential.id), rawId: b64(credential.id), type: 'public-key', clientExtensionResults: {}, response: {
-      clientDataJSON: b64(data), authenticatorData: b64(authData), signature: b64(sign('sha256', Buffer.concat([authData, hash(data)]), credential.key.privateKey)),
-    },
-  } });
-}
+import { oldOrigin, newOrigin, cookie, b64, request, enroll, authenticate } from './domain-fixture.ts';
 
 test('parallel origins retain registration authority, shared sessions and RP-bound verification', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'ab-domain-'));
-  const common = { databasePath: join(dir, 'accounts.sqlite'), secret: b64(randomBytes(48)), maxAccounts: 1 };
+  const common = { databasePath: join(dir, 'accounts.sqlite'), secret: b64(randomBytes(48)), maxAccounts: 2 };
   const original = open({ ...common, publicUrl: oldOrigin, allowRegistration: true });
   await original.migrate();
-  const second = open({ ...common, publicUrl: newOrigin, registrationOrigin: oldOrigin });
+  const second = open({ ...common, publicUrl: newOrigin, registrationOrigin: oldOrigin, allowRegistration: true });
   try {
     await Promise.all([original.migrate(), second.migrate()]);
     const invite = original.invites.create({ uses: 3, days: 1 });
@@ -87,6 +36,12 @@ test('parallel origins retain registration authority, shared sessions and RP-bou
     const signedIn = await request(second, newOrigin, '/sign-in/email', '', signup);
     assert.equal(signedIn.status, 200);
     const newSession = cookie(signedIn);
+    const sessionCookies = signedIn.headers.getSetCookie().filter(value => value.startsWith('__Host-ab_account='));
+    assert.ok(sessionCookies.length > 0);
+    for (const value of sessionCookies) {
+      assert.match(value, /Secure/i); assert.match(value, /HttpOnly/i); assert.match(value, /Path=\//i); assert.doesNotMatch(value, /Domain=/i);
+    }
+    assert.notEqual((await request(second, 'https://customer.new.example', '/sign-in/email', '', signup)).status, 200);
     assert.equal((await (await request(second, newOrigin, '/get-session', oldSession)).json()).user.email, signup.email);
     const oldKey = await enroll(original, oldOrigin, oldSession);
     const newKey = await enroll(second, newOrigin, newSession);
@@ -96,9 +51,71 @@ test('parallel origins retain registration authority, shared sessions and RP-bou
     const listed = await (await request(second, newOrigin, '/passkey/list-user-passkeys', newSession)).json();
     assert.equal(listed.length, 2);
     const oldRow = listed.find((item: any) => item.credentialID === b64(oldKey.id));
+    const other = await request(original, oldOrigin, '/sign-up/email', invited, { ...signup, email: 'other-fixture@example.test' });
+    assert.equal(other.status, 200);
+    const refused = await request(second, newOrigin, '/passkey/delete-passkey', cookie(other), { id: oldRow.id });
+    assert.notEqual(refused.status, 200);
     assert.equal((await request(second, newOrigin, '/passkey/delete-passkey', newSession, { id: oldRow.id })).status, 200);
     assert.equal((await (await request(original, oldOrigin, '/passkey/list-user-passkeys', oldSession)).json()).length, 1);
   } finally {
     original.database.close(); second.database.close(); rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('OAuth callback cannot create a new account on the migration origin', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ab-oauth-domain-'));
+  const accounts = open({ publicUrl: newOrigin, databasePath: join(dir, 'accounts.sqlite'), secret: b64(randomBytes(48)), maxAccounts: 5, google: { clientId: 'fixture', clientSecret: 'fixture' } });
+  try {
+    await accounts.migrate();
+    const context = await accounts.auth.$context;
+    const provider = context.socialProviders.find(provider => provider.id === 'google')!;
+    provider.validateAuthorizationCode = async () => ({ accessToken: 'fixture-access' });
+    provider.getUserInfo = async () => ({ user: { id: 'fixture-google', email: 'oauth-fixture@example.test', emailVerified: true, name: '[ab-test] OAuth' }, data: { sub: 'fixture-google' } });
+    const start = await request(accounts, newOrigin, '/sign-in/social', '', { provider: 'google', callbackURL: newOrigin });
+    assert.equal(start.status, 200);
+    const authorization = new URL((await start.json()).url);
+    const callback = await request(accounts, newOrigin, `/callback/google?code=fixture&state=${encodeURIComponent(authorization.searchParams.get('state')!)}`, cookie(start));
+    assert.equal(callback.status, 403);
+    assert.match((await callback.json()).message, /New accounts are disabled/);
+    assert.equal((accounts.database.prepare('SELECT count(*) AS n FROM user').get() as any).n, 0);
+  } finally {
+    accounts.database.close(); rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('immediate transactions commit, roll back and preserve SQL errors', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ab-transaction-domain-'));
+  const accounts = open({ publicUrl: newOrigin, databasePath: join(dir, 'accounts.sqlite'), secret: b64(randomBytes(48)), maxAccounts: 1 });
+  try {
+    await accounts.migrate();
+    const db = accounts.database;
+    db.exec('CREATE TABLE fixture(value INTEGER)');
+    db.prepare('begin').run();
+    db.prepare('INSERT INTO fixture VALUES(1)').run();
+    db.prepare('rollback').run();
+    assert.equal((db.prepare('SELECT count(*) AS n FROM fixture').get() as any).n, 0);
+    db.prepare('begin').run();
+    db.prepare('INSERT INTO fixture VALUES(2)').run();
+    db.prepare('commit').run();
+    assert.equal((db.prepare('SELECT value FROM fixture').get() as any).value, 2);
+    assert.throws(() => db.prepare('unrelated invalid SQL'), /syntax error/);
+    const holder = spawn(process.execPath, ['--input-type=module', '-e', "import {DatabaseSync} from 'node:sqlite'; const db=new DatabaseSync(process.argv[1]); db.exec('BEGIN IMMEDIATE'); console.log('held'); process.stdin.once('data',()=>{db.exec('ROLLBACK');db.close();process.exit(0)});", join(dir, 'accounts.sqlite')], { stdio: ['pipe', 'pipe', 'pipe'] });
+    await new Promise<void>((done, reject) => { holder.stdout.once('data', () => done()); holder.once('error', reject); });
+    db.exec('PRAGMA busy_timeout=100');
+    const started = Date.now();
+    try {
+      assert.throws(() => db.prepare('begin').run(), /database is locked/);
+      assert.ok(Date.now() - started >= 75 && Date.now() - started < 2000);
+    } finally {
+      const exited = new Promise<void>(done => holder.once('exit', () => done()));
+      holder.stdin.end('release');
+      await exited;
+    }
+    db.prepare('begin').run(); db.prepare('rollback').run();
+
+    assert.equal((db.prepare('PRAGMA integrity_check').get() as any).integrity_check, 'ok');
+  } finally {
+    accounts.database.close(); rmSync(dir, { recursive: true, force: true });
   }
 });

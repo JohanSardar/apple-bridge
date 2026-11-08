@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 
@@ -6,6 +7,8 @@ const [provisioned, output, mode = 'fixture'] = process.argv.slice(2);
 if (!provisioned || !output || !['fixture', 'production'].includes(mode)) throw Error('usage: node reuse-accounts-bundle.mjs PROVISIONED OUTPUT [fixture|production]');
 const root = resolve(import.meta.dirname, '../..');
 const carrier = readFileSync(provisioned, 'utf8');
+const approvedDigest = 'e59192fd5bcaaa712645376c5008d5aa32eb8305a4b2df48f850ac486ed8930f';
+if (createHash('sha256').update(carrier).digest('hex') !== approvedDigest) throw Error('unrecognized provisioned dependency carrier');
 if (!carrier.includes('var PACKAGE_VERSION = "1.7.17";')) throw Error('provisioned Better Auth must be 1.7.17');
 const compile = name => stripTypeScriptTypes(readFileSync(`${root}/services/accounts/src/${name}.ts`, 'utf8').replace(/^import .*;\n/gm, '').replaceAll('export ', ''));
 const auth = compile('auth').replaceAll('APIError', 'APIError2').replace(/\bopen\b/g, 'open2');

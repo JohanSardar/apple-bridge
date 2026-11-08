@@ -39,9 +39,24 @@ function inviteCheck(invites: Invites, secret: string): BetterAuthPlugin {
   };
 }
 
+class ImmediateTransactions extends DatabaseSync {
+  override prepare(sql: string) {
+    return super.prepare(sql === 'begin' ? 'begin immediate' : sql);
+  }
+}
+
 export function open(config: Config) {
-  const database = new DatabaseSync(config.databasePath);
-  database.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
+  const database = new ImmediateTransactions(config.databasePath);
+  database.exec('PRAGMA busy_timeout=5000;');
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      database.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
+      break;
+    } catch (error) {
+      if (attempt >= 7 || !(error instanceof Error) || !/database is locked/.test(error.message)) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25 * (attempt + 1));
+    }
+  }
   const invites = new Invites(database);
   const url = new URL(config.publicUrl);
   const auth = betterAuth({
@@ -81,7 +96,7 @@ export function open(config: Config) {
       user: {
         create: {
           before: async (user, context) => {
-            if (config.allowRegistration !== true) {
+            if (config.allowRegistration !== true || config.registrationOrigin) {
               throw new APIError('FORBIDDEN', { message: config.registrationOrigin ? `Create your account with an invite at ${config.registrationOrigin}, then sign in here.` : 'New accounts are disabled on this sign-in host.' });
             }
             const count = database.prepare('SELECT count(*) AS n FROM user').get() as { n: number };
@@ -107,8 +122,16 @@ export function open(config: Config) {
     invites,
     database,
     async migrate() {
-      const { runMigrations } = await getMigrations(auth.options);
-      await runMigrations();
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const { runMigrations } = await getMigrations(auth.options);
+          await runMigrations();
+          return;
+        } catch (error) {
+          if (attempt >= 7 || !(error instanceof Error) || !/table .* already exists|database is locked/.test(error.message)) throw error;
+          await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+        }
+      }
     },
   };
 }

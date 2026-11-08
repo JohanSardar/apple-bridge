@@ -12,7 +12,7 @@ try {
   for (const [mode, name] of [['fixture', 'auth.mjs'], ['production', 'accounts.mjs']]) {
     execFileSync(process.execPath, [join(import.meta.dirname, 'reuse-accounts-bundle.mjs'), provisioned, join(scratch, name), mode]);
   }
-  for (const name of ['accounts.test.ts', 'domain-migration.test.ts']) {
+  for (const name of ['accounts.test.ts', 'domain-migration.test.ts', 'process-migration.test.ts', 'domain-fixture.ts']) {
     const source = readFileSync(join(root, 'services/accounts/test', name), 'utf8')
       .replace("import { toNodeHandler } from 'better-auth/node';", "import { toNodeHandler } from './auth.mjs';")
       .replace("'../src/auth.ts'", "'./auth.mjs'")
@@ -21,7 +21,7 @@ try {
   }
   const secret = join(scratch, 'fixture-secret');
   writeFileSync(secret, randomBytes(48).toString('base64url'), { mode: 0o600 });
-  execFileSync(process.execPath, ['--test', '--test-concurrency=1', join(scratch, 'accounts.test.ts'), join(scratch, 'domain-migration.test.ts')], {
+  execFileSync(process.execPath, ['--test', '--test-concurrency=1', join(scratch, 'accounts.test.ts'), join(scratch, 'domain-migration.test.ts'), join(scratch, 'process-migration.test.ts')], {
     stdio: 'inherit', env: { ...process.env, AB_TEST_BUNDLE: join(scratch, 'accounts.mjs'), AB_TEST_SECRET_FILE: secret },
   });
 } finally {

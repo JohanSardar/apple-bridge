@@ -57,5 +57,20 @@ account. RP migration is never performed by rewriting stored credentials.
 Registration is disabled by default in the accounts executable. The original
 registration service must explicitly set AB_ALLOW_REGISTRATION=true. Setting
 AB_REGISTRATION_ORIGIN always disables registration, even if the allow flag is
-also present. Keep the original executable/configuration unchanged during a
-parallel rollout; apply the explicit allow flag before upgrading it later.
+also present. Preserve the original service, URL, RP, database and secret. Upgrade both
+accounts executables to the same reviewed transaction policy during rollout,
+setting the explicit allow flag only on the original service.
+
+The pinned Better Auth 1.7.17 NodeSQLite driver issues the exact SQL `begin` for
+transactions. A DatabaseSync subclass translates only that statement to
+`begin immediate`, reserving the writer before reads and preventing SQLite
+BUSY_SNAPSHOT read-to-write upgrades across sign-in processes. Commit, rollback
+and every other SQL statement pass through unchanged; lock waits remain bounded
+by SQLite busy_timeout. Never retry authentication effects. Startup alone retries
+WAL setup for lock contention and re-reads the migration plan on concurrent
+CREATE TABLE conflicts, at most eight attempts; unrelated errors propagate.
+
+The public dependency carrier is the provisioned 2026-11-06 accounts bundle,
+SHA-256 e59192fd5bcaaa712645376c5008d5aa32eb8305a4b2df48f850ac486ed8930f.
+The reuse helper requires that exact digest and the pinned 1.7.17 marker. Generated
+production digests and deployed-file parity belong in private deployment evidence.
