@@ -5,7 +5,7 @@ Agents on your Mac, such as Claude Code and Codex, connect to one local address:
 ## Install
 
 ```sh
-curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
+curl -fsSL https://eilmer.si/applebridge/install | sh
 ```
 
 It needs no Node, Homebrew or `sudo`. [The script](install) puts Apple Bridge in `~/.applebridge`, links `bridge` into `~/.local/bin` and adds that folder to your PATH if it's missing. It checks the download's SHA-256 before changing anything.

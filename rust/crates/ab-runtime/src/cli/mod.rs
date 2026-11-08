@@ -89,7 +89,7 @@ async fn run(cli: Cli) -> Outcome {
             PermissionsAction::Guide(args) => permissions::guide(&home, &args).await,
             PermissionsAction::Status(args) => permissions::status(&home, &args),
             PermissionsAction::Request { name, helper_app } => {
-                commands::permission_request(&name, helper_app.as_deref())
+                commands::permission_request(&home, &name, helper_app.as_deref()).await
             }
         },
         Command::Connector(command) => commands::connector(&home, command.action).await,

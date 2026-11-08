@@ -38,7 +38,7 @@ Open these on your server's firewall: TCP 443, TCP 53 and UDP 53.
 On the server, as root:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/JohanSardar/apple-bridge/main/deploy/selfhost/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/eilmer-si/apple-bridge/main/deploy/selfhost/install.sh -o install.sh
 bash install.sh --domain bridge.example.com --owner-key YOUR_MAC_KEY
 ```
 

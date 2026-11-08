@@ -97,7 +97,7 @@ The canonical glossary is `GLOSSARY.md` (domain language only). Key terms: **Sou
 ## 4. Repository layout and toolchain
 
 ```text
-go.mod                              module github.com/JohanSardar/apple-bridge, Go 1.27
+go.mod                              module github.com/eilmer-si/apple-bridge, Go 1.27
 cmd/bridge/                         Runtime entry (gateway | replica)
 cmd/bridge-lab/                     Harness control tool
 internal/contracts/                 Records, collections, operation descriptors, wire codecs, validation
