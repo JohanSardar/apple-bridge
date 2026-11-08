@@ -818,3 +818,17 @@ async fn a_policy_request_is_one_a_relay_from_before_versions_accepts() {
     );
     assert!(head.to_lowercase().contains("x-bridge-policy-version: 42"));
 }
+
+#[test]
+fn an_origin_view_retains_the_single_writer_and_fence_locks() {
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("control.db");
+    let fence = dir.path().join("fence");
+    let original = Control::open(&database, &fence, PUBLIC).unwrap();
+    let second = original.for_origin("https://app.new.example");
+    drop(original);
+    assert!(Control::open(&database, &fence, PUBLIC).is_err());
+    second.throttle("198.51.100.1", 1000).unwrap();
+    drop(second);
+    assert!(Control::open(&database, &fence, PUBLIC).is_ok());
+}

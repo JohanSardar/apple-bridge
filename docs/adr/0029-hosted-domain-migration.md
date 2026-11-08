@@ -37,3 +37,25 @@ Future projects receive separate product subdomains, sign-in RPs, secrets,
 services and tenant namespaces. Paid plans, billing, account creation changes,
 quotas and cross-product identity are deferred to a future ADR and explicit
 owner authorization. Domain migration does not imply implementing those systems.
+
+During parallel migration the new origin permits existing-account sign-in and
+passkey enrollment only. AB_REGISTRATION_ORIGIN points to the retained original
+registration origin; every new-user hook rejects before invite consumption.
+Only the original service admits new users. Do not enable two registration
+writers until account-capacity enforcement and invite consumption are atomic
+with insertion across processes. The accounts SQLite schema is unchanged.
+
+Both sign-in origins deliberately share the same account/session audience and
+secret. A deliberately copied session token can authenticate at either origin;
+this is not audience-bound authentication. Browser host isolation prevents
+customer hosts from accessing or shadowing __Host session/invite cookies.
+Passkey verification binds the RP, but passkey list/delete management is shared
+at account scope; users may manage credentials belonging to either RP. Retain
+password sign-in during migration so removing a credential cannot strand an
+account. RP migration is never performed by rewriting stored credentials.
+
+Registration is disabled by default in the accounts executable. The original
+registration service must explicitly set AB_ALLOW_REGISTRATION=true. Setting
+AB_REGISTRATION_ORIGIN always disables registration, even if the allow flag is
+also present. Keep the original executable/configuration unchanged during a
+parallel rollout; apply the explicit allow flag before upgrading it later.

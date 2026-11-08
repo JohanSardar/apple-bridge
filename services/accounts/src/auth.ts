@@ -10,6 +10,8 @@ export type Config = {
   databasePath: string;
   secret: string;
   maxAccounts: number;
+  registrationOrigin?: string;
+  allowRegistration?: boolean;
   google?: { clientId: string; clientSecret: string };
 };
 
@@ -79,6 +81,9 @@ export function open(config: Config) {
       user: {
         create: {
           before: async (user, context) => {
+            if (config.allowRegistration !== true) {
+              throw new APIError('FORBIDDEN', { message: config.registrationOrigin ? `Create your account with an invite at ${config.registrationOrigin}, then sign in here.` : 'New accounts are disabled on this sign-in host.' });
+            }
             const count = database.prepare('SELECT count(*) AS n FROM user').get() as { n: number };
             if (count.n >= config.maxAccounts) {
               throw new APIError('FORBIDDEN', { message: 'This relay is full.' });

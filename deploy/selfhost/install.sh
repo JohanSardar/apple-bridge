@@ -131,6 +131,7 @@ AB_ACCOUNTS_DB=/var/lib/ab-accounts/accounts.sqlite
 AB_ACCOUNTS_SECRET_FILE=$secret
 AB_ACCOUNTS_LISTEN=127.0.0.1:8790
 AB_MAX_ACCOUNTS=$max_accounts
+AB_ALLOW_REGISTRATION=true
 ENV
   cat >/etc/ab-relay/control.env <<ENV
 AB_PUBLIC_URL=https://app.$domain

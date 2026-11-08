@@ -24,6 +24,7 @@ before(async () => {
     databasePath: join(directory, 'accounts.sqlite'),
     secret: 'x'.repeat(40),
     maxAccounts: 5,
+    allowRegistration: true,
   });
   await accounts.migrate();
   const handle = toNodeHandler(accounts.auth);

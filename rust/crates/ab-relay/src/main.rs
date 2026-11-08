@@ -61,6 +61,7 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
             "control-acme",
             "apns-key",
             "apns-sandbox",
+            "accounts-host",
             "app-host",
             "app-upstream",
             "dns-listen",
@@ -124,20 +125,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
     let extra_hosts = additional_hosts(&args, &mut server)?;
     let server = Arc::new(server);
-    let mut api = Api::new(
-        server.clone(),
-        std::env::var("APPLE_BRIDGE_RELAY_ADMIN").unwrap_or_default(),
-    )?;
-    api.dns = dns.clone();
-    if !app_host.is_empty() {
-        api.accounts_url = format!("https://{app_host}");
-    }
-    if let Some(path) = args.get("apns-key").filter(|p| !p.is_empty()) {
-        api.push.provider = Some(Arc::new(ab_relay::push::Apns::load(
-            std::path::Path::new(path),
-            get("apns-sandbox", "true") == "true",
-        )?));
-    }
+    let api = configured_api(&args, server.clone(), dns.clone())?;
     let api = Arc::new(api);
     let router = api.clone().router();
     let make = router.clone().into_make_service_with_connect_info();
@@ -510,4 +498,32 @@ async fn configured_dns(args: &HashMap<String, String>) -> Result<Dns, Box<dyn s
         }));
     }
     Ok(dns)
+}
+
+fn configured_api(
+    args: &HashMap<String, String>,
+    server: Arc<Server>,
+    dns: Dns,
+) -> Result<Api, Box<dyn std::error::Error>> {
+    let get =
+        |key: &str, default: &str| args.get(key).cloned().unwrap_or_else(|| default.to_owned());
+    let mut api = Api::new(
+        server,
+        std::env::var("APPLE_BRIDGE_RELAY_ADMIN").unwrap_or_default(),
+    )?;
+    api.dns = dns;
+    if let Some(app_host) = args
+        .get("accounts-host")
+        .or_else(|| args.get("app-host"))
+        .filter(|host| !host.is_empty())
+    {
+        api.accounts_url = format!("https://{app_host}");
+    }
+    if let Some(path) = args.get("apns-key").filter(|p| !p.is_empty()) {
+        api.push.provider = Some(Arc::new(ab_relay::push::Apns::load(
+            std::path::Path::new(path),
+            get("apns-sandbox", "true") == "true",
+        )?));
+    }
+    Ok(api)
 }
