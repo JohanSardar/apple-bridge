@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/JohanSardar/apple-bridge/lab/world"
+	"github.com/eilmer-si/apple-bridge/lab/world"
 	"os"
 	"path/filepath"
 	"strings"

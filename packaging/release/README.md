@@ -103,7 +103,7 @@ Run `bridge down` before updating or uninstalling an npm installation. The gatew
 
 ## iPhone releases
 
-The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
+The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://github.com/eilmer-si/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
 
 ## Local qualification
 

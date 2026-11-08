@@ -88,7 +88,7 @@ class InstallScript(unittest.TestCase):
         text = self.SCRIPT.read_text()
         self.assertRegex(text, r"\nVERSION=\d+\.\d+\.\d+\n")
         self.assertRegex(text, r"\nSHA256=[0-9a-f]{64}\n")
-        self.assertIn("\nURL=https://github.com/JohanSardar/apple-bridge/releases/download/v$VERSION/", text)
+        self.assertIn("\nURL=https://github.com/eilmer-si/apple-bridge/releases/download/v$VERSION/", text)
 
     def test_a_fresh_install_links_bridge_and_adds_path_once(self):
         result = self.install(self.script_for(self.tarball))
