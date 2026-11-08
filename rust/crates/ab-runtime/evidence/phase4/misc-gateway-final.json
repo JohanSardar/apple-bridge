@@ -299,8 +299,8 @@
     "File blob-read queries retain their original one-second deadline; loaded parallel runs intermittently failed, and serial rechecks with TOKIO_WORKER_THREADS=2 passed without changing assertions or deadlines."
   ],
   "pull_requests": [
-    "https://github.com/JohanSardar/apple-bridge/pull/562",
-    "https://github.com/JohanSardar/apple-bridge/pull/568"
+    "https://github.com/eilmer-si/apple-bridge/pull/562",
+    "https://github.com/eilmer-si/apple-bridge/pull/568"
   ],
   "environment": {
     "CARGO_BUILD_JOBS": 4,
