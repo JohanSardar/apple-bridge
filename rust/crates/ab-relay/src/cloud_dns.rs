@@ -88,19 +88,9 @@ impl CloudDns {
                     vec![],
                     vec![hickory_resolver::config::NameServerConfig::udp(ip.into())],
                 );
-                let resolver = hickory_resolver::TokioResolver::builder_with_config(
-                    config,
-                    hickory_resolver::net::runtime::TokioRuntimeProvider::default(),
-                )
-                .build()
-                .map_err(|_| Error::Configuration)?;
+                let resolver = propagation_resolver(config)?;
                 loop {
-                    if resolver.txt_lookup(name).await.is_ok_and(|answer| {
-                        answer
-                            .answers()
-                            .iter()
-                            .any(|txt| published(&txt.data, value))
-                    }) {
+                    if propagation_visible(&resolver, name, value).await {
                         break;
                     }
                     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -182,6 +172,28 @@ impl CloudDns {
         Ok(())
     }
 }
+async fn propagation_visible(
+    resolver: &hickory_resolver::TokioResolver,
+    name: &str,
+    value: &str,
+) -> bool {
+    resolver.txt_lookup(name).await.is_ok_and(|answer| {
+        answer
+            .answers()
+            .iter()
+            .any(|txt| published(&txt.data, value))
+    })
+}
+fn propagation_resolver(
+    config: hickory_resolver::config::ResolverConfig,
+) -> Result<hickory_resolver::TokioResolver> {
+    let mut builder = hickory_resolver::TokioResolver::builder_with_config(
+        config,
+        hickory_resolver::net::runtime::TokioRuntimeProvider::default(),
+    );
+    builder.options_mut().cache_size = 0;
+    builder.build().map_err(|_| Error::Configuration)
+}
 fn published(record: &hickory_resolver::proto::rr::RData, value: &str) -> bool {
     match record {
         hickory_resolver::proto::rr::RData::TXT(txt) => {
@@ -219,5 +231,97 @@ mod tests {
             &RData::TXT(TXT::new(vec!["other".to_owned()])),
             "p9JG8PAA4Wf7"
         ));
+    }
+    #[tokio::test]
+    async fn propagation_requeries_long_ttl_answers_and_requires_both_resolvers() {
+        use hickory_resolver::proto::serialize::binary::{BinDecodable, BinEncodable};
+        use hickory_resolver::{
+            config::{NameServerConfig, ResolverConfig},
+            proto::{
+                op::{Message, ResponseCode},
+                rr::{Name, Record, rdata::SOA},
+            },
+        };
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        use tokio::net::UdpSocket;
+
+        let mut fixtures = Vec::new();
+        for _ in 0..2 {
+            let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+            let address = socket.local_addr().unwrap();
+            let mode = Arc::new(AtomicUsize::new(0));
+            let queries = Arc::new(AtomicUsize::new(0));
+            let response_mode = mode.clone();
+            let query_count = queries.clone();
+            let task = tokio::spawn(async move {
+                let mut buffer = [0; 4096];
+                loop {
+                    let (size, peer) = socket.recv_from(&mut buffer).await.unwrap();
+                    let request = Message::from_bytes(&buffer[..size]).unwrap();
+                    query_count.fetch_add(1, Ordering::SeqCst);
+                    let mut response =
+                        Message::response(request.metadata.id, request.metadata.op_code);
+                    response.add_queries(request.queries.clone());
+                    response.metadata.authoritative = true;
+                    match response_mode.load(Ordering::SeqCst) {
+                        0 => {
+                            response.metadata.response_code = ResponseCode::NXDomain;
+                            let zone = Name::from_ascii("example.test.").unwrap();
+                            response.add_authority(Record::from_rdata(
+                                zone.clone(),
+                                3600,
+                                RData::SOA(SOA::new(
+                                    zone.clone(),
+                                    zone,
+                                    1,
+                                    3600,
+                                    600,
+                                    86_400,
+                                    3600,
+                                )),
+                            ));
+                        }
+                        mode => {
+                            let value = if mode == 1 { "wrong" } else { "expected" };
+                            response.add_answer(Record::from_rdata(
+                                request.queries[0].name().clone(),
+                                3600,
+                                RData::TXT(TXT::new(vec![value.into()])),
+                            ));
+                        }
+                    }
+                    socket
+                        .send_to(&response.to_bytes().unwrap(), peer)
+                        .await
+                        .unwrap();
+                }
+            });
+            let mut server = NameServerConfig::udp(address.ip());
+            server.connections[0].port = address.port();
+            let resolver =
+                super::propagation_resolver(ResolverConfig::from_name_servers(vec![server]))
+                    .unwrap();
+            fixtures.push((resolver, mode, queries, task));
+        }
+        let name = "_acme-challenge.example.test.";
+        for (resolver, _, _, _) in &fixtures {
+            assert!(!super::propagation_visible(resolver, name, "expected").await);
+        }
+        fixtures[0].1.store(1, Ordering::SeqCst);
+        fixtures[1].1.store(2, Ordering::SeqCst);
+        let left = super::propagation_visible(&fixtures[0].0, name, "expected").await;
+        let right = super::propagation_visible(&fixtures[1].0, name, "expected").await;
+        assert!(!left && right);
+        fixtures[0].1.store(2, Ordering::SeqCst);
+        for (resolver, _, queries, _) in &fixtures {
+            assert!(super::propagation_visible(resolver, name, "expected").await);
+            assert!(queries.load(Ordering::SeqCst) >= 3);
+        }
+        for (_, _, _, task) in fixtures {
+            task.abort();
+        }
     }
 }
