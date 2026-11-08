@@ -437,7 +437,7 @@ fn relay_endpoint(home: &Path) -> String {
         .map(|config| config.relay_url)
         .filter(|url| !url.is_empty())
         .or_else(|| std::env::var("APPLE_BRIDGE_RELAY_URL").ok())
-        .unwrap_or_else(|| "https://ab.lexaai.tech".into())
+        .unwrap_or_else(|| "https://applebridge.eilmer.si".into())
 }
 #[cfg(test)]
 mod legacy_tests {

@@ -140,6 +140,7 @@ impl Fixture {
                 let nonces = self.store.lock().await.nonces.clone();
                 let server = Arc::new(Server {
                     app: None,
+                    additional_hosts: Vec::new(),
                     capacity: ab_relay::server::Capacity::default(),
                     nonces,
                     store: self.store.clone(),

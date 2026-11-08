@@ -18,6 +18,8 @@ function config(): Config {
     databasePath: need('AB_ACCOUNTS_DB'),
     secret,
     maxAccounts: Number(process.env.AB_MAX_ACCOUNTS ?? 25),
+    allowRegistration: process.env.AB_ALLOW_REGISTRATION === 'true' && !process.env.AB_REGISTRATION_ORIGIN,
+    ...(process.env.AB_REGISTRATION_ORIGIN ? { registrationOrigin: process.env.AB_REGISTRATION_ORIGIN } : {}),
     ...(clientId && clientSecret ? { google: { clientId, clientSecret } } : {}),
   };
 }

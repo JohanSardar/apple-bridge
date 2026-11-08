@@ -41,6 +41,31 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .transpose()?;
     let relay = Arc::new(RelayApi::new(&required("AB_RELAY_URL")?, token, connect)?);
     tokio::spawn(sync_policy(control.clone(), relay.clone()));
+    if let Ok(origin) = std::env::var("AB_ADDITIONAL_PUBLIC_URL") {
+        let address: SocketAddr = required("AB_ADDITIONAL_LISTEN")?.parse()?;
+        if !address.ip().is_loopback() || address == listen {
+            return Err("additional origin needs a distinct loopback listener".into());
+        }
+        let accounts_url = required("AB_ADDITIONAL_ACCOUNTS_URL")?;
+        let listener = tokio::net::TcpListener::bind(address).await?;
+        let router = router(
+            Arc::new(control.for_origin(&origin)),
+            Arc::new(BetterAuth::new(&accounts_url)?),
+            relay.clone(),
+            &accounts_url,
+        )?;
+        tokio::spawn(async move {
+            if let Err(error) = axum::serve(
+                listener,
+                router.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            {
+                eprintln!("additional origin stopped: {error}");
+                std::process::exit(1);
+            }
+        });
+    }
     let listener = tokio::net::TcpListener::bind(listen).await?;
     eprintln!("ab-relay-control listening on {listen}");
     axum::serve(

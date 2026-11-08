@@ -40,6 +40,10 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
     }
     for key in out.keys() {
         if ![
+            "dns-challenge-alias",
+            "legacy-zones",
+            "legacy-dns-zone",
+            "extra-hosts",
             "zone",
             "state",
             "addr",
@@ -57,6 +61,7 @@ fn options() -> std::result::Result<HashMap<String, String>, Box<dyn std::error:
             "control-acme",
             "apns-key",
             "apns-sandbox",
+            "accounts-host",
             "app-host",
             "app-upstream",
             "dns-listen",
@@ -93,7 +98,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     }
     let store = configured_store(&args)?;
     let stop = CancellationToken::new();
-    let dns = dns_provider(&args).await?;
+    let dns = configured_dns(&args).await?;
     let config = control_tls(&args, tls_builder()?, dns.clone(), stop.clone()).await?;
     let acceptor = TlsAcceptor::from(Arc::new(config));
     let control = if get("control-host", "").is_empty() {
@@ -118,24 +123,12 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     if !app_host.is_empty() {
         server.app = Some((app_host.clone(), app_tx));
     }
+    let extra_hosts = additional_hosts(&args, &mut server)?;
     let server = Arc::new(server);
-    let mut api = Api::new(
-        server.clone(),
-        std::env::var("APPLE_BRIDGE_RELAY_ADMIN").unwrap_or_default(),
-    )?;
-    api.dns = dns.clone();
-    if !app_host.is_empty() {
-        api.accounts_url = format!("https://{app_host}");
-    }
-    if let Some(path) = args.get("apns-key").filter(|p| !p.is_empty()) {
-        api.push.provider = Some(Arc::new(ab_relay::push::Apns::load(
-            std::path::Path::new(path),
-            get("apns-sandbox", "true") == "true",
-        )?));
-    }
+    let api = configured_api(&args, server.clone(), dns.clone())?;
     let api = Arc::new(api);
     let router = api.clone().router();
-    let make = router.into_make_service_with_connect_info();
+    let make = router.clone().into_make_service_with_connect_info();
     let public = TcpListener::bind(listen_addr(&get("addr", "0.0.0.0:443"))).await?;
     tokio::spawn(cancel_on_signal(stop.clone()));
     let stop_api = stop.clone();
@@ -160,6 +153,15 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         ));
     }
     let own_listener = control.map(|listener| (listener, control_slots));
+    serve_additional_hosts(
+        extra_hosts,
+        &get("state", "relay-state.json"),
+        dns,
+        router,
+        stop.clone(),
+        deadlines,
+    )
+    .await?;
     let api_task = serve_control(
         own_listener,
         control_rx,
@@ -199,11 +201,28 @@ async fn dns_provider(
         ));
     }
     if let Some(project) = args.get("dns-project").filter(|s| !s.is_empty()) {
-        return Ok(Some(Arc::new(ab_relay::cloud_dns::CloudDns::new(
+        let primary = Arc::new(ab_relay::cloud_dns::CloudDns::new(
             project,
             &get("dns-zone", ""),
             &get("zone", ""),
-        )?)));
+        )?);
+        if let Some(legacy_zone) = args.get("legacy-dns-zone") {
+            let suffix = get("legacy-zones", "");
+            if suffix.contains(',') || suffix.is_empty() {
+                return Err("legacy Cloud DNS needs exactly one legacy zone".into());
+            }
+            let legacy = Arc::new(ab_relay::cloud_dns::CloudDns::new(
+                project,
+                legacy_zone,
+                &suffix,
+            )?);
+            return Ok(Some(Arc::new(MigrationDns {
+                primary,
+                legacy,
+                suffix,
+            })));
+        }
+        return Ok(Some(primary));
     }
     Ok(None)
 }
@@ -297,9 +316,14 @@ fn configured_store(
         bytes_per_second: get("bytes-per-second", "1048576").parse()?,
         monthly_bytes: get("monthly-bytes", "10737418240").parse()?,
     };
-    let mut store = Store::open(
+    let mut store = Store::open_with_legacy_zones(
         PathBuf::from(get("state", "relay-state.json")),
         &get("zone", ""),
+        &get("legacy-zones", "")
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect::<Vec<_>>(),
         limits,
     )?;
     if let Some(path) = args.get("owner-keys-file").filter(|s| !s.is_empty()) {
@@ -336,4 +360,170 @@ mod listen_addr_tests {
         assert!(listener.local_addr()?.ip().is_unspecified());
         Ok(())
     }
+}
+
+#[derive(Debug)]
+struct MigrationDns {
+    primary: Arc<dyn ab_relay::http::DnsProvider>,
+    legacy: Arc<dyn ab_relay::http::DnsProvider>,
+    suffix: String,
+}
+impl ab_relay::http::DnsProvider for MigrationDns {
+    fn txt<'a>(
+        &'a self,
+        name: &'a str,
+        value: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ab_relay::Result<()>> + Send + 'a>>
+    {
+        if name
+            .strip_prefix("_acme-challenge.")
+            .is_some_and(|host| host == self.suffix || host.ends_with(&format!(".{}", self.suffix)))
+        {
+            self.legacy.txt(name, value)
+        } else {
+            self.primary.txt(name, value)
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ChallengeAlias {
+    provider: Arc<dyn ab_relay::http::DnsProvider>,
+    source: String,
+    target: String,
+}
+impl ab_relay::http::DnsProvider for ChallengeAlias {
+    fn txt<'a>(
+        &'a self,
+        name: &'a str,
+        value: &'a str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ab_relay::Result<()>> + Send + 'a>>
+    {
+        self.provider.txt(
+            if name == self.source {
+                &self.target
+            } else {
+                name
+            },
+            value,
+        )
+    }
+}
+
+type ExtraHosts = Vec<(
+    String,
+    String,
+    tokio::sync::mpsc::Receiver<ab_relay::server::ControlConnection>,
+)>;
+fn additional_hosts(
+    args: &HashMap<String, String>,
+    server: &mut Server,
+) -> Result<ExtraHosts, Box<dyn std::error::Error>> {
+    let mut extra_hosts = Vec::new();
+    for entry in args
+        .get("extra-hosts")
+        .map_or("", String::as_str)
+        .split(',')
+        .filter(|s| !s.is_empty())
+    {
+        let (host, upstream) = entry
+            .split_once('=')
+            .ok_or("extra host needs host=control or host=upstream")?;
+        if !ab_relay::hello::valid_host(host)
+            || args.get("app-host").is_some_and(|app| app == host)
+            || args
+                .get("control-host")
+                .is_some_and(|control| control == host)
+            || extra_hosts.iter().any(|(name, _, _)| name == host)
+        {
+            return Err("duplicate or invalid extra host".into());
+        }
+        let (tx, rx) = tokio::sync::mpsc::channel(256);
+        server.additional_hosts.push((host.to_owned(), tx));
+        extra_hosts.push((host.to_owned(), upstream.to_owned(), rx));
+    }
+    Ok(extra_hosts)
+}
+
+async fn serve_additional_hosts(
+    extra_hosts: ExtraHosts,
+    state: &str,
+    dns: Dns,
+    router: axum::Router,
+    stop: CancellationToken,
+    deadlines: ConnectionDeadlines,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for (host, upstream, incoming) in extra_hosts {
+        let dns = dns.clone().ok_or("extra hosts need DNS")?;
+        let path = PathBuf::from(state)
+            .parent()
+            .ok_or("state needs parent")?
+            .join("control-tls")
+            .join(&host);
+        let certificates = ab_relay::acme::start(path, host, dns, stop.clone()).await?;
+        let acceptor = TlsAcceptor::from(Arc::new(tls_builder()?.with_cert_resolver(certificates)));
+        let extra_router = if upstream == "control" {
+            router.clone()
+        } else {
+            ab_relay::app::router(&upstream)?
+        };
+        tokio::spawn(serve_control(
+            None,
+            incoming,
+            extra_router.into_make_service_with_connect_info(),
+            acceptor,
+            stop.clone(),
+            deadlines,
+        ));
+    }
+    Ok(())
+}
+
+async fn configured_dns(args: &HashMap<String, String>) -> Result<Dns, Box<dyn std::error::Error>> {
+    let mut dns = dns_provider(args).await?;
+    if let Some(alias) = args.get("dns-challenge-alias") {
+        let (source, target) = alias
+            .split_once('=')
+            .ok_or("DNS alias needs source=target")?;
+        if ![source, target].iter().all(|name| {
+            name.strip_prefix("_acme-challenge.")
+                .is_some_and(ab_relay::hello::valid_host)
+        }) {
+            return Err("invalid DNS challenge alias".into());
+        }
+        dns = Some(Arc::new(ChallengeAlias {
+            provider: dns.ok_or("DNS alias needs provider")?,
+            source: source.into(),
+            target: target.into(),
+        }));
+    }
+    Ok(dns)
+}
+
+fn configured_api(
+    args: &HashMap<String, String>,
+    server: Arc<Server>,
+    dns: Dns,
+) -> Result<Api, Box<dyn std::error::Error>> {
+    let get =
+        |key: &str, default: &str| args.get(key).cloned().unwrap_or_else(|| default.to_owned());
+    let mut api = Api::new(
+        server,
+        std::env::var("APPLE_BRIDGE_RELAY_ADMIN").unwrap_or_default(),
+    )?;
+    api.dns = dns;
+    if let Some(app_host) = args
+        .get("accounts-host")
+        .or_else(|| args.get("app-host"))
+        .filter(|host| !host.is_empty())
+    {
+        api.accounts_url = format!("https://{app_host}");
+    }
+    if let Some(path) = args.get("apns-key").filter(|p| !p.is_empty()) {
+        api.push.provider = Some(Arc::new(ab_relay::push::Apns::load(
+            std::path::Path::new(path),
+            get("apns-sandbox", "true") == "true",
+        )?));
+    }
+    Ok(api)
 }

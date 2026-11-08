@@ -9,7 +9,7 @@ use std::{
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::Path,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -61,9 +61,9 @@ struct Writer {
     _lock: File,
 }
 pub struct Control {
-    writer: Mutex<Writer>,
+    writer: Arc<Mutex<Writer>>,
     public_url: String,
-    policy_sync: tokio::sync::Mutex<()>,
+    policy_sync: Arc<tokio::sync::Mutex<()>>,
 }
 impl fmt::Debug for Control {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -244,10 +244,18 @@ CREATE TABLE IF NOT EXISTS grant_sources(grant_id TEXT PRIMARY KEY, source TEXT 
         }
         writer.check()?;
         Ok(Self {
-            writer: Mutex::new(writer),
+            writer: Arc::new(Mutex::new(writer)),
             public_url: public_url.trim_end_matches('/').to_owned(),
-            policy_sync: tokio::sync::Mutex::new(()),
+            policy_sync: Arc::new(tokio::sync::Mutex::new(())),
         })
+    }
+    #[must_use]
+    pub fn for_origin(&self, public_url: &str) -> Self {
+        Self {
+            writer: self.writer.clone(),
+            public_url: public_url.trim_end_matches('/').to_owned(),
+            policy_sync: self.policy_sync.clone(),
+        }
     }
     fn with<T>(&self, f: impl FnOnce(&mut Writer) -> Result<T>) -> Result<T> {
         let mut writer = self.writer.lock().map_err(|_| Error::Unavailable)?;
