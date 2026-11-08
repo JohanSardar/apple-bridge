@@ -64,7 +64,7 @@
       "go_after": "passed",
       "rust_after": "passed",
       "assertions_passed": 13,
-      "root_cause": "SIM admission guard requires a selected-binary fixture path; native yield fixture used protected Messages home, fixed in https://github.com/JohanSardar/apple-bridge/pull/643"
+      "root_cause": "SIM admission guard requires a selected-binary fixture path; native yield fixture used protected Messages home, fixed in https://github.com/eilmer-si/apple-bridge/pull/643"
     },
     {
       "id": "VM-CAPTURE",

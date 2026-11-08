@@ -2,8 +2,8 @@
 
 **Give Claude Code, Codex and other agents your Mac's Messages, Mail, Calendar, Notes and more through one local MCP server.**
 
-[![Rust](https://github.com/JohanSardar/apple-bridge/actions/workflows/rust.yml/badge.svg)](https://github.com/JohanSardar/apple-bridge/actions/workflows/rust.yml)
-[![Swift](https://github.com/JohanSardar/apple-bridge/actions/workflows/swift.yml/badge.svg)](https://github.com/JohanSardar/apple-bridge/actions/workflows/swift.yml)
+[![Rust](https://github.com/eilmer-si/apple-bridge/actions/workflows/rust.yml/badge.svg)](https://github.com/eilmer-si/apple-bridge/actions/workflows/rust.yml)
+[![Swift](https://github.com/eilmer-si/apple-bridge/actions/workflows/swift.yml/badge.svg)](https://github.com/eilmer-si/apple-bridge/actions/workflows/swift.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on remote use, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
@@ -13,7 +13,7 @@ Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 ## Quick start
 
 ```sh
-curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
+curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want

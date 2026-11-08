@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apple Bridge — Your Mac, connected to your agent</title>
+<meta name="description" content="Connect Claude Code, Codex and other agents to your Mac's Messages, Mail, Calendar, Notes and more. Open source, local first, early access.">
+<link rel="canonical" href="https://eilmer.si/applebridge">
+<link rel="stylesheet" href="/assets/site.css">
+<meta name="theme-color" content="#101b17">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+<a class="brand" href="/">eilmer<span>.</span>
+</a>
+<nav aria-label="Main">
+<a href="#install">Install</a>
+<a href="https://github.com/eilmer-si/apple-bridge">GitHub ↗</a>
+</nav>
+</header>
+<main id="main">
+<section class="hero">
+<div class="eyebrow">Apple Bridge / Early access</div>
+<h1>Your Mac.<br>Meet your agent.</h1>
+<p class="lead">Messages, Mail, Calendar, Notes and more — connected to Claude Code, Codex and other agents through one local MCP server.</p>
+<div class="actions">
+<a class="button" href="#install">Install Apple Bridge ↓</a>
+<a class="button secondary" href="https://github.com/eilmer-si/apple-bridge">Explore the source ↗</a>
+</div>
+<p class="meta">Apple silicon · macOS 26 or later · Open source / MIT</p>
+</section>
+<section class="section">
+<div class="eyebrow">A connection to the everyday</div>
+<h2>Less switching.<br>More getting things done.</h2>
+<div class="grid">
+<article>
+<h3>Find the context</h3>
+<p>Let your agent read from the sources you allow, including messages, mail, contacts and notes.</p>
+</article>
+<article>
+<h3>Work with your day</h3>
+<p>Read your agenda, create calendar events and manage reminders through the same connection.</p>
+</article>
+<article>
+<h3>Keep a say</h3>
+<p>Choose Mac permissions yourself. Connected agents can read; changes require your approval by default.</p>
+</article>
+</div>
+<p class="meta">Availability depends on permissions and source support. <a href="https://github.com/eilmer-si/apple-bridge/blob/main/features.yaml">See feature status and limits ↗</a>
+</p>
+</section>
+<section class="section" id="install">
+<div class="eyebrow">From terminal to connected</div>
+<h2>Start on your Mac.</h2>
+<p class="muted">Open Terminal and run the installer. No account, server or domain is needed for local use.</p>
+<div class="terminal install">
+<p>1 / INSTALL · APPLE SILICON · MACOS 26+</p>
+<pre>curl -fsSL https://eilmer.si/applebridge/install | sh</pre>
+</div>
+<p class="meta">
+<a href="/applebridge/install">Inspect the installer</a> · Downloads a version-pinned release and checks its SHA-256 checksum. Run again to update.</p>
+<div class="steps">
+<article class="step">
+<h3>Start the bridge</h3>
+<code>bridge up</code>
+<p>Start Apple Bridge on your Mac.</p>
+</article>
+<article class="step">
+<h3>Connect your agent</h3>
+<code>bridge link claude</code>
+<p>Use <code>bridge link codex</code> for Codex. Follow the browser connection flow and approve the connection.</p>
+</article>
+<article class="step">
+<h3>Choose access</h3>
+<code>bridge permissions guide</code>
+<p>Allow the Mac permissions you want, then use <code>bridge stats --watch</code> to see sync counts.</p>
+</article>
+</div>
+<p class="note">Apple Bridge reads private data. Local use sends nothing off your Mac, but an agent you connect may send what it reads to its own service. Remote access is optional. Review your agent’s settings before connecting.</p>
+<a href="https://github.com/eilmer-si/apple-bridge/blob/main/docs/local-setup.md">Full setup, updates &amp; uninstall guide ↗</a>
+</section>
+<section class="section">
+<h2>A few things to know.</h2>
+<details>
+<summary>Which agents can connect?</summary>
+<p>Claude Code and Codex have built-in linking commands. Other MCP clients can use the local MCP server; see the repository for configuration.</p>
+</details>
+<details>
+<summary>What can it access?</summary>
+<p>Sources include Messages, Mail, Calendar, Reminders, Contacts and Notes, with additional integrations documented in the repository. Access depends on the permissions you allow. Some sources have limits; Photos native qualification is pending and the iPhone app is in internal testing.</p>
+</details>
+<details>
+<summary>Is this ready for everyone?</summary>
+<p>This is early-access software. Check known limits before relying on a workflow. You need an Apple silicon Mac running macOS 26 or later.</p>
+</details>
+<details>
+<summary>Can I run it myself?</summary>
+<p>Yes. Apple Bridge is MIT-licensed open source. Local use needs no hosted service. Source builds and optional remote access are documented in the repository.</p>
+</details>
+</section>
+</main>
+<footer>
+<a href="/">← All Eilmer projects</a>
+<span>Apple Bridge · Open source / MIT</span>
+<a href="https://github.com/eilmer-si/apple-bridge/issues">Issues &amp; feedback ↗</a>
+</footer>
+</body>
+</html>
