@@ -172,6 +172,20 @@ fn verify(key: &str, sig: &str, message: &[u8]) -> bool {
 }
 impl Store {
     pub fn open(path: PathBuf, zone: &str, defaults: Limits) -> Result<Self> {
+        Self::open_with_legacy_zones(path, zone, &[], defaults)
+    }
+    pub fn open_with_legacy_zones(
+        path: PathBuf,
+        zone: &str,
+        legacy: &[String],
+        defaults: Limits,
+    ) -> Result<Self> {
+        if legacy
+            .iter()
+            .any(|zone| !valid_host(zone) || zone.len() > 228)
+        {
+            return Err(Error::Configuration);
+        }
         let zone = zone.strip_suffix('.').unwrap_or(zone).to_lowercase();
         if path.as_os_str().is_empty()
             || zone.len() > 228
@@ -190,7 +204,9 @@ impl Store {
                 || d.hostname != *host
                 || d.bytes < 0
                 || !d.limits.valid()
-                || !host.ends_with(&format!(".{zone}"))
+                || !std::iter::once(&zone)
+                    .chain(legacy.iter())
+                    .any(|zone| host.ends_with(&format!(".{zone}")))
             {
                 return Err(Error::Configuration);
             }

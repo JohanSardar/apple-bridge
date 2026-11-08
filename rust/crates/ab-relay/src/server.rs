@@ -200,6 +200,7 @@ pub struct Server {
     pub idle: Duration,
     pub control: Option<(String, ControlConnections)>,
     pub app: Option<(String, ControlConnections)>,
+    pub additional_hosts: Vec<(String, ControlConnections)>,
     pub capacity: Capacity,
     pub nonces: Arc<Nonces>,
 }
@@ -211,6 +212,7 @@ impl Server {
             store: Arc::new(Mutex::new(store)),
             sessions: Mutex::new(HashMap::new()),
             idle,
+            additional_hosts: Vec::new(),
             control: None,
             app: None,
         }
@@ -305,6 +307,12 @@ impl Server {
                     .filter(|(name, _)| *name == host)
                     .map(|(_, incoming)| (incoming, pool))
             });
+        let terminating = terminating.or_else(|| {
+            self.additional_hosts
+                .iter()
+                .find(|(name, _)| *name == host)
+                .map(|(_, incoming)| (incoming, &pools.control))
+        });
         if let Some((incoming, pool)) = terminating {
             let _slot = pool
                 .clone()
