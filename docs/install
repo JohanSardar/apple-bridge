@@ -3,8 +3,8 @@
 # https://github.com/eilmer-si/apple-bridge/blob/main/docs/local-setup.md
 set -eu
 
-VERSION=0.1.4
-SHA256=49e99bfab9e57aa60e87261435ffeb0641e2690ca8861acaac1bbe2762955084
+VERSION=0.1.5
+SHA256=fb6432d1022826e0a05f4317a9fc3601790fde6a9905b95892d0b32cb20b89d6
 URL=https://github.com/eilmer-si/apple-bridge/releases/download/v$VERSION/applebridge-$VERSION.tgz
 
 fail() {
