@@ -7,7 +7,7 @@ below. No product behavior changed beyond the merged source and release version.
 
 ## Artifact and source
 
-- Release: <https://github.com/eilmer-si/apple-bridge/releases/tag/v0.1.5>.
+- Release: <https://github.com/JohanSardar/apple-bridge/releases/tag/v0.1.5>.
 - Build source: `fd4ea1c635aafb6a3d00ac8d9cabb2c7013c9a20`, including merged
   main `82a6da62755f34bdc07fe587bf73fa660e4a4c75`. Later installer/report commits
   do not change the compiled source.

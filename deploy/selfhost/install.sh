@@ -2,7 +2,7 @@
 set -euo pipefail
 NODE_VERSION=24.11.0
 NODE_SHA256=46da9a098973ab7ba4fca76945581ecb2eaf468de347173897044382f10e0a0a
-REPO=eilmer-si/apple-bridge
+REPO=JohanSardar/apple-bridge
 
 fetch_node_archive() {
   local destination=$1

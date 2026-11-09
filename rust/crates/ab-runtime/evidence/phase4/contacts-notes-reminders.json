@@ -20,8 +20,8 @@
     "Dispatch-time native conflicts bypassed capture-bound current-record enrichment."
   ],
   "prs": [
-    "https://github.com/eilmer-si/apple-bridge/pull/565",
-    "https://github.com/eilmer-si/apple-bridge/pull/570"
+    "https://github.com/JohanSardar/apple-bridge/pull/565",
+    "https://github.com/JohanSardar/apple-bridge/pull/570"
   ],
   "pre_existing": [
     "NOTE-EXTERNAL failed external_edits_converge with API 404 on the first Go baseline and a second Go regression; it passed on the latest Go and Rust runs without changing Go or the scenario."
@@ -289,5 +289,5 @@
     "MSG-SEND-SELF-TEXT": "pass"
   },
   "rebase_note": "Rebased immediately before merge; the subsequent main change only handles unknown usage_* MCP tools. Verified Contacts/Notes/Reminders product source is unchanged.",
-  "superseded_pr": "https://github.com/eilmer-si/apple-bridge/pull/567"
+  "superseded_pr": "https://github.com/JohanSardar/apple-bridge/pull/567"
 }
