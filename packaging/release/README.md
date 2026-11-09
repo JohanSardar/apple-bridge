@@ -52,7 +52,39 @@ spctl -a -vv -t open --context context:primary-signature dist/local-0.1.2/AppleB
 
 `evidence.json` contains pass/fail and the DMG digest. Rejection stops the build. Inspect a rejected submission with `notarytool log` and the same ASC key arguments.
 
-## npm package
+## Public curl release
+
+Public distribution uses `https://eilmer.si/applebridge/install`; npm is not
+published. Build on an authorized signing Mac from the release commit with a
+unique checkout, private `CARGO_TARGET_DIR`, and `CARGO_BUILD_JOBS=4` on the Pro.
+Use the existing dedicated keychain and release credentials above.
+
+Build the flat app with `packaging/build-app.sh --identity <Developer-ID-fingerprint>`
+in the Aqua signing session. Notarize a ZIP made with `ditto -c -k --keepParent`,
+staple the app, then require `codesign --verify --deep --strict`,
+`xcrun stapler validate`, and `spctl -a -vv --type execute` to pass.
+
+The curl tarball contains `package/Apple Bridge.app`, `package/bin/bridge`
+(the shell launcher in `packaging/npm/bin/bridge`), `LICENSE`, and
+`THIRD_PARTY_NOTICES.md`. Make it with macOS `tar` and `COPYFILE_DISABLE=1`;
+no npm command is needed. Verify the extracted app again and record the archive's
+SHA-256. The flat curl app has no Sparkle updater: rerun the checksum-pinned
+installer to update. Sparkle qualification below applies to the separate DMG.
+
+Publish the archive to the matching versioned GitHub release before changing
+`VERSION` and `SHA256` in `docs/install`. Stage the public website with
+`packaging/site/package.py` and coordinate deployment with the relay owner.
+Copy the same installer to the retained owner Pages repository. Require exact
+installer parity at both public URLs and a successful download of the pinned
+archive before announcing the release.
+
+Qualify installation from the public curl URL on a fresh authorized macOS guest.
+Verify its existing SIP and Gatekeeper policy first; do not change security
+settings to make a test pass. A temporary HOME on a used Mac is not a clean Mac.
+Record signing, notarization, version, install, default remote host and readiness
+separately. Native permissions and account enrollment need their own evidence.
+
+## Historical npm package
 
 `packaging/npm` holds a Mac-only package that installs the `bridge` command. The package name is on one line, in `packaging/npm/package.json`. Nothing has been published, and user documentation does not mention npm until it is.
 
