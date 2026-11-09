@@ -4,6 +4,12 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-08
+
+### Changed
+
+- New hosted connections use `applebridge.eilmer.si`. Existing connections and iPhone pairings retain their identities. Install with `curl -fsSL https://eilmer.si/applebridge/install | sh`.
+
 ## [0.1.4] - 2026-11-07
 
 ### Added
