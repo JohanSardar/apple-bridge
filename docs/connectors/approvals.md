@@ -11,9 +11,9 @@ There is one queue of requests per gateway, shared by every hostname, so a reque
 The owner can also use the CLI on the gateway Mac:
 
 ```
-bridge connector pending --home <gateway-home>
-bridge connector allow --request <id> --code <four-digit-code> --home <gateway-home>
-bridge connector deny --request <id> --code <four-digit-code> --home <gateway-home>
+bridge connectors list --home <gateway-home>
+bridge connectors allow --request <id> --code <four-digit-code> --home <gateway-home>
+bridge connectors deny --request <id> --code <four-digit-code> --home <gateway-home>
 ```
 
 These commands use a Unix socket in a directory accessible only to the gateway's macOS account. Five failed code attempts refuse further decisions. Public creation is limited to ten requests a minute and one hundred a day per client address, with a global limit and at most 128 outstanding requests. Approval and redirect retrieval are each single use. Denial returns OAuth `access_denied`. A passkey is the fallback: once one is enrolled the page offers “Use a passkey instead”, which signs in and then offers Allow and Deny on the page.

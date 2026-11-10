@@ -105,9 +105,12 @@ fn help_and_version_work_and_say_how_to_start() -> Check {
             format!("bridge {}", env!("CARGO_PKG_VERSION"))
         );
     }
-    let output = bridge().args(["remote", "--help"]).output()?;
+    let output = bridge().args(["remote", "enable", "--help"]).output()?;
     assert!(output.status.success());
     assert!(text(&output.stdout).contains("--relay-url"));
+    let output = bridge().args(["remote"]).output()?;
+    assert!(output.status.success());
+    assert!(text(&output.stdout).contains("enable"));
     let output = bridge().args(["down", "--help"]).output()?;
     assert!(output.status.success());
     let help = text(&output.stdout);
@@ -119,34 +122,56 @@ fn help_and_version_work_and_say_how_to_start() -> Check {
 #[test]
 fn every_failure_names_what_went_wrong() -> Check {
     let home = tempfile::tempdir()?;
-    let cases: &[(&[&str], &str)] = &[
-        (&["nonsense"], "unrecognized subcommand"),
-        (&["status"], "has not been set up"),
-        (&["doctor"], "has not been set up"),
-        (&["stats"], "has not been set up"),
-        (&["link", "claude"], "is not running"),
-        (&["read", "messages"], "is not running"),
-        (&["connector", "pending"], "is not running"),
-        (&["permissions", "request", "fake"], "not a permission"),
-        (&["agent", "revoke", "nope"], "not an agent id"),
+    let cases: &[(&[&str], &str, i32)] = &[
+        (&["nonsense"], "Unknown command nonsense", 2),
+        (&["status"], "isn't set up", 1),
+        (&["doctor"], "isn't set up", 1),
+        (&["stats"], "isn't set up", 1),
+        (&["link", "claude"], "isn't running", 1),
+        (&["read", "messages"], "isn't running", 1),
+        (&["connector", "pending"], "isn't running", 1),
+        (
+            &["permissions", "request", "fake"],
+            "It isn't a permission name",
+            2,
+        ),
+        (
+            &["agent", "revoke", "nope"],
+            "Can't use nope as an agent ID",
+            2,
+        ),
         (
             &["agent", "create", "--name", "x", "--level", "root"],
-            "not an agent level",
+            "Can't use --level root",
+            2,
         ),
         (
             &["token", "create", "--scope", "made-up"],
-            "not a known scope",
+            "made-up isn't a known grant",
+            2,
         ),
-        (&["join", "not-a-code"], "not a valid pairing code"),
-        (&["remote", "on", "--snippets"], "--snippets only works"),
-        (&["skills", "get", "nope"], "no skill called"),
-        (&["call", "nope.nothing"], "no operation called"),
-        (&["call", "messages.send"], "only reads"),
-        (&["start", "--api-addr", "8.8.8.8:80"], "loopback"),
+        (&["join", "not-a-code"], "Can't use that pairing code", 2),
+        (&["skills", "get", "nope"], "Unknown skill nope", 2),
+        (
+            &["call", "nope.nothing"],
+            "Unknown operation nope.nothing",
+            2,
+        ),
+        (&["call", "messages.send"], "only reads", 1),
+        (&["start", "--api-addr", "8.8.8.8:80"], "loopback", 2),
+        (&["read", "notes", "--limit", "0"], "Can't use --limit 0", 2),
+        (
+            &["read", "notes", "--limit", "-1"],
+            "Can't use --limit -1",
+            2,
+        ),
+        (&["restore"], "without a backup file", 2),
+        (&["status", "--bogus"], "Unknown option --bogus", 2),
     ];
-    for (arguments, expected) in cases {
+    for (arguments, expected, code) in cases {
         let output = run(home.path(), arguments)?;
-        assert_eq!(output.status.code(), Some(1), "{arguments:?}");
+        assert_eq!(output.status.code(), Some(*code), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
         let error = text(&output.stderr);
         assert!(error.contains(expected), "{arguments:?}: {error}");
         assert!(
@@ -170,7 +195,8 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
 
     let again = run(&home, &["up"])?;
     assert!(again.status.success(), "{}", text(&again.stderr));
-    let summary = text(&again.stdout);
+    assert_eq!(text(&again.stdout), format!("http://{api}/mcp\n"));
+    let summary = text(&again.stderr);
     assert!(summary.contains("was already on"), "{summary}");
     assert!(summary.contains(&format!("http://{api}/mcp")), "{summary}");
     assert!(summary.contains("bridge link claude"), "{summary}");
@@ -182,7 +208,7 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     stale["version"] = serde_json::json!("older-fixture");
     std::fs::write(&marker, serde_json::to_vec(&stale)?)?;
     let updated = run(&home, &["up"])?;
-    let warning = text(&updated.stdout);
+    let warning = text(&updated.stderr);
     assert!(warning.contains("older-fixture"), "{warning}");
     assert!(warning.contains("bridge down, then bridge up"), "{warning}");
     let updated = run(&home, &["up", "--json"])?;
@@ -200,7 +226,7 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     drop(guard);
     let stopped = run(&home, &["down"])?;
     assert!(stopped.status.success());
-    assert!(text(&stopped.stdout).contains("not running"));
+    assert!(text(&stopped.stderr).contains("Already stopped"));
     Ok(())
 }
 
@@ -282,11 +308,9 @@ fn first_up_in_a_terminal_returns_with_next_steps_last() -> Check {
         text(&output.stderr)
     );
     let summary = text(&output.stdout);
-    assert!(summary.contains("Next:"), "{summary}");
-    assert!(
-        summary.trim_end().ends_with("follow the first sync"),
-        "{summary}"
-    );
+    assert!(summary.contains("Follow the first sync:"), "{summary}");
+    let last = summary.trim_end().lines().last().unwrap_or_default();
+    assert!(last.contains("bridge stats --follow"), "{summary}");
     assert!(!summary.contains("Ctrl-C stops watching"), "{summary}");
     ab_runtime::cli::parse(["bridge", "up", "--no-watch"].map(std::ffi::OsString::from))?;
     Ok(())
@@ -300,6 +324,7 @@ fn up_reports_a_busy_port_and_leaves_it_alone() -> Check {
     let output = run(home.path(), &["up", "--api-addr", &address])?;
     assert_eq!(output.status.code(), Some(1));
     assert!(text(&output.stderr).contains("already in use"));
+    assert!(output.stdout.is_empty());
     Ok(())
 }
 
@@ -330,7 +355,7 @@ fn down_refuses_a_gateway_it_did_not_start() -> Check {
     foreground.kill()?;
     foreground.wait()?;
     assert_eq!(output.status.code(), Some(1), "{error}");
-    assert!(error.contains("not started by `bridge up`"), "{error}");
+    assert!(error.contains("not started by bridge up"), "{error}");
     Ok(())
 }
 
@@ -365,7 +390,8 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
         Some(format!("mcp add --transport http --scope user apple-bridge {url}").as_str())
     );
     assert!(!calls.contains("mcp login"));
-    assert!(text(&claude.stdout).contains("claude mcp login apple-bridge"));
+    assert!(text(&claude.stderr).contains("claude mcp login apple-bridge"));
+    assert!(claude.stdout.is_empty());
 
     let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
     assert!(project.status.success());
@@ -379,7 +405,7 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
         .arg(home.path())
         .output()?;
     assert!(codex.status.success(), "{}", text(&codex.stderr));
-    assert!(text(&codex.stdout).contains("codex mcp login apple-bridge"));
+    assert!(text(&codex.stderr).contains("codex mcp login apple-bridge"));
     let expected_add = format!("mcp add apple-bridge --url {url}");
     assert!(
         std::fs::read_to_string(&codex_log)?
@@ -388,10 +414,13 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     );
 
     let print = link(&["link", "codex", "--print"])?;
-    assert!(text(&print.stdout).contains(&format!("codex mcp add apple-bridge --url {url}")));
+    assert_eq!(
+        text(&print.stdout),
+        format!("codex mcp add apple-bridge --url {url}\ncodex mcp login apple-bridge\n")
+    );
 
     let other = link(&["link", "other"])?;
-    assert!(text(&other.stdout).contains(&url));
+    assert_eq!(text(&other.stdout).trim(), url);
 
     let unlink = bridge()
         .env("PATH", &path)
@@ -427,10 +456,16 @@ fn link_accepts_the_same_server_and_refuses_a_different_one() -> Check {
     };
     let same = link(format!("http://{api}/mcp"))?;
     assert!(same.status.success(), "{}", text(&same.stderr));
-    assert!(text(&same.stdout).contains("already has"));
+    assert!(text(&same.stderr).contains("Already added"));
     let different = link("http://elsewhere.example/mcp".to_owned())?;
     assert_eq!(different.status.code(), Some(1));
     assert!(text(&different.stderr).contains("different server"));
+    assert_eq!(
+        link("http://elsewhere.example/mcp".to_owned())?
+            .status
+            .code(),
+        Some(1)
+    );
     Ok(())
 }
 
@@ -460,7 +495,7 @@ fn link_waits_for_claude_code_to_approve_a_project_server() -> Check {
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stdout).contains("approve project servers first"));
+    assert!(text(&output.stderr).contains("approve project servers first"));
     assert!(!std::fs::read_to_string(&log)?.contains("mcp login"));
     Ok(())
 }
@@ -478,8 +513,8 @@ fn link_explains_a_missing_agent() -> Check {
         .output()?;
     assert_eq!(output.status.code(), Some(1));
     let error = text(&output.stderr);
-    assert!(error.contains("Claude Code is not installed"), "{error}");
-    assert!(error.contains("next:"), "{error}");
+    assert!(error.contains("Can't find Claude Code"), "{error}");
+    assert!(error.contains("bridge link other"), "{error}");
     Ok(())
 }
 
@@ -564,8 +599,12 @@ fn stats_watch_reports_each_source_then_finishes() -> Check {
 fn stats_watch_stops_at_its_time_limit_on_an_empty_home() -> Check {
     let home = tempfile::tempdir()?;
     let output = run(home.path(), &["stats", "--watch", "--timeout", "1"])?;
-    assert!(output.status.success());
+    assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(text(&output.stdout).contains("Still syncing"));
+    assert!(text(&output.stderr).contains("--watch is deprecated. Use --follow."));
+    let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(!text(&output.stderr).contains("deprecated"));
     Ok(())
 }
 
@@ -582,14 +621,7 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     };
     let before = principals(home.path())?;
     for arguments in [
-        &["read", "messages", "--json"][..],
-        &["read", "messages", "--text", "hello", "--json"][..],
-        &["read", "chats", "--json"][..],
         &["read", "contacts", "--json"][..],
-        &["read", "calendar", "--json"][..],
-        &["read", "reminders", "--json"][..],
-        &["read", "notes", "--json"][..],
-        &["read", "mail", "--json"][..],
         &["search", "hello", "--json"][..],
         &["call", "sources.status"][..],
     ] {
@@ -601,8 +633,32 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
         );
         let _: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     }
+    for (arguments, reason) in [
+        (&["read", "messages", "--json"][..], "permission_missing"),
+        (
+            &["read", "messages", "--query", "hello", "--json"][..],
+            "permission_missing",
+        ),
+        (&["read", "chats", "--json"][..], "permission_missing"),
+        (&["read", "calendar", "--json"][..], "source_unavailable"),
+        (&["read", "reminders", "--json"][..], "source_unavailable"),
+        (&["read", "notes", "--json"][..], "source_unavailable"),
+        (&["read", "mail", "--json"][..], "source_unavailable"),
+    ] {
+        let output = run(home.path(), arguments)?;
+        assert_eq!(output.status.code(), Some(1), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
+        let error: serde_json::Value = serde_json::from_slice(&output.stderr)?;
+        assert_eq!(error["reason"], reason, "{arguments:?}");
+        assert_eq!(error["status"], "action_required", "{arguments:?}");
+    }
     let human = run(home.path(), &["read", "contacts"])?;
-    assert!(text(&human.stdout).contains("Nothing to show"));
+    assert!(human.status.success());
+    assert!(human.stdout.is_empty());
+    assert!(text(&human.stderr).contains("No contacts. Contacts synced and has none."));
+    let never = run(home.path(), &["read", "notes"])?;
+    assert_eq!(never.status.code(), Some(1));
+    assert!(text(&never.stderr).contains("hasn't synced on this Mac yet"));
     let helper = run(home.path(), &["call", "helper.version"])?;
     assert!(!helper.status.success());
     assert!(
@@ -657,12 +713,13 @@ fn photos_cli_requires_explicit_writes_and_a_stable_credential()
             ],
         )?;
         assert!(!missing_id.status.success());
-        assert!(text(&missing_id.stderr).contains("stable qry_"));
+        assert!(text(&missing_id.stderr).contains("stable \"id\""));
+        assert!(text(&missing_id.stderr).contains("never retry with a new one"));
     }
     for operation in ["photos.fetch", "photos.release"] {
         let transfer = run(home.path(), &["call", operation])?;
         assert!(!transfer.status.success());
-        assert!(text(&transfer.stderr).contains("stable authenticated identity"));
+        assert!(text(&transfer.stderr).contains("stable credential identity"));
     }
     let other = run(home.path(), &["call", "messages.send", "--write"])?;
     assert!(!other.status.success());
@@ -800,8 +857,18 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     assert_eq!(statuses["calendar"], "granted");
 
     let no_terminal = run(&home, &["permissions", "guide", "--fixture", &fixture_arg])?;
-    assert!(no_terminal.status.success());
-    assert!(text(&no_terminal.stdout).contains("Nothing was changed or requested"));
+    assert_eq!(no_terminal.status.code(), Some(2));
+    assert!(no_terminal.stdout.is_empty());
+    assert!(
+        text(&no_terminal.stderr).contains("Can't walk through permissions without a terminal.")
+    );
+    assert!(text(&no_terminal.stderr).contains("bridge permissions status"));
+    let in_ci = bridge()
+        .env("CI", "1")
+        .args(["permissions", "guide", "--fixture", &fixture_arg, "--home"])
+        .arg(&home)
+        .output()?;
+    assert_eq!(in_ci.status.code(), Some(2));
     let untouched: serde_json::Value = serde_json::from_slice(&std::fs::read(&fixture)?)?;
     assert!(untouched.get("asked").is_none(), "{untouched}");
     assert!(untouched.get("opened").is_none(), "{untouched}");
@@ -826,10 +893,18 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
     ] {
         assert_eq!(after["statuses"][permission], "granted", "{permission}");
     }
-    assert!(text(&walked.stdout).contains("Full Disk Access allowed"));
-    assert!(text(&walked.stdout).contains("Waiting up to 10 minutes"));
-    assert!(text(&walked.stdout).contains("Mission Control"));
-    assert!(text(&walked.stdout).contains("existing grants are kept"));
+    let progress = text(&walked.stderr)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(progress.contains("Allowed Full Disk Access"), "{progress}");
+    assert!(progress.contains("Waiting up to 10 minutes"), "{progress}");
+    assert!(progress.contains("Mission Control"), "{progress}");
+    assert!(
+        progress.contains("grants already made are kept"),
+        "{progress}"
+    );
+    assert!(text(&walked.stdout).starts_with("Permission\tStatus\tUsed for\n"));
     Ok(())
 }
 
@@ -858,8 +933,7 @@ fn permission_guide_continues_after_a_decline_and_explains_how_to_enable_it() ->
             ],
         )?;
         assert!(output.status.success(), "{}", text(&output.stderr));
-        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
-        let message = text(&output.stdout);
+        let message = text(&output.stderr);
         for phrase in [
             "Contacts permission was declined",
             "System Settings > Privacy & Security > Contacts",
@@ -903,7 +977,7 @@ fn optional_capture_permissions_are_independent_and_declining_keeps_the_rest_wor
     ];
     let output = run(&home, &arguments)?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    let shown = text(&output.stdout);
+    let shown = format!("{}{}", text(&output.stdout), text(&output.stderr));
     assert!(shown.contains("optional"), "{shown}");
     assert!(shown.contains("Camera permission was declined"), "{shown}");
     assert!(shown.contains("Other sources still work"), "{shown}");
@@ -991,9 +1065,9 @@ fn photos_permission_request_reaches_the_helper_and_cleans_reports() -> Check {
             .env("PATH", &bin)
             .output()?;
         assert!(output.status.success(), "{}", text(&output.stderr));
-        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
+        assert!(output.stdout.is_empty(), "{}", text(&output.stdout));
         assert_eq!(
-            text(&output.stdout).contains("permission was declined"),
+            text(&output.stderr).contains("permission was declined"),
             denied
         );
         let arguments = std::fs::read_to_string(&log)?;
@@ -1039,8 +1113,8 @@ fn a_declined_permission_request_exits_cleanly_including_on_retry() -> Check {
             .env("PATH", &bin)
             .output()?;
         assert!(output.status.success(), "{}", text(&output.stderr));
-        assert!(output.stderr.is_empty(), "{}", text(&output.stderr));
-        let message = text(&output.stdout);
+        assert!(output.stdout.is_empty(), "{}", text(&output.stdout));
+        let message = text(&output.stderr);
         for phrase in [
             "permission was declined",
             "System Settings > Privacy & Security > Contacts",

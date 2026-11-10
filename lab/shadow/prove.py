@@ -109,7 +109,7 @@ def main():
         if primer:
             stop(primer)
         stop(gateway)
-    (root / 'iphone-agent.json').write_text(subprocess.check_output([args.bridge, 'agent', 'create', '--home', str(home), '--name', 'shadow-approver', '--level', 'approve', '--scope', 'iphone:write'], text=True))
+    (root / 'iphone-agent.json').write_text(subprocess.check_output([args.bridge, 'agent', 'create', '--json', '--home', str(home), '--name', 'shadow-approver', '--level', 'approve', '--scope', 'iphone:write'], text=True))
     subprocess.run([tools, 'iphone-device', '--home', str(home), '--output', str(root / 'iphone-device.json')], check=True, stdout=log)
     shutil.copytree(home, root / 'starting')
     (home / 'runtime.json').unlink(missing_ok=True)

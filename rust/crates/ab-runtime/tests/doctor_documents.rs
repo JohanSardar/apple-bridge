@@ -29,11 +29,13 @@ fn gateway_home(home: &std::path::Path) -> Check {
 fn doctor(home: &std::path::Path) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_bridge"))
         .env("APPLE_BRIDGE_SECRET_STORE", "file")
-        .args(["doctor", "--home"])
+        .args(["doctor", "--json", "--home"])
         .arg(home)
         .output()?;
-    assert!(output.status.success());
-    Ok(serde_json::from_slice(&output.stdout)?)
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(output.status.success(), report["ok"] == true);
+    assert!(output.stderr.is_empty());
+    Ok(report)
 }
 
 #[test]

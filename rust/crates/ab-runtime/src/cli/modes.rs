@@ -1,0 +1,179 @@
+use std::{
+    io::IsTerminal,
+    path::PathBuf,
+    sync::{
+        OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
+};
+
+const AGENT_VARIABLES: &[&str] = &[
+    "AI_AGENT",
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CODEX_SANDBOX",
+    "CODEX_THREAD_ID",
+    "CURSOR_AGENT",
+    "GEMINI_CLI",
+    "CLINE_ACTIVE",
+    "OPENCODE",
+    "AMP_AGENT",
+];
+
+#[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct Requested {
+    pub json: bool,
+    pub non_interactive: Option<bool>,
+    pub yes: bool,
+    pub no_color: bool,
+    pub debug: bool,
+    pub explicit_home: Option<PathBuf>,
+    pub fields: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct Modes {
+    pub json: bool,
+    pub yes: bool,
+    pub debug: bool,
+    pub fields: Option<Vec<String>>,
+    pub explicit_home: Option<PathBuf>,
+    pub ci: bool,
+    pub agent: Option<String>,
+    pub github_actions: bool,
+    non_interactive: Option<bool>,
+    stdin_tty: bool,
+    stdout_tty: bool,
+    stderr_tty: bool,
+    dumb: bool,
+    color: bool,
+    width: usize,
+}
+
+static MODES: OnceLock<Modes> = OnceLock::new();
+static STDIN_PAYLOAD: AtomicBool = AtomicBool::new(false);
+
+fn set(name: &str) -> bool {
+    std::env::var_os(name)
+        .is_some_and(|value| !value.is_empty() && value != "0" && value != "false")
+}
+
+impl Modes {
+    pub fn resolve(requested: Requested) -> Self {
+        let stdin_tty = std::io::stdin().is_terminal();
+        let stdout_tty = std::io::stdout().is_terminal();
+        let stderr_tty = std::io::stderr().is_terminal();
+        let dumb = std::env::var("TERM").is_ok_and(|term| term == "dumb");
+        let no_color_env = std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty());
+        let forced = std::env::var("FORCE_COLOR").ok();
+        let color = if requested.no_color || no_color_env {
+            false
+        } else if let Some(force) = forced.as_deref().filter(|force| !force.is_empty()) {
+            force != "0"
+        } else {
+            stderr_tty && !dumb
+        };
+        let width = std::env::var("COLUMNS")
+            .ok()
+            .and_then(|columns| columns.parse::<usize>().ok())
+            .filter(|columns| *columns >= 20)
+            .or_else(|| ab_sys::terminal_columns(2).map(usize::from))
+            .unwrap_or(80);
+        Self {
+            json: requested.json,
+            yes: requested.yes,
+            debug: requested.debug,
+            fields: requested.fields,
+            explicit_home: requested.explicit_home,
+            ci: set("CI"),
+            agent: AGENT_VARIABLES
+                .iter()
+                .find(|name| set(name))
+                .map(|name| (*name).to_owned()),
+            github_actions: std::env::var("GITHUB_ACTIONS").is_ok_and(|value| value == "true"),
+            non_interactive: requested.non_interactive,
+            stdin_tty,
+            stdout_tty,
+            stderr_tty,
+            dumb,
+            color,
+            width,
+        }
+    }
+
+    pub fn install(self) {
+        let _ = MODES.set(self);
+    }
+
+    pub fn get() -> &'static Self {
+        MODES.get_or_init(|| Self::resolve(Requested::default()))
+    }
+
+    pub fn interactive(&self) -> bool {
+        if self.json
+            || self.non_interactive == Some(true)
+            || self.ci
+            || STDIN_PAYLOAD.load(Ordering::Relaxed)
+            || !self.stdin_tty
+            || !self.stderr_tty
+            || self.dumb
+        {
+            return false;
+        }
+        self.agent.is_none() || self.non_interactive == Some(false)
+    }
+
+    pub fn why_not_interactive(&self) -> &'static str {
+        if self.json {
+            "with --json"
+        } else if self.non_interactive == Some(true) {
+            "with --non-interactive"
+        } else if self.ci {
+            "in CI"
+        } else if self.agent.is_some() && self.non_interactive != Some(false) {
+            "when run by an agent"
+        } else if STDIN_PAYLOAD.load(Ordering::Relaxed) {
+            "while stdin carries the payload"
+        } else {
+            "without a terminal"
+        }
+    }
+
+    pub fn stdout_tty(&self) -> bool {
+        self.stdout_tty
+    }
+
+    pub fn rich(&self) -> bool {
+        self.stderr_tty && !self.dumb
+    }
+
+    pub fn color(&self) -> bool {
+        self.color
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn stdout_table(&self) -> bool {
+        self.stdout_tty && !self.dumb
+    }
+
+    pub fn legacy_json(&self) -> bool {
+        !self.json
+            && !self.stdout_tty
+            && std::env::var("APPLE_BRIDGE_LEGACY_JSON").map_or(true, |value| value != "0")
+    }
+
+    pub fn browser_allowed(&self) -> bool {
+        self.interactive()
+            && std::env::var_os("SSH_CONNECTION").is_none()
+            && std::env::var_os("SSH_TTY").is_none()
+    }
+}
+
+pub fn mark_stdin_payload() {
+    STDIN_PAYLOAD.store(true, Ordering::Relaxed);
+}

@@ -140,6 +140,24 @@ pub async fn command(
         writeln!(out, "{}", serde_json::to_string(&state::status(home)?)?)?;
         return Ok(());
     }
+    let status = settle(home, action, via, out, opener, recheck).await?;
+    if status.url.is_empty() {
+        writeln!(out, "{}", status.state)?;
+    } else {
+        writeln!(out, "{}", status.url)?;
+        writeln!(out, "{}/mcp", status.url)?;
+    }
+    Ok(())
+}
+
+pub async fn settle(
+    home: &Path,
+    action: &str,
+    via: &str,
+    out: &mut (dyn Write + Send),
+    opener: Opener,
+    recheck: Duration,
+) -> Result<state::Status> {
     if action != "on" && action != "off" {
         return Err(Error::Contract("action must be on, off or status"));
     }
@@ -161,10 +179,19 @@ pub async fn command(
             });
         }
     });
+    let cleanup = Cleanup(socket);
     let result = wait(home, action, via, &id, out, &opener, recheck, &mut received).await;
     accepting.abort();
-    let _ = std::fs::remove_file(socket);
+    drop(cleanup);
     result
+}
+
+struct Cleanup(std::path::PathBuf);
+
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -177,7 +204,7 @@ async fn wait(
     opener: &Opener,
     recheck: Duration,
     links: &mut tokio::sync::mpsc::Receiver<String>,
-) -> Result<()> {
+) -> Result<state::Status> {
     state::select(home, action, via, id)?;
     let mut ticker = tokio::time::interval(recheck);
     let mut notice = String::new();
@@ -191,13 +218,7 @@ async fn wait(
                 notice.clone_from(&status.message);
             }
             if status.state == "on" || status.state == "off" {
-                if status.url.is_empty() {
-                    writeln!(out, "{}", status.state)?;
-                } else {
-                    writeln!(out, "{}", status.url)?;
-                    writeln!(out, "{}/mcp", status.url)?;
-                }
-                return Ok(());
+                return Ok(status);
             }
             if status.state == "error" {
                 return Err(Error::Remote(format!("remote: {}", status.last_error)));

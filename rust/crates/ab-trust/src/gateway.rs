@@ -427,38 +427,7 @@ impl Authority {
         let mut grants = Vec::new();
         for scope in scopes {
             let (source, _) = scope.as_str().split_once(':').ok_or(Error::Invalid)?;
-            if ![
-                #[cfg(feature = "lab-harness")]
-                "labdummy",
-                "messages",
-                "calendar",
-                "reminders",
-                "contacts",
-                "notes",
-                "usage",
-                "phone",
-                "photos",
-                "location",
-                "audio",
-                "capture",
-                "files",
-                "focus",
-                "health",
-                "iphone",
-                "mac",
-                "mail",
-                "maps",
-                "pdf",
-                "print",
-                "safari",
-                "shortcuts",
-                "speech",
-                "vision",
-                "voice_memos",
-                "voicemail",
-            ]
-            .contains(&source)
-            {
+            if !agent_source(source) {
                 return Err(Error::Invalid);
             }
             grants.push(if level == AgentLevel::Read {
@@ -640,5 +609,84 @@ impl Authority {
             .await?
             .error_for_status()?;
         self.confirm_dial(&principal.id)
+    }
+}
+
+pub fn agent_source(source: &str) -> bool {
+    [
+        #[cfg(feature = "lab-harness")]
+        "labdummy",
+        "messages",
+        "calendar",
+        "reminders",
+        "contacts",
+        "notes",
+        "usage",
+        "phone",
+        "photos",
+        "location",
+        "audio",
+        "capture",
+        "files",
+        "focus",
+        "health",
+        "iphone",
+        "mac",
+        "mail",
+        "maps",
+        "pdf",
+        "print",
+        "safari",
+        "shortcuts",
+        "speech",
+        "vision",
+        "voice_memos",
+        "voicemail",
+    ]
+    .contains(&source)
+}
+
+impl Authority {
+    pub fn set_grants(&self, id: &str, grants: Vec<Grant>) -> Result<Principal, Error> {
+        self.update(|d| {
+            let enrollment = d.enrollment.clone();
+            let p = d
+                .principals
+                .iter_mut()
+                .find(|p| {
+                    p.id == id
+                        && p.active()
+                        && matches!(p.kind.as_str(), "agent" | "token" | "replica")
+                })
+                .ok_or(Error::Unauthorized)?;
+            let mut chosen = Vec::new();
+            for grant in grants {
+                if p.kind == "agent" {
+                    let (source, _) = grant.as_str().split_once(':').ok_or(Error::Invalid)?;
+                    if !agent_source(source) {
+                        return Err(Error::Invalid);
+                    }
+                    chosen.push(if p.level == AgentLevel::Read.as_str() {
+                        Grant::parse(&format!("{source}:read"))?
+                    } else {
+                        grant
+                    });
+                } else {
+                    chosen.push(grant);
+                }
+            }
+            if chosen.is_empty()
+                || enrollment
+                    .as_ref()
+                    .is_some_and(|e| !subset(&chosen, &e.grants))
+            {
+                return Err(Error::Invalid);
+            }
+            p.grants = chosen;
+            p.revision += 1;
+            let mut shown = p.clone();
+            shown.token_hash.clear();
+            Ok(shown)
+        })
     }
 }

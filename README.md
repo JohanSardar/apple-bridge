@@ -17,20 +17,20 @@ curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
-bridge stats --watch        # counts per source, as each one finishes
+bridge stats --follow       # counts per source, as each one finishes
 ```
 
-No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connector allow`. Allowed agents can read, and every change waits for your approval.
+No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connectors allow`. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 
 ```text
 $ bridge stats
-  ✓ Messages     163,101 messages · 708 chats · 6,791 attachments
-  ✓ Contacts     154 contacts
-  ✓ Calendar     1,776 events · 30 calendars
-  ! Notes        nothing yet  (needs a Mac permission: run bridge permissions guide)
-  354,321 items in total. Counts only, no content.
+✓ Messages        163,101 messages · 708 chats · 6,791 attachments
+✓ Contacts        154 contacts
+✓ Calendar        1,776 events · 30 calendars
+! Notes           nothing yet  (needs a Mac permission: run bridge permissions guide)
+354,321 items in total. Counts only, no content.
 ```
 
 Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
@@ -54,7 +54,7 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 | Shortcuts | Installed shortcuts and actions | Run a shortcut |
 | Photos (native qualification pending) | [Live PhotoKit search, details and temporary original downloads](docs/reference/photos.md), no synced library copy | Favorites and regular albums |
 
-An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. A connected app makes changes right away. To have one ask you first, run `bridge agent level <id> approve`. The [operations reference](docs/reference/operations.md) lists all 158 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
+An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. A connected app makes changes right away. To have one ask you first, run `bridge agents update <id> --level approve`. The [operations reference](docs/reference/operations.md) lists all 158 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
 
 ## Commands
 
@@ -67,15 +67,16 @@ An iPhone app adds health, location, alarms, Face ID approvals and more. It is i
 | Connect | `bridge link claude`, `bridge link codex` | Connect an agent on this Mac |
 | | `bridge link other` | Print what other apps and bots need |
 | | `bridge unlink claude` | Disconnect an agent |
-| | `bridge connector allow` | Allow an app that is waiting to connect |
-| | `bridge agent create`, `list`, `revoke` | Manage agent access |
+| | `bridge connectors allow` | Allow an app that is waiting to connect |
+| | `bridge agents create`, `list`, `update`, `revoke` | Manage agent access |
 | Read | `bridge stats` | Counts per source, never content |
 | | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes`, `mail`, `voicemail` and live `photos` |
 | | `bridge search "dinner"` | Search everything synced |
 | | `bridge call --list` | List every read operation you can call |
-| Remote | `bridge remote on`, `bridge remote off` | Use it from other computers. Off by default |
+| Remote | `bridge remote enable`, `bridge remote disable` | Use it from other computers. Off by default |
+| Maintenance | `bridge backup FILE`, `bridge restore FILE` | Back up or restore this Mac's synced data. Both refuse to replace anything without asking |
 
-`bridge --help` lists everything. [Setting up your Mac](docs/local-setup.md) covers each command.
+`bridge --help` lists everything, and `bridge help search <text>` finds a command. [Setting up your Mac](docs/local-setup.md) covers each command, the [CLI reference](docs/reference/cli.md) lists every option, and [CLI changes](docs/reference/cli-changes.md) lists what moved in this release.
 
 ## For AI agents
 
@@ -118,12 +119,12 @@ The address above only works on that Mac, so ChatGPT and Claude's website can't 
 
 Turn this on only to connect from another computer or from cloud apps. Your Mac must stay awake and connected.
 
-- **Hosted relay, by invite:** run `bridge remote on`, follow the account-linking page, then use the printed address ending in `/mcp` in your app's custom connector settings. The relay forwards traffic; TLS ends on your Mac.
+- **Hosted relay, by invite:** run `bridge remote enable`, follow the account-linking page, then use the printed address ending in `/mcp` in your app's custom connector settings. The relay forwards traffic; TLS ends on your Mac.
 - **Your own server:** run the relay on a Linux server with a domain you control. See [self-hosting](docs/self-host.md).
 
 ## Approvals and safety
 
-Connecting an app does not give it access. Each request names the app and the access it wants, and you compare a matching code before approving on your Mac or paired iPhone. Agents can have read-only, approval-required or full access, so choose the least your task needs. See [connector approvals](docs/connectors/approvals.md).
+Connecting an app does not give it access. Each request names the app and the access it wants, and you compare a matching code before approving on your Mac or paired iPhone. Once allowed, an agent has full access by default; it can also be set to read-only or to ask before each change, so choose the least your task needs. See [connector approvals](docs/connectors/approvals.md).
 
 Report suspected vulnerabilities through the private route in [SECURITY.md](SECURITY.md).
 

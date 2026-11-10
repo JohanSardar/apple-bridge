@@ -1,4 +1,4 @@
-use super::{Failure, Outcome};
+use super::{Failure, Outcome, failure::Reason, modes::Modes, ui};
 
 pub const SKILLS: &[(&str, &str, &str)] = &[
     (
@@ -13,10 +13,23 @@ pub const SKILLS: &[(&str, &str, &str)] = &[
     ),
 ];
 
-pub fn list() {
-    for (name, summary, _) in SKILLS {
-        println!("{name:<8} {summary}");
+#[allow(clippy::unnecessary_wraps)]
+pub fn list() -> Outcome {
+    if Modes::get().json {
+        ui::json_document(serde_json::Value::Array(
+            SKILLS
+                .iter()
+                .map(|(name, summary, _)| serde_json::json!({"name": name, "summary": summary}))
+                .collect(),
+        ));
+        return Ok(());
     }
+    let rows: Vec<Vec<String>> = SKILLS
+        .iter()
+        .map(|(name, summary, _)| vec![(*name).to_owned(), (*summary).to_owned()])
+        .collect();
+    ui::table(&["Skill", "Summary"], &rows);
+    Ok(())
 }
 
 pub fn get(name: &str) -> Outcome {
@@ -24,9 +37,21 @@ pub fn get(name: &str) -> Outcome {
         .iter()
         .find(|(skill, _, _)| *skill == name)
         .ok_or_else(|| {
-            Failure::new(format!("There is no skill called `{name}`."))
-                .next("Run `bridge skills list`.")
+            let names: Vec<String> = SKILLS
+                .iter()
+                .map(|(skill, _, _)| (*skill).to_owned())
+                .collect();
+            let mut headline = format!("Unknown skill {}.", ui::clean(name));
+            if let Some(close) = super::help::suggestion(&names, name) {
+                headline = format!("{headline} Did you mean {close}?");
+            }
+            Failure::new(Reason::InvalidValue, headline)
+                .then("See the skills", ["bridge", "skills", "list"])
         })?;
-    print!("{text}");
+    if Modes::get().json {
+        ui::json_document(serde_json::json!({"name": name, "text": text}));
+    } else {
+        ui::out(text);
+    }
     Ok(())
 }

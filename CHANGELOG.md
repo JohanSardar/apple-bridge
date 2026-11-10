@@ -6,6 +6,16 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ### Changed
 
+- The `bridge` command follows one set of rules for output, errors, prompts and options; see [CLI changes](docs/reference/cli-changes.md). Usage errors exit 2, Ctrl+C and declined prompts exit 130, and `doctor` exits 1 when it finds problems. Every failure has the same layout, and with `--json` it is one line of JSON on stderr with a stable `reason`. Reads that printed JSON to people now print tables in a terminal; piped, they keep printing the old JSON for one more release with a notice on stderr. Piped `bridge up` prints only the MCP address on stdout. Commands are grouped by task, with plural names such as `bridge agents` and `bridge remote enable`; every old name still works.
+- `bridge backup` no longer replaces an existing file without `--force`, and `bridge restore`, `bridge web lock` and revokes show what they change and ask first. Without a terminal they need `--yes`; `agent revoke` and `revoke` still run without it for one release, with a warning.
+- Invalid input fails before anything is created, and reads such as `bridge agent list` on a fresh home create no files. A malformed `runtime.json` is reported with its line and column and left as it is.
+- `bridge read` tells a source that never synced, or lacks its permission, from one that is empty.
+- `bridge agent create` defaults to `--scope reminders:read`; the old default included `system:read`, which agents can't hold, so it always failed.
+
+### Added
+
+- `bridge permissions guide --only NAMES`, `bridge read --next` and `--all`, `bridge call --data`/`--file`/stdin, `--timeout` on `link` and `remote enable`, `bridge help search`, `--help --json`, `bridge help --all --json` and `bridge completion`.
+
 - Connected apps act without asking for approval by default, local or remote, including screenshots, screen and audio recording, camera photos, current location, Focus and Photos changes. Apps connected before this version get the same without reconnecting. Connecting a new app still needs Allow with the matching code. To make an app ask before each change, run `bridge agent level <id> approve`; the passkey consent page also offers it. This trades safety for convenience: an app tricked by something it reads can now send a message or delete a note with nothing to stop it.
 
 ## [0.1.5] - 2026-11-08

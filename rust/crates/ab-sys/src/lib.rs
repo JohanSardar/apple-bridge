@@ -188,3 +188,29 @@ pub fn rename_exclusive(from: &std::path::Path, to: &std::path::Path) -> io::Res
         Err(io::Error::last_os_error())
     }
 }
+
+#[allow(unsafe_code)]
+#[must_use]
+pub fn terminal_columns(fd: i32) -> Option<u16> {
+    let mut size = libc::winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    // SAFETY: TIOCGWINSZ writes one winsize into a live local value and reads nothing else.
+    let result = unsafe { libc::ioctl(fd, libc::TIOCGWINSZ, &raw mut size) };
+    (result == 0 && size.ws_col > 0).then_some(size.ws_col)
+}
+
+#[allow(unsafe_code)]
+pub fn terminate(pid: u32) {
+    let Ok(pid) = i32::try_from(pid) else {
+        return;
+    };
+    if pid <= 1 {
+        return;
+    }
+    // SAFETY: kill takes integer arguments only and has no memory effects.
+    unsafe { libc::kill(pid, libc::SIGTERM) };
+}

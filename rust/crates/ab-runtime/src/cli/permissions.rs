@@ -1,12 +1,15 @@
 use super::{
-    Failure, Outcome, stats,
+    Failure, Outcome,
+    failure::{Reason, Step},
+    modes::Modes,
+    stats,
     tree::{GuideArgs, GuideStatusArgs},
+    ui,
 };
 use crate::{Config, product_cli};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
-    io::{BufRead, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{Duration, Instant},
@@ -182,10 +185,11 @@ impl Backend<'_> {
                     Ok(())
                 } else {
                     Err(
-                        Failure::new("System Settings could not be opened.").next(format!(
-                            "Open Privacy & Security > {} yourself.",
-                            permission.title
-                        )),
+                        Failure::new(Reason::SpawnFailed, "Couldn't open System Settings.")
+                            .sentence(format!(
+                                "Open Privacy & Security > {} yourself.",
+                                permission.title
+                            )),
                     )
                 }
             }
@@ -239,8 +243,11 @@ impl Backend<'_> {
             }
             Self::Mac { helper, .. } => {
                 if helper.is_empty() {
-                    return Err(Failure::new("No Helper app was found to ask macOS with.")
-                        .next("Install Apple Bridge, or pass --helper-app."));
+                    return Err(Failure::new(
+                        Reason::HelperFailed,
+                        "Can't ask macOS. No Helper app was found.",
+                    )
+                    .sentence("Install Apple Bridge, or pass --helper-app."));
                 }
                 let report = product_cli::permissions_request(
                     Path::new("open"),
@@ -328,24 +335,34 @@ fn label(status: &str) -> &'static str {
     }
 }
 
-fn mark(status: &str) -> &'static str {
-    match status {
-        "granted" => "✓",
-        "denied" | "needs_permission" => "!",
-        _ => "?",
+fn checklist(backend: &Backend<'_>) -> Outcome<Vec<Vec<String>>> {
+    let mut rows = Vec::new();
+    for permission in permissions() {
+        let status = backend.status(permission)?;
+        rows.push(vec![
+            permission.title.to_owned(),
+            label(&status).to_owned(),
+            permission.why.to_owned(),
+        ]);
     }
+    Ok(rows)
 }
 
 fn print_checklist(backend: &Backend<'_>) -> Outcome {
-    for permission in permissions() {
-        let status = backend.status(permission)?;
-        println!(
-            "  {} {:<18} {:<18} {}",
-            mark(&status),
-            permission.title,
-            label(&status),
-            permission.why
-        );
+    ui::table(&["Permission", "Status", "Used for"], &checklist(backend)?);
+    Ok(())
+}
+
+fn print_checklist_stderr(backend: &Backend<'_>) -> Outcome {
+    for row in checklist(backend)? {
+        let mark = match (row[1].as_str(), Modes::get().rich()) {
+            ("allowed", true) => "✓",
+            ("allowed", false) => "ok",
+            ("needs permission", true) => "!",
+            ("needs permission", false) => "!!",
+            _ => "-",
+        };
+        ui::err_line(&format!("{mark} {:<32} {}", row[0], row[1]));
     }
     Ok(())
 }
@@ -364,27 +381,48 @@ fn backend_for<'a>(home: &'a Path, fixture: Option<&PathBuf>, helper: Option<&st
 
 pub fn status(home: &Path, args: &GuideStatusArgs) -> Outcome {
     let backend = backend_for(home, args.fixture.as_ref(), None);
-    if args.json {
+    if Modes::get().json {
         let mut statuses = BTreeMap::new();
         for permission in permissions() {
             statuses.insert(permission.id, backend.status(permission)?);
         }
-        println!("{}", serde_json::to_string(&statuses)?);
+        ui::outln(&serde_json::to_string(&statuses)?);
     } else {
         print_checklist(&backend)?;
     }
     Ok(())
 }
 
-fn pause(prompt: &str, yes: bool) -> Outcome<bool> {
-    if yes {
-        return Ok(true);
+#[derive(Clone, Copy)]
+enum Consent<'a> {
+    Ask,
+    Everything,
+    Only(&'a [&'static str]),
+}
+
+impl Consent<'_> {
+    fn covers(self, permission: &Permission) -> Option<bool> {
+        match self {
+            Self::Ask => None,
+            Self::Everything => Some(true),
+            Self::Only(names) => Some(names.contains(&permission.id)),
+        }
     }
-    print!("{prompt} ");
-    std::io::stdout().flush()?;
-    let mut line = String::new();
-    std::io::stdin().lock().read_line(&mut line)?;
-    Ok(!matches!(line.trim(), "s" | "skip" | "n" | "no"))
+}
+
+fn pause(prompt: &str, consent: Consent<'_>, permission: &Permission) -> Outcome<bool> {
+    if let Some(decided) = consent.covers(permission) {
+        return Ok(decided);
+    }
+    let Some(answer) = ui::ask(prompt)? else {
+        return Err(Failure::canceled(
+            "Stopped: no answer (end of input). Nothing more was requested; grants already made are kept.",
+        ));
+    };
+    Ok(!matches!(
+        answer.trim().to_lowercase().as_str(),
+        "s" | "skip" | "n" | "no"
+    ))
 }
 
 async fn wait_for(backend: &Backend<'_>, permission: &Permission) -> Outcome<bool> {
@@ -406,35 +444,55 @@ fn not_listed_hint(permission: &Permission, helper: &str) -> Option<String> {
         .then(|| format!("  Not in the list? Click +, press Command-Shift-G and paste: {helper}"))
 }
 
-async fn settings_step(backend: &Backend<'_>, permission: &Permission, yes: bool) -> Outcome {
-    if backend.status(permission)? == "granted" {
+async fn settings_step(
+    backend: &Backend<'_>,
+    permission: &Permission,
+    consent: Consent<'_>,
+) -> Outcome {
+    if backend.status(permission)? == "granted" || consent.covers(permission) == Some(false) {
         return Ok(());
     }
-    println!();
-    println!("{}: {}.", permission.title, permission.why);
-    println!(
-        "  System Settings > Privacy & Security > {}: switch on Apple Bridge.",
+    ui::blank();
+    ui::note(&format!("{}: {}.", permission.title, permission.why));
+    ui::note(&format!(
+        "System Settings > Privacy & Security > {}: switch on Apple Bridge.",
         permission.title
-    );
+    ));
     if let Some(hint) = not_listed_hint(permission, backend.helper()) {
-        println!("{hint}");
+        ui::note(hint.trim());
     }
-    if !pause("  Press Enter to open it, or type s to skip:", yes)? {
-        println!("  Skipped. Other sources still work.");
+    if !Modes::get().interactive() && !matches!(backend, Backend::Fixture(_)) {
+        ui::warn(
+            "needs_person",
+            &format!(
+                "{} can only be switched on by a person in System Settings.",
+                permission.title
+            ),
+        );
+        return Ok(());
+    }
+    if !pause(
+        "Press Enter to open it, or type s to skip:",
+        consent,
+        permission,
+    )? {
+        ui::note("Skipped. Other sources still work.");
         return Ok(());
     }
     backend.open_settings(permission)?;
-    println!(
-        "  If Settings is not visible, click System Settings in the Dock or use Mission Control to find its Space."
+    ui::note(
+        "If Settings isn't visible, click System Settings in the Dock or use Mission Control to find its Space.",
     );
-    println!(
-        "  Waiting up to 10 minutes. You can press Ctrl-C and rerun bridge permissions guide; existing grants are kept."
-    );
+    ui::note("Waiting up to 10 minutes. Press Ctrl-C to stop; grants already made are kept.");
     if wait_for(backend, permission).await? {
-        println!("  ✓ {} allowed.", permission.title);
+        ui::done("Allowed", permission.title);
     } else {
-        println!(
-            "  Not confirmed yet. Rerun bridge permissions guide to continue. If you allowed it, run bridge down, then bridge up."
+        ui::warn(
+            "not_confirmed",
+            &format!(
+                "{} isn't confirmed yet. Rerun bridge permissions guide to continue. If you allowed it, run bridge down, then bridge up.",
+                permission.title
+            ),
         );
     }
     Ok(())
@@ -469,7 +527,7 @@ fn ask_one(
     }
     if wants(permission)? {
         if backend.ask_macos(permission)? {
-            println!("  {}", declined(permission.id));
+            ui::warn("permission_denied", &declined(permission.id));
             answers.skipped.push(permission.id);
         } else {
             answers.asked.push(permission);
@@ -568,50 +626,120 @@ pub async fn after_request(home: &Path, name: &str, helper: Option<&str>) -> Out
     let backend = backend_for(home, None, helper);
     let settled = let_new_grants_settle(&backend, &[permission], NEW_GRANT_SETTLES).await?;
     if let Some(report) = settled.report() {
-        println!("{report}");
+        ui::warn("not_reading", &report);
     }
     Ok(())
 }
 
-pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
-    let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
-    println!("Mac permissions for Apple Bridge. You can skip any of them; the rest still work.");
-    print_checklist(&backend)?;
-    if !args.yes && !super::interactive() {
-        println!();
-        println!(
-            "Nothing was changed or requested. Run this in a terminal to be walked through it."
-        );
-        return Ok(());
+fn only(names: &str) -> Outcome<Vec<&'static str>> {
+    let mut chosen = Vec::new();
+    let mut unknown = Vec::new();
+    for name in names
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+    {
+        match permissions().find(|permission| permission.id == name) {
+            Some(permission) => chosen.push(permission.id),
+            None => unknown.push(name.to_owned()),
+        }
     }
+    if !unknown.is_empty() {
+        let accepted: Vec<&str> = permissions().map(|permission| permission.id).collect();
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            format!(
+                "Can't use --only {}. Not permission names: {}.",
+                ui::clean(names),
+                ui::clean(&unknown.join(", "))
+            ),
+        )
+        .row("Accepted", accepted.join(", ")));
+    }
+    if chosen.is_empty() {
+        return Err(Failure::new(
+            Reason::MissingArgument,
+            "Can't use an empty --only. Name the permissions to request.",
+        ));
+    }
+    Ok(chosen)
+}
+
+pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
+    let named = args.only.as_deref().map(only).transpose()?;
+    let modes = Modes::get();
+    let consent = match &named {
+        Some(chosen) => Consent::Only(chosen),
+        None if modes.yes => Consent::Everything,
+        None if modes.interactive() => Consent::Ask,
+        None => {
+            return Err(Failure::new(Reason::TerminalRequired, "Can't walk through permissions without a terminal.")
+                .sentence(format!("Nothing was requested ({}). Name the ones to request with --only, such as --only contacts,calendar.", modes.why_not_interactive()))
+                .then("See which are allowed", ["bridge", "permissions", "status"]));
+        }
+    };
+    let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
+    ui::set_cancel_note(Some(
+        "Canceled. Nothing more was requested; grants already made are kept.",
+    ));
+    ui::note("Mac permissions for Apple Bridge. You can skip any of them; the rest still work.");
+    print_checklist_stderr(&backend)?;
     let answers = ask_each(&backend, |permission| {
-        println!();
-        println!(
+        if let Some(decided) = consent.covers(permission) {
+            return Ok(decided);
+        }
+        ui::blank();
+        ui::note(&format!(
             "{}: {}. macOS asks you in a small window.",
             permission.title, permission.why
-        );
-        let wanted = pause("  Press Enter to ask now, or type s to skip:", args.yes)?;
+        ));
+        let wanted = pause(
+            "Press Enter to ask now, or type s to skip:",
+            consent,
+            permission,
+        )?;
         if !wanted {
-            println!("  Skipped. Other sources still work.");
+            ui::note("Skipped. Other sources still work.");
         }
         Ok(wanted)
     });
+    if answers
+        .failure
+        .as_ref()
+        .is_some_and(|failure| failure.reason == Reason::Canceled)
+    {
+        return Err(answers
+            .failure
+            .unwrap_or_else(|| Failure::canceled("Canceled.")));
+    }
     let new_grants = let_new_grants_settle(&backend, &answers.asked, NEW_GRANT_SETTLES).await;
     if let Some(report) = new_grants.as_ref().ok().and_then(NewGrants::report) {
-        println!();
-        println!("{report}");
+        ui::warn("not_reading", &report);
     }
     if let Some(failure) = answers.failure {
         return Err(failure);
     }
     new_grants?;
     for permission in permissions().filter(|permission| !answers.skipped.contains(&permission.id)) {
-        settings_step(&backend, permission, args.yes).await?;
+        settings_step(&backend, permission, consent).await?;
     }
-    println!();
+    ui::set_cancel_note(None);
+    if modes.json {
+        let mut statuses = BTreeMap::new();
+        for permission in permissions() {
+            statuses.insert(permission.id, backend.status(permission)?);
+        }
+        ui::json_document(
+            serde_json::json!({"permissions": statuses, "requested": answers.asked.iter().map(|permission| permission.id).collect::<Vec<_>>(), "skipped": answers.skipped}),
+        );
+        return Ok(());
+    }
+    ui::blank();
     print_checklist(&backend)?;
-    println!();
-    println!("Follow the sync with: bridge stats --watch");
+    ui::next_steps(&[Step::new(
+        "Follow the sync",
+        ["bridge", "stats", "--follow"],
+    )]);
     Ok(())
 }
 
@@ -678,7 +806,7 @@ mod tests {
         let backend = Backend::Fixture(path);
         let answers = ask_each(&backend, |permission| {
             if permission.id == "calendar" {
-                return Err(Failure::new("macOS did not answer."));
+                return Err(Failure::new(Reason::HelperFailed, "macOS did not answer."));
             }
             Ok(true)
         });

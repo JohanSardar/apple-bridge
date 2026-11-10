@@ -1,4 +1,4 @@
-use super::{Failure, Outcome, tree::StatsArgs};
+use super::{Failure, Outcome, commands, failure::Reason, modes::Modes, tree::StatsArgs, ui};
 use rusqlite::{Connection, OpenFlags};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -157,11 +157,14 @@ impl SourceStats {
     }
 
     fn mark(&self) -> &'static str {
+        let rich = Modes::get().rich();
         match self.state.as_str() {
-            "ready" => "✓",
-            "degraded" => "~",
-            "unknown" => "…",
-            _ => "!",
+            "ready" if rich => "✓",
+            "ready" => "ok",
+            "unknown" if rich => "…",
+            "unknown" => "--",
+            _ if rich => "!",
+            _ => "!!",
         }
     }
 
@@ -186,12 +189,12 @@ impl SourceStats {
         let advice = self
             .advice()
             .map_or_else(String::new, |advice| format!("  ({advice})"));
-        format!(
-            "  {} {:<12} {}{advice}",
+        ui::clean(&format!(
+            "{} {:<16}{}{advice}",
             self.mark(),
             self.label,
             self.phrase()
-        )
+        ))
     }
 
     fn attention(&self) -> bool {
@@ -218,22 +221,23 @@ pub fn thousands(value: i64) -> String {
     out
 }
 
-fn open(home: &Path) -> Outcome<Option<Connection>> {
+pub fn open(home: &Path) -> Outcome<Option<Connection>> {
     let path = home.join("state.db");
     if !path.exists() {
         return Ok(None);
     }
     let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(|error| Failure::new(format!("Could not open this home's data: {error}.")))?;
+        .map_err(|error| read_error(&error))?;
     connection
         .busy_timeout(Duration::from_secs(5))
-        .map_err(|error| Failure::new(format!("Could not open this home's data: {error}.")))?;
+        .map_err(|error| read_error(&error))?;
     Ok(Some(connection))
 }
 
 fn read_error(error: &rusqlite::Error) -> Failure {
-    Failure::new(format!("Could not read this home's data: {error}."))
-        .next("Run `bridge doctor` to check it.")
+    Failure::new(Reason::UnhealthyHome, "Couldn't read this home's data.")
+        .row("Detail", ui::clean(&error.to_string()))
+        .then("Check it", ["bridge", "doctor"])
 }
 
 fn title_case(source: &str) -> String {
@@ -334,32 +338,33 @@ fn visible(source: &SourceStats, all: bool) -> bool {
     all || source.total > 0 || source.core()
 }
 
-fn print_snapshot(snapshot: &Snapshot, all: bool) {
-    let mut shown = 0;
-    for source in snapshot
+fn snapshot_lines(snapshot: &Snapshot, all: bool) -> Vec<String> {
+    let mut lines: Vec<String> = snapshot
         .sources
         .iter()
         .filter(|source| visible(source, all))
-    {
-        println!("{}", source.line());
-        shown += 1;
+        .map(SourceStats::line)
+        .collect();
+    if lines.is_empty() {
+        lines.push("Nothing has synced yet. Sources appear here as they connect.".to_owned());
+    } else {
+        lines.push(format!(
+            "{} items in total. Counts only, no content.",
+            thousands(snapshot.total)
+        ));
     }
-    if shown == 0 {
-        println!("  Nothing has synced yet. Sources appear here as they connect.");
-        return;
-    }
-    println!(
-        "  {} items in total. Counts only, no content.",
-        thousands(snapshot.total)
-    );
+    lines
 }
 
-pub fn print_once(home: &Path) -> Outcome {
+pub fn print_once_stderr(home: &Path) -> Outcome {
     let snapshot = match open(home)? {
         Some(connection) => read_snapshot(&connection)?,
         None => Snapshot::default(),
     };
-    print_snapshot(&snapshot, false);
+    ui::blank();
+    for line in snapshot_lines(&snapshot, false) {
+        ui::err_line(&line);
+    }
     Ok(())
 }
 
@@ -477,29 +482,34 @@ impl Tracker {
 
 fn emit(event: &Event, json_lines: bool, all: bool) {
     if json_lines {
-        println!("{}", event_json(event));
+        ui::outln(&event_json(event).to_string());
         return;
     }
+    let mark = if Modes::get().rich() { "…" } else { "--" };
     match event {
         Event::Appeared(source) if visible(source, all) => {
-            println!(
-                "  … {:<12} syncing, {} so far",
+            ui::err_line(&ui::clean(&format!(
+                "{mark} {:<16}syncing, {} so far",
                 source.label,
                 source.phrase()
-            );
+            )));
         }
         Event::Progress(source) if visible(source, all) => {
-            println!("  … {:<12} {} so far", source.label, source.phrase());
+            ui::err_line(&ui::clean(&format!(
+                "{mark} {:<16}{} so far",
+                source.label,
+                source.phrase()
+            )));
         }
         Event::Finished(source, _) | Event::Attention(source) if visible(source, all) => {
-            println!("{}", source.line());
+            ui::outln(&source.line());
         }
         Event::AllFinished(total, elapsed) => {
-            println!(
+            ui::outln(&format!(
                 "Finished: {} items in {}. Counts only, no content.",
                 thousands(*total),
                 friendly_duration(*elapsed)
-            );
+            ));
         }
         _ => {}
     }
@@ -554,7 +564,7 @@ async fn watch(
             None => Snapshot::default(),
         };
         if snapshot.sources.is_empty() && !told_waiting && !json_lines {
-            println!("  Waiting for sources to connect…");
+            ui::err_line("Waiting for sources to connect…");
             told_waiting = true;
         }
         for event in tracker.observe(&snapshot, Instant::now()) {
@@ -565,13 +575,13 @@ async fn watch(
         }
         if timeout.is_some_and(|limit| began.elapsed() >= limit) {
             if json_lines {
-                println!("{}", json!({"event":"timeout","total":snapshot.total}));
+                ui::outln(&json!({"event":"timeout","total":snapshot.total}).to_string());
             } else {
-                println!(
-                    "Still syncing after {}: {} items so far.",
+                ui::outln(&format!(
+                    "Still syncing after {}: {} items so far. Stopped watching; syncing continues.",
                     friendly_duration(began.elapsed()),
                     thousands(snapshot.total)
-                );
+                ));
             }
             return Ok(());
         }
@@ -580,28 +590,39 @@ async fn watch(
 }
 
 pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
-    if args.watch {
-        let timeout = args
-            .timeout
-            .map(Duration::from_secs)
-            .or_else(|| (!super::interactive()).then_some(NON_INTERACTIVE_WATCH_LIMIT));
-        return watch(
-            home,
-            Duration::from_secs(args.settle),
-            timeout,
-            args.json,
-            args.all,
+    let settle = commands::duration("--settle", &args.settle)?;
+    let timeout = args
+        .timeout
+        .as_deref()
+        .map(|text| commands::duration("--timeout", text))
+        .transpose()?;
+    if timeout.is_some() && !args.follow {
+        return Err(Failure::new(
+            Reason::ConflictingOptions,
+            "Can't use --timeout without --follow.",
         )
-        .await;
+        .then(
+            "Follow the sync for a while",
+            ["bridge", "stats", "--follow", "--timeout", "5m"],
+        ));
+    }
+    let json = Modes::get().json;
+    if args.follow {
+        ui::set_cancel_note(Some(""));
+        let timeout = timeout
+            .or_else(|| (!Modes::get().interactive()).then_some(NON_INTERACTIVE_WATCH_LIMIT));
+        return watch(home, settle, timeout, json, args.all).await;
     }
     let Some(connection) = open(home)? else {
         return Err(Failure::not_set_up(home));
     };
     let snapshot = read_snapshot(&connection)?;
-    if args.json {
-        println!("{}", serde_json::to_string(&snapshot)?);
+    if json {
+        ui::outln(&serde_json::to_string(&snapshot)?);
     } else {
-        print_snapshot(&snapshot, args.all);
+        for line in snapshot_lines(&snapshot, args.all) {
+            ui::outln(&line);
+        }
     }
     Ok(())
 }

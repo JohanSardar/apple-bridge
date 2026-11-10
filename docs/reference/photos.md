@@ -10,7 +10,7 @@ Every request uses `{"id":"qry_<random-id>","args":{...},"deadline_ms":5000}`. U
 
 `bridge call` remains read-only by default. Use `bridge call --list --write` to include the six Photos organization writes. Transfers and writes require `--token-env PHOTO_TOKEN`, naming an environment variable containing an existing credential with the necessary scopes. Keep the same credential for transfer start, reads and release; the CLI neither creates nor revokes it. Never put the credential itself in command arguments.
 
-For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --args '{"id":"qry_<random-id>","args":{"asset_id":"<asset-id>","favorite":true}}'`. Writes require explicit `--write` and a stable query ID. These flags do not bypass scopes or agent approvals. No other mutating operation is enabled by `--write`.
+For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --data '{"id":"qry_<random-id>","args":{"asset_id":"<asset-id>","favorite":true}}'`. Writes require explicit `--write` and a stable query ID. These flags do not bypass scopes or agent approvals. No other mutating operation is enabled by `--write`.
 
 | Operation | Arguments and effect |
 |---|---|
