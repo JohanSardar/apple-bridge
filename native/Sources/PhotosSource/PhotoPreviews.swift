@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 @preconcurrency import Photos
 import SourceSupport
 
-let photoImageByteLimit = 600 << 10
+let photoImageByteLimit = 172 << 10
 
 func photoPreview(_ args: JSON) async throws -> JSON {
     try fields(args, ["asset_id", "max_px", "network_access", "include_hidden"])
@@ -182,14 +182,28 @@ private func drawLabel(_ text: String, in context: CGContext, at frame: CGRect, 
 }
 
 private func encodedImage(_ image: CGImage) throws -> JSON {
-    for quality in [0.82, 0.7, 0.55, 0.4] {
-        let data = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { throw SourceFailure.unavailable }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: quality, kCGImagePropertyOrientation: 1] as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else { throw SourceFailure.unavailable }
-        if data.length <= photoImageByteLimit {
-            return .object(["mime_type": .string("image/jpeg"), "width": .number(Double(image.width)), "height": .number(Double(image.height)), "bytes": .number(Double(data.length)), "image_base64": .string((data as Data).base64EncodedString())])
+    for scale in [1.0, 0.8, 0.64, 0.5, 0.4] {
+        let candidate = try scaled(image, by: scale)
+        for quality in [0.82, 0.7, 0.55, 0.42] {
+            let data = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { throw SourceFailure.unavailable }
+            CGImageDestinationAddImage(destination, candidate, [kCGImageDestinationLossyCompressionQuality: quality, kCGImagePropertyOrientation: 1] as CFDictionary)
+            guard CGImageDestinationFinalize(destination) else { throw SourceFailure.unavailable }
+            if data.length <= photoImageByteLimit {
+                return .object(["mime_type": .string("image/jpeg"), "width": .number(Double(candidate.width)), "height": .number(Double(candidate.height)), "bytes": .number(Double(data.length)), "image_base64": .string((data as Data).base64EncodedString())])
+            }
         }
     }
     throw SourceFailure.unavailable
+}
+
+private func scaled(_ image: CGImage, by scale: Double) throws -> CGImage {
+    guard scale < 1 else { return image }
+    let width = max(1, Int((Double(image.width) * scale).rounded()))
+    let height = max(1, Int((Double(image.height) * scale).rounded()))
+    let canvas = try drawingContext(width: width, height: height)
+    canvas.interpolationQuality = .high
+    canvas.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    guard let result = canvas.makeImage() else { throw SourceFailure.unavailable }
+    return result
 }
