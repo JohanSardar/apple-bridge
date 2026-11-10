@@ -101,6 +101,7 @@ dependencies = [
  "tokio",
  "tower",
  "ulid",
+ "unicode-normalization",
  "url",
 ]
 
