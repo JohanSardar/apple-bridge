@@ -7,8 +7,9 @@ use axum::{
 use rmcp::{
     RoleServer, ServerHandler,
     model::{
-        CacheScope, CallToolRequestParams, CallToolResponse, ErrorData, ListToolsResult,
-        PaginatedRequestParams, ServerConfig, Tool,
+        CacheScope, CallToolRequestParams, CallToolResponse, ErrorData, ListResourcesResult,
+        ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResponse,
+        ReadResourceResult, ServerConfig, Tool,
     },
     service::RequestContext,
     transport::streamable_http_server::{
@@ -26,7 +27,13 @@ struct Handler {
 }
 impl ServerHandler for Handler {
     fn get_info(&self) -> ServerConfig {
-        serde_json::from_value(json!({"protocolVersion":"2025-03-26","capabilities":{"logging":{},"tools":{"listChanged":true}},"serverInfo":{"name":"apple-bridge","version":"1"}})).unwrap_or_default()
+        serde_json::from_value(json!({
+            "protocolVersion":"2025-03-26",
+            "capabilities":{"logging":{},"tools":{"listChanged":true},"resources":{}},
+            "serverInfo":{"name":"apple-bridge","version":"1"},
+            "instructions": crate::mcp_guides::INSTRUCTIONS,
+        }))
+        .unwrap_or_default()
     }
     fn list_tools(
         &self,
@@ -36,6 +43,40 @@ impl ServerHandler for Handler {
         std::future::ready(Ok(ListToolsResult::with_all_items(self.tools.clone())
             .with_ttl_ms(0)
             .with_cache_scope(CacheScope::Public)))
+    }
+    fn list_resources(
+        &self,
+        _: Option<PaginatedRequestParams>,
+        _: RequestContext<RoleServer>,
+    ) -> impl Future<Output = Result<ListResourcesResult, ErrorData>> {
+        std::future::ready(
+            serde_json::from_value(crate::mcp_guides::resources())
+                .map_err(|_| ErrorData::internal_error("encoding", None)),
+        )
+    }
+    fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _: RequestContext<RoleServer>,
+    ) -> impl Future<Output = Result<ReadResourceResponse, ErrorData>> {
+        let result = crate::mcp_guides::guide(&request.uri).map_or_else(
+            || {
+                Err(ErrorData::resource_not_found(
+                    format!("unknown resource {}", request.uri),
+                    None,
+                ))
+            },
+            |(name, _, text)| {
+                serde_json::from_value::<ReadResourceResult>(json!({"contents":[{
+                    "uri": crate::mcp_guides::uri(name),
+                    "mimeType": "text/markdown",
+                    "text": text,
+                }]}))
+                .map(ReadResourceResponse::Complete)
+                .map_err(|_| ErrorData::internal_error("encoding", None))
+            },
+        );
+        std::future::ready(result)
     }
     async fn call_tool(
         &self,
@@ -49,6 +90,62 @@ impl ServerHandler for Handler {
                 None,
             )
         })?;
+        let arguments = request.arguments.clone().unwrap_or_default();
+        let legacy_shape = matches!(request.name.as_ref(), "messages_send" | "notes_create")
+            && arguments.contains_key("args");
+        if crate::mcp_registry::COMPACT.contains(&request.name.as_ref()) && !legacy_shape {
+            let outcome = tokio::select! {
+                () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
+                outcome = crate::mcp_facade::call(&self.frontdoor, principal, &request.name, arguments) => outcome,
+            };
+            self.frontdoor.observe_mcp(
+                principal,
+                &request.name,
+                outcome.operation.as_deref(),
+                outcome
+                    .is_error
+                    .then(|| outcome.value["error"]["code"].as_str().unwrap_or("error")),
+            );
+            return self.compact_result(&outcome);
+        }
+        self.legacy(principal, request, context).await
+    }
+}
+impl Handler {
+    fn compact_result(
+        &self,
+        outcome: &crate::mcp_facade::Outcome,
+    ) -> Result<CallToolResponse, ErrorData> {
+        let raw = serde_json::to_vec(&outcome.value)
+            .map_err(|_| ErrorData::internal_error("encoding", None))?;
+        let bytes = self
+            .frontdoor
+            .encode(&raw)
+            .map_err(|_| ErrorData::internal_error("encoding", None))?;
+        let text =
+            String::from_utf8(bytes).map_err(|_| ErrorData::internal_error("encoding", None))?;
+        let structured: serde_json::Value =
+            serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
+        let mut items = vec![json!({"type":"text","text":text})];
+        if let Some((data, mime)) = &outcome.image {
+            items.push(json!({"type":"image","data":data,"mimeType":mime}));
+        }
+        let mut value =
+            json!({"isError":outcome.is_error,"content":items,"structuredContent":structured});
+        if let Some(elapsed) = outcome.read_model_ms {
+            value["_meta"] = json!({"bridge/read_model_ms": elapsed});
+        }
+        serde_json::from_value::<rmcp::model::CallToolResult>(value)
+            .map(CallToolResponse::Complete)
+            .map_err(|_| ErrorData::internal_error("encoding", None))
+    }
+
+    async fn legacy(
+        &self,
+        principal: &Principal,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, ErrorData> {
         let descriptors =
             tool_descriptors().map_err(|_| ErrorData::internal_error("catalog", None))?;
         if request.name.starts_with("usage_")
@@ -68,7 +165,22 @@ impl ServerHandler for Handler {
             .iter()
             .find(|d| d.name.replace('.', "_") == request.name)
             .ok_or_else(|| {
-                ErrorData::invalid_params(format!("unknown tool {:?}", request.name), None)
+                let close = crate::mcp_registry::registry().map(|registry| {
+                    let mut names: Vec<String> = crate::mcp_registry::COMPACT
+                        .iter()
+                        .filter(|tool| distance_ok(tool, &request.name))
+                        .map(|tool| (*tool).to_owned())
+                        .collect();
+                    names.extend(registry.closest(&request.name, Some(principal)));
+                    names
+                });
+                ErrorData::invalid_params(
+                    format!("unknown tool {:?}", request.name),
+                    Some(json!({
+                        "closest": close.unwrap_or_default(),
+                        "hint": "List tools with tools/list, or find an operation with apple_describe and run it with apple_read or apple_change.",
+                    })),
+                )
             })?;
         let input = serde_json::to_vec(&request.arguments.unwrap_or_default())
             .map_err(|_| ErrorData::invalid_params("invalid input", None))?;
@@ -78,6 +190,18 @@ impl ServerHandler for Handler {
             result = self.frontdoor.service.invoke(principal, &descriptor.name, &input) => result,
         };
         let is_error = result.is_err();
+        let failure = result.as_ref().err().map(|error| {
+            serde_json::to_value(&error.code)
+                .ok()
+                .and_then(|code| code.as_str().map(str::to_owned))
+                .unwrap_or_else(|| "error".into())
+        });
+        self.frontdoor.observe_mcp(
+            principal,
+            &request.name,
+            Some(&descriptor.name),
+            failure.as_deref(),
+        );
         let mut image = None;
         let raw = match result {
             Ok(value) if returns_image(&descriptor.name) => {
@@ -112,17 +236,23 @@ impl ServerHandler for Handler {
             .map_err(|_| ErrorData::internal_error("encoding", None))
     }
 }
-fn returns_image(operation: &str) -> bool {
+
+fn distance_ok(tool: &str, wanted: &str) -> bool {
+    let wanted = wanted.to_lowercase();
+    tool.contains(&wanted) || wanted.contains(tool)
+}
+
+pub(crate) fn returns_image(operation: &str) -> bool {
     matches!(operation, "photos.preview" | "photos.contact_sheet")
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Image {
-    data: String,
-    mime: String,
+pub(crate) struct Image {
+    pub(crate) data: String,
+    pub(crate) mime: String,
 }
 
-fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_json::Error> {
+pub(crate) fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_json::Error> {
     let mut value: serde_json::Value = serde_json::from_str(raw)?;
     let result = &mut value["result_json"];
     let image = match (
@@ -146,6 +276,7 @@ fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_json::Error
     Ok((serde_json::to_vec(&value)?, image))
 }
 
+#[cfg(test)]
 fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_json::Value {
     let mut tools = ab_catalog::mcp_tools(descriptors)["tools"].take();
     for tool in tools.as_array_mut().into_iter().flatten() {
@@ -164,10 +295,12 @@ fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_jso
 }
 pub(crate) async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
     let principal = request.extensions().get::<Principal>().cloned();
-    let Ok(descriptors) = tool_descriptors() else {
+    let Some(registry) = crate::mcp_registry::registry() else {
         return problem(Code::Corrupt.into());
     };
-    let Ok(tools) = serde_json::from_value(annotated_tools(&descriptors)) else {
+    let Ok(tools) =
+        serde_json::from_value(serde_json::Value::Array(registry.tools(principal.as_ref())))
+    else {
         return problem(Code::Corrupt.into());
     };
     let mut config = StreamableHttpServerConfig::default();
