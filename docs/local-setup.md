@@ -28,7 +28,7 @@ Your data stays in `~/Library/Application Support/AppleBridge`, including a copy
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
-bridge stats --watch        # counts per source, as each one finishes
+bridge stats --follow       # counts per source, as each one finishes
 ```
 
 Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
@@ -40,13 +40,13 @@ The only network difference is whether the app runs on your Mac.
 | Level | Who connects | How | Needs |
 |---|---|---|---|
 | 1, the default | Anything on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
-| 2, opt-in | Other computers and cloud apps such as ChatGPT | `bridge remote on` | An invite for the hosted relay, or [your own server](self-host.md) |
+| 2, opt-in | Other computers and cloud apps such as ChatGPT | `bridge remote enable` | An invite for the hosted relay, or [your own server](self-host.md) |
 
-Level 1 never starts the relay. Level 2 only starts when you run `bridge remote on`, and `bridge remote off` stops it.
+Level 1 never starts the relay. Level 2 only starts when you run `bridge remote enable`, and `bridge remote disable` stops it.
 
 ## Start and stop
 
-`bridge up` starts the gateway in the background and returns as soon as it is ready, with the address, current counts and Next steps last. It never waits for the first sync; use `bridge stats --watch` to follow that separately. The older `--no-watch` flag is accepted as a no-op. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
+`bridge up` starts the gateway in the background and returns as soon as it is ready, with the address, current counts and next steps last. When its output goes to a pipe, stdout carries only the MCP address and the rest goes to stderr. It never waits for the first sync; use `bridge stats --follow` to follow that separately. The older `--no-watch` flag is accepted as a no-op. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
 
 Useful options: `--home DIR` picks another data folder, `--api-addr 127.0.0.1:PORT` picks another port, and `--json` prints a result for scripts.
 
@@ -59,7 +59,7 @@ Run `bridge down` before updating or uninstalling. Moving, replacing or deleting
 `bridge link claude` adds the server to Claude Code, then signs in through your browser. The page shows a four-digit code. Check that the Apple Bridge window on your Mac shows the same code, and click Allow. Without the app, `bridge link` prints the command to run in another terminal:
 
 ```sh
-bridge connector allow --request <id> --code <code>
+bridge connectors allow --request <id> --code <code>
 ```
 
 | Option | What it does |
@@ -67,21 +67,22 @@ bridge connector allow --request <id> --code <code>
 | `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step. On 2026-11-05 a script drove this two-step path through sign-in on a Linux debug build of the current code with Claude Code 2.1.318, ending at `Connected`. It did not go on to a read by Claude Code, and it has not been repeated on a Mac |
 | `--name NAME` | Use another name in the agent |
 | `--no-login` | Add the server now and sign in later with `claude mcp login apple-bridge` |
-| `--no-browser` | Claude Code only, for a session without a browser: prints the address, then you paste the final address back |
+| `--no-open` | Print the sign-in address instead of opening a browser. Claude Code then asks you to paste the final address back. The old spelling `--no-browser` still works |
+| `--timeout DURATION` | Stop waiting for sign-in after this long, such as `5m` (default `10m`). The server stays registered |
 | `--print` | Show the agent's commands and run nothing |
 
 Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run. It never allows a request itself.
 
-To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agent list`, then `bridge agent revoke <id>`.
+To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agents list`, then `bridge agents revoke <id>`.
 
-When you allow a request you choose nothing else: the agent can read and change what it asked for, and its changes happen right away, with no further approval. That includes screenshots, recordings, camera photos, current location, Focus and Photos changes. To have an agent ask you before each change instead, run `bridge agent list`, then `bridge agent level <id> approve`; `bridge agent level <id> full` switches it back. Apps connected before this version act at once too. See [connector approvals](connectors/approvals.md).
+When you allow a request you choose nothing else: the agent can read and change what it asked for, and its changes happen right away, with no further approval. That includes screenshots, recordings, camera photos, current location, Focus and Photos changes. To have an agent ask you before each change instead, run `bridge agents list`, then `bridge agents update <id> --level approve`; `--level full` switches it back. Apps connected before this version act at once too. See [connector approvals](connectors/approvals.md).
 
 ## Other apps and bots
 
 `bridge link other` prints the address. Apps that support MCP sign-in work the same way as Claude Code. For a bot without sign-in, create a token with the least access it needs:
 
 ```sh
-bridge agent create --name my-bot --level read --scope messages:read,contacts:read
+bridge agents create --name my-bot --level read --scope messages:read,contacts:read
 ```
 
 `--level` is `full` by default, so a token with write scopes acts at once. Pass `--level approve` to make every change wait for you.
@@ -108,21 +109,21 @@ Mail reports missing local data when its folder can be listed but the supported 
 
 ```text
 $ bridge stats
-  ✓ Messages     163,101 messages · 708 chats · 6,791 attachments
-  ✓ Contacts     154 contacts
-  ✓ Calendar     1,776 events · 30 calendars
-  ! Notes        nothing yet  (needs a Mac permission; if declined, enable it in System Settings > Privacy & Security > Full Disk Access, then run bridge down and bridge up)
-  354,321 items in total. Counts only, no content.
+✓ Messages        163,101 messages · 708 chats · 6,791 attachments
+✓ Contacts        154 contacts
+✓ Calendar        1,776 events · 30 calendars
+! Notes           nothing yet  (needs a Mac permission; if declined, enable it in System Settings > Privacy & Security > Full Disk Access, then run bridge down and bridge up)
+354,321 items in total. Counts only, no content.
 ```
 
-`bridge stats --watch` prints each source as it starts and finishes, with running counts in between, then stops when all are done. A source counts as finished after 30 seconds without new records (`--settle`), so a source that pauses for longer can be reported early and picks up again in `bridge stats`. Apple Bridge does not know the total in advance, so progress is a count, not a percentage. `--json` prints one line per event, and `--timeout SECONDS` stops watching early. Without a terminal, watching stops after five minutes unless you set `--timeout`.
+`bridge stats --follow` prints each source as it starts and finishes, with running counts in between, then stops when all are done. A source counts as finished after 30 seconds without new records (`--settle`), so a source that pauses for longer can be reported early and picks up again in `bridge stats`. Apple Bridge does not know the total in advance, so progress is a count, not a percentage. `--json` prints one line per event, and `--timeout DURATION`, such as `30s` or `5m` (a bare number means seconds), stops watching early. Without a terminal, watching stops after five minutes unless you set `--timeout`. Progress goes to stderr; finished sources and the final line go to stdout. `--watch` is the old spelling and still works.
 
 ## Read from the terminal
 
 ```sh
 bridge read chats --limit 5
 bridge read messages --chat <id>
-bridge read messages --text "dinner"
+bridge read messages --query "dinner"
 bridge read contacts
 bridge read calendar --days 3
 bridge read reminders
@@ -130,10 +131,10 @@ bridge read notes
 bridge read mail
 bridge search "invoice"
 bridge call sources.status
-bridge call records.query --args '{"collection":"reminders.list","limit":5}'
+bridge call records.query --data '{"collection":"reminders.list","limit":5}'
 ```
 
-These print your real data to the terminal. They need the gateway running, and they only read: each one uses a read-only credential that is removed when it finishes. Add `--json` for structured output; `bridge read --limit N` limits the returned items in either format (up to 200), while metadata such as total counts still describes the full query. See `bridge call --list` for every read operation. `bridge call helper.version` needs no arguments.
+These print your real data to the terminal. They need the gateway running, and they only read: each one uses a read-only credential that is removed when it finishes. Add `--json` for structured output; `bridge read --limit NUMBER` limits the returned items in either format (1 to 200; a larger number is clamped with a warning), while metadata such as total counts still describes the full query. When there are more, the CLI prints a `--next` cursor to continue, and `--all` fetches every page up to 10,000 items. A source that has never synced, or that lacks its permission, is an error rather than an empty list. `bridge call` reads its arguments from `--data`, from `--file FILE`, or from stdin with `--data -`; `--args` still works. See `bridge call --list` for every read operation. `bridge call helper.version` needs no arguments.
 
 ## Instructions for your agent
 
@@ -173,7 +174,7 @@ A real first sync has not been timed: it needs the Helper reading a Mac's real A
 | Real data: a fresh replica home syncing from a clone of a test copy, over the local network path | 195,243 real records, 944 MB stored | 59.5 s |
 | Capture: synthetic messages through the real capture path into a fresh home | 195,243 synthetic records, 576 MB stored | 44.5 s |
 
-Neither includes the time to read Apple's own stores, or attachments. So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --watch` shows the real progress. A replica's snapshot appears all at once, so its count stays at zero until the snapshot is complete.
+Neither includes the time to read Apple's own stores, or attachments. So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --follow` shows the real progress. A replica's snapshot appears all at once, so its count stays at zero until the snapshot is complete.
 
 ## What has been proven
 

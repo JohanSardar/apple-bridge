@@ -5,7 +5,7 @@ mod gateway;
 mod identity;
 pub mod iphone;
 pub mod oauth;
-pub use gateway::{AgentLevel, VerifiedDelegation};
+pub use gateway::{AgentLevel, VerifiedDelegation, agent_source};
 mod pairing;
 pub mod passkeys;
 mod store;

@@ -88,7 +88,7 @@ async function loadDevices() {
   if (!devices.length) {
     const none = document.createElement('p');
     none.className = 'muted';
-    none.textContent = 'No Macs yet. On your Mac, run: bridge remote on';
+    none.textContent = 'No Macs yet. On your Mac, run: bridge remote enable';
     root.append(none);
     return;
   }

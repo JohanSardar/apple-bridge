@@ -1,4 +1,12 @@
-use super::{Failure, Outcome, stats, tree::UpArgs};
+use super::{
+    Failure, Outcome,
+    commands::{address, load_config},
+    failure::{Reason, Step},
+    modes::Modes,
+    stats,
+    tree::UpArgs,
+    ui,
+};
 use crate::{Config, bundle};
 use serde_json::json;
 use std::{
@@ -20,7 +28,7 @@ const ANY_PEER: &str = "127.0.0.1:0";
 const START_BUDGET: Duration = Duration::from_secs(60);
 const STOP_BUDGET: Duration = Duration::from_secs(20);
 
-fn lock_held(home: &Path) -> bool {
+pub fn lock_held(home: &Path) -> bool {
     let Ok(file) = OpenOptions::new()
         .read(true)
         .write(true)
@@ -55,9 +63,9 @@ pub async fn healthy(address: &str) -> bool {
 }
 
 pub async fn running_address(home: &Path) -> Outcome<String> {
-    let address = Config::load(home)
+    let address = load_config(home)?
         .map(|config| config.api_address)
-        .map_err(|_| Failure::not_running(home))?;
+        .ok_or_else(|| Failure::not_running(home))?;
     if lock_held(home) && healthy(&address).await {
         Ok(address)
     } else {
@@ -71,8 +79,15 @@ pub fn mcp_address(api_address: &str) -> String {
 
 fn prepare_home(home: &Path) -> Outcome {
     let cannot = |error: std::io::Error| {
-        Failure::new(format!("Could not create {}: {error}.", home.display()))
-            .next("Choose a folder you can write to with --home.")
+        Failure::new(
+            Reason::PermissionDenied,
+            format!("Can't create {}.", home.display()),
+        )
+        .row("Detail", ui::clean(&error.to_string()))
+        .then(
+            "Choose a folder you can write to",
+            ["bridge", "up", "--home", "<DIR>"],
+        )
     };
     fs::DirBuilder::new()
         .recursive(true)
@@ -84,15 +99,28 @@ fn prepare_home(home: &Path) -> Outcome {
     Ok(())
 }
 
-fn loopback(address: &str) -> Outcome<SocketAddr> {
-    address
-        .parse::<SocketAddr>()
-        .ok()
-        .filter(|parsed| parsed.ip().is_loopback())
-        .ok_or_else(|| {
-            Failure::new(format!("`{address}` is not a local address."))
-                .next("Local use only needs 127.0.0.1:PORT. Remote use is `bridge remote on`.")
-        })
+pub fn loopback(text: &str) -> Outcome<SocketAddr> {
+    let parsed = text.parse::<SocketAddr>().map_err(|_| {
+        Failure::new(
+            Reason::InvalidValue,
+            format!(
+                "Can't use --api-addr {}. Addresses look like 127.0.0.1:7780.",
+                ui::clean(text)
+            ),
+        )
+    })?;
+    if !parsed.ip().is_loopback() {
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            format!(
+                "Can't use --api-addr {}. It must be a loopback address such as 127.0.0.1:PORT.",
+                ui::clean(text)
+            ),
+        )
+        .sentence("For access from other devices, turn on remote access instead.")
+        .then("Turn on remote access", ["bridge", "remote", "enable"]));
+    }
+    Ok(parsed)
 }
 
 fn free(address: SocketAddr) -> std::io::Result<()> {
@@ -110,11 +138,18 @@ fn api_address(args: &UpArgs, previous: Option<&Config>) -> Outcome<String> {
         })
         .unwrap_or_else(|| DEFAULT_API.to_owned());
     match free(loopback(&chosen)?) {
-        Err(error) if error.kind() == ErrorKind::AddrInUse => Err(Failure::new(format!(
-            "{chosen} is already in use by another program."
-        ))
-        .next("Choose a free one with --api-addr 127.0.0.1:PORT.")),
-        Err(error) => Err(Failure::new(format!("Could not use {chosen}: {error}."))),
+        Err(error) if error.kind() == ErrorKind::AddrInUse => Err(Failure::new(
+            Reason::PortInUse,
+            format!("Can't start on {chosen}. It's already in use by another program."),
+        )
+        .then(
+            "Choose a free address",
+            ["bridge", "up", "--api-addr", "127.0.0.1:<PORT>"],
+        )),
+        Err(error) => Err(
+            Failure::new(Reason::PortInUse, format!("Can't use {chosen}."))
+                .row("Detail", ui::clean(&error.to_string())),
+        ),
         Ok(()) => Ok(chosen),
     }
 }
@@ -177,7 +212,11 @@ struct Launch<'a> {
 }
 
 fn spawn_gateway(launch: &Launch<'_>) -> Outcome<std::process::Child> {
-    let executable = std::env::current_exe()?;
+    let spawn_failed = |error: std::io::Error| {
+        Failure::new(Reason::SpawnFailed, "Failed to start the gateway process.")
+            .row("Detail", ui::clean(&error.to_string()))
+    };
+    let executable = std::env::current_exe().map_err(spawn_failed)?;
     let log = crate::gateway_lifetime::open_log(&log_file(launch.home))?;
     let mut command = Command::new("/usr/bin/nohup");
     command
@@ -192,7 +231,7 @@ fn spawn_gateway(launch: &Launch<'_>) -> Outcome<std::process::Child> {
     if !launch.helper.is_empty() {
         command.args(["--helper-app", launch.helper]);
     }
-    let child = command.spawn()?;
+    let child = command.spawn().map_err(spawn_failed)?;
     ab_trust::atomic_write(&pid_file(launch.home), child.id().to_string().as_bytes())?;
     Ok(child)
 }
@@ -206,32 +245,41 @@ async fn wait_until_healthy(
     loop {
         if let Some(status) = child.try_wait()? {
             let tail = log_tail(&log_file(home));
-            return Err(Failure::new(format!(
-                "The gateway stopped right after starting ({status}). Last log lines:\n{tail}"
-            ))
-            .next(format!("Full log: {}", log_file(home).display())));
+            let mut failure = Failure::new(
+                Reason::SpawnFailed,
+                format!("The gateway stopped right after starting ({status})."),
+            )
+            .row("Log", log_file(home).display().to_string());
+            if !tail.is_empty() {
+                failure = failure.remote("The gateway log", tail);
+            }
+            return Err(failure.then("Try again after fixing the cause", ["bridge", "up"]));
         }
         if healthy(address).await {
             return Ok(());
         }
         if Instant::now() >= deadline {
-            return Err(
-                Failure::new("The gateway is taking too long to start.").next(format!(
-                    "Check {} and run `bridge up` again.",
-                    log_file(home).display()
-                )),
-            );
+            return Err(Failure::new(
+                Reason::Timeout,
+                "Stopped waiting after 60s. The gateway hasn't answered yet.",
+            )
+            .row("Log", log_file(home).display().to_string())
+            .sentence("It may still be starting; nothing was stopped.")
+            .then("Check again", ["bridge", "up"]));
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
 
 async fn start_gateway(home: &Path, args: &UpArgs, previous: Option<&Config>) -> Outcome<String> {
-    prepare_home(home)?;
-    ab_trust::Authority::open(home).map_err(crate::Error::from)?;
     let api = api_address(args, previous)?;
+    prepare_home(home)?;
+    super::access::open(home)?;
     let peer = peer_address(args, previous);
     let helper = helper_app(args, previous);
+    if !Modes::get().json {
+        ui::note("Starting Apple Bridge…");
+    }
     let mut child = spawn_gateway(&Launch {
         home,
         api: &api,
@@ -239,7 +287,7 @@ async fn start_gateway(home: &Path, args: &UpArgs, previous: Option<&Config>) ->
         helper: &helper,
     })?;
     wait_until_healthy(home, &api, &mut child).await?;
-    Ok(Config::load(home)?.api_address)
+    Ok(load_config(home)?.map_or(api, |config| config.api_address))
 }
 
 fn remote_state(home: &Path) -> String {
@@ -251,79 +299,122 @@ fn remote_state(home: &Path) -> String {
 
 fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapsed: Duration) {
     let verb = if started { "is on" } else { "was already on" };
-    println!(
-        "Apple Bridge {verb} ({:.1} s). No account, server or domain needed.",
-        elapsed.as_secs_f32()
+    ui::done(
+        &format!("Apple Bridge {verb}"),
+        &format!(
+            "({:.1} s). No account, server or domain needed.",
+            elapsed.as_secs_f32()
+        ),
     );
-    println!("  For agents on this Mac   {}", mcp_address(address));
-    println!("  Data folder              {}", home.display());
+    ui::row("MCP address", &mcp_address(address));
+    ui::row("Data folder", &home.display().to_string());
     let remote = remote_state(home);
-    if remote == "off" {
-        println!("  Remote access            off (optional: bridge remote on)");
-    } else {
-        println!("  Remote access            {remote}");
-    }
+    ui::row(
+        "Remote access",
+        if remote == "off" {
+            "off (optional)"
+        } else {
+            &remote
+        },
+    );
     if !helper {
-        println!("  Mac data                 no Helper app found, so nothing new will sync");
-        println!("                           Install Apple Bridge, or pass --helper-app.");
+        ui::row("Mac data", "no Helper app found, so nothing new will sync");
+        ui::note("Install Apple Bridge, or pass --helper-app.");
     }
 }
 
-fn print_next(home_is_default: bool, home: &Path) {
-    let suffix = if home_is_default {
-        String::new()
-    } else {
-        format!(" --home {}", shell_quote(&home.to_string_lossy()))
-    };
-    println!();
-    println!("Next:");
-    println!("  bridge link claude{suffix}        connect Claude Code (or: bridge link codex)");
-    println!("  bridge permissions guide{suffix}  allow the Mac permissions you want");
-    println!("  bridge stats --watch{suffix}      follow the first sync");
-}
-
-pub fn shell_quote(text: &str) -> String {
-    if text
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || "/._-:".contains(c))
+fn validate_up(args: &UpArgs) -> Outcome {
+    let mut failures = Vec::new();
+    if let Some(api) = &args.api_addr
+        && let Err(failure) = loopback(api)
     {
-        text.to_owned()
-    } else {
-        format!("'{}'", text.replace('\'', "'\\''"))
+        failures.push(failure);
     }
+    if let Some(peer) = &args.peer_addr
+        && let Err(failure) = address("--peer-addr", peer)
+    {
+        failures.push(failure);
+    }
+    if let Some(helper) = &args.helper_app
+        && !Path::new(helper).exists()
+    {
+        failures.push(Failure::new(
+            Reason::NotFound,
+            format!(
+                "Can't use --helper-app {}. Nothing is there.",
+                ui::clean(helper)
+            ),
+        ));
+    }
+    let mut failures = failures.into_iter();
+    let Some(first) = failures.next() else {
+        return Ok(());
+    };
+    let rest: Vec<Failure> = failures.collect();
+    if rest.is_empty() {
+        return Err(first);
+    }
+    let mut combined = Failure::new(
+        Reason::InvalidValue,
+        format!("Can't start. {} options have problems.", rest.len() + 1),
+    );
+    for failure in std::iter::once(first).chain(rest) {
+        combined = combined.issue(failure.headline.clone());
+    }
+    Err(combined)
 }
 
 pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
     let began = Instant::now();
-    let previous = Config::load(home).ok();
+    validate_up(args)?;
+    super::check_socket_length(home)?;
+    let previous = load_config(home)?;
     if previous
         .as_ref()
         .is_some_and(|config| config.role != "gateway")
     {
-        return Err(Failure::new(format!(
-            "{} is a replica of another gateway.",
-            home.display()
-        ))
-        .next("Run it with `bridge start --role replica`, or choose another --home."));
+        return Err(Failure::new(
+            Reason::Conflict,
+            format!(
+                "Can't start a gateway in {}. It's a replica of another gateway.",
+                home.display()
+            ),
+        )
+        .sentence("Choose another --home for a gateway on this Mac."));
     }
     let running = lock_held(home);
     let address = if running {
-        running_address(home).await.map_err(|_| {
-            Failure::new("A gateway holds this home but is not answering yet.")
-                .next("Wait a moment and run `bridge up` again.")
-        })?
+        let address = running_address(home).await.map_err(|_| {
+            Failure::new(
+                Reason::GatewayBusy,
+                "A gateway holds this home but isn't answering yet.",
+            )
+            .then("Wait a moment, then try again", ["bridge", "up"])
+        })?;
+        if let Some(wanted) = &args.api_addr
+            && wanted != &address
+        {
+            return Err(Failure::new(
+                Reason::Conflict,
+                format!("Can't move Apple Bridge to {wanted}. It's already running on {address}."),
+            )
+            .then(
+                "Stop it, then start it on the new address",
+                ["bridge", "down"],
+            ));
+        }
+        address
     } else {
         start_gateway(home, args, previous.as_ref()).await?
     };
-    let helper = !Config::load(home)?.helper_app.is_empty();
+    let helper = load_config(home)?.is_some_and(|config| !config.helper_app.is_empty());
     let older = running
         .then(|| crate::gateway_lifetime::older(home))
         .flatten();
     let elapsed = began.elapsed();
-    if args.json {
-        println!(
-            "{}",
-            json!({
+    if Modes::get().json {
+        ui::outln(
+            &json!({
                 "state": "on",
                 "started": !running,
                 "mcp": mcp_address(&address),
@@ -333,28 +424,39 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
                 "seconds": elapsed.as_secs_f64(),
                 "restart_needed": older.is_some(),
             })
+            .to_string(),
         );
         return Ok(());
     }
+    if !Modes::get().stdout_tty() {
+        ui::outln(&mcp_address(&address));
+    }
     print_summary(home, &address, !running, helper, elapsed);
     if let Some(version) = older {
-        println!(
-            "Warning: the running gateway ({version}) differs from this installed executable."
-        );
-        println!(
-            "  Run bridge down, then bridge up to finish the update. If the app started it, restart the app instead."
+        ui::warn(
+            "restart_needed",
+            &format!(
+                "The running gateway ({version}) differs from this installed executable. Run bridge down, then bridge up to finish the update. If the app started it, restart the app instead."
+            ),
         );
     } else if running && !home.join("run/gateway-build.json").exists() {
-        println!(
-            "Warning: this gateway predates update detection. If you updated, run bridge down, then bridge up."
+        ui::warn(
+            "restart_needed",
+            "This gateway predates update detection. If you updated, run bridge down, then bridge up.",
         );
     }
-    println!();
-    stats::print_once(home)?;
-    print_next(
-        crate::default_home().is_ok_and(|default| default == home),
-        home,
-    );
+    stats::print_once_stderr(home)?;
+    ui::next_steps(&[
+        Step::new(
+            "Connect Claude Code (or: bridge link codex)",
+            ["bridge", "link", "claude"],
+        ),
+        Step::new(
+            "Allow the Mac permissions you want",
+            ["bridge", "permissions", "guide"],
+        ),
+        Step::new("Follow the first sync", ["bridge", "stats", "--follow"]),
+    ]);
     Ok(())
 }
 
@@ -370,13 +472,20 @@ fn started_by_up(pid: &str, home: &Path) -> bool {
 
 pub fn down(home: &Path) -> Outcome {
     if !lock_held(home) {
-        println!("Apple Bridge is not running from {}.", home.display());
         let _ = fs::remove_file(pid_file(home));
+        if Modes::get().json {
+            ui::json_document(json!({"home": home, "outcome": "unchanged"}));
+        } else {
+            ui::done("Already stopped", &home.display().to_string());
+        }
         return Ok(());
     }
     let foreign = || {
-        Failure::new("This gateway was not started by `bridge up`, so it was left running.")
-            .next("Stop it the way it was started, such as from the Apple Bridge app.")
+        Failure::new(
+            Reason::NotOwned,
+            "Can't stop this gateway. It was not started by bridge up, so it was left running.",
+        )
+        .sentence("Stop it the way it was started, such as from the Apple Bridge app.")
     };
     let pid = fs::read_to_string(pid_file(home)).map_err(|_| foreign())?;
     let pid = pid.trim();
@@ -388,17 +497,28 @@ pub fn down(home: &Path) -> Outcome {
         .status()?
         .success();
     if !stopped {
-        return Err(Failure::new(format!("Could not stop process {pid}.")));
+        return Err(
+            Failure::new(Reason::Conflict, format!("Couldn't stop process {pid}."))
+                .sentence("It may have exited already.")
+                .then("Check again", ["bridge", "down"]),
+        );
     }
     let deadline = Instant::now() + STOP_BUDGET;
     while lock_held(home) {
         if Instant::now() >= deadline {
-            return Err(Failure::new("The gateway did not stop in time.")
-                .next(format!("It may still be finishing. Process {pid}.")));
+            return Err(Failure::new(
+                Reason::Timeout,
+                format!("Stopped waiting after 20s. Process {pid} is still finishing."),
+            )
+            .then("Check again", ["bridge", "down"]));
         }
         std::thread::sleep(Duration::from_millis(100));
     }
     let _ = fs::remove_file(pid_file(home));
-    println!("Apple Bridge stopped.");
+    if Modes::get().json {
+        ui::json_document(json!({"home": home, "outcome": "stopped"}));
+    } else {
+        ui::done("Apple Bridge stopped", &home.display().to_string());
+    }
     Ok(())
 }

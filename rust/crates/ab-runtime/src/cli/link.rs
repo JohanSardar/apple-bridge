@@ -1,16 +1,21 @@
 use super::{
-    Failure, Outcome, gateway,
+    Failure, Outcome, children, commands,
+    failure::{Reason, Step},
+    gateway,
+    modes::Modes,
     tree::{LinkArgs, LinkClient, LinkScope, UnlinkArgs},
+    ui,
 };
 use std::{
     collections::BTreeSet,
-    io::{IsTerminal, Write},
+    os::fd::AsFd,
     path::Path,
     process::{Command, Stdio},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const REGISTER_BUDGET: Duration = Duration::from_secs(20);
+const SIGN_IN_WAIT: Duration = Duration::from_secs(600);
 const TRY_IT: &str = "Try it: ask your agent \"Use Apple Bridge to show my reminder lists. Then run bridge stats and tell me how much has synced.\"\nAgent instructions: bridge skills get core";
 
 struct Plan {
@@ -72,25 +77,38 @@ fn plan(
 fn shown(program: &str, arguments: &[String]) -> String {
     let quoted: Vec<String> = arguments
         .iter()
-        .map(|argument| gateway::shell_quote(argument))
+        .map(|argument| ui::shell_quote(argument))
         .collect();
     format!("{program} {}", quoted.join(" "))
 }
 
 fn print_other(url: &str) {
-    println!("Any MCP app on this Mac can use this address:");
-    println!("  {url}");
-    println!();
-    println!("Apps that support sign-in ask you to approve them the first time.");
-    println!("Bots without sign-in can use a token. Keep it secret, and give it the least access:");
-    println!(
-        "  bridge agent create --name my-bot --level read --scope messages:read,contacts:read"
+    if Modes::get().json {
+        ui::json_document(serde_json::json!({"mcp": url, "rest": url.trim_end_matches("/mcp")}));
+        return;
+    }
+    ui::outln(url);
+    ui::note(
+        "Any MCP app on this Mac can use this address. Apps that support sign-in ask you to approve them the first time.",
     );
-    println!("Then send it as: Authorization: Bearer <token>");
-    println!(
-        "REST uses the same token: POST http://{}/v1/op/sources.status",
-        url.trim_start_matches("http://").trim_end_matches("/mcp")
-    );
+    ui::note(&format!(
+        "Bots without sign-in send a token as Authorization: Bearer <token>. REST uses the same token: POST {}/v1/op/sources.status",
+        url.trim_end_matches("/mcp")
+    ));
+    ui::next_steps(&[Step::new(
+        "Create a token with the least access it needs",
+        [
+            "bridge",
+            "agents",
+            "create",
+            "--name",
+            "my-bot",
+            "--level",
+            "read",
+            "--scope",
+            "messages:read,contacts:read",
+        ],
+    )]);
 }
 
 fn run_quietly(plan: &Plan, arguments: &[String]) -> Outcome<(bool, String)> {
@@ -102,7 +120,11 @@ fn run_quietly(plan: &Plan, arguments: &[String]) -> Outcome<(bool, String)> {
             if error.kind() == std::io::ErrorKind::NotFound {
                 missing(plan)
             } else {
-                Failure::new(format!("Could not run {}: {error}.", plan.program))
+                Failure::new(
+                    Reason::SpawnFailed,
+                    format!("Couldn't run {}.", plan.program),
+                )
+                .row("Detail", ui::clean(&error.to_string()))
             }
         })?;
     let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
@@ -111,43 +133,56 @@ fn run_quietly(plan: &Plan, arguments: &[String]) -> Outcome<(bool, String)> {
 }
 
 fn missing(plan: &Plan) -> Failure {
-    Failure::new(format!(
-        "{} is not installed, or `{}` is not on your PATH.",
-        plan.title, plan.program
-    ))
-    .next(format!(
-        "Install it from {}, then run this again. For other apps: bridge link other",
+    Failure::new(
+        Reason::MissingCommand,
+        format!(
+            "Can't find {}. {} isn't on your PATH.",
+            plan.title, plan.program
+        ),
+    )
+    .sentence(format!(
+        "Install it from {}, then run this again.",
         plan.install
     ))
+    .then("Or connect another app", ["bridge", "link", "other"])
 }
 
 fn register(plan: &Plan, name: &str, url: &str) -> Outcome {
     let (success, text) = run_quietly(plan, &plan.register)?;
     if success {
-        println!("Added {name} to {} at {url}.", plan.title);
+        ui::done("Added", &format!("{name} to {} at {url}", plan.title));
         return Ok(());
     }
     if text.contains("already exists") {
         let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
         if details.contains(url) {
-            println!("{} already has {name} at {url}.", plan.title);
+            ui::done(
+                "Already added",
+                &format!("{name} to {} at {url}", plan.title),
+            );
             return Ok(());
         }
-        return Err(Failure::new(format!(
-            "{} already has a different server called {name}.",
-            plan.title
-        ))
-        .next("Pick another name with --name, or remove it with `bridge unlink`."));
+        return Err(Failure::new(
+            Reason::Conflict,
+            format!(
+                "Can't add {name}. {} already has a different server with that name.",
+                plan.title
+            ),
+        )
+        .then(
+            "Pick another name",
+            ["bridge", "link", plan.program, "--name", "<NAME>"],
+        ));
     }
-    Err(Failure::new(format!(
-        "{} refused the new server: {}",
-        plan.title,
-        text.trim()
-    )))
+    Err(Failure::new(
+        Reason::ApiError,
+        format!("{} didn't add the server.", plan.title),
+    )
+    .remote(plan.title, text.trim()))
 }
 
 fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
-    let mut child = Command::new(plan.program)
+    let child = Command::new(plan.program)
         .args(&plan.register)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -157,27 +192,31 @@ fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
             if error.kind() == std::io::ErrorKind::NotFound {
                 missing(plan)
             } else {
-                Failure::new(format!("Could not run {}: {error}.", plan.program))
+                Failure::new(
+                    Reason::SpawnFailed,
+                    format!("Couldn't run {}.", plan.program),
+                )
+                .row("Detail", ui::clean(&error.to_string()))
             }
         })?;
-    let deadline = std::time::Instant::now() + REGISTER_BUDGET;
+    let mut child = children::Owned::new(child);
+    let deadline = Instant::now() + REGISTER_BUDGET;
     loop {
         let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
         if details.contains(url) {
-            let _ = child.kill();
-            let _ = child.wait();
-            println!("Added {name} to {} at {url}.", plan.title);
+            child.stop();
+            ui::done("Added", &format!("{name} to {} at {url}", plan.title));
             return Ok(());
         }
-        if std::time::Instant::now() >= deadline || child.try_wait()?.is_some() {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(
-                Failure::new(format!("{} did not save the server.", plan.title)).next(format!(
-                    "Try it yourself: {}",
-                    shown(plan.program, &plan.register)
-                )),
-            );
+        if Instant::now() >= deadline || child.0.try_wait()?.is_some() {
+            child.stop();
+            let mut argv = vec![plan.program.to_owned()];
+            argv.extend(plan.register.iter().cloned());
+            return Err(Failure::new(
+                Reason::ApiError,
+                format!("{} didn't save the server.", plan.title),
+            )
+            .step(Step::new("Try it yourself", argv)));
         }
         std::thread::sleep(Duration::from_millis(200));
     }
@@ -186,12 +225,6 @@ fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
 fn awaiting_approval(plan: &Plan, name: &str) -> Outcome<bool> {
     let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
     Ok(details.contains("Pending approval"))
-}
-
-fn say(text: &str) {
-    let mut out = std::io::stdout();
-    let _ = writeln!(out, "{text}");
-    let _ = out.flush();
 }
 
 struct Waiting {
@@ -220,56 +253,100 @@ async fn newest_request(home: &Path, seen: &BTreeSet<String>) -> Option<Waiting>
         .find(|request| !seen.contains(&request.id))
 }
 
-fn explain_request(home: &Path, request: &Waiting) {
-    let home_flag = if crate::default_home().is_ok_and(|default| default == home) {
-        String::new()
-    } else {
-        format!(" --home {}", gateway::shell_quote(&home.to_string_lossy()))
-    };
-    say("");
-    say(&format!(
+fn explain_request(request: &Waiting) {
+    ui::blank();
+    ui::note(&format!(
         "{} wants to connect. {}",
-        request.client_name, request.access
+        ui::clean(&request.client_name),
+        ui::clean(&request.access)
     ));
-    say("Check the four-digit code in your browser, then allow it in the Apple Bridge window.");
-    say("No window? In another terminal:");
-    say(&format!(
-        "  bridge connector allow --request {} --code CODE{home_flag}",
-        request.id
-    ));
+    ui::note(
+        "Check the four-digit code in your browser, then allow it in the Apple Bridge window.",
+    );
+    ui::next_steps(&[Step::new(
+        "No window? Allow it from another terminal",
+        [
+            "bridge",
+            "connectors",
+            "allow",
+            "--request",
+            &request.id,
+            "--code",
+            "<CODE>",
+        ],
+    )]);
 }
 
-async fn sign_in(home: &Path, plan: &Plan, arguments: &[String]) -> Outcome<bool> {
-    let mut child = Command::new(plan.program)
+enum SignIn {
+    Finished(bool),
+    StoppedWaiting,
+}
+
+async fn sign_in(
+    home: &Path,
+    plan: &Plan,
+    arguments: &[String],
+    limit: Duration,
+) -> Outcome<SignIn> {
+    let child = Command::new(plan.program)
         .args(arguments)
+        .stdout(Stdio::from(std::io::stderr().as_fd().try_clone_to_owned()?))
         .spawn()
-        .map_err(|error| Failure::new(format!("Could not start sign-in: {error}.")))?;
+        .map_err(|error| {
+            Failure::new(Reason::SpawnFailed, "Couldn't start sign-in.")
+                .row("Detail", ui::clean(&error.to_string()))
+        })?;
+    let mut child = children::Owned::new(child);
+    let deadline = Instant::now() + limit;
     let mut seen = BTreeSet::new();
     loop {
-        if let Some(status) = child.try_wait()? {
-            return Ok(status.success());
+        if let Some(status) = child.0.try_wait()? {
+            return Ok(SignIn::Finished(status.success()));
+        }
+        if Instant::now() >= deadline {
+            child.stop();
+            return Ok(SignIn::StoppedWaiting);
         }
         if let Some(request) = newest_request(home, &seen).await {
-            explain_request(home, &request);
+            explain_request(&request);
             seen.insert(request.id);
         }
         tokio::time::sleep(Duration::from_millis(250)).await;
     }
 }
 
+fn login_step(plan: &Plan) -> Step {
+    let mut argv = vec![plan.program.to_owned()];
+    argv.extend(plan.login.iter().cloned());
+    Step::new("Sign in later", argv)
+}
+
 pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
+    let limit = args
+        .timeout
+        .as_deref()
+        .map(|text| commands::duration("--timeout", text))
+        .transpose()?
+        .unwrap_or(SIGN_IN_WAIT);
+    if (args.client == LinkClient::Other || args.print) && args.timeout.is_some() {
+        return Err(Failure::new(
+            Reason::ConflictingOptions,
+            "Can't use --timeout here. Nothing waits for sign-in.",
+        ));
+    }
     let address = gateway::running_address(home).await?;
     let url = gateway::mcp_address(&address);
-    let Some(plan) = plan(args.client, &args.name, args.scope, &url, args.no_browser) else {
+    let no_browser = args.no_open || (!args.print && !Modes::get().browser_allowed());
+    let Some(plan) = plan(args.client, &args.name, args.scope, &url, no_browser) else {
         print_other(&url);
         return Ok(());
     };
     if args.print {
-        println!("{}", shown(plan.program, &plan.register));
-        println!("{}", shown(plan.program, &plan.login));
+        ui::outln(&shown(plan.program, &plan.register));
+        ui::outln(&shown(plan.program, &plan.login));
         return Ok(());
     }
-    let can_sign_in = !args.no_login && std::io::stdin().is_terminal();
+    let can_sign_in = !args.no_login && Modes::get().interactive();
     let sign_in_arguments = if plan.register_signs_in {
         if !can_sign_in {
             register_without_signing_in(&plan, &args.name, &url)?;
@@ -278,38 +355,75 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
     } else {
         register(&plan, &args.name, &url)?;
         if awaiting_approval(&plan, &args.name)? {
-            println!("Claude Code asks you to approve project servers first:");
-            println!(
-                "  run `claude` in this folder and choose \"Use this MCP server\", then run this command again."
+            ui::warn(
+                "pending_approval",
+                "Claude Code asks you to approve project servers first: run claude in this folder and choose \"Use this MCP server\", then run this command again.",
             );
             return Ok(());
         }
         &plan.login
     };
     if !can_sign_in {
-        println!("To finish, run this in a terminal and approve it in the browser:");
-        println!("  {}", shown(plan.program, &plan.login));
-        println!("{TRY_IT}");
+        ui::note(&format!(
+            "{} is registered. Signing in needs a terminal and a browser.",
+            plan.title
+        ));
+        ui::next_steps(&[Step {
+            benefit: "To finish, run this in a terminal and approve it in the browser".to_owned(),
+            ..login_step(&plan)
+        }]);
+        ui::note(TRY_IT);
         return Ok(());
     }
-    if sign_in(home, &plan, sign_in_arguments).await? {
-        println!("{} is connected.", plan.title);
-        println!("{TRY_IT}");
-        Ok(())
-    } else {
-        Err(
-            Failure::new(format!("{} did not finish signing in.", plan.title)).next(format!(
-                "Try again with: {}",
-                shown(plan.program, &plan.login)
-            )),
+    ui::note(&format!(
+        "Waiting for you to sign in to {} (up to {})…",
+        plan.title,
+        commands::friendly(limit)
+    ));
+    ui::set_cancel_note(Some(&format!(
+        "Canceled sign-in. {} stays registered in {}; sign in later with: {}",
+        args.name,
+        plan.title,
+        login_step(&plan).command()
+    )));
+    match sign_in(home, &plan, sign_in_arguments, limit).await? {
+        SignIn::Finished(true) => {
+            ui::set_cancel_note(None);
+            ui::done("Connected", plan.title);
+            ui::note(TRY_IT);
+            Ok(())
+        }
+        SignIn::Finished(false) => Err(Failure::new(
+            Reason::ApiError,
+            format!("{} didn't finish signing in.", plan.title),
         )
+        .sentence(format!("{} stays registered.", args.name))
+        .step(Step {
+            benefit: "Try again".to_owned(),
+            ..login_step(&plan)
+        })),
+        SignIn::StoppedWaiting => Err(Failure::new(
+            Reason::Timeout,
+            format!(
+                "Stopped waiting for sign-in after {}.",
+                commands::friendly(limit)
+            ),
+        )
+        .sentence(format!("{} stays registered in {}.", args.name, plan.title))
+        .step(login_step(&plan))),
     }
 }
 
 pub fn unlink(args: &UnlinkArgs) -> Outcome {
     let Some(plan) = plan(args.client, &args.name, args.scope, "", false) else {
-        return Err(Failure::new("`bridge unlink` works with claude or codex.")
-            .next("For other apps, run `bridge agent list` and `bridge agent revoke`."));
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            "Can't unlink other. bridge unlink works with claude or codex.",
+        )
+        .then(
+            "For other apps, see the agents with access",
+            ["bridge", "agents", "list"],
+        ));
     };
     run_quietly(&plan, &strings(&["mcp", "logout", &args.name]))?;
     let mut remove = strings(&["mcp", "remove", &args.name]);
@@ -318,16 +432,26 @@ pub fn unlink(args: &UnlinkArgs) -> Outcome {
     }
     let (success, text) = run_quietly(&plan, &remove)?;
     if !success {
-        return Err(Failure::new(format!(
-            "{} could not remove {}: {}",
-            plan.title,
-            args.name,
-            text.trim()
-        )));
+        if text.contains("not found")
+            || text.contains("No MCP server")
+            || text.contains("does not exist")
+        {
+            ui::done(
+                "Already removed",
+                &format!("{} from {}", args.name, plan.title),
+            );
+            return Ok(());
+        }
+        return Err(Failure::new(
+            Reason::ApiError,
+            format!("{} couldn't remove {}.", plan.title, args.name),
+        )
+        .remote(plan.title, text.trim()));
     }
-    println!("Removed {} from {}.", args.name, plan.title);
-    println!(
-        "To end its access on this Mac too: bridge agent list, then bridge agent revoke <id>."
-    );
+    ui::done("Removed", &format!("{} from {}", args.name, plan.title));
+    ui::next_steps(&[Step::new(
+        "To end its access on this Mac too, find it",
+        ["bridge", "agents", "list"],
+    )]);
     Ok(())
 }

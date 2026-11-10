@@ -217,7 +217,7 @@ class Proof:
             stats_ok = not failed and not denied and re.sub(r"\D", "", reply) == str(stats["total"])
             self.mark("Claude Code read bridge stats")
             codex = self.prove_codex()
-            agents = json.loads(self.bridge("agent", "list").stdout)
+            agents = json.loads(self.bridge("agent", "list", "--json").stdout)
             terminal_reads = {}
             for what in ("reminders", "contacts", "chats", "calendar", "notes"):
                 terminal_reads[what] = self.bridge("read", what, "--json", check=False).returncode == 0

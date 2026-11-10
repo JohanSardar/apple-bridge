@@ -52,7 +52,7 @@ curl https://bridge.example.com/info
 ## 4. Connect your Mac
 
 ```sh
-bridge remote on --relay-url https://bridge.example.com
+bridge remote enable --relay-url https://bridge.example.com
 ```
 
 It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Your Mac has its own certificate for it, so in normal use your relay sees only encrypted traffic. [What your relay can and can't see](#what-your-relay-can-and-cant-see) explains the limit.
@@ -63,7 +63,7 @@ It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Yo
 
 **ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with the same address and OAuth. Developer mode needs a paid ChatGPT plan.
 
-A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connector pending` and `bridge connector allow --request ID --code CODE` do the same.
+A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connectors list` and `bridge connector allow --request ID --code CODE` do the same.
 
 ## Letting other people use your relay
 
@@ -74,7 +74,7 @@ bash install.sh --domain bridge.example.com --accounts
 ab-relay-admin invite --note "Sam"
 ```
 
-Send them the link it prints. They create an account at `app.bridge.example.com`, then run `bridge remote on --relay-url https://bridge.example.com`, and a browser page asks them to confirm their Mac.
+Send them the link it prints. They create an account at `app.bridge.example.com`, then run `bridge remote enable --relay-url https://bridge.example.com`, and a browser page asks them to confirm their Mac.
 
 An account can link Macs and turn tunnels off. It can't reach anyone's data. Each Mac still approves its own connections. You, as the relay's operator, hold more trust than an account does: see the next section.
 
@@ -140,7 +140,7 @@ Stop the services before you copy. Restoring an old control database on purpose 
 | `certificate request failed` in `journalctl -u ab-relay` | Let's Encrypt couldn't check your domain | Check step 2 with `dig NS bridge.example.com` and open port 53 |
 | A connector says it can't reach the server | Your Mac is off, or Remote is off | `bridge remote status` on the Mac |
 | `ct_warning` in `bridge remote status` | A certificate your Mac didn't request is public for its address | See [The certificate warning](#the-certificate-warning) |
-| The approval window doesn't appear | Apple Bridge isn't running on the Mac | Open Apple Bridge, or run `bridge connector pending` |
+| The approval window doesn't appear | Apple Bridge isn't running on the Mac | Open Apple Bridge, or run `bridge connectors list` |
 
 ## Moving the sign-in address
 

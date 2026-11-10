@@ -1,99 +1,159 @@
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
-const ABOUT: &str = "Connect local agents such as Claude Code and Codex to your Mac's Apple data.";
-const QUICK_START: &str = "Quick start (no account, server or domain):
-  bridge up                 start Apple Bridge on this Mac
-  bridge permissions guide  allow the Mac permissions you want to use
-  bridge link claude        connect Claude Code (or: bridge link codex)
-  bridge stats              see how much is synced, counts only
-  bridge skills get core    instructions for your agent
-
-Remote use is separate and off until you ask: bridge remote on";
+pub const DEFAULT_GRANTS: &str = "reminders:read,system:read";
+pub const DEFAULT_AGENT_GRANTS: &str = "reminders:read";
 
 #[derive(Debug, Parser)]
 #[command(
     name = "bridge",
-    version,
-    about = ABOUT,
-    after_help = QUICK_START,
-    subcommand_required = true,
-    arg_required_else_help = true
+    about = "Connect local agents such as Claude Code and Codex to your Mac's Apple data",
+    disable_help_flag = true,
+    disable_help_subcommand = true,
+    disable_version_flag = true
 )]
 pub struct Cli {
+    #[command(flatten)]
+    pub globals: Globals,
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+#[derive(Debug, Args, Clone)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct Globals {
     #[arg(
         long,
         global = true,
         value_name = "DIR",
-        help = "Data folder [default: ~/Library/Application Support/AppleBridge]"
+        env = "APPLE_BRIDGE_HOME",
+        hide_env = true,
+        help = "Data folder (default: ~/Library/Application Support/AppleBridge; env: APPLE_BRIDGE_HOME)"
     )]
     pub home: Option<PathBuf>,
-    #[command(subcommand)]
-    pub command: Command,
+    #[arg(long, global = true, help = "Print the result as JSON; never prompt")]
+    pub json: bool,
+    #[arg(
+        long,
+        global = true,
+        value_name = "FIELDS",
+        help = "With --json: keep only these comma-separated fields"
+    )]
+    pub fields: Option<String>,
+    #[arg(
+        long,
+        global = true,
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "true",
+        value_name = "BOOL",
+        help = "Never prompt; fail with the input that is needed instead"
+    )]
+    pub non_interactive: Option<bool>,
+    #[arg(
+        short = 'y',
+        long,
+        global = true,
+        help = "Confirm destructive changes without asking"
+    )]
+    pub yes: bool,
+    #[arg(long, global = true, help = "Disable color (also NO_COLOR)")]
+    pub no_color: bool,
+    #[arg(
+        short = 'd',
+        long,
+        global = true,
+        help = "Print redacted diagnostic detail on stderr"
+    )]
+    pub debug: bool,
+    #[arg(
+        short = 'v',
+        long,
+        global = true,
+        visible_short_alias = 'V',
+        action = ArgAction::SetTrue,
+        help = "Print the version"
+    )]
+    pub version: bool,
+    #[arg(short = 'h', long, global = true, action = ArgAction::SetTrue, help = "Show help for the command")]
+    pub help: bool,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    #[command(about = "Start Apple Bridge on this Mac, for local agents. Asks nothing")]
+    #[command(about = "Start Apple Bridge on this Mac for local agents")]
     Up(UpArgs),
-    #[command(
-        about = "Stop a gateway that `bridge up` started",
-        after_help = "Run bridge down before updating or uninstalling. Moving or deleting the installation does not stop a running gateway."
-    )]
-    Down,
-    #[command(about = "Connect Claude Code or Codex to this Mac's local MCP address")]
+    #[command(about = "Connect Claude Code or Codex to this Mac")]
     Link(LinkArgs),
     #[command(about = "Disconnect Claude Code or Codex")]
     Unlink(UnlinkArgs),
-    #[command(about = "Show how much each source has synced. Counts only, never content")]
-    Stats(StatsArgs),
-    #[command(about = "Read source data in the terminal; Photos is queried live")]
-    Read(ReadArgs),
-    #[command(about = "Search synced data in the terminal")]
-    Search(SearchArgs),
-    #[command(about = "Call read operations; Photos organization writes require explicit --write")]
-    Call(CallArgs),
-    #[command(about = "Show agent instructions built into this binary")]
-    Skills(SkillsCommand),
-    #[command(about = "Check, guide or request Mac permissions")]
+    #[command(about = "Check or allow the Mac permissions Apple Bridge reads with")]
     Permissions(PermissionsCommand),
-    #[command(about = "Show this home's role and sync position as JSON")]
-    Status,
-    #[command(about = "Check this home's data, files and credentials as JSON")]
-    Doctor,
-    #[command(about = "Remote use from other computers. Separate and off by default")]
-    Remote(RemoteArgs),
-    #[command(about = "Allow or deny apps waiting to connect")]
-    Connector(ConnectorCommand),
-    #[command(about = "Create, list or revoke agent access")]
-    Agent(AgentCommand),
-    #[command(about = "Run the gateway in the foreground. `bridge up` is usually easier")]
-    Start(StartArgs),
-    #[command(about = "Create a pairing code for a replica or iPhone")]
-    Pair(PairArgs),
-    #[command(about = "Join a gateway as a replica using a pairing code")]
-    Join(JoinArgs),
-    #[command(about = "Run the private replica client")]
-    Connect(ConnectArgs),
-    #[command(about = "Create a scoped API token")]
-    Token(TokenCommand),
-    #[command(about = "Revoke a credential by id")]
-    Revoke(IdArgs),
-    #[command(about = "Change a credential's access")]
-    Scope(ScopeArgs),
+    #[command(about = "Show how much each source has synced, as counts only")]
+    Stats(StatsArgs),
+    #[command(about = "Stop a gateway that bridge up started")]
+    Down,
+    #[command(about = "Read synced data in the terminal")]
+    Read(ReadArgs),
+    #[command(about = "Search synced data")]
+    Search(SearchArgs),
+    #[command(about = "Call a read operation and print its raw JSON")]
+    Call(CallArgs),
+    #[command(about = "Print the agent instructions built into this binary")]
+    Skills(SkillsCommand),
+    #[command(about = "Create, inspect, update or revoke agents", alias = "agent")]
+    Agents(AgentsCommand),
+    #[command(about = "Create, update or revoke scoped API tokens", alias = "token")]
+    Tokens(TokensCommand),
+    #[command(about = "Allow or deny apps waiting to connect", alias = "connector")]
+    Connectors(ConnectorsCommand),
     #[command(about = "Manage browser sign-in for this Mac's local pages")]
     Web(WebCommand),
+    #[command(about = "Use Apple Bridge from other computers; off until you enable it")]
+    Remote(RemoteCommand),
+    #[command(about = "Create a pairing code for a replica or iPhone")]
+    Pair(PairArgs),
+    #[command(about = "Join a gateway as a replica with a pairing code")]
+    Join(JoinArgs),
+    #[command(about = "Show this home's role and sync position")]
+    Status,
+    #[command(about = "Check this home's data, files and credentials")]
+    Doctor,
     #[command(about = "Copy this home's data to a file")]
     Backup(BackupArgs),
-    #[command(about = "Restore this home from a backup")]
+    #[command(about = "Replace this home's data with a backup")]
     Restore(RestoreArgs),
-    #[command(about = "Prepare credentials for the background service")]
-    InstallCredentials,
+    #[command(about = "Run a self-test that sends real messages to yourself")]
+    Selftest(SelftestCommand),
     #[command(about = "Install the Shortcuts pack")]
     Shortcuts(ShortcutsCommand),
-    #[command(about = "Run a Helper self-test that sends real messages to yourself")]
-    Selftest(SelftestCommand),
-    #[command(about = "Run the Messages self-test through the Helper")]
+    #[command(about = "Print a shell completion script")]
+    Completion(CompletionArgs),
+    #[command(about = "Show help, list every command or search them offline")]
+    Help(HelpArgs),
+    #[command(
+        hide = true,
+        about = "Run the gateway in the foreground; bridge up is usually easier"
+    )]
+    Start(StartArgs),
+    #[command(hide = true, about = "Run the private replica client")]
+    Connect(ConnectArgs),
+    #[command(hide = true, about = "Prepare credentials for the background service")]
+    InstallCredentials,
+    #[command(
+        hide = true,
+        about = "Revoke an agent or token (deprecated: bridge tokens revoke)"
+    )]
+    Revoke(CredentialArgs),
+    #[command(
+        hide = true,
+        about = "Change a token's access (deprecated: bridge tokens update)"
+    )]
+    Scope(ScopeArgs),
+    #[command(
+        hide = true,
+        about = "Run the Messages self-test, which sends real messages to yourself (deprecated: bridge selftest messages)"
+    )]
     Setup(SelftestArgs),
     #[cfg(feature = "lab-harness")]
     #[command(name = "lab-operation-catalog", hide = true)]
@@ -113,35 +173,31 @@ pub enum Command {
 pub struct UpArgs {
     #[arg(
         long,
-        value_name = "HOST:PORT",
-        help = "Local API address [default: 127.0.0.1:7780]"
+        value_name = "ADDRESS",
+        help = "Local API address, loopback only (default: 127.0.0.1:7780)"
     )]
     pub api_addr: Option<String>,
     #[arg(
         long,
-        value_name = "HOST:PORT",
-        help = "Replica feed address [default: 127.0.0.1:7443, or any free port if that is taken]"
+        value_name = "ADDRESS",
+        help = "Replica feed address (default: 127.0.0.1:7443, or a free port if it's taken)"
     )]
     pub peer_addr: Option<String>,
     #[arg(
         long,
-        value_name = "APP",
-        help = "Helper app [default: the app this binary ships in]"
+        value_name = "PATH",
+        help = "Helper app (default: the app this binary ships in)"
     )]
     pub helper_app: Option<String>,
-    #[arg(long, help = "Print the result as JSON")]
-    pub json: bool,
-    #[arg(
-        long,
-        help = "Compatibility flag: up always returns while syncing continues"
-    )]
+    #[arg(long, hide = true)]
     pub no_watch: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum LinkClient {
-    #[value(alias = "claude-code")]
+    #[value(alias = "claude-code", help = "Claude Code")]
     Claude,
+    #[value(help = "Codex")]
     Codex,
     #[value(help = "Print what any other app or bot needs")]
     Other,
@@ -166,61 +222,86 @@ impl LinkScope {
 
 #[derive(Debug, Args)]
 pub struct LinkArgs {
-    #[arg(value_enum, help = "Which agent to connect")]
+    #[arg(value_enum, value_name = "CLIENT", help = "Which agent to connect")]
     pub client: LinkClient,
     #[arg(
         long,
         value_enum,
+        value_name = "SCOPE",
         default_value = "user",
-        help = "Claude Code only: where to save the connection"
+        help = "Claude Code only: where Claude Code saves the registration. This isn't access; you grant access when you sign in"
     )]
     pub scope: LinkScope,
-    #[arg(long, default_value = "apple-bridge", help = "Name shown in the agent")]
+    #[arg(
+        long,
+        value_name = "NAME",
+        default_value = "apple-bridge",
+        help = "Name shown in the agent"
+    )]
     pub name: String,
     #[arg(long, help = "Print the agent's commands instead of running them")]
     pub print: bool,
-    #[arg(long, help = "Register only. Sign in later from the agent")]
+    #[arg(long, help = "Register only; sign in later from the agent")]
     pub no_login: bool,
-    #[arg(long, help = "Print the sign-in address instead of opening a browser")]
-    pub no_browser: bool,
+    #[arg(
+        long,
+        alias = "no-browser",
+        help = "Print the sign-in address instead of opening a browser"
+    )]
+    pub no_open: bool,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Stop waiting for sign-in after this long (default: 10m)"
+    )]
+    pub timeout: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct UnlinkArgs {
-    #[arg(value_enum, help = "Which agent to disconnect")]
+    #[arg(value_enum, value_name = "CLIENT", help = "Which agent to disconnect")]
     pub client: LinkClient,
     #[arg(
         long,
         value_enum,
+        value_name = "SCOPE",
         default_value = "user",
-        help = "Claude Code only: where the connection is saved"
+        help = "Claude Code only: where the registration is saved"
     )]
     pub scope: LinkScope,
-    #[arg(long, default_value = "apple-bridge", help = "Name shown in the agent")]
+    #[arg(
+        long,
+        value_name = "NAME",
+        default_value = "apple-bridge",
+        help = "Name shown in the agent"
+    )]
     pub name: String,
 }
 
 #[derive(Debug, Args)]
 pub struct StatsArgs {
-    #[arg(long, help = "Keep updating until every source has finished syncing")]
-    pub watch: bool,
     #[arg(
+        short = 'f',
         long,
-        value_name = "SECONDS",
-        help = "Stop watching after this long [default: no limit]"
+        alias = "watch",
+        help = "Keep updating until every source has finished syncing"
     )]
-    pub timeout: Option<u64>,
+    pub follow: bool,
     #[arg(
         long,
-        value_name = "SECONDS",
-        default_value_t = 30,
+        value_name = "DURATION",
+        help = "With --follow: stop watching after this long, such as 30s or 5m (default: no limit on a terminal, 5m otherwise)"
+    )]
+    pub timeout: Option<String>,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        default_value = "30s",
         help = "A source counts as finished after this long without new records"
     )]
-    pub settle: u64,
-    #[arg(long, help = "Include sources with nothing synced")]
+    pub settle: String,
+    #[arg(short = 'a', long, help = "Include sources with nothing synced")]
     pub all: bool,
-    #[arg(long, help = "Print JSON. With --watch, one JSON line per event")]
-    pub json: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -236,54 +317,109 @@ pub enum ReadKind {
     Voicemail,
 }
 
+impl ReadKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Photos => "photos",
+            Self::Messages => "messages",
+            Self::Chats => "chats",
+            Self::Contacts => "contacts",
+            Self::Calendar => "calendar",
+            Self::Reminders => "reminders",
+            Self::Notes => "notes",
+            Self::Mail => "mail",
+            Self::Voicemail => "voicemail",
+        }
+    }
+}
+
 #[derive(Debug, Args)]
 pub struct ReadArgs {
-    #[arg(value_enum, help = "What to read")]
+    #[arg(value_enum, value_name = "KIND", help = "What to read")]
     pub kind: ReadKind,
-    #[arg(long, default_value_t = 10, help = "How many items to show")]
-    pub limit: u32,
-    #[arg(long, value_name = "TEXT", help = "Messages only: find this text")]
-    pub text: Option<String>,
-    #[arg(long, value_name = "ID", help = "Messages only: read this chat")]
+    #[arg(
+        short = 'n',
+        long,
+        value_name = "NUMBER",
+        default_value = "10",
+        allow_hyphen_values = true,
+        help = "How many items to show, 1 to 200"
+    )]
+    pub limit: String,
+    #[arg(
+        short = 'q',
+        long,
+        alias = "text",
+        value_name = "TEXT",
+        help = "Messages only: find messages containing this text"
+    )]
+    pub query: Option<String>,
+    #[arg(long, value_name = "CHAT", help = "Messages only: read this chat")]
     pub chat: Option<String>,
-    #[arg(long, default_value_t = 7, help = "Calendar only: how many days ahead")]
-    pub days: u32,
-    #[arg(long, help = "Print the JSON answer, limited to --limit items")]
-    pub json: bool,
+    #[arg(
+        long,
+        value_name = "NUMBER",
+        default_value = "7",
+        help = "Calendar only: how many days ahead"
+    )]
+    pub days: String,
+    #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
+    pub next: Option<String>,
+    #[arg(short = 'a', long, help = "Fetch every page, up to 10,000 items")]
+    pub all: bool,
 }
 
 #[derive(Debug, Args)]
 pub struct SearchArgs {
-    #[arg(help = "Text to find")]
+    #[arg(value_name = "TEXT", help = "Text to find")]
     pub text: String,
-    #[arg(long, default_value_t = 10, help = "How many results to show")]
-    pub limit: u32,
-    #[arg(long, help = "Print the full JSON answer")]
-    pub json: bool,
+    #[arg(
+        short = 'n',
+        long,
+        value_name = "NUMBER",
+        default_value = "10",
+        allow_hyphen_values = true,
+        help = "How many results to show, 1 to 200"
+    )]
+    pub limit: String,
+    #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
+    pub next: Option<String>,
+    #[arg(short = 'a', long, help = "Fetch every page, up to 10,000 results")]
+    pub all: bool,
 }
 
 #[derive(Debug, Args)]
 pub struct CallArgs {
-    #[arg(help = "Operation name, such as sources.status. Use --list to see them")]
+    #[arg(
+        value_name = "OPERATION",
+        help = "Operation name, such as sources.status"
+    )]
     pub operation: Option<String>,
     #[arg(
         long,
         value_name = "JSON",
-        default_value = "{}",
-        help = "Arguments as JSON"
+        help = "Arguments as JSON; - reads them from stdin (default: {})"
     )]
-    pub args: String,
-    #[arg(long, help = "List reads, and Photos writes with --write")]
+    pub data: Option<String>,
+    #[arg(long, value_name = "JSON", hide = true)]
+    pub args: Option<String>,
+    #[arg(
+        long,
+        value_name = "FILE",
+        help = "Read the arguments from a JSON file; - means stdin"
+    )]
+    pub file: Option<PathBuf>,
+    #[arg(long, help = "List read operations, and Photos writes with --write")]
     pub list: bool,
     #[arg(
         long,
-        help = "Explicitly allow Photos organization writes; requires --token-env and a stable query id"
+        help = "Allow Photos organization writes; needs --token-env and a stable query ID"
     )]
     pub write: bool,
     #[arg(
         long,
         value_name = "NAME",
-        help = "Read an existing scoped credential from this environment variable; never revoke it"
+        help = "Environment variable holding an existing token to call with; it's never revoked"
     )]
     pub token_env: Option<String>,
 }
@@ -291,7 +427,7 @@ pub struct CallArgs {
 #[derive(Debug, Args)]
 pub struct SkillsCommand {
     #[command(subcommand)]
-    pub action: SkillsAction,
+    pub action: Option<SkillsAction>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -300,7 +436,7 @@ pub enum SkillsAction {
     List,
     #[command(about = "Print one skill")]
     Get {
-        #[arg(help = "Skill name, such as core")]
+        #[arg(value_name = "NAME", help = "Skill name, such as core")]
         name: String,
     },
 }
@@ -308,29 +444,33 @@ pub enum SkillsAction {
 #[derive(Debug, Args)]
 pub struct PermissionsCommand {
     #[command(subcommand)]
-    pub action: PermissionsAction,
+    pub action: Option<PermissionsAction>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum PermissionsAction {
     #[command(about = "Walk through the Mac permissions Apple Bridge reads with")]
     Guide(GuideArgs),
-    #[command(about = "Show permission status. Never asks macOS for anything")]
+    #[command(about = "Show which permissions are allowed; never asks macOS")]
     Status(GuideStatusArgs),
     #[command(about = "Ask macOS for one permission through the Helper")]
     Request {
-        #[arg(help = "Permission name, such as camera")]
+        #[arg(value_name = "PERMISSION", help = "Permission name, such as camera")]
         name: String,
-        #[arg(long, value_name = "APP", help = "Helper app to use")]
+        #[arg(long, value_name = "PATH", help = "Helper app to use")]
         helper_app: Option<String>,
     },
 }
 
 #[derive(Debug, Args)]
 pub struct GuideArgs {
-    #[arg(long, help = "Do each step without waiting for Enter")]
-    pub yes: bool,
-    #[arg(long, value_name = "APP", help = "Helper app to use")]
+    #[arg(
+        long,
+        value_name = "NAMES",
+        help = "Request only these comma-separated permissions, without prompts, such as contacts,calendar"
+    )]
+    pub only: Option<String>,
+    #[arg(long, value_name = "PATH", help = "Helper app to use")]
     pub helper_app: Option<String>,
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
@@ -338,106 +478,204 @@ pub struct GuideArgs {
 
 #[derive(Debug, Args)]
 pub struct GuideStatusArgs {
-    #[arg(long, help = "Print JSON")]
-    pub json: bool,
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-pub enum RemoteAction {
-    On,
-    Off,
-    Status,
-    Key,
-    CertificateAccept,
+#[derive(Debug, Args)]
+pub struct RemoteCommand {
+    #[command(subcommand)]
+    pub action: Option<RemoteAction>,
 }
 
-impl RemoteAction {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::On => "on",
-            Self::Off => "off",
-            Self::Status => "status",
-            Self::Key => "key",
-            Self::CertificateAccept => "certificate-accept",
-        }
-    }
+#[derive(Debug, Subcommand)]
+pub enum RemoteAction {
+    #[command(about = "Turn on remote access through the relay or a private route")]
+    Enable(RemoteEnableArgs),
+    #[command(about = "Turn off remote access")]
+    Disable(RemoteDisableArgs),
+    #[command(about = "Show remote access state")]
+    Status(RemoteStatusArgs),
+    #[command(about = "Print this Mac's relay key for a self-hosted relay")]
+    Key(RemoteKeyArgs),
+    #[command(about = "Manage certificates seen for this Mac's remote address")]
+    Certificates(CertificatesCommand),
+    #[command(
+        hide = true,
+        about = "Turn on remote access (deprecated: bridge remote enable)"
+    )]
+    On(RemoteEnableArgs),
+    #[command(
+        hide = true,
+        about = "Turn off remote access (deprecated: bridge remote disable)"
+    )]
+    Off(RemoteDisableArgs),
+    #[command(
+        name = "certificate-accept",
+        hide = true,
+        about = "Accept a certificate (deprecated: bridge remote certificates accept)"
+    )]
+    CertificateAccept(FingerprintArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct RemoteArgs {
-    #[arg(value_enum, help = "What to do")]
-    pub action: RemoteAction,
-    #[arg(help = "With certificate-accept: the certificate to accept")]
-    pub value: Option<String>,
-    #[arg(long, value_name = "ROUTE", help = "Route to use [default: relay]")]
+pub struct RemoteEnableArgs {
+    #[arg(
+        long,
+        value_name = "ROUTE",
+        help = "Route: relay, private, tailscale-app or both (default: relay)"
+    )]
     pub via: Option<String>,
-    #[arg(long, help = "Use the private route")]
+    #[arg(long, help = "Use the private route; same as --via private")]
     pub private: bool,
-    #[arg(long, help = "With status: print connection snippets")]
-    pub snippets: bool,
-    #[arg(long, value_name = "DOMAIN", help = "Custom relay domain")]
+    #[arg(long, value_name = "DOMAIN", help = "Custom domain on the relay route")]
     pub domain: Option<String>,
     #[arg(long, value_name = "URL", help = "Your own relay's address")]
     pub relay_url: Option<String>,
     #[arg(long, value_name = "NAME", help = "Name for this Mac")]
     pub name: Option<String>,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Stop waiting after this long (default: 10m)"
+    )]
+    pub timeout: Option<String>,
+    #[arg(long, help = "Print sign-in links instead of opening a browser")]
+    pub no_open: bool,
 }
 
 #[derive(Debug, Args)]
-pub struct ConnectorCommand {
+pub struct RemoteDisableArgs {
+    #[arg(
+        long,
+        value_name = "ROUTE",
+        help = "Route to turn off (default: relay)"
+    )]
+    pub via: Option<String>,
+    #[arg(long, help = "Turn off the private route; same as --via private")]
+    pub private: bool,
+    #[arg(long, value_name = "NAME", help = "Name for this Mac")]
+    pub name: Option<String>,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Stop waiting after this long (default: 10m)"
+    )]
+    pub timeout: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct RemoteStatusArgs {
+    #[arg(long, help = "Print connection snippets for agents")]
+    pub snippets: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct RemoteKeyArgs {
+    #[arg(long, value_name = "URL", help = "Save this relay address first")]
+    pub relay_url: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct CertificatesCommand {
     #[command(subcommand)]
-    pub action: ConnectorAction,
+    pub action: Option<CertificatesAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CertificatesAction {
+    #[command(about = "Accept a certificate you requested yourself")]
+    Accept(FingerprintArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct FingerprintArgs {
+    #[arg(
+        value_name = "FINGERPRINT",
+        help = "SHA-256 fingerprint: 64 hexadecimal characters"
+    )]
+    pub fingerprint: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct ConnectorsCommand {
+    #[command(subcommand)]
+    pub action: Option<ConnectorAction>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ConnectorAction {
     #[command(about = "List apps waiting for approval")]
-    Pending,
-    #[command(about = "Allow a waiting app. Check the code matches first")]
+    List,
+    #[command(about = "Allow a waiting app after checking its code")]
     Allow(DecisionArgs),
     #[command(about = "Deny a waiting app")]
     Deny(DecisionArgs),
+    #[command(
+        hide = true,
+        about = "List apps waiting for approval (deprecated: bridge connectors list)"
+    )]
+    Pending,
 }
 
 #[derive(Debug, Args)]
 pub struct DecisionArgs {
-    #[arg(long, value_name = "ID", help = "Request id from `connector pending`")]
+    #[arg(
+        long,
+        value_name = "REQUEST",
+        help = "Request ID from bridge connectors list"
+    )]
     pub request: String,
-    #[arg(long, value_name = "CODE", help = "Code shown on the app's page")]
+    #[arg(
+        long,
+        value_name = "CODE",
+        help = "Four-digit code shown on the app's page"
+    )]
     pub code: String,
 }
 
 #[derive(Debug, Args)]
-pub struct AgentCommand {
+pub struct AgentsCommand {
     #[command(subcommand)]
-    pub action: AgentAction,
+    pub action: Option<AgentAction>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum AgentAction {
-    #[command(about = "List agents as JSON")]
+    #[command(about = "List agents")]
     List,
     #[command(about = "Create an agent and print its token once")]
     Create(AgentCreateArgs),
-    #[command(about = "Revoke an agent")]
-    Revoke(IdArgs),
-    #[command(about = "Choose whether an agent acts at once or asks you before each change")]
+    #[command(about = "Show one agent")]
+    Inspect(AgentArgs),
+    #[command(about = "Change an agent's level or access")]
+    Update(AgentUpdateArgs),
+    #[command(about = "Revoke an agent's token")]
+    Revoke(AgentArgs),
+    #[command(
+        hide = true,
+        about = "Change an agent's level (deprecated: bridge agents update --level)"
+    )]
     Level(AgentLevelArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct AgentLevelArgs {
-    #[arg(help = "Agent id from `bridge agent list`")]
+pub struct AgentArgs {
+    #[arg(value_name = "AGENT", help = "Agent ID, such as agent:01J…")]
     pub id: String,
-    #[arg(help = "full (acts at once) or approve (asks you before each change)")]
+}
+
+#[derive(Debug, Args)]
+pub struct AgentLevelArgs {
+    #[arg(value_name = "AGENT", help = "Agent ID")]
+    pub id: String,
+    #[arg(value_name = "LEVEL", help = "full or approve")]
     pub level: String,
 }
 
 #[derive(Debug, Args)]
 pub struct AgentCreateArgs {
-    #[arg(long, value_name = "NAME", help = "Agent name")]
+    #[arg(long, value_name = "NAME", help = "Agent name, 1 to 120 bytes")]
     pub name: String,
     #[arg(
         long,
@@ -448,66 +686,162 @@ pub struct AgentCreateArgs {
     pub level: String,
     #[arg(
         long,
-        value_name = "SCOPES",
-        default_value = "reminders:read,system:read",
-        help = "Comma-separated access, such as messages:read,contacts:read"
+        value_name = "ACCESS",
+        default_value = DEFAULT_AGENT_GRANTS,
+        help = "Access grants, comma-separated, such as messages:read,contacts:read"
     )]
     pub scope: String,
 }
 
 #[derive(Debug, Args)]
-pub struct IdArgs {
-    #[arg(help = "Credential id")]
+pub struct AgentUpdateArgs {
+    #[arg(value_name = "AGENT", help = "Agent ID")]
+    pub id: String,
+    #[arg(long, value_name = "LEVEL", help = "full or approve")]
+    pub level: Option<String>,
+    #[arg(
+        long,
+        value_name = "ACCESS",
+        help = "Replace its access grants, comma-separated"
+    )]
+    pub scope: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct CredentialArgs {
+    #[arg(value_name = "CREDENTIAL", help = "Agent, token or replica ID")]
     pub id: String,
 }
 
 #[derive(Debug, Args)]
 pub struct ScopeArgs {
-    #[arg(help = "Credential id")]
+    #[arg(value_name = "CREDENTIAL", help = "Agent, token or replica ID")]
     pub id: String,
-    #[arg(
-        long,
-        value_name = "SCOPES",
-        default_value = "reminders:read,system:read",
-        help = "Comma-separated access, such as messages:read,contacts:read"
-    )]
+    #[arg(long, value_name = "ACCESS", default_value = DEFAULT_GRANTS, help = "Access grants, comma-separated")]
     pub scope: String,
 }
 
 #[derive(Debug, Args)]
+pub struct TokensCommand {
+    #[command(subcommand)]
+    pub action: Option<TokenAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum TokenAction {
+    #[command(about = "Create a token and print it once")]
+    Create {
+        #[arg(long, value_name = "ACCESS", default_value = DEFAULT_GRANTS, help = "Access grants, comma-separated")]
+        scope: String,
+        #[arg(long, help = "Allow use through remote access")]
+        remote: bool,
+    },
+    #[command(about = "Revoke a token, agent or replica")]
+    Revoke(CredentialArgs),
+    #[command(about = "Replace a token's, agent's or replica's access")]
+    Update {
+        #[arg(value_name = "CREDENTIAL", help = "Token, agent or replica ID")]
+        id: String,
+        #[arg(
+            long,
+            value_name = "ACCESS",
+            required = true,
+            help = "Access grants, comma-separated"
+        )]
+        scope: String,
+    },
+}
+
+#[derive(Debug, Args)]
+pub struct WebCommand {
+    #[command(subcommand)]
+    pub action: Option<WebAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum WebAction {
+    #[command(about = "Print a link and QR code to add a passkey")]
+    Enroll {
+        #[arg(
+            long,
+            value_name = "URL",
+            default_value = "http://localhost:7780",
+            help = "Page address: https://HOST, or http://localhost:PORT"
+        )]
+        host: String,
+        #[arg(long, help = "Use the remote access address")]
+        public: bool,
+    },
+    #[command(about = "List or sign out signed-in browsers")]
+    Sessions(SessionsCommand),
+    #[command(
+        hide = true,
+        about = "Sign out every browser (deprecated: bridge web sessions revoke --all)"
+    )]
+    Lock,
+    #[command(
+        hide = true,
+        about = "List signed-in browsers (deprecated: bridge web sessions list)"
+    )]
+    Devices,
+}
+
+#[derive(Debug, Args)]
+pub struct SessionsCommand {
+    #[command(subcommand)]
+    pub action: Option<SessionsAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SessionsAction {
+    #[command(about = "List signed-in browsers")]
+    List,
+    #[command(about = "Sign out browsers")]
+    Revoke {
+        #[arg(long, required = true, help = "Sign out every browser")]
+        all: bool,
+    },
+}
+
+#[derive(Debug, Args)]
 pub struct StartArgs {
-    #[arg(long, default_value = "gateway", help = "gateway or replica")]
+    #[arg(
+        long,
+        value_name = "ROLE",
+        default_value = "gateway",
+        help = "gateway or replica"
+    )]
     pub role: String,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         default_value = "127.0.0.1:7780",
         help = "Local API address"
     )]
     pub api_addr: String,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         default_value = "",
         help = "Replica feed address"
     )]
     pub peer_addr: String,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         default_value = "",
         help = "Replica listen address"
     )]
     pub listen: String,
     #[arg(long, value_name = "PATH", default_value = "", help = "Helper socket")]
     pub socket: String,
-    #[arg(long, value_name = "APP", default_value = "", help = "Helper app")]
+    #[arg(long, value_name = "PATH", default_value = "", help = "Helper app")]
     pub helper_app: String,
     #[arg(long, hide = true)]
     pub helper_lab_commands: bool,
     #[arg(
         long,
-        value_name = "N",
+        value_name = "NUMBER",
         default_value_t = 0,
         help = "Journal rows to keep"
     )]
@@ -521,40 +855,31 @@ pub struct StartArgs {
     pub retention_age: String,
     #[arg(
         long,
-        value_name = "BYTES",
+        value_name = "NUMBER",
         default_value_t = 0,
-        help = "Attachment storage limit"
+        help = "Attachment storage limit in bytes"
     )]
     pub blob_cap: u64,
     #[arg(
         long,
-        value_name = "MS",
+        value_name = "NUMBER",
         default_value_t = 0,
-        help = "Attachment removal grace"
+        help = "Attachment removal grace in milliseconds"
     )]
     pub blob_grace_ms: u64,
 }
 
 #[derive(Debug, Args)]
 pub struct PairArgs {
-    #[arg(
-        long,
-        value_name = "HOST:PORT",
-        help = "Address the replica should dial"
-    )]
+    #[arg(long, value_name = "ADDRESS", help = "Address the replica should dial")]
     pub peer_addr: Option<String>,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         help = "Replica address the gateway should dial"
     )]
     pub dial_replica: Option<String>,
-    #[arg(
-        long,
-        value_name = "SCOPES",
-        default_value = "reminders:read,system:read",
-        help = "Comma-separated access"
-    )]
+    #[arg(long, value_name = "ACCESS", default_value = DEFAULT_GRANTS, help = "Access grants for the replica, comma-separated")]
     pub scope: String,
     #[arg(
         long,
@@ -563,7 +888,7 @@ pub struct PairArgs {
         help = "How long the code works"
     )]
     pub expires_in: String,
-    #[arg(long, help = "Pair an iPhone. Needs --via-remote")]
+    #[arg(long, help = "Pair an iPhone; needs --via-remote")]
     pub iphone: bool,
     #[arg(long, help = "Pair through remote access")]
     pub via_remote: bool,
@@ -571,11 +896,11 @@ pub struct PairArgs {
 
 #[derive(Debug, Args)]
 pub struct JoinArgs {
-    #[arg(help = "Pairing code")]
+    #[arg(value_name = "CODE", help = "Pairing code from bridge pair")]
     pub code: String,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         help = "Listen for the gateway on this address"
     )]
     pub listen: Option<String>,
@@ -583,11 +908,11 @@ pub struct JoinArgs {
 
 #[derive(Debug, Args)]
 pub struct ConnectArgs {
-    #[arg(help = "Connection code")]
+    #[arg(value_name = "CODE", help = "Connection code")]
     pub code: String,
     #[arg(
         long,
-        value_name = "HOST:PORT",
+        value_name = "ADDRESS",
         default_value = "127.0.0.1:7780",
         help = "Local address to serve"
     )]
@@ -595,109 +920,104 @@ pub struct ConnectArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct TokenCommand {
-    #[command(subcommand)]
-    pub action: TokenAction,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum TokenAction {
-    #[command(about = "Create a token and print it once")]
-    Create {
-        #[arg(
-            long,
-            value_name = "SCOPES",
-            default_value = "reminders:read,system:read",
-            help = "Comma-separated access"
-        )]
-        scope: String,
-        #[arg(long, help = "Allow use through remote access")]
-        remote: bool,
-    },
-}
-
-#[derive(Debug, Args)]
-pub struct WebCommand {
-    #[command(subcommand)]
-    pub action: WebAction,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum WebAction {
-    #[command(about = "Print a link and QR code to add a passkey")]
-    Enroll {
-        #[arg(
-            long,
-            value_name = "URL",
-            default_value = "http://localhost:7780",
-            help = "Page address"
-        )]
-        host: String,
-        #[arg(long, help = "Use the remote address")]
-        public: bool,
-    },
-    #[command(about = "Sign out every browser")]
-    Lock,
-    #[command(about = "List signed-in browsers as JSON")]
-    Devices,
-}
-
-#[derive(Debug, Args)]
 pub struct BackupArgs {
-    #[arg(help = "File to write")]
+    #[arg(value_name = "FILE", help = "File to write")]
     pub path: PathBuf,
+    #[arg(long, help = "Replace the file if it exists")]
+    pub force: bool,
 }
 
 #[derive(Debug, Args)]
 pub struct RestoreArgs {
-    #[arg(help = "Backup file")]
+    #[arg(value_name = "FILE", help = "Backup file")]
     pub path: Option<PathBuf>,
-    #[arg(long, value_name = "FILE", help = "Backup file")]
+    #[arg(
+        long,
+        value_name = "FILE",
+        help = "Backup file; same as the positional FILE"
+    )]
     pub backup: Option<PathBuf>,
-    #[arg(long, help = "Restore even though the command ledger is missing")]
+    #[arg(
+        long,
+        help = "Restore even though the command ledger is missing or doesn't match"
+    )]
     pub accept_ledger_loss: bool,
 }
 
 #[derive(Debug, Args)]
 pub struct ShortcutsCommand {
     #[command(subcommand)]
-    pub action: ShortcutsAction,
+    pub action: Option<ShortcutsAction>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ShortcutsAction {
-    #[command(name = "install-pack", about = "Open the Shortcuts pack for import")]
-    InstallPack {
-        #[arg(
-            long,
-            value_name = "DIR",
-            default_value = ".build/shortcuts",
-            help = "Pack folder"
-        )]
-        pack: PathBuf,
-    },
+    #[command(about = "Open the Shortcuts pack for import")]
+    Install(PackArgs),
+    #[command(
+        name = "install-pack",
+        hide = true,
+        about = "Open the Shortcuts pack (deprecated: bridge shortcuts install)"
+    )]
+    InstallPack(PackArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct PackArgs {
+    #[arg(
+        long,
+        value_name = "DIR",
+        default_value = ".build/shortcuts",
+        help = "Pack folder"
+    )]
+    pub pack: PathBuf,
 }
 
 #[derive(Debug, Args)]
 pub struct SelftestCommand {
     #[command(subcommand)]
-    pub action: SelftestAction,
+    pub action: Option<SelftestAction>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum SelftestAction {
-    #[command(about = "Prove Messages operations on your own chat")]
+    #[command(about = "Prove Messages operations by sending real messages to your own chat")]
     Messages(SelftestArgs),
 }
 
 #[derive(Debug, Args)]
 pub struct SelftestArgs {
-    #[arg(long, value_name = "APP", help = "Helper app to use")]
+    #[arg(long, value_name = "PATH", help = "Helper app to use")]
     pub helper_app: Option<String>,
     #[arg(long, help = "Run again even if already proven")]
     pub force: bool,
     #[arg(long, help = "Skip steps that use the Messages window")]
     pub no_ui: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum Shell {
+    Bash,
+    Zsh,
+    Fish,
+}
+
+#[derive(Debug, Args)]
+pub struct CompletionArgs {
+    #[arg(value_enum, value_name = "SHELL", help = "bash, zsh or fish")]
+    pub shell: Shell,
+}
+
+#[derive(Debug, Args)]
+pub struct HelpArgs {
+    #[arg(long, help = "List every command")]
+    pub all: bool,
+    #[arg(
+        value_name = "COMMAND",
+        trailing_var_arg = true,
+        help = "Command path, or search <TEXT>"
+    )]
+    pub path: Vec<String>,
 }
 
 #[cfg(feature = "lab-harness")]

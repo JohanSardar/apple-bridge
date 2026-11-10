@@ -182,7 +182,7 @@ Relay installed.
     $domain       NS  ns1.$domain
   Firewall: allow TCP 443, and TCP and UDP 53.
 
-  On your Mac:  bridge remote on --relay-url https://$domain
+  On your Mac:  bridge remote enable --relay-url https://$domain
 DONE
 if [ "$accounts" = 1 ]; then
   cat <<DONE

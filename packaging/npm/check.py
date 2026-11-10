@@ -141,15 +141,15 @@ def exercise(world, app, port, report, label):
     version = world.bridge(report, "--version")
     report.expect(f"{label}: bridge --version", version.returncode == 0)
     up = world.bridge(report, "up", "--home", home, "--api-addr", f"127.0.0.1:{port}", "--peer-addr", "127.0.0.1:0")
-    report.expect(f"{label}: bridge up", up.returncode == 0 and "is on" in up.stdout)
-    report.expect(f"{label}: bridge up found the installed app", "no Helper app found" not in up.stdout)
+    report.expect(f"{label}: bridge up", up.returncode == 0 and "is on" in up.stderr and up.stdout.strip() == f"http://127.0.0.1:{port}/mcp")
+    report.expect(f"{label}: bridge up found the installed app", "no Helper app found" not in up.stderr)
     wanted = f"-a {app.resolve()} --args session"
     report.expect(f"{label}: the gateway asks open for the installed app", wanted in world.launch_calls(wanted), f"open calls: {world.launch_calls(wanted)!r}. Gateway log: {world.log_tail()}")
     report.expect(f"{label}: the app itself was never launched", run("pgrep", "-f", f"{app.resolve()}/Contents/MacOS/AppleBridgeHelper").returncode == 1)
     stats = world.bridge(report, "stats", "--home", home)
     report.expect(f"{label}: bridge stats", stats.returncode == 0)
     down = world.bridge(report, "down", "--home", home)
-    report.expect(f"{label}: bridge down", down.returncode == 0 and "stopped" in down.stdout)
+    report.expect(f"{label}: bridge down", down.returncode == 0 and "stopped" in down.stderr)
 
 
 def replaced_while_running(world, tarball, port, app, source_app, identity, facts, name, prefix, report):
@@ -161,7 +161,7 @@ def replaced_while_running(world, tarball, port, app, source_app, identity, fact
     stats = world.bridge(report, "stats", "--home", home)
     report.expect("update: the running gateway still answers", stats.returncode == 0)
     down = world.bridge(report, "down", "--home", home)
-    report.expect("update: bridge down stops the older process", down.returncode == 0 and "stopped" in down.stdout)
+    report.expect("update: bridge down stops the older process", down.returncode == 0 and "stopped" in down.stderr)
 
 
 def other_install_running(world, port, report):
@@ -174,7 +174,7 @@ def other_install_running(world, port, report):
                 break
             time.sleep(0.1)
         up = world.bridge(report, "up", "--home", home)
-        report.expect("other install: bridge up reports the running gateway", up.returncode == 0 and "was already on" in up.stdout)
+        report.expect("other install: bridge up reports the running gateway", up.returncode == 0 and "was already on" in up.stderr)
         down = world.bridge(report, "down", "--home", home)
         report.expect("other install: bridge down leaves it running", down.returncode != 0 and "not started by" in down.stderr + down.stdout)
         report.expect("other install: it is still running", gateway.poll() is None)

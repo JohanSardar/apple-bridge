@@ -19,7 +19,7 @@ fn web_devices_and_lock_work_on_a_fresh_home() -> Check {
     assert!(bridge(home.path(), &["web", "lock"])?.status.success());
     assert_eq!(
         bridge(home.path(), &["web", "other"])?.status.code(),
-        Some(1)
+        Some(2)
     );
     Ok(())
 }
@@ -33,7 +33,7 @@ fn permission_and_selftest_verbs_reject_bad_input_without_launching_anything() -
         &["permissions", "list", "camera"][..],
         &["selftest", "other"][..],
     ] {
-        assert_eq!(bridge(home.path(), arguments)?.status.code(), Some(1));
+        assert_eq!(bridge(home.path(), arguments)?.status.code(), Some(2));
     }
     Ok(())
 }
@@ -95,21 +95,34 @@ fn agent_json_matches_go_key_order_and_id_shape() -> Check {
 #[test]
 fn remote_flags_validate_like_go() -> Check {
     let home = tempfile::tempdir()?;
-    for arguments in [
-        &["remote", "on", "--private", "--via", "relay"][..],
-        &["remote", "on", "--private", "--domain", "example.com"][..],
-        &["remote", "on", "--snippets"][..],
-        &["remote", "status", "--snippets"][..],
-        &[
-            "remote",
-            "on",
-            "--domain",
-            "example.com",
-            "--via",
-            "private",
-        ][..],
+    for (arguments, code) in [
+        (&["remote", "on", "--private", "--via", "relay"][..], 2),
+        (
+            &["remote", "on", "--private", "--domain", "example.com"][..],
+            2,
+        ),
+        (&["remote", "on", "--snippets"][..], 2),
+        (&["remote", "status", "--snippets"][..], 1),
+        (
+            &[
+                "remote",
+                "on",
+                "--domain",
+                "example.com",
+                "--via",
+                "private",
+            ][..],
+            2,
+        ),
+        (
+            &["remote", "on", "--relay-url", "http://relay.example"][..],
+            2,
+        ),
+        (&["remote", "on", "--timeout", "0"][..], 2),
     ] {
-        assert_eq!(bridge(home.path(), arguments)?.status.code(), Some(1));
+        let output = bridge(home.path(), arguments)?;
+        assert_eq!(output.status.code(), Some(code), "{arguments:?}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
     }
     Ok(())
 }
@@ -128,7 +141,7 @@ fn doctor_reports_credential_store_last_error_without_a_database() -> Check {
         serde_json::to_vec(&failure)?,
     )?;
     let output = bridge_with_file_store(home.path(), &["doctor"])?;
-    assert!(output.status.success());
+    assert_eq!(output.status.code(), Some(1));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(report["credentials"]["store"], "file_0600");
     assert_eq!(report["credentials"]["last_error"], failure);
@@ -149,19 +162,14 @@ fn doctor_ignores_a_last_error_from_another_store() -> Check {
 }
 
 #[test]
-fn web_enroll_prints_the_url_then_a_terminal_qr() -> Check {
+fn web_enroll_prints_only_the_url_when_piped() -> Check {
     let home = tempfile::tempdir()?;
     let output = bridge_with_file_store(home.path(), &["web", "enroll"])?;
     assert!(output.status.success());
     let text = String::from_utf8(output.stdout)?;
-    let mut lines = text.lines();
-    let url = lines.next().ok_or("url")?;
-    assert!(url.starts_with("http://localhost:7780/enroll#"));
-    let code: Vec<&str> = lines.collect();
-    assert!(code.len() > 10);
-    assert!(code.iter().any(|line| line.contains('\u{2588}')
-        || line.contains('\u{2580}')
-        || line.contains('\u{2584}')));
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 1, "{text}");
+    assert!(lines[0].starts_with("http://localhost:7780/enroll#"));
     Ok(())
 }
 
@@ -184,7 +192,7 @@ fn remote_certificate_accept_clears_the_warning_and_rejects_bad_input() -> Check
         bridge(home.path(), &["remote", "certificate-accept", "nope"])?
             .status
             .code(),
-        Some(1)
+        Some(2)
     );
     assert!(
         bridge(home.path(), &["remote", "certificate-accept", &fingerprint])?
