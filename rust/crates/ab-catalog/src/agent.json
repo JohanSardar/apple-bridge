@@ -1,0 +1,2502 @@
+{
+  "domains": {
+    "audio": "Transcribe speech in an audio file on the Mac.",
+    "blobs": "Fetch bytes a read returned (attachments, captures, query outputs) and stage file bytes for a message.",
+    "calendar": "Calendar events and calendars.",
+    "capture": "Take a screenshot, camera photo or audio recording on the Mac, or play a system sound.",
+    "commands": "Look up changes this agent made earlier.",
+    "contacts": "People in Contacts, their details and groups.",
+    "files": "Files in folders the owner opted in.",
+    "focus": "Turn Do Not Disturb on or off.",
+    "health": "Health samples captured from the iPhone, summarised by day or week.",
+    "helper": "Version of the Apple Bridge helper app.",
+    "iphone": "The owner's paired iPhone: alarms, timers, notifications, location, motion, Health logging, Screen Time.",
+    "location": "The Mac's current location and address lookups.",
+    "mac": "Mac settings, apps, clipboard, notifications and system actions.",
+    "mail": "Mail messages: read bodies, send, draft, move, flag, delete.",
+    "maps": "Places, directions, travel times and map images.",
+    "messages": "iMessage, SMS and RCS chats and messages.",
+    "notes": "Notes and note folders.",
+    "pdf": "Read, search and annotate PDF documents.",
+    "photos": "The Photos library, read live: search, look at, download, favorite and organise albums.",
+    "print": "Print a PDF.",
+    "records": "Any synced collection: list, fetch one record, full-text search.",
+    "reminders": "Reminders and reminder lists.",
+    "shortcuts": "Run Shortcuts and list app actions.",
+    "speech": "Text to speech.",
+    "status": "Which sources are ready and how fresh the synced copy is.",
+    "vision": "Read text in images."
+  },
+  "params": {
+    "dates.value.calendar": "Calendar system of this date, such as gregorian, chinese or hebrew.",
+    "dates.value.day": "Day of the month, 1 to 31.",
+    "dates.value.month": "Month, 1 to 12, or 1 to 13 for calendars with a leap month.",
+    "dates.value.year": "Year. Omit or 0 when the year is unknown.",
+    "dates.value.is_leap_month": "True when the month is a leap month in that calendar.",
+    "non_gregorian_birthday.calendar": "Calendar system of the birthday, such as chinese or hebrew.",
+    "non_gregorian_birthday.day": "Day of the month in that calendar.",
+    "non_gregorian_birthday.month": "Month in that calendar.",
+    "non_gregorian_birthday.year": "Year in that calendar. Omit or 0 when unknown.",
+    "non_gregorian_birthday.is_leap_month": "True when the month is a leap month in that calendar.",
+    "time_zone": "IANA time zone, such as Europe/Ljubljana. Defaults to the Mac's time zone.",
+    "limit": "Maximum items to return.",
+    "after": "Cursor for the next page: pass the next value from the previous page. Omit for the first page.",
+    "expected_version": "The version of the record you are changing, from the version field of the read that returned it. If someone changed it since, the call fails with conflict and returns the current record.",
+    "device_id": "The paired iPhone, written iphone: followed by its ID. Get it from iphone.devices.",
+    "lat": "Latitude in degrees, -90 to 90.",
+    "lon": "Longitude in degrees, -180 to 180.",
+    "data_base64": "The file's bytes, base64 encoded, 8 MiB at most. Give this or blob, not both.",
+    "blob": "A file Apple Bridge already holds, from an earlier result: digest plus either query_id, or collection and record_id. Give this or data_base64, not both.",
+    "blob.digest": "SHA-256 of the bytes, 64 lowercase hex characters, from the earlier result.",
+    "blob.query_id": "The qry_ ID of the read that returned the file.",
+    "blob.record_id": "The ID of the record the file belongs to, such as an att_ attachment.",
+    "blob.collection": "The collection of that record, such as messages.attachment.",
+    "include_hidden": "Also include photos the owner hid. Default false.",
+    "network_access": "Let Photos download the original from iCloud when the Mac only keeps a thumbnail.",
+    "volume": "Playback volume from 0 (silent) to 1 (full). Defaults to the current volume.",
+    "bundle_id": "The app's bundle identifier, such as com.apple.Safari.",
+    "root": "An opted-in folder as an absolute path, from files.search results or the owner.",
+    "path": "Path of the item inside root, relative, without a leading slash.",
+    "parent": "Folder inside root that holds the item, relative. Omit for root itself.",
+    "name": "File or folder name, without slashes.",
+    "content_base64": "The file's new contents, base64 encoded, 128 KiB at most.",
+    "digest": "SHA-256 of the decoded contents, 64 lowercase hex characters.",
+    "near": "Centre point to search around.",
+    "near.lat": "Latitude in degrees, -90 to 90.",
+    "near.lon": "Longitude in degrees, -180 to 180.",
+    "from": "Starting point.",
+    "from.lat": "Latitude in degrees, -90 to 90.",
+    "from.lon": "Longitude in degrees, -180 to 180.",
+    "to": "Destination.",
+    "to.lat": "Latitude in degrees, -90 to 90.",
+    "to.lon": "Longitude in degrees, -180 to 180.",
+    "center": "Centre of the map.",
+    "center.lat": "Latitude in degrees, -90 to 90.",
+    "center.lon": "Longitude in degrees, -180 to 180.",
+    "radius": "Search radius in meters, up to 100000. Default 5000.",
+    "mode": "How to travel.",
+    "part_index": "Which part of a multi-part message, counting from 0. Default 0.",
+    "label": "Label such as home, work or mobile.",
+    "value": "The value.",
+    "files": "Attachments, up to 10. Each has a name and either data (base64 bytes) or an upload_id from blobs.stage.",
+    "files.name": "File name shown to the recipient, without slashes.",
+    "files.data": "File bytes, base64 encoded. Give this or upload_id.",
+    "files.upload_id": "ID from blobs.stage. Give this or data.",
+    "asset_id": "A photo or video ID from photos.search or photos.get.",
+    "asset_ids": "Photo or video IDs from photos.search.",
+    "album_id": "An album ID from photos.albums.",
+    "title": "The title.",
+    "transfer_id": "The transfer ID that photos.fetch returned.",
+    "text": "The text."
+  },
+  "operations": {
+    "audio.transcribe": {
+      "s": "Transcribe speech in an audio file to text, on the Mac without network.",
+      "r": "The transcript, or status unavailable if the on-device speech model is missing.",
+      "a": {
+        "data_base64": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blob": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string"
+            },
+            "query_id": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            }
+          }
+        },
+        "language": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Spoken language as a locale such as en-US or sl-SI. Default en-US."
+        }
+      },
+      "x": {
+        "blob": {
+          "digest": "4f0c0f5e8f6a1c6b2a7d6f1e3b9c0d2e4f6a8b0c1d3e5f7a9b1c3d5e7f9a1b3c",
+          "record_id": "att_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+          "collection": "messages.attachment"
+        },
+        "language": "en-US"
+      },
+      "d": "Audio up to 120 seconds. Give the audio as data_base64 or as a blob from an earlier result, such as a voice memo or message attachment."
+    },
+    "calendar.agenda": {
+      "s": "List calendar events that overlap a time window, in start order.",
+      "r": "records: the events, each with id, version and data (title, start, end, all_day, calendar_id, location).",
+      "p": {
+        "start": "Window start as an RFC 3339 timestamp, such as 2026-11-12T00:00:00-06:00.",
+        "end": "Window end as an RFC 3339 timestamp, after start.",
+        "calendar_id": "Only events in this calendar (a cal_ ID from records.query on calendar.calendar). Omit for all calendars."
+      },
+      "x": {
+        "start": "2026-11-12T00:00:00-06:00",
+        "end": "2026-11-13T00:00:00-06:00"
+      }
+    },
+    "calendar.range": {
+      "s": "List events in a date range with calendars and overlap grouping, for building a day or week view.",
+      "r": "calendars and events, each event with its overlap group and column for layout.",
+      "p": {
+        "start": "Range start: RFC 3339 timestamp or YYYY-MM-DD.",
+        "end": "Range end, exclusive: RFC 3339 timestamp or YYYY-MM-DD.",
+        "calendars": "Only these calendar IDs (cal_). Omit for all.",
+        "text": "Only events whose title, notes or location contain this text."
+      },
+      "x": {
+        "start": "2026-11-09",
+        "end": "2026-11-16"
+      }
+    },
+    "calendar.create_event": {
+      "s": "Create a calendar event.",
+      "r": "The new event's ID (evt_) in ids, and the event in record.",
+      "p": {
+        "calendar_id": "Calendar to add it to: a cal_ ID from records.query on calendar.calendar.",
+        "title": "Event title.",
+        "start": "Start: RFC 3339 timestamp, or YYYY-MM-DD when all_day is true.",
+        "end": "End, after start: RFC 3339 timestamp, or YYYY-MM-DD when all_day is true.",
+        "all_day": "True for an all-day event. Default false.",
+        "time_zone": "IANA time zone the event belongs to, such as Europe/Ljubljana, or Local. Default: floating in the Mac's zone.",
+        "location": "Location text.",
+        "notes": "Notes text.",
+        "url": "A link stored on the event.",
+        "availability": "Busy state: -1 not supported, 0 busy, 1 free, 2 tentative, 3 unavailable.",
+        "recurrence": "Repeat rules.",
+        "recurrence.frequency": "daily, weekly, monthly or yearly.",
+        "recurrence.interval": "Repeat every N periods, 1 or more.",
+        "recurrence.count": "Stop after this many occurrences. 0 or omitted means no count limit.",
+        "recurrence.end": "Stop repeating at this RFC 3339 timestamp.",
+        "alarms": "Alerts. Each has absolute_date or relative_offset, not both.",
+        "alarms.absolute_date": "Alert time as an RFC 3339 timestamp.",
+        "alarms.relative_offset": "Alert offset from the start in seconds; negative is before, such as -900 for 15 minutes before."
+      },
+      "x": {
+        "calendar_id": "cal_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Dentist",
+        "start": "2026-11-12T15:00:00-06:00",
+        "end": "2026-11-12T16:00:00-06:00",
+        "alarms": [
+          {
+            "relative_offset": -900
+          }
+        ]
+      }
+    },
+    "calendar.update_event": {
+      "s": "Change fields of a calendar event; for a repeating event choose this occurrence or this and future ones.",
+      "r": "The event ID in ids and the updated event in record.",
+      "p": {
+        "id": "The event's evt_ ID from calendar.agenda or calendar.range.",
+        "span": "this changes only this occurrence; future changes it and every later one.",
+        "calendar_id": "Move the event to this calendar (cal_ ID).",
+        "title": "New title.",
+        "start": "New start: RFC 3339 timestamp, or YYYY-MM-DD for all-day.",
+        "end": "New end: RFC 3339 timestamp, or YYYY-MM-DD for all-day.",
+        "all_day": "True to make it all-day.",
+        "time_zone": "IANA time zone such as Europe/Ljubljana, or Local.",
+        "location": "New location; empty string clears it.",
+        "notes": "New notes; empty string clears them.",
+        "url": "New link; empty string clears it.",
+        "availability": "Busy state: -1 not supported, 0 busy, 1 free, 2 tentative, 3 unavailable.",
+        "recurrence": "New repeat rules; an empty list removes repetition.",
+        "recurrence.frequency": "daily, weekly, monthly or yearly.",
+        "recurrence.interval": "Repeat every N periods, 1 or more.",
+        "recurrence.count": "Stop after this many occurrences. 0 or omitted means no count limit.",
+        "recurrence.end": "Stop repeating at this RFC 3339 timestamp.",
+        "alarms": "New alerts, replacing the old ones. Each has absolute_date or relative_offset, not both.",
+        "alarms.absolute_date": "Alert time as an RFC 3339 timestamp.",
+        "alarms.relative_offset": "Alert offset from the start in seconds; negative is before."
+      },
+      "v": "required",
+      "x": {
+        "id": "evt_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "span": "this",
+        "start": "2026-11-12T16:00:00-06:00",
+        "end": "2026-11-12T17:00:00-06:00",
+        "expected_version": 3
+      }
+    },
+    "calendar.delete_event": {
+      "s": "Delete a calendar event, or this and all later occurrences of a repeating one.",
+      "r": "The deleted event's ID in ids.",
+      "p": {
+        "id": "The event's evt_ ID from calendar.agenda or calendar.range.",
+        "span": "this deletes only this occurrence; future deletes it and every later one."
+      },
+      "v": "required",
+      "x": {
+        "id": "evt_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "span": "this",
+        "expected_version": 3
+      }
+    },
+    "calendar.create_calendar": {
+      "s": "Create a new calendar.",
+      "r": "The new calendar's ID (cal_) in ids.",
+      "p": {
+        "title": "Calendar name."
+      },
+      "x": {
+        "title": "Trips"
+      }
+    },
+    "notes.list": {
+      "s": "List note accounts, folders and notes with short previews, grouped like the Notes sidebar.",
+      "r": "accounts, folders (fld_ IDs) and sections of notes (nte_ IDs) with previews. Locked notes show only the title.",
+      "p": {
+        "folder": "Only notes in this folder (fld_ ID). Omit for all notes.",
+        "sort": "Order notes by modified (default), created or title."
+      },
+      "x": {
+        "sort": "modified"
+      }
+    },
+    "contacts.list": {
+      "s": "List all contacts in A to Z sections, with groups and containers.",
+      "r": "sections of contacts (con_ IDs) with display names, plus groups (grp_) and containers.",
+      "p": {
+        "group": "Only members of this group (grp_ ID).",
+        "sort": "Sort by given (first) or family (last) name.",
+        "display_order": "Show names given-first or family-first."
+      },
+      "x": {
+        "sort": "family"
+      }
+    },
+    "reminders.items": {
+      "s": "List reminders in one list, a smart list such as today, or with a tag.",
+      "r": "sections of reminders, each with id (rmd_), version and data (title, completed, due, list_id), plus subtasks and attachments.",
+      "p": {
+        "list": "A list ID (lst_) from reminders.lists.",
+        "smart": "A smart list instead of a list: today, scheduled, all, flagged, completed or assigned.",
+        "tag": "Only reminders with this tag, without the hash sign.",
+        "sort": "Order: manual (default), due, created, priority or title.",
+        "show_completed": "Include completed reminders. Default false."
+      },
+      "x": {
+        "smart": "today"
+      },
+      "d": "Give one of list, smart or tag."
+    },
+    "reminders.lists": {
+      "s": "List the reminder lists with their IDs, item counts, tags and smart-list counts.",
+      "r": "lists, each with list.id (lst_), list.version and list.data.title; smart counts; tags.",
+      "x": {}
+    },
+    "messages.chats": {
+      "s": "List recent message chats, newest first, with last message preview and unread count.",
+      "r": "chats, each with chat.id (cht_), title, participants, last_message and unread_count, plus next for paging.",
+      "p": {
+        "limit": "Chats per page, 1 to 200. Default 50.",
+        "filter": "all (default), known, unknown, unread, deleted, spam or archived.",
+        "participants": "Only the chat with exactly these phone numbers or emails, 1 to 32 of them."
+      },
+      "x": {
+        "limit": 20
+      }
+    },
+    "messages.thread": {
+      "s": "Read the messages in one chat, with reactions, attachments and reply counts.",
+      "r": "items: messages (msg_ IDs) with text, sender, sent_at and attachments (att_); before and after cursors for paging.",
+      "p": {
+        "chat_id": "The chat's cht_ ID from messages.chats or messages.search.",
+        "anchor": "Where to start: latest (default), oldest, unread, or a msg_ ID.",
+        "before": "Cursor for older messages: the before value from the previous page.",
+        "after": "Cursor for newer messages: the after value from the previous page.",
+        "limit": "Messages per page, 1 to 200. Default 50.",
+        "thread_originator_id": "Only this msg_ root message and its inline replies."
+      },
+      "x": {
+        "chat_id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "limit": 30
+      }
+    },
+    "messages.handles": {
+      "s": "Turn message sender handle IDs into names, initials and avatars.",
+      "r": "handles with address, display name and contact_id.",
+      "p": {
+        "ids": "Handle IDs (hdl_) from messages, up to 500."
+      },
+      "x": {
+        "ids": [
+          "hdl_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+        ]
+      }
+    },
+    "messages.search": {
+      "s": "Find messages by text, sender, media kind or unread state across all chats.",
+      "r": "items: matching messages (msg_ IDs) with chat_id, text and sender, newest first, plus next for paging.",
+      "p": {
+        "text": "Words the message or attachment name starts with, up to 512 characters.",
+        "kind": "Only messages with photos, links, documents or locations.",
+        "unread": "Only unread messages.",
+        "from_contact_id": "Only messages from this contact (con_ ID from contacts.lookup).",
+        "from_handle_id": "Only messages from this handle (hdl_ ID).",
+        "limit": "Messages per page, 1 to 200. Default 50."
+      },
+      "x": {
+        "text": "dinner",
+        "limit": 10
+      },
+      "d": "Give at least one of text, kind, unread or a sender."
+    },
+    "messages.collection": {
+      "s": "List the photos, links, documents or other media shared in one chat.",
+      "r": "items: attachments or link messages, newest first, plus next for paging.",
+      "p": {
+        "chat_id": "The chat's cht_ ID.",
+        "kind": "photos, videos, media, links, documents, locations or audio.",
+        "limit": "Items per page, 1 to 200. Default 50."
+      },
+      "x": {
+        "chat_id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "kind": "photos"
+      }
+    },
+    "replica.status": {
+      "s": "Show replication progress of this Apple Bridge copy (owner diagnostics).",
+      "r": "The replica's role, lag, cursor and blob backlog.",
+      "x": {}
+    },
+    "search": {
+      "s": "Full-text search over synced records in one collection or all of them.",
+      "r": "records: matching records with id, version and data, plus next for paging.",
+      "p": {
+        "text": "Words to look for.",
+        "collection": "Collection to search, such as notes.note or mail.message. Empty string searches all.",
+        "include_aliases": "Also return older IDs that now point to these records.",
+        "include_deleted": "Also return deleted records.",
+        "limit": "Maximum records, 1 to 10000. Default 100."
+      },
+      "x": {
+        "text": "passport",
+        "collection": "",
+        "limit": 20
+      },
+      "o": [
+        "id"
+      ]
+    },
+    "records.get": {
+      "s": "Fetch one synced record by collection and ID.",
+      "r": "records: the one record with id, version and data.",
+      "p": {
+        "collection": "The record's collection, such as reminders.reminder. The ID prefix tells you which: rmd_ is reminders.reminder.",
+        "id": "The record ID.",
+        "include_aliases": "Also return older IDs that now point to this record.",
+        "include_deleted": "Return the record even if it was deleted."
+      },
+      "x": {
+        "collection": "reminders.reminder",
+        "id": "rmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "o": [
+        "after",
+        "text",
+        "limit"
+      ]
+    },
+    "records.query": {
+      "s": "Page through any synced collection, such as phone calls, Safari history or voicemail.",
+      "r": "records with id, version and data, in ID order, plus next for paging.",
+      "p": {
+        "collection": "Collection to read, such as phone.call or safari.history. Empty string reads all collections.",
+        "id": "Only the record with this ID.",
+        "text": "Only records containing this text.",
+        "include_aliases": "Also return older IDs that now point to these records.",
+        "include_deleted": "Also return deleted records.",
+        "limit": "Records per page, 1 to 10000. Default 100."
+      },
+      "x": {
+        "collection": "phone.call",
+        "limit": 20
+      }
+    },
+    "sources.status": {
+      "s": "Show which Apple sources are synced and ready, and how fresh they are.",
+      "r": "records: one per source with state, record counts and last sync time.",
+      "x": {}
+    },
+    "commands.status": {
+      "s": "Check the outcome of an earlier change by its request ID.",
+      "r": "The change's state: pending, done, failed or indeterminate, with affected record IDs.",
+      "p": {
+        "command_id": "The request_id an earlier change returned.",
+        "resolve": "Ask the Mac to re-check an unfinished change now. Default false."
+      },
+      "x": {
+        "command_id": "cmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "o": [
+        "limit"
+      ]
+    },
+    "commands.list": {
+      "s": "List the changes this agent made recently, newest first.",
+      "r": "Changes with request ID, operation, state and affected record IDs.",
+      "p": {
+        "limit": "Maximum changes, 1 to 1000."
+      },
+      "x": {
+        "limit": 20
+      },
+      "o": [
+        "command_id",
+        "resolve"
+      ]
+    },
+    "reminders.create": {
+      "s": "Add a reminder to a list.",
+      "r": "The new reminder's ID (rmd_) in ids and the reminder in record.",
+      "p": {
+        "list_id": "List to add it to: a lst_ ID from reminders.lists.",
+        "title": "What to be reminded of.",
+        "notes": "Extra notes.",
+        "url": "A link stored on the reminder.",
+        "due": "When it is due: RFC 3339 timestamp, or YYYY-MM-DD for a date without a time.",
+        "due_all_day": "True if due is a whole day without a time.",
+        "start": "When to start: RFC 3339 timestamp or YYYY-MM-DD.",
+        "priority": "0 none, 1 high, 5 medium, 9 low."
+      },
+      "x": {
+        "list_id": "lst_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Call the plumber",
+        "due": "2026-11-12T09:00:00-06:00"
+      }
+    },
+    "reminders.create_list": {
+      "s": "Create a new reminder list.",
+      "r": "The new list's ID (lst_) in ids.",
+      "p": {
+        "title": "List name."
+      },
+      "x": {
+        "title": "Groceries"
+      }
+    },
+    "reminders.update": {
+      "s": "Change a reminder's title, notes, due date, priority or list.",
+      "r": "The reminder ID in ids and the updated reminder in record.",
+      "p": {
+        "id": "The reminder's rmd_ ID from reminders.items.",
+        "list_id": "Move it to this list (lst_ ID).",
+        "title": "New title.",
+        "notes": "New notes; empty string clears them.",
+        "url": "New link; empty string clears it.",
+        "due": "New due date: RFC 3339 timestamp or YYYY-MM-DD; empty string clears it.",
+        "due_all_day": "True if due is a whole day without a time.",
+        "start": "New start: RFC 3339 timestamp or YYYY-MM-DD; empty string clears it.",
+        "priority": "0 none, 1 high, 5 medium, 9 low."
+      },
+      "v": "required",
+      "x": {
+        "id": "rmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "due": "2026-11-13",
+        "due_all_day": true,
+        "expected_version": 2
+      }
+    },
+    "reminders.complete": {
+      "s": "Mark a reminder as done.",
+      "r": "The reminder ID in ids and the completed reminder in record.",
+      "p": {
+        "id": "The reminder's rmd_ ID from reminders.items."
+      },
+      "v": "required",
+      "x": {
+        "id": "rmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 2
+      }
+    },
+    "reminders.uncomplete": {
+      "s": "Mark a completed reminder as not done again.",
+      "r": "The reminder ID in ids and the reopened reminder in record.",
+      "p": {
+        "id": "The reminder's rmd_ ID from reminders.items with show_completed true."
+      },
+      "v": "required",
+      "x": {
+        "id": "rmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 3
+      }
+    },
+    "reminders.delete": {
+      "s": "Delete a reminder.",
+      "r": "The deleted reminder's ID in ids.",
+      "p": {
+        "id": "The reminder's rmd_ ID from reminders.items."
+      },
+      "v": "required",
+      "x": {
+        "id": "rmd_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 2
+      }
+    },
+    "contacts.lookup": {
+      "s": "Find people by part of a name, phone number or email.",
+      "r": "records: up to 25 contacts (con_ IDs) with names, phones and emails.",
+      "p": {
+        "q": "Part of a name, a phone number or an email, 1 to 64 characters.",
+        "limit": "Maximum contacts, 1 to 25. Default 25.",
+        "name": "Older exact-name filter; prefer q.",
+        "handle": "Exact phone number or email, normalised."
+      },
+      "x": {
+        "q": "Ana"
+      }
+    },
+    "contacts.create": {
+      "s": "Create a contact.",
+      "r": "The new contact's ID (con_) in ids and the contact in record.",
+      "p": {
+        "given_name": "First name.",
+        "family_name": "Last name.",
+        "middle_name": "Middle name.",
+        "name_prefix": "Prefix such as Dr.",
+        "name_suffix": "Suffix such as Jr.",
+        "nickname": "Nickname.",
+        "previous_family_name": "Maiden or previous last name.",
+        "phonetic_given_name": "How to pronounce the first name.",
+        "phonetic_middle_name": "How to pronounce the middle name.",
+        "phonetic_family_name": "How to pronounce the last name.",
+        "phonetic_organization": "How to pronounce the company name.",
+        "organization": "Company.",
+        "department": "Department.",
+        "job_title": "Job title.",
+        "emails": "Email addresses.",
+        "phones": "Phone numbers.",
+        "urls": "Web addresses.",
+        "postal_addresses": "Postal addresses.",
+        "postal_addresses.value": "Address fields: street, city, state, postal_code, country, iso_country_code, sub_administrative_area, sub_locality.",
+        "social_profiles": "Social profiles.",
+        "social_profiles.value": "Profile fields: service, username, url, user_identifier.",
+        "instant_messages": "Instant message accounts.",
+        "relations": "Related people, such as mother or assistant, with the person's name as value.",
+        "dates": "Other dates such as an anniversary.",
+        "dates.value": "The date.",
+        "birthday": "Birthday. Year is optional.",
+        "non_gregorian_birthday": "Birthday in another calendar, such as chinese or hebrew.",
+        "birthday.calendar": "Calendar of the date, such as gregorian. Default gregorian.",
+        "birthday.year": "Year, if known.",
+        "birthday.month": "Month, 1 to 12.",
+        "birthday.day": "Day of the month, 1 to 31.",
+        "birthday.is_leap_month": "True for a leap month in lunar calendars.",
+        "image": "Contact photo.",
+        "image.base64": "Image bytes, base64 encoded, 8 MB at most."
+      },
+      "x": {
+        "given_name": "Ana",
+        "family_name": "Novak",
+        "phones": [
+          {
+            "label": "mobile",
+            "value": "+38640123456"
+          }
+        ]
+      }
+    },
+    "contacts.update": {
+      "s": "Change fields of a contact; lists such as phones replace the old list.",
+      "r": "The contact ID in ids and the updated contact in record.",
+      "p": {
+        "id": "The contact's con_ ID from contacts.lookup or contacts.list.",
+        "given_name": "First name.",
+        "family_name": "Last name.",
+        "middle_name": "Middle name.",
+        "name_prefix": "Prefix such as Dr.",
+        "name_suffix": "Suffix such as Jr.",
+        "nickname": "Nickname.",
+        "previous_family_name": "Maiden or previous last name.",
+        "phonetic_given_name": "How to pronounce the first name.",
+        "phonetic_middle_name": "How to pronounce the middle name.",
+        "phonetic_family_name": "How to pronounce the last name.",
+        "phonetic_organization": "How to pronounce the company name.",
+        "organization": "Company.",
+        "department": "Department.",
+        "job_title": "Job title.",
+        "emails": "Email addresses, replacing the old list.",
+        "phones": "Phone numbers, replacing the old list.",
+        "urls": "Web addresses, replacing the old list.",
+        "postal_addresses": "Postal addresses, replacing the old list.",
+        "postal_addresses.value": "Address fields: street, city, state, postal_code, country, iso_country_code, sub_administrative_area, sub_locality.",
+        "social_profiles": "Social profiles, replacing the old list.",
+        "social_profiles.value": "Profile fields: service, username, url, user_identifier.",
+        "instant_messages": "Instant message accounts, replacing the old list.",
+        "relations": "Related people, replacing the old list.",
+        "dates": "Other dates, replacing the old list.",
+        "dates.value": "The date.",
+        "birthday": "Birthday. Year is optional.",
+        "non_gregorian_birthday": "Birthday in another calendar.",
+        "birthday.calendar": "Calendar of the date, such as gregorian. Default gregorian.",
+        "birthday.year": "Year, if known.",
+        "birthday.month": "Month, 1 to 12.",
+        "birthday.day": "Day of the month, 1 to 31.",
+        "birthday.is_leap_month": "True for a leap month in lunar calendars.",
+        "image": "New contact photo.",
+        "image.base64": "Image bytes, base64 encoded, 8 MB at most."
+      },
+      "v": "required",
+      "x": {
+        "id": "con_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "job_title": "Architect",
+        "expected_version": 4
+      }
+    },
+    "contacts.delete": {
+      "s": "Delete a contact.",
+      "r": "The deleted contact's ID in ids.",
+      "p": {
+        "id": "The contact's con_ ID."
+      },
+      "v": "required",
+      "x": {
+        "id": "con_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 4
+      }
+    },
+    "contacts.create_group": {
+      "s": "Create a contact group.",
+      "r": "The new group's ID (grp_) in ids.",
+      "p": {
+        "name": "Group name, up to 256 characters."
+      },
+      "x": {
+        "name": "Book club"
+      }
+    },
+    "contacts.rename_group": {
+      "s": "Rename a contact group.",
+      "r": "The group ID in ids.",
+      "p": {
+        "id": "The group's grp_ ID from contacts.list.",
+        "name": "New name, up to 256 characters."
+      },
+      "v": "required",
+      "x": {
+        "id": "grp_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "name": "Reading club",
+        "expected_version": 1
+      }
+    },
+    "contacts.delete_group": {
+      "s": "Delete a contact group; its contacts stay.",
+      "r": "The deleted group's ID in ids.",
+      "p": {
+        "id": "The group's grp_ ID from contacts.list."
+      },
+      "v": "required",
+      "x": {
+        "id": "grp_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 1
+      }
+    },
+    "contacts.add_member": {
+      "s": "Add a contact to a group.",
+      "r": "The group ID in ids.",
+      "p": {
+        "id": "The group's grp_ ID.",
+        "contact_id": "The contact's con_ ID, in the same account as the group."
+      },
+      "v": "required",
+      "x": {
+        "id": "grp_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "contact_id": "con_01J9Z8Y7X6W5V4T3S2R1Q0P9N9",
+        "expected_version": 1
+      }
+    },
+    "contacts.remove_member": {
+      "s": "Remove a contact from a group without deleting the contact.",
+      "r": "The group ID in ids.",
+      "p": {
+        "id": "The group's grp_ ID.",
+        "contact_id": "The contact's con_ ID."
+      },
+      "v": "required",
+      "x": {
+        "id": "grp_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "contact_id": "con_01J9Z8Y7X6W5V4T3S2R1Q0P9N9",
+        "expected_version": 2
+      }
+    },
+    "notes.create": {
+      "s": "Create a note with plain text in a folder.",
+      "r": "The new note's ID (nte_) in ids and the note in record.",
+      "p": {
+        "folder_id": "Folder to put it in: a fld_ ID from notes.list.",
+        "title": "Note title, shown as its first line.",
+        "plain_text": "The body as plain text."
+      },
+      "x": {
+        "folder_id": "fld_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Packing list",
+        "plain_text": "Passport\nCharger"
+      }
+    },
+    "notes.update": {
+      "s": "Replace or append a note's text, or rewrite its body as Notes HTML.",
+      "r": "The note ID in ids and the updated note in record.",
+      "p": {
+        "id": "The note's nte_ ID from notes.list.",
+        "plain_text": "New text. With mode append it is added at the end; otherwise it replaces the body. Give this or html.",
+        "mode": "replace (default) or append.",
+        "html": "The whole body as Notes HTML, keeping the note's existing structure; for formatting changes. Cannot be combined with plain_text or mode append. Locked notes and unsupported rich content are refused."
+      },
+      "a": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plain_text": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "append"
+          ]
+        },
+        "html": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "q": [
+        "id"
+      ],
+      "v": "required",
+      "x": {
+        "id": "nte_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "plain_text": "\nSunscreen",
+        "mode": "append",
+        "expected_version": 2
+      }
+    },
+    "notes.delete": {
+      "s": "Delete a note.",
+      "r": "The deleted note's ID in ids.",
+      "p": {
+        "id": "The note's nte_ ID."
+      },
+      "v": "required",
+      "x": {
+        "id": "nte_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 2
+      }
+    },
+    "notes.create_folder": {
+      "s": "Create a Notes folder.",
+      "r": "The new folder's ID (fld_) in ids.",
+      "p": {
+        "title": "Folder name."
+      },
+      "x": {
+        "title": "Recipes"
+      }
+    },
+    "messages.send": {
+      "s": "Send a text or files to an existing chat, or to one phone number or email.",
+      "r": "The sent message's ID (msg_) in ids once the Messages app shows it. That proves it left this Mac, not that it was delivered.",
+      "p": {
+        "chat_id": "An existing chat's cht_ ID from messages.chats. Give this, or handles with service.",
+        "handles": "Exactly one phone number in international form or email, for a new conversation. Needs service.",
+        "service": "iMessage, SMS or RCS. Only with handles; a chat_id already has its service.",
+        "text": "Message text, up to 65536 characters. Give text, files or both.",
+        "resend_of": "To resend a message that failed, its msg_ ID. Needs chat_id."
+      },
+      "x": {
+        "chat_id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "text": "On my way"
+      },
+      "d": "Rules: give chat_id or handles plus service, not both; give text or files."
+    },
+    "messages.reply": {
+      "s": "Reply inline to a specific message, starting or continuing its thread.",
+      "r": "The reply's ID (msg_) in ids.",
+      "p": {
+        "id": "The msg_ ID of the message to reply to.",
+        "text": "Reply text.",
+        "part_index": "Which part of the message to reply to, from 0. Default 0."
+      },
+      "v": "optional",
+      "x": {
+        "id": "msg_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "text": "Sounds good"
+      }
+    },
+    "messages.react": {
+      "s": "Add or remove a reaction (tapback) on a message.",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The msg_ ID to react to.",
+        "reaction": "love, like, dislike, laugh, emphasize, question, or emoji.",
+        "emoji": "The emoji, when reaction is emoji.",
+        "remove": "True to remove this reaction instead of adding it.",
+        "part_index": "Which part of the message, from 0. Default 0."
+      },
+      "v": "optional",
+      "x": {
+        "id": "msg_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "reaction": "like"
+      }
+    },
+    "messages.edit": {
+      "s": "Edit the text of a message you sent recently (iMessage only).",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The msg_ ID of your sent message.",
+        "text": "Replacement text.",
+        "part_index": "Which part, from 0. Default 0."
+      },
+      "v": "required",
+      "x": {
+        "id": "msg_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "text": "On my way, 10 minutes",
+        "expected_version": 1
+      }
+    },
+    "messages.unsend": {
+      "s": "Unsend a message you sent in the last few minutes (iMessage only).",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The msg_ ID of your sent message.",
+        "part_index": "Which part, from 0. Default 0."
+      },
+      "v": "required",
+      "x": {
+        "id": "msg_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 1
+      }
+    },
+    "messages.mark_read": {
+      "s": "Mark a chat as read.",
+      "r": "The chat ID in ids.",
+      "p": {
+        "id": "The chat's cht_ ID from messages.chats."
+      },
+      "v": "optional",
+      "x": {
+        "id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "messages.mark_unread": {
+      "s": "Mark a chat as unread.",
+      "r": "The chat ID in ids.",
+      "p": {
+        "id": "The chat's cht_ ID from messages.chats."
+      },
+      "v": "optional",
+      "x": {
+        "id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "messages.delete_message": {
+      "s": "Delete one message from this Mac's copy of a chat.",
+      "r": "The deleted message's ID in ids.",
+      "p": {
+        "id": "The msg_ ID."
+      },
+      "v": "required",
+      "x": {
+        "id": "msg_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 1
+      }
+    },
+    "messages.delete_chat": {
+      "s": "Delete a whole chat from this Mac.",
+      "r": "The deleted chat's ID in ids.",
+      "p": {
+        "id": "The chat's cht_ ID."
+      },
+      "v": "required",
+      "x": {
+        "id": "cht_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 5
+      }
+    },
+    "helper.version": {
+      "s": "Report the Apple Bridge helper app's version (owner diagnostics).",
+      "r": "The helper's version and build.",
+      "x": {}
+    },
+    "focus.set": {
+      "s": "Turn Do Not Disturb on or off, optionally until a time.",
+      "r": "Whether Do Not Disturb is now on, read back from the Mac.",
+      "p": {
+        "mode": "Only Do Not Disturb is supported.",
+        "on": "True to turn it on, false to turn it off.",
+        "until": "Turn it off again at this RFC 3339 timestamp. Only with on true."
+      },
+      "x": {
+        "mode": "Do Not Disturb",
+        "on": true,
+        "until": "2026-11-12T18:00:00-06:00"
+      }
+    },
+    "pdf.text": {
+      "s": "Extract the text of a PDF, page by page.",
+      "r": "The text of each page.",
+      "a": {
+        "data_base64": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blob": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string"
+            },
+            "query_id": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "x": {
+        "blob": {
+          "digest": "4f0c0f5e8f6a1c6b2a7d6f1e3b9c0d2e4f6a8b0c1d3e5f7a9b1c3d5e7f9a1b3c",
+          "record_id": "mat_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+          "collection": "mail.attachment"
+        }
+      },
+      "d": "Unlocked PDFs up to 1000 pages and 200000 bytes of text."
+    },
+    "shortcuts.run": {
+      "s": "Run a Shortcut by name with optional text input.",
+      "r": "The shortcut's output, base64 encoded, and its exit status. It shows the shortcut finished, not what it changed.",
+      "p": {
+        "shortcut": "The shortcut's exact name, from records.query on shortcuts.shortcut.",
+        "input": "Text passed to the shortcut, up to 16384 bytes.",
+        "input_base64": "Binary input, base64 encoded, up to 16 KiB. Use instead of input.",
+        "timeout_ms": "Give up after this many milliseconds, up to 300000."
+      },
+      "x": {
+        "shortcut": "Log Water",
+        "input": "250"
+      }
+    },
+    "pdf.search": {
+      "s": "Find text in a PDF and get the pages and positions of each match.",
+      "r": "Matches with page number and character offsets.",
+      "a": {
+        "data_base64": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blob": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string"
+            },
+            "query_id": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            }
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Text to find, case-insensitive."
+        }
+      },
+      "q": [
+        "text"
+      ],
+      "x": {
+        "data_base64": "JVBERi0xLjQK",
+        "text": "invoice total"
+      }
+    },
+    "files.search": {
+      "s": "Search the opted-in folders for files by name, content, kind, tag or date.",
+      "r": "Matching paths with their root, up to 100.",
+      "a": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "What to look for."
+        },
+        "field": {
+          "type": "string",
+          "enum": [
+            "name",
+            "content",
+            "kind",
+            "tag",
+            "date"
+          ],
+          "description": "What query matches: name (default), content, kind, tag or date."
+        }
+      },
+      "q": [
+        "query"
+      ],
+      "x": {
+        "query": "lease",
+        "field": "name"
+      }
+    },
+    "vision.ocr": {
+      "s": "Read the text in an image.",
+      "r": "Recognised lines of text with positions and confidence.",
+      "a": {
+        "data_base64": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blob": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "digest"
+          ],
+          "properties": {
+            "digest": {
+              "type": "string"
+            },
+            "query_id": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string"
+            },
+            "collection": {
+              "type": "string"
+            }
+          }
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Languages to expect, as locales such as en-US. Default: detect automatically."
+        }
+      },
+      "x": {
+        "blob": {
+          "digest": "4f0c0f5e8f6a1c6b2a7d6f1e3b9c0d2e4f6a8b0c1d3e5f7a9b1c3d5e7f9a1b3c",
+          "record_id": "att_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+          "collection": "messages.attachment"
+        }
+      },
+      "d": "Images up to 16000 pixels a side and 40 million pixels."
+    },
+    "files.read": {
+      "s": "Read a file from an opted-in folder.",
+      "r": "The file's size and digest, and its bytes as a blob to fetch with blobs.read.",
+      "a": {
+        "root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "q": [
+        "root",
+        "path"
+      ],
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "lease.pdf"
+      }
+    },
+    "reminders.rename_list": {
+      "s": "Rename a reminder list.",
+      "r": "The list ID in ids.",
+      "p": {
+        "id": "The list's lst_ ID from reminders.lists.",
+        "title": "New name."
+      },
+      "v": "required",
+      "x": {
+        "id": "lst_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Shopping",
+        "expected_version": 1
+      }
+    },
+    "files.create": {
+      "s": "Create a new small file in an opted-in folder.",
+      "r": "The file's path and digest, read back from disk.",
+      "x": {
+        "root": "/Users/owner/Documents",
+        "name": "hello.txt",
+        "content_base64": "aGVsbG8K",
+        "digest": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+      }
+    },
+    "reminders.delete_list": {
+      "s": "Delete a reminder list and the reminders in it.",
+      "r": "The deleted list's ID in ids.",
+      "p": {
+        "id": "The list's lst_ ID from reminders.lists."
+      },
+      "v": "required",
+      "x": {
+        "id": "lst_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "expected_version": 1
+      }
+    },
+    "files.write": {
+      "s": "Overwrite a small file in an opted-in folder.",
+      "r": "The file's path and new digest, read back from disk.",
+      "x": {
+        "root": "/Users/owner/Documents",
+        "name": "hello.txt",
+        "content_base64": "aGVsbG8K",
+        "digest": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+      }
+    },
+    "notes.move": {
+      "s": "Move a note to another folder.",
+      "r": "The note ID in ids.",
+      "p": {
+        "id": "The note's nte_ ID.",
+        "folder_id": "Destination folder's fld_ ID from notes.list."
+      },
+      "v": "required",
+      "x": {
+        "id": "nte_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "folder_id": "fld_01J9Z8Y7X6W5V4T3S2R1Q0P9N9",
+        "expected_version": 2
+      }
+    },
+    "files.move": {
+      "s": "Move a file or folder to another folder inside the same opted-in root.",
+      "r": "The new path, read back from disk.",
+      "p": {
+        "path": "Current path inside root.",
+        "parent": "Destination folder inside root. Omit for root itself.",
+        "name": "Name at the destination."
+      },
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "inbox/lease.pdf",
+        "parent": "home",
+        "name": "lease.pdf"
+      }
+    },
+    "notes.rename_folder": {
+      "s": "Rename a test folder in Notes (only folders whose name starts with Bridge Test [ab-test).",
+      "r": "The folder ID in ids.",
+      "p": {
+        "id": "The folder's fld_ ID.",
+        "title": "New name. It must start with Bridge Test [ab-test; other folders cannot be renamed yet."
+      },
+      "v": "required",
+      "x": {
+        "id": "fld_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Bridge Test [ab-test] archive",
+        "expected_version": 1
+      }
+    },
+    "speech.synthesize": {
+      "s": "Turn text into spoken audio and return it as a WAV file.",
+      "r": "A WAV file as a blob to fetch with blobs.read.",
+      "a": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "description": "Text to speak, up to 2048 bytes."
+        }
+      },
+      "q": [
+        "text"
+      ],
+      "x": {
+        "text": "Your package has arrived."
+      }
+    },
+    "files.rename": {
+      "s": "Rename a file or folder in an opted-in folder.",
+      "r": "The new path, read back from disk.",
+      "p": {
+        "path": "Current path inside root.",
+        "parent": "Folder that holds it, inside root.",
+        "name": "New name."
+      },
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "scan1.pdf",
+        "name": "passport-scan.pdf"
+      }
+    },
+    "files.trash": {
+      "s": "Move a file or folder in an opted-in folder to the Trash.",
+      "r": "Where it went in the Trash.",
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "old/notes.txt"
+      }
+    },
+    "files.set_tags": {
+      "s": "Set the Finder tags of a file, replacing its old tags.",
+      "r": "The tags read back from disk.",
+      "p": {
+        "tags": "Tag names, up to 64. An empty list removes all tags."
+      },
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "lease.pdf",
+        "tags": [
+          "Important"
+        ]
+      }
+    },
+    "files.download": {
+      "s": "Download an iCloud Drive file so it is stored on the Mac.",
+      "r": "Whether it is now downloaded.",
+      "x": {
+        "root": "/Users/owner/Library/Mobile Documents/com~apple~CloudDocs",
+        "path": "taxes.pdf"
+      }
+    },
+    "speech.say": {
+      "s": "Speak text out loud through the Mac's speakers.",
+      "r": "Confirmation that speaking finished.",
+      "p": {
+        "text": "Text to speak, up to 2048 bytes."
+      },
+      "x": {
+        "text": "Dinner is ready"
+      }
+    },
+    "capture.play_sound": {
+      "s": "Play a built-in macOS alert sound.",
+      "r": "Confirmation that the sound finished.",
+      "p": {
+        "name": "Sound name: Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Submarine or Tink."
+      },
+      "x": {
+        "name": "Glass"
+      }
+    },
+    "files.evict": {
+      "s": "Remove the local copy of an iCloud Drive file, keeping it in iCloud.",
+      "r": "Whether it is now cloud-only.",
+      "x": {
+        "root": "/Users/owner/Library/Mobile Documents/com~apple~CloudDocs",
+        "path": "taxes.pdf"
+      }
+    },
+    "mail.body": {
+      "s": "Read the full body of one mail message.",
+      "r": "The message body as text, or a blob to fetch with blobs.read when it is large.",
+      "a": {
+        "message_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The message's mml_ ID from records.query or search on mail.message."
+        }
+      },
+      "q": [
+        "message_id"
+      ],
+      "x": {
+        "message_id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "maps.open": {
+      "s": "Open the Maps app on the Mac at a place, or with directions.",
+      "r": "Confirmation that Maps came to the front.",
+      "p": {
+        "lat": "Latitude of the place to show. Give lat and lon, or from, to and mode.",
+        "lon": "Longitude of the place to show.",
+        "mode": "For directions: driving, walking, transit or cycling."
+      },
+      "x": {
+        "lat": 46.0569,
+        "lon": 14.5058
+      },
+      "d": "Rules: give lat and lon to show a place, or from, to and mode for directions."
+    },
+    "maps.snapshot": {
+      "s": "Render a map image of an area with optional markers.",
+      "r": "A PNG image as a blob to fetch with blobs.read.",
+      "a": {
+        "center": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          }
+        },
+        "span": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 180,
+          "description": "Height of the map in degrees of latitude, such as 0.05 for a neighbourhood."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 1024,
+          "description": "Image width in pixels, 128 to 1024."
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 1024,
+          "description": "Image height in pixels, 128 to 1024."
+        },
+        "markers": {
+          "type": "array",
+          "maxItems": 50,
+          "description": "Pins to draw, up to 50.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lon": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            }
+          }
+        }
+      },
+      "q": [
+        "center",
+        "span",
+        "width",
+        "height"
+      ],
+      "x": {
+        "center": {
+          "lat": 46.0569,
+          "lon": 14.5058
+        },
+        "span": 0.05,
+        "width": 512,
+        "height": 512
+      }
+    },
+    "location.current": {
+      "s": "Get the Mac's current location.",
+      "r": "Latitude, longitude and accuracy. An agent set to ask first gets awaiting_approval; repeat the same call with the same request_id within ten minutes after the owner approves.",
+      "a": {},
+      "x": {}
+    },
+    "location.geocode": {
+      "s": "Turn an address into coordinates.",
+      "r": "Matching places with latitude, longitude and formatted address.",
+      "a": {
+        "address": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "description": "Address or place name to look up."
+        }
+      },
+      "q": [
+        "address"
+      ],
+      "x": {
+        "address": "Presernov trg 1, Ljubljana"
+      }
+    },
+    "location.reverse_geocode": {
+      "s": "Turn coordinates into an address.",
+      "r": "The address and place name at that point.",
+      "a": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "q": [
+        "lat",
+        "lon"
+      ],
+      "x": {
+        "lat": 46.0514,
+        "lon": 14.506
+      }
+    },
+    "maps.search": {
+      "s": "Search for places by name or type near a point.",
+      "r": "Up to 50 places with name, address, coordinates and distance.",
+      "a": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "What to find, such as coffee or a business name."
+        },
+        "near": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          }
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        }
+      },
+      "q": [
+        "query",
+        "near"
+      ],
+      "x": {
+        "query": "pharmacy",
+        "near": {
+          "lat": 46.0569,
+          "lon": 14.5058
+        },
+        "radius": 2000
+      }
+    },
+    "maps.nearby": {
+      "s": "List places of a category, such as restaurants, near a point.",
+      "r": "Up to 50 places with name, address, coordinates and distance.",
+      "a": {
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Point-of-interest category, such as restaurant, cafe or parking."
+        },
+        "near": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          }
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        }
+      },
+      "q": [
+        "category",
+        "near"
+      ],
+      "x": {
+        "category": "restaurant",
+        "near": {
+          "lat": 46.0569,
+          "lon": 14.5058
+        }
+      }
+    },
+    "maps.directions": {
+      "s": "Get routes between two points with distance, travel time and steps.",
+      "r": "Up to 3 routes; distance in meters, duration in milliseconds.",
+      "a": {
+        "from": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          }
+        },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "lon": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          }
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "driving",
+            "walking",
+            "cycling"
+          ],
+          "description": "driving, walking or cycling. Use maps.eta for transit."
+        }
+      },
+      "q": [
+        "from",
+        "to",
+        "mode"
+      ],
+      "x": {
+        "from": {
+          "lat": 46.0569,
+          "lon": 14.5058
+        },
+        "to": {
+          "lat": 46.3683,
+          "lon": 14.1146
+        },
+        "mode": "driving"
+      }
+    },
+    "maps.eta": {
+      "s": "Estimate travel time and distance between two points, including transit.",
+      "r": "Duration in milliseconds and distance in meters.",
+      "x": {
+        "from": {
+          "lat": 37.7955,
+          "lon": -122.3937
+        },
+        "to": {
+          "lat": 37.8024,
+          "lon": -122.4058
+        },
+        "mode": "walking"
+      }
+    },
+    "mail.create_draft": {
+      "s": "Save a new mail draft without sending it.",
+      "r": "Confirmation that the draft was saved, read back from Mail.",
+      "p": {
+        "to": "Recipient email addresses.",
+        "cc": "Copy recipients.",
+        "subject": "Subject line.",
+        "body": "Plain text body."
+      },
+      "x": {
+        "to": [
+          "ana@example.com"
+        ],
+        "subject": "Saturday",
+        "body": "Are we still on for Saturday?"
+      }
+    },
+    "shortcuts.actions": {
+      "s": "List the App Intents actions installed apps offer to Shortcuts.",
+      "r": "Apps and their actions with titles; for discovery only.",
+      "a": {},
+      "x": {}
+    },
+    "mail.send": {
+      "s": "Send a new email from the default account.",
+      "r": "Confirmation that Mail accepted it, read back from the Sent mailbox. That is not proof of delivery.",
+      "p": {
+        "to": "Recipient email addresses.",
+        "cc": "Copy recipients.",
+        "subject": "Subject line.",
+        "body": "Plain text body."
+      },
+      "x": {
+        "to": [
+          "ana@example.com"
+        ],
+        "subject": "Saturday",
+        "body": "See you at 7."
+      }
+    },
+    "mail.move": {
+      "s": "Move a mail message to another mailbox.",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The message's mml_ ID.",
+        "account": "Account name of the destination mailbox, from records.query on mail.mailbox.",
+        "mailbox": "Destination mailbox name, such as Archive."
+      },
+      "v": "optional",
+      "x": {
+        "id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "account": "iCloud",
+        "mailbox": "Archive"
+      }
+    },
+    "mail.set_flag": {
+      "s": "Flag or unflag a mail message.",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The message's mml_ ID.",
+        "flagged": "True to flag, false to unflag."
+      },
+      "v": "optional",
+      "x": {
+        "id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "flagged": true
+      }
+    },
+    "mail.mark_read": {
+      "s": "Mark a mail message read or unread.",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The message's mml_ ID.",
+        "read": "True for read, false for unread."
+      },
+      "v": "optional",
+      "x": {
+        "id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "read": true
+      }
+    },
+    "mail.delete": {
+      "s": "Move a mail message to the Trash.",
+      "r": "The message ID in ids.",
+      "p": {
+        "id": "The message's mml_ ID."
+      },
+      "v": "optional",
+      "x": {
+        "id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "mac.set_volume": {
+      "s": "Set the Mac's output volume.",
+      "r": "The volume read back from the Mac.",
+      "p": {
+        "volume": "Volume from 0 to 100."
+      },
+      "x": {
+        "volume": 30
+      }
+    },
+    "mac.set_mute": {
+      "s": "Mute or unmute the Mac's sound.",
+      "r": "The mute state read back from the Mac.",
+      "p": {
+        "muted": "True to mute, false to unmute."
+      },
+      "x": {
+        "muted": true
+      }
+    },
+    "pdf.annotate": {
+      "s": "Add notes or highlights to a PDF and get the annotated copy.",
+      "r": "The annotated PDF as a blob to fetch with blobs.read. The original is unchanged.",
+      "p": {
+        "annotations": "Up to 100 annotations.",
+        "annotations.page": "Page number, from 1.",
+        "annotations.type": "note or highlight.",
+        "annotations.text": "Note text; required for note.",
+        "annotations.x": "Left edge in PDF points from the page's left.",
+        "annotations.y": "Bottom edge in PDF points from the page's bottom.",
+        "annotations.width": "Width in PDF points.",
+        "annotations.height": "Height in PDF points."
+      },
+      "x": {
+        "data_base64": "JVBERi0xLjQK",
+        "annotations": [
+          {
+            "page": 1,
+            "type": "note",
+            "text": "Check this",
+            "x": 72,
+            "y": 700,
+            "width": 20,
+            "height": 20
+          }
+        ]
+      },
+      "d": "Rules: give data_base64 or blob, not both."
+    },
+    "mac.set_appearance": {
+      "s": "Switch the Mac between light and dark mode.",
+      "r": "The appearance read back from the Mac.",
+      "p": {
+        "appearance": "light or dark."
+      },
+      "x": {
+        "appearance": "dark"
+      }
+    },
+    "mac.launch_app": {
+      "s": "Open an app on the Mac.",
+      "r": "Confirmation that the app is running.",
+      "x": {
+        "bundle_id": "com.apple.Safari"
+      }
+    },
+    "mac.activate_app": {
+      "s": "Bring a running app to the front.",
+      "r": "Confirmation that the app is frontmost.",
+      "x": {
+        "bundle_id": "com.apple.Notes"
+      }
+    },
+    "mac.quit_app": {
+      "s": "Quit an app on the Mac.",
+      "r": "Confirmation that the app is no longer running.",
+      "x": {
+        "bundle_id": "com.apple.Music"
+      }
+    },
+    "mac.keep_awake": {
+      "s": "Keep the Mac from sleeping, for a while or until turned off.",
+      "r": "Whether keep-awake is now on.",
+      "p": {
+        "on": "True to keep awake, false to allow sleep again.",
+        "duration": "Seconds to stay awake, up to 86400. 0 or omitted means until turned off."
+      },
+      "x": {
+        "on": true,
+        "duration": 3600
+      }
+    },
+    "mac.clipboard_write": {
+      "s": "Put text on the Mac's clipboard.",
+      "r": "Confirmation the clipboard holds the text. The text is not kept in history.",
+      "p": {
+        "text": "Text to copy, up to 65536 bytes."
+      },
+      "x": {
+        "text": "Order 4471"
+      }
+    },
+    "mac.notify": {
+      "s": "Show a notification on the Mac.",
+      "r": "Confirmation the notification was posted.",
+      "p": {
+        "title": "Notification title, up to 256 bytes.",
+        "body": "Body text, up to 4096 bytes.",
+        "action_url": "Link opened when the owner clicks it, https only."
+      },
+      "x": {
+        "title": "Build finished",
+        "body": "All tests passed."
+      }
+    },
+    "mac.open_settings": {
+      "s": "Open a System Settings pane.",
+      "r": "Confirmation that the pane opened.",
+      "p": {
+        "pane": "general, notifications, network, displays, wallpaper or privacy."
+      },
+      "x": {
+        "pane": "displays"
+      }
+    },
+    "files.transform": {
+      "s": "Convert or resize an image or PDF in an opted-in folder (not available yet).",
+      "r": "Nothing yet: the operation is not implemented and always returns unsupported.",
+      "x": {
+        "root": "/Users/owner/Documents",
+        "path": "scan.png"
+      },
+      "u": "Not implemented yet; every call returns unsupported."
+    },
+    "capture.camera_photo": {
+      "s": "Take a photo with the Mac's camera.",
+      "r": "The photo as a blob to fetch with blobs.read.",
+      "x": {}
+    },
+    "capture.record_audio": {
+      "s": "Record audio from the Mac's microphone.",
+      "r": "The recording as a blob to fetch with blobs.read.",
+      "p": {
+        "seconds": "Length in seconds, 1 to 60."
+      },
+      "x": {
+        "seconds": 10
+      }
+    },
+    "capture.screenshot": {
+      "s": "Take a screenshot of a display or a window.",
+      "r": "The image as a blob to fetch with blobs.read.",
+      "p": {
+        "display": "Display number, from 1. Omit for the main display.",
+        "window": "Window number instead of a display."
+      },
+      "x": {}
+    },
+    "health.summary": {
+      "s": "Summarise Health samples for a day or a week, grouped by type and unit.",
+      "r": "metrics: totals, averages and counts per sample type for the period.",
+      "p": {
+        "period": "day or week (weeks start on Monday).",
+        "date": "The day, or a day in the week, as YYYY-MM-DD.",
+        "device_id": "Only samples from this device."
+      },
+      "x": {
+        "period": "day",
+        "date": "2026-11-10"
+      }
+    },
+    "iphone.alarm.cancel": {
+      "s": "Cancel an alarm Apple Bridge set on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "id": "The alarm's UUID from iphone.alarm.create or iphone.alarm.list."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b"
+      }
+    },
+    "iphone.alarm.create": {
+      "s": "Set an alarm on the iPhone.",
+      "r": "The alarm's UUID, confirmed by the phone.",
+      "p": {
+        "fire_at": "When it rings, as Unix seconds in the future.",
+        "id": "A UUID to use for the alarm. Omit to let the phone choose.",
+        "title": "Alarm label, up to 200 characters.",
+        "snooze_seconds": "Snooze length in seconds."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "fire_at": 1794470400,
+        "title": "Wake up"
+      }
+    },
+    "iphone.alarm.list": {
+      "s": "List the alarms and timers Apple Bridge set on the iPhone.",
+      "r": "Alarms and timers with UUID, title and time.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.alarm.update": {
+      "s": "Change the time or label of an alarm on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "id": "The alarm's UUID.",
+        "fire_at": "New ring time as Unix seconds in the future.",
+        "title": "New label, up to 200 characters.",
+        "snooze_seconds": "Snooze length in seconds."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+        "fire_at": 1794474000
+      }
+    },
+    "iphone.capture.audio": {
+      "s": "Record audio on the iPhone after the owner approves with Face ID.",
+      "r": "The recording, uploaded to the Mac.",
+      "p": {
+        "seconds": "Length in seconds, 1 to 10."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "seconds": 5
+      }
+    },
+    "iphone.capture.photo": {
+      "s": "Take a photo on the iPhone after the owner approves with Face ID.",
+      "r": "The photo, uploaded to the Mac.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "iphone.device.status": {
+      "s": "Get the iPhone's battery, storage and connectivity status.",
+      "r": "Battery level, charging state, storage and network, as reported by the phone.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.devices": {
+      "s": "List the paired iPhones and their device IDs.",
+      "r": "Paired iPhones with id (iphone:...) to use as device_id.",
+      "x": {}
+    },
+    "iphone.geofence.add": {
+      "s": "Watch a circular area on the iPhone and record when it is entered or left.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "name": "Name for the area, up to 100 characters.",
+        "latitude": "Centre latitude, -90 to 90.",
+        "longitude": "Centre longitude, -180 to 180.",
+        "radius": "Radius in meters, 1 to 100000."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "name": "Office",
+        "latitude": 46.0569,
+        "longitude": 14.5058,
+        "radius": 150
+      }
+    },
+    "iphone.geofence.list": {
+      "s": "List the areas the iPhone is watching.",
+      "r": "The geofences, also written as iphone.location records.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.geofence.remove": {
+      "s": "Stop watching an area on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "name": "The area's name."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "name": "Office"
+      }
+    },
+    "iphone.health.log": {
+      "s": "Log water, weight, mindful minutes or a workout to Health on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "kind": "water (ml), weight (kg), mindful (minutes) or workout (minutes).",
+        "value": "Amount in the unit for kind, above 0.",
+        "start": "When it happened, as an RFC 3339 timestamp.",
+        "tag": "Your label for this entry, up to 128 characters, so it can be found later.",
+        "activity": "For a workout: walking, running, cycling or other."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "kind": "water",
+        "value": 250,
+        "start": "2026-11-10T09:00:00-06:00",
+        "tag": "agent-log-1"
+      }
+    },
+    "iphone.live.end": {
+      "s": "End a task's Live Activity on the iPhone lock screen.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "task_id": "The task_id used with iphone.live.start.",
+        "title": "Final title, up to 128 characters.",
+        "status": "Final status line, up to 256 characters.",
+        "progress": "Final progress from 0 to 1."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "task_id": "backup-1",
+        "title": "Backup",
+        "status": "Done",
+        "progress": 1
+      }
+    },
+    "iphone.live.start": {
+      "s": "Show a task's progress as a Live Activity on the iPhone lock screen.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "task_id": "Your ID for this task, up to 128 characters; reuse it to update and end.",
+        "title": "Title, up to 128 characters.",
+        "status": "Status line, up to 256 characters.",
+        "progress": "Progress from 0 to 1."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "task_id": "backup-1",
+        "title": "Backup",
+        "status": "Starting",
+        "progress": 0
+      }
+    },
+    "iphone.live.update": {
+      "s": "Update a task's Live Activity on the iPhone lock screen.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "task_id": "The task_id used with iphone.live.start.",
+        "title": "Title, up to 128 characters.",
+        "status": "Status line, up to 256 characters.",
+        "progress": "Progress from 0 to 1."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "task_id": "backup-1",
+        "title": "Backup",
+        "status": "Copying photos",
+        "progress": 0.4
+      }
+    },
+    "iphone.location.current": {
+      "s": "Get the iPhone's precise current location.",
+      "r": "The location, also saved as an iphone.location record.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.location.significant": {
+      "s": "Turn recording of significant iPhone location changes on or off.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "enabled": "True to start recording, false to stop."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "enabled": true
+      }
+    },
+    "iphone.motion.activity": {
+      "s": "Get the iPhone's current motion activity, such as walking or driving.",
+      "r": "The activity and confidence, as reported by the phone.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.motion.history": {
+      "s": "Get the iPhone's motion activity history for recent days.",
+      "r": "Activity periods, as reported by the phone.",
+      "p": {
+        "days": "How many days back, 1 to 7."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "days": 1
+      },
+      "ro": true
+    },
+    "iphone.notify": {
+      "s": "Send a notification to the iPhone, optionally with buttons the owner can tap.",
+      "r": "Delivery confirmation; with buttons, the ID of the button the owner tapped.",
+      "p": {
+        "title": "Title, up to 200 characters.",
+        "body": "Body, up to 1000 characters.",
+        "buttons": "Up to 4 buttons.",
+        "buttons.id": "Your ID for the button, 1 to 64 characters, not starting with com.apple.",
+        "buttons.title": "Button text, 1 to 100 characters.",
+        "thread": "Group notifications with the same thread, up to 100 characters.",
+        "time_sensitive": "True to break through Focus."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "title": "Laundry",
+        "body": "The dryer is done."
+      }
+    },
+    "iphone.ping": {
+      "s": "Check that the iPhone is reachable with a signed round trip.",
+      "r": "The phone's signed reply.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      },
+      "ro": true
+    },
+    "iphone.screentime.cancel": {
+      "s": "Remove the Screen Time schedule and shield Apple Bridge set on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "iphone.screentime.schedule": {
+      "s": "Schedule a daily Screen Time window on the iPhone that shields the owner's chosen apps.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "start_minute": "Start as minutes after midnight, 0 to 1439.",
+        "end_minute": "End as minutes after midnight, 0 to 1439; at least 15 minutes after start."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "start_minute": 1320,
+        "end_minute": 420
+      }
+    },
+    "iphone.screentime.shield": {
+      "s": "Shield the owner's chosen apps on the iPhone now.",
+      "r": "Confirmation from the phone.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "iphone.screentime.unshield": {
+      "s": "Remove the Screen Time shield on the iPhone now.",
+      "r": "Confirmation from the phone.",
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "iphone.timer.cancel": {
+      "s": "Cancel a timer Apple Bridge started on the iPhone.",
+      "r": "Confirmation from the phone.",
+      "p": {
+        "id": "The timer's UUID from iphone.timer.start or iphone.alarm.list."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b"
+      }
+    },
+    "iphone.timer.start": {
+      "s": "Start a countdown timer on the iPhone.",
+      "r": "The timer's UUID, confirmed by the phone.",
+      "p": {
+        "duration_seconds": "Length in seconds, above 0.",
+        "id": "A UUID to use for the timer. Omit to let the phone choose.",
+        "title": "Timer label, up to 200 characters."
+      },
+      "x": {
+        "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
+        "duration_seconds": 600,
+        "title": "Tea"
+      }
+    },
+    "mac.bluetooth_devices": {
+      "s": "List paired Bluetooth devices and whether they are connected.",
+      "r": "Devices with name, address and connected state.",
+      "a": {},
+      "x": {}
+    },
+    "mac.clipboard_read": {
+      "s": "Read the text on the Mac's clipboard right now.",
+      "r": "The clipboard text. It is not stored.",
+      "a": {},
+      "x": {}
+    },
+    "mac.iwork_export": {
+      "s": "Convert a Pages, Numbers or Keynote document to PDF or text.",
+      "r": "The converted file as a blob to fetch with blobs.read.",
+      "p": {
+        "app": "pages, numbers or keynote.",
+        "document_blob": "The document's bytes, base64 encoded, 8 MiB at most.",
+        "format": "pdf or text."
+      },
+      "x": {
+        "app": "pages",
+        "document_blob": "UEsDBBQAAAAIAA==",
+        "format": "pdf"
+      }
+    },
+    "mac.lock_screen": {
+      "s": "Lock the Mac's screen.",
+      "r": "Confirmation that the screen locked.",
+      "x": {}
+    },
+    "mac.network_check": {
+      "s": "Check internet reachability, DNS and network interface counters.",
+      "r": "Reachability, DNS result and interface statistics.",
+      "a": {},
+      "x": {}
+    },
+    "mac.recognize_song": {
+      "s": "Identify a song from a short audio recording with Shazam.",
+      "r": "The song's title and artist, if found.",
+      "p": {
+        "audio_blob": "The audio's bytes, base64 encoded, up to about 8 MiB."
+      },
+      "x": {
+        "audio_blob": "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
+      }
+    },
+    "mac.restart": {
+      "s": "Restart the Mac.",
+      "r": "Confirmation that restart began.",
+      "x": {}
+    },
+    "mac.screen_record": {
+      "s": "Record the Mac's screen as a video.",
+      "r": "The video as a blob to fetch with blobs.read.",
+      "p": {
+        "seconds": "Length in seconds, 1 to 30."
+      },
+      "x": {
+        "seconds": 10
+      }
+    },
+    "mac.set_wallpaper": {
+      "s": "Set the Mac's desktop picture.",
+      "r": "Confirmation that the wallpaper changed.",
+      "p": {
+        "image_blob": "The image's bytes, base64 encoded, 8 MiB at most."
+      },
+      "x": {
+        "image_blob": "iVBORw0KGgo="
+      }
+    },
+    "mac.shutdown": {
+      "s": "Shut down the Mac.",
+      "r": "Confirmation that shutdown began.",
+      "x": {}
+    },
+    "mac.sleep_display": {
+      "s": "Turn off the Mac's display now.",
+      "r": "Confirmation that the display slept.",
+      "x": {}
+    },
+    "mac.time_machine_status": {
+      "s": "Show Time Machine backup status and the last backup time.",
+      "r": "Whether a backup is running and when the last one finished.",
+      "a": {},
+      "x": {}
+    },
+    "print.document": {
+      "s": "Print a PDF to a named printer, or save it as PDF.",
+      "r": "Confirmation that the print job was accepted.",
+      "p": {
+        "printer": "Printer name as macOS shows it, or PDF to save a PDF."
+      },
+      "x": {
+        "printer": "PDF",
+        "data_base64": "JVBERi0xLjQK"
+      },
+      "d": "Rules: give data_base64 or blob, not both."
+    },
+    "photos.search": {
+      "s": "Search the Photos library by date, type, album, favorite or place.",
+      "r": "assets with asset_id, date, type and size; next_cursor for the next page. Keep paging while next_cursor is not null, even if a page is empty.",
+      "p": {
+        "start": "Taken on or after this time: RFC 3339 timestamp or YYYY-MM-DD.",
+        "end": "Taken before this time: RFC 3339 timestamp or YYYY-MM-DD.",
+        "type": "Only this kind: image, video, audio, live_photo, screenshot, panorama, hdr, depth, slow_motion or timelapse.",
+        "album_id": "Only photos in this album (from photos.albums).",
+        "favorite": "Only favorites.",
+        "near": "Only photos taken near this point. Use with radius_m.",
+        "radius_m": "Distance from near in meters, up to 100000.",
+        "cursor": "The next_cursor from the previous page, with the same filters.",
+        "limit": "Assets per page, 1 to 200."
+      },
+      "x": {
+        "start": "2026-07-01",
+        "end": "2026-08-01",
+        "type": "image",
+        "limit": 50
+      }
+    },
+    "photos.get": {
+      "s": "Get one photo's details, location and downloadable resources.",
+      "r": "Metadata, location and resources (original, edited, Live Photo video) with resource_index and resource_key for photos.fetch.",
+      "x": {
+        "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
+      }
+    },
+    "photos.albums": {
+      "s": "List the owner's albums or the smart albums.",
+      "r": "Albums with album_id, title, count and whether they can be edited.",
+      "p": {
+        "smart": "True for smart albums such as Favorites; false (default) for the owner's albums.",
+        "offset": "Skip this many albums.",
+        "limit": "Albums per page, 1 to 200."
+      },
+      "x": {
+        "limit": 50
+      }
+    },
+    "photos.preview": {
+      "s": "Look at one photo: returns it as an image.",
+      "r": "The photo as an image attached to the result; video returns a still frame.",
+      "p": {
+        "max_px": "Longest side in pixels, 64 to 1536. Default 512.",
+        "network_access": "Allow downloading from iCloud. Default true."
+      },
+      "x": {
+        "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001",
+        "max_px": 768
+      }
+    },
+    "photos.contact_sheet": {
+      "s": "Look at up to 30 photos at once as one numbered grid image.",
+      "r": "One grid image attached to the result, and cells mapping each number to its asset_id.",
+      "p": {
+        "asset_ids": "1 to 30 photo IDs from photos.search.",
+        "columns": "Columns, 1 to 8. Default up to 5.",
+        "cell_px": "Cell size in pixels, 96 to 384. Default 256.",
+        "network_access": "Allow downloading from iCloud. Default false; cells that are not on the Mac show grey."
+      },
+      "x": {
+        "asset_ids": [
+          "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001",
+          "1B2C3D4E-5F60-4A7B-8C9D-0E1F2A3B4C5D/L0/001"
+        ]
+      }
+    },
+    "photos.fetch": {
+      "s": "Download a photo or video original in chunks.",
+      "r": "First call: transfer_id and state downloading or ready, size and SHA-256. Later calls: up to 512 KiB of bytes in base64 from offset.",
+      "p": {
+        "asset_id": "Start a transfer for this asset. Omit when reading an existing transfer.",
+        "resource_index": "Which resource from photos.get. Omit for the original.",
+        "resource_key": "The resource_key from photos.get, to fail if the photo changed since.",
+        "network_access": "Allow downloading from iCloud. Default false.",
+        "max_bytes": "Refuse resources larger than this many bytes. Default 8 GiB.",
+        "transfer_id": "Read from this transfer instead of starting one.",
+        "offset": "Byte offset to read from.",
+        "length": "Bytes to read, up to 524288."
+      },
+      "x": {
+        "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
+      },
+      "d": "Start with asset_id, then poll with transfer_id until ready, read with transfer_id, offset and length, check the SHA-256, and call photos.release. Poll within 120 seconds or the transfer is dropped."
+    },
+    "photos.release": {
+      "s": "Finish a photo download and delete its temporary copy.",
+      "r": "Confirmation that the transfer was released.",
+      "x": {
+        "transfer_id": "xfr_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
+      }
+    },
+    "photos.favorite": {
+      "s": "Mark a photo as a favorite, or unmark it.",
+      "r": "The favorite state read back from Photos.",
+      "p": {
+        "favorite": "True to favorite, false to unfavorite."
+      },
+      "x": {
+        "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001",
+        "favorite": true
+      }
+    },
+    "photos.album_create": {
+      "s": "Create a new photo album.",
+      "r": "The new album's album_id.",
+      "p": {
+        "title": "Album name, up to 256 characters."
+      },
+      "x": {
+        "title": "Summer 2026"
+      }
+    },
+    "photos.album_rename": {
+      "s": "Rename one of the owner's photo albums.",
+      "r": "The album's new title, read back.",
+      "p": {
+        "title": "New name, up to 256 characters."
+      },
+      "x": {
+        "album_id": "A1B2C3D4-0000-4000-8000-000000000001/L0/040",
+        "title": "Summer trip"
+      }
+    },
+    "photos.album_add": {
+      "s": "Add up to 200 existing photos to an album.",
+      "r": "How many were added.",
+      "p": {
+        "asset_ids": "1 to 200 photo IDs to add."
+      },
+      "x": {
+        "album_id": "A1B2C3D4-0000-4000-8000-000000000001/L0/040",
+        "asset_ids": [
+          "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
+        ]
+      }
+    },
+    "photos.album_remove": {
+      "s": "Remove up to 200 photos from an album; they stay in the library.",
+      "r": "How many were removed.",
+      "p": {
+        "asset_ids": "1 to 200 photo IDs to remove from the album."
+      },
+      "x": {
+        "album_id": "A1B2C3D4-0000-4000-8000-000000000001/L0/040",
+        "asset_ids": [
+          "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
+        ]
+      }
+    },
+    "photos.album_delete": {
+      "s": "Delete one of the owner's albums; its photos stay in the library.",
+      "r": "Confirmation that the album was deleted.",
+      "x": {
+        "album_id": "A1B2C3D4-0000-4000-8000-000000000001/L0/040"
+      }
+    }
+  }
+}
