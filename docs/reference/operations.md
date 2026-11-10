@@ -2245,7 +2245,7 @@ Page through user albums or smart albums, with PhotoKit editing capabilities. No
 
 ### photos.preview
 
-Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.
+Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden. network_access (default true) lets PhotoKit download this one original from the owner's iCloud when the Mac keeps only a thumbnail; set false to use local data only. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.
 
 - Kind: `query`
 - Scope: `photos:read`
@@ -2258,7 +2258,7 @@ Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-153
 
 ### photos.contact_sheet
 
-Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Pixels leave the Mac only for the photos named in this call.
+Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads, and cells that are not local otherwise show grey with rendered false. Pixels leave the Mac only for the photos named in this call.
 
 - Kind: `query`
 - Scope: `photos:read`

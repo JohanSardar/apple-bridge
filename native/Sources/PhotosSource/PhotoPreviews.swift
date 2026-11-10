@@ -12,7 +12,7 @@ let photoImageByteLimit = 172 << 10
 func photoPreview(_ args: JSON) async throws -> JSON {
     try fields(args, ["asset_id", "max_px", "network_access", "include_hidden"])
     let size = try integer(args, "max_px", default: 512, maximum: 1536, minimum: 64)
-    let network = try boolean(args, "network_access", default: false)
+    let network = try boolean(args, "network_access", default: true)
     let photo = try visibleAsset(string(args, "asset_id"), includeHidden: boolean(args, "include_hidden", default: false))
     let image = try await renderedImage(photo, longestSide: size, network: network)
     let canvas = try drawingContext(width: image.width, height: image.height)
