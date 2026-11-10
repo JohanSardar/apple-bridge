@@ -63,7 +63,7 @@ Without colour or a terminal the first line starts with `Error:`. With `--json`,
 - Old spellings still work and warn once on stderr: `-home` and other single-dash long options, `read --text` (now `--query`), `link --no-browser` (now `--no-open`), `call --args` (now `--data`). `stats --watch` is hidden and keeps its old meaning; `--wait` is the new name.
 - `remote on`, `remote off` and `remote enable`/`disable` accept `--via system` again.
 - Options written between `remote` and its action work again, as in earlier releases: `bridge remote --relay-url URL key` saves URL and prints that relay's key, and `bridge remote --snippets status` prints the snippets.
-- `--relay-url` refuses an address with a user name or password (`https://user:pass@…`) before anything is saved. Errors, `--debug` lines, receipts and suggested commands never show credentials from an address; they appear as `***`.
+- `--relay-url` refuses an address with a user name or password (`https://user:pass@…`) before anything is saved. Errors, `--debug` lines, receipts and suggested commands never show credentials from an address; they appear as `***`. For the same reason `agents create --name` refuses a name that holds a user name and password, such as `https://user:pass@host`; this is a deliberate safety correction.
 - `--timeout` takes a duration such as `30s`, `5m` or `2h`; a bare number still means seconds.
 - `--limit` must be 1 or more, except `read` and `search` with `--json`, where `--limit 0` keeps its old meaning (see above). Above 200 it is clamped with a `limit_clamped` warning.
 - Defaults in help read `(default: X)`.

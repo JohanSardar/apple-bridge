@@ -580,6 +580,11 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
             Reason::InvalidValue,
             "Can't use that --name. Names are 1 to 120 bytes; accented letters and emoji take 2 to 4 each.",
         ));
+    } else if name.contains('@') && name.contains(':') {
+        problems.push(Failure::new(
+            Reason::InvalidValue,
+            "Can't use that --name. Names can't include a user name and password, such as user:pass@.",
+        ));
     }
     let level = if args.level.is_empty() {
         Ok(AgentLevel::DEFAULT)

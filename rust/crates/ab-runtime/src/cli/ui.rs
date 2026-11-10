@@ -171,12 +171,18 @@ fn scheme_before(text: &str, end: usize) -> bool {
     end - start >= 2
 }
 
+fn colon_before_space(text: &str) -> bool {
+    match text.find(' ') {
+        Some(space) => text[..space].contains(':'),
+        None => true,
+    }
+}
+
 fn userinfo_spans(text: &str) -> Vec<(usize, usize)> {
     let bytes = text.as_bytes();
     let mut spans: Vec<(usize, usize)> = Vec::new();
     for (at, _) in text.match_indices('@') {
         let mut index = at;
-        let mut space = None;
         let mut slash = None;
         while index > 0 {
             let byte = bytes[index - 1];
@@ -190,9 +196,6 @@ fn userinfo_spans(text: &str) -> Vec<(usize, usize)> {
                 slash = Some(index - 1);
                 break;
             }
-            if byte == b' ' && space.is_none() {
-                space = Some(index);
-            }
             index -= 1;
         }
         let span = if let Some(boundary) = slash {
@@ -201,18 +204,24 @@ fn userinfo_spans(text: &str) -> Vec<(usize, usize)> {
                 colon -= 1;
             }
             let start = boundary + 1;
-            let candidate = &text[start..at];
-            let authority = colon > 0
-                && bytes[colon - 1] == b':'
-                && scheme_before(text, colon - 1)
-                && (!candidate.contains(' ') || candidate.contains(':'));
-            authority.then_some((start, at))
+            let leading = boundary + 1 - colon;
+            let schemed = colon > 0 && bytes[colon - 1] == b':' && scheme_before(text, colon - 1);
+            let bare = leading >= 2
+                && bytes[boundary] == b'/'
+                && (colon == 0
+                    || !bytes[colon - 1].is_ascii_alphanumeric() && bytes[colon - 1] != b':');
+            ((schemed || bare) && colon_before_space(&text[start..at])).then_some((start, at))
         } else {
-            let word = space.unwrap_or(index);
-            text[word..at].find(':').and_then(|colon| {
-                let colon = word + colon;
-                scheme_before(text, colon).then_some((colon + 1, at))
-            })
+            text[index..at]
+                .match_indices(':')
+                .map(|(offset, _)| index + offset)
+                .find(|&colon| {
+                    scheme_before(text, colon)
+                        && colon_before_space(&text[colon + 1..at])
+                        && text[colon + 1..at].contains(':')
+                        || scheme_before(text, colon) && !text[colon + 1..at].contains(' ')
+                })
+                .map(|colon| (colon + 1, at))
         };
         if let Some((start, end)) = span
             && start < end
@@ -1192,6 +1201,9 @@ mod tests {
             ("https://me:p w@h.test", "https://***@h.test"),
             ("https://me@corp:pw@h.test/x", "https://***@h.test/x"),
             ("https:me:\\npw@h.test", "https:***@h.test"),
+            ("https:user:hunter2 pw@h.test", "https:***@h.test"),
+            ("see //user:hunter2@h.test now", "see //***@h.test now"),
+            ("//user:hunter2@h.test", "//***@h.test"),
         ] {
             assert_eq!(strip_userinfo(text), shown, "{text}");
         }
@@ -1205,6 +1217,10 @@ mod tests {
             "ssh me@host.test",
             "see https://h.test and mail a@b.com",
             "Error: Can't use a@b.com",
+            "https://h.test and Error: contact a@b.com",
+            "Note: at 14:03 mail a@b.com",
+            "a/b//c@d.test",
+            "名前@例え.jp と https://ü.test",
         ] {
             assert_eq!(strip_userinfo(text), text, "{text}");
         }

@@ -1143,15 +1143,8 @@ fn credentials_in_any_url_spelling_never_reach_the_output() -> Check {
             "--json",
         ],
     )?;
-    let named = json_out(&output)?["agent"]["id"]
-        .as_str()
-        .ok_or("id")?
-        .to_owned();
-    let output = run(
-        home.path(),
-        &["agents", "revoke", &named, "--json", "--debug"],
-    )?;
     assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
     assert!(
         !text(&output.stderr).contains("hunter2"),
         "{}",
@@ -1230,16 +1223,48 @@ fn control_characters_cannot_split_a_password_from_its_url() -> Check {
             "--json",
         ],
     )?;
-    let id = json_out(&output)?["agent"]["id"]
-        .as_str()
-        .ok_or("id")?
-        .to_owned();
-    let output = run(home.path(), &["agents", "revoke", &id, "--json", "--debug"])?;
     assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
     assert!(
         !text(&output.stderr).contains("hunter2"),
         "{}",
         text(&output.stderr)
     );
+    Ok(())
+}
+
+#[test]
+fn spaces_and_missing_schemes_do_not_hide_a_password() -> Check {
+    let home = short_home()?;
+    for value in [
+        "https:user:hunter2 pw@h.test",
+        "//user:hunter2@h.test",
+        "https://user:hunter2 pw@h.test",
+    ] {
+        let output = run(
+            home.path(),
+            &["agents", "inspect", value, "--json", "--debug"],
+        )?;
+        assert_eq!(output.status.code(), Some(2), "{value}");
+        let shown = text(&output.stderr);
+        assert!(!shown.contains("hunter2"), "{value}: {shown}");
+        let output = run(
+            home.path(),
+            &[
+                "agents",
+                "create",
+                "--name",
+                value,
+                "--level",
+                "read",
+                "--expires-in",
+                "1d",
+            ],
+        )?;
+        assert_eq!(output.status.code(), Some(2), "{value}");
+        assert!(!text(&output.stderr).contains("hunter2"), "{value}");
+    }
+    let listed = json_out(&run(home.path(), &["agents", "list", "--json"])?)?;
+    assert_eq!(listed["agents"], json!([]));
     Ok(())
 }
