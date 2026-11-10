@@ -174,15 +174,6 @@ pub(crate) fn source_of(collection: &str) -> &str {
     collection.split('.').next().unwrap_or(collection)
 }
 
-pub(crate) fn sees(principal: &Principal, source: &str) -> bool {
-    principal.grants.iter().any(|grant| {
-        grant == "admin"
-            || grant
-                .split_once(':')
-                .is_some_and(|(granted, _)| granted == source)
-    })
-}
-
 impl Call<'_> {
     fn check_tool(&self, tool: &str, input: &Map<String, Value>) -> Step<()> {
         let Some(schema) = self.registry.tool_schema(tool) else {
@@ -557,7 +548,7 @@ impl Call<'_> {
             .get("collection")
             .and_then(Value::as_str)
             .filter(|c| !c.is_empty())
-            && !sees(self.principal, source_of(collection))
+            && !can(self.principal, &format!("{}:read", source_of(collection)))
         {
             return Err(mcp_check::refused(
                 self.principal,
@@ -632,8 +623,6 @@ impl Call<'_> {
             serde_json::from_str(&raw).map_err(|_| Problem::new("corrupt", "unreadable result"))?;
         let value = if operation.kind == OperationKind::Query {
             query_result(&value, verbose, fields.as_deref())
-        } else if operation.name.starts_with("messages.") && !verbose {
-            messages_result(&value, fields.as_deref())
         } else {
             compact(&value, verbose, fields.as_deref())
         };
@@ -674,19 +663,24 @@ impl Call<'_> {
             mcp_check::local_dates(operation, arguments);
         }
         let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
-        if BY_TITLE.contains(&operation.name.as_str()) {
+        if !operation.scope.is_empty() {
+            self.require(&operation.scope, &operation.name)?;
+        }
+        let id = request_id(input)?;
+        if BY_TITLE.contains(&operation.name.as_str())
+            && !self.bound_target(operation, &id, &mut arguments).await?
+        {
             self.reminder_target(operation, &mut arguments).await?;
         }
         if operation.name == "calendar.create_event" {
-            let wanted = arguments
-                .remove("calendar")
-                .or_else(|| arguments.remove("calendar_id"));
-            let (id, _) = self
-                .calendar_for(wanted.as_ref().and_then(Value::as_str), true)
-                .await?;
-            arguments.insert("calendar_id".into(), json!(id));
+            let name = arguments.remove("calendar");
+            if name.is_some() || !arguments.contains_key("calendar_id") {
+                let (calendar, _) = self
+                    .calendar_for(name.as_ref().and_then(Value::as_str), true)
+                    .await?;
+                arguments.insert("calendar_id".into(), json!(calendar));
+            }
         }
-        let id = request_id(input)?;
         self.run_change(operation, arguments, &id, flag(input, "verbose"))
             .await
     }
@@ -832,7 +826,11 @@ impl Call<'_> {
             arguments.insert("chat_id".into(), json!(chat));
         } else if let Some(who) = text(input, "to") {
             let person = self.person(who, "to").await?;
-            let chats = self.direct_chats(&person.handles).await?;
+            let chats = if can(self.principal, "messages:read") {
+                self.direct_chats(&person.handles).await?
+            } else {
+                Vec::new()
+            };
             if chats.len() > 1 {
                 return Err(
                     Problem::new("ambiguous", format!("{who} has {} chats", chats.len()))
@@ -1357,28 +1355,6 @@ fn attachment_summary(attachment: &Value) -> Value {
         fields.retain(|_, v| !v.is_null());
     }
     value
-}
-
-fn messages_result(value: &Value, fields: Option<&[String]>) -> Value {
-    let Value::Object(map) = value else {
-        return compact(value, false, fields);
-    };
-    let mut out = Map::new();
-    for (key, child) in map {
-        let summarised = match (key.as_str(), child) {
-            ("items", Value::Array(items))
-                if items.iter().all(|i| i["collection"] == "messages.message") =>
-            {
-                Value::Array(items.iter().map(message_summary).collect())
-            }
-            _ => compact(child, false, fields),
-        };
-        if key == "cursor" && child.get("epoch").is_some() {
-            continue;
-        }
-        out.insert(key.clone(), summarised);
-    }
-    Value::Object(out)
 }
 
 const INTERNAL: &[&str] = &[

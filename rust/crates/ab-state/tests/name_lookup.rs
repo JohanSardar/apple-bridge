@@ -56,7 +56,10 @@ fn full_names_match_in_any_order_ignoring_case_spacing_and_accents() {
     assert_eq!(names(&state, &visibility, "Marko Horvat"), ["Marko Horvat"]);
     assert_eq!(names(&state, &visibility, "Ana Kovac"), ["Ana Kovač"]);
     assert_eq!(names(&state, &visibility, "ANA").len(), 2);
-    assert!(names(&state, &visibility, "Ana Horvat").is_empty());
+    assert_eq!(
+        names(&state, &visibility, "Ana Horvat"),
+        Vec::<String>::new()
+    );
 }
 
 #[test]

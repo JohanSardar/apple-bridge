@@ -2,7 +2,7 @@ use crate::{
     mcp_check::{self, Problem, day_start, local_time, mac_zone},
     mcp_facade::{
         Call, Outcome, Step, chat_summary, compact, contact_handles, contact_name, content, flag,
-        fold, message_summary, pick, request_id, sees, source_of, text,
+        fold, message_summary, pick, request_id, source_of, text,
     },
     mcp_registry::can,
 };
@@ -544,7 +544,7 @@ impl Call<'_> {
             if source == "messages" && collection == "messages.message" {
                 continue;
             }
-            if !sees(self.principal, source) {
+            if !can(self.principal, &format!("{source}:read")) {
                 if explicit(collection) && !hidden.iter().any(|h| h == source) {
                     hidden.push(source.to_owned());
                 }
@@ -745,19 +745,14 @@ impl Call<'_> {
                 Some((name, raw, local)) => moment(&name, raw, local)?,
                 None => moment("start", &today.to_string(), true)?,
             };
-            let end = match field("end") {
-                Some((name, raw, _)) if raw.len() == 10 => {
-                    let date = civil_date(&name, raw)?;
-                    moment(&name, &date.tomorrow().unwrap_or(date).to_string(), true)?
-                }
-                Some((name, raw, local)) => moment(&name, raw, local)?,
-                None => {
-                    let base = field("start")
-                        .and_then(|(_, s, _)| s.get(..10).map(str::to_owned))
-                        .and_then(|s| s.parse::<jiff::civil::Date>().ok())
-                        .unwrap_or(today);
-                    moment("end", &base.tomorrow().unwrap_or(base).to_string(), true)?
-                }
+            let end = if let Some((name, raw, local)) = field("end") {
+                moment(&name, raw, local)?
+            } else {
+                let base = field("start")
+                    .and_then(|(_, s, _)| s.get(..10).map(str::to_owned))
+                    .and_then(|s| s.parse::<jiff::civil::Date>().ok())
+                    .unwrap_or(today);
+                moment("end", &base.tomorrow().unwrap_or(base).to_string(), true)?
             };
             if end.parse::<jiff::Timestamp>().ok() <= start.parse::<jiff::Timestamp>().ok() {
                 return Err(Problem::new("invalid", "end must be after start")
@@ -881,7 +876,12 @@ impl Call<'_> {
                 arguments.insert(key.into(), json!(value));
             }
         }
-        let (calendar_id, calendar_name) = self.calendar_for(text(input, "calendar"), true).await?;
+        let (calendar_id, calendar_name) = match text(input, "calendar") {
+            Some(id) if id.starts_with("cal_") && !can(self.principal, "calendar:read") => {
+                (id.to_owned(), None)
+            }
+            wanted => self.calendar_for(wanted, true).await?,
+        };
         arguments.insert("calendar_id".into(), json!(calendar_id));
         mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
         let mut outcome = self.run_change(operation, arguments, &id, false).await?;
@@ -889,6 +889,43 @@ impl Call<'_> {
             outcome.value["calendar"] = json!(name);
         }
         Ok(outcome)
+    }
+
+    pub(crate) async fn bound_target(
+        &self,
+        operation: &AgentOperation,
+        request_id: &str,
+        arguments: &mut Map<String, Value>,
+    ) -> Step<bool> {
+        if !arguments.contains_key("reminder") || arguments.contains_key("id") {
+            return Ok(false);
+        }
+        let Ok(record) = self
+            .invoke(
+                self.operation("commands.status")?,
+                &json!({"command_id": request_id}),
+            )
+            .await
+        else {
+            return Ok(false);
+        };
+        let command = &record["command"];
+        if command["op"] != operation.name.as_str() {
+            return Err(Problem::new("id_reused", "this request_id was already used for a different request")
+                .operation(&operation.name)
+                .field("request_id")
+                .hint("Use a new request_id for a new change. Reuse a request_id only to repeat exactly the same call."));
+        }
+        let Some(id) = command["args"]["id"].as_str() else {
+            return Ok(false);
+        };
+        arguments.remove("reminder");
+        arguments.insert("id".into(), json!(id));
+        arguments.insert(
+            "expected_version".into(),
+            command["expected_version"].clone(),
+        );
+        Ok(true)
     }
 
     pub(crate) async fn reminder_target(
@@ -918,6 +955,8 @@ impl Call<'_> {
                     "the reminder's title, or its rmd_ id with expected_version"
                 )));
         };
+        self.require("reminders:read", "finding a reminder by its title")
+            .map_err(|problem| problem.field("reminder").hint("Pass the reminder's id with expected_version instead, or ask the owner to grant reminders:read."))?;
         let completed = operation.name == "reminders.uncomplete";
         let found = self
             .invoke(

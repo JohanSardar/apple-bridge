@@ -743,3 +743,19 @@ fn message_results_keep_text_exactly_and_name_attachments() {
     let compacted = compact(&message, false, None);
     assert_eq!(compacted["attachments"][0]["id"], "att_1");
 }
+
+#[test]
+fn write_only_agents_cannot_read_through_name_lookups() {
+    let writer = principal("full", &["reminders:write", "notes:write"]);
+    assert!(!crate::mcp_registry::can(&writer, "reminders:read"));
+    assert!(!crate::mcp_registry::can(&writer, "notes:read"));
+    let problem = mcp_check::refused(
+        &writer,
+        "finding a reminder by its title",
+        "reminders:read",
+        false,
+    )
+    .to_json();
+    assert_eq!(problem["error"]["code"], "unauthorized");
+    assert_eq!(problem["error"]["expected"]["scope"], "reminders:read");
+}

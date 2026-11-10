@@ -45,6 +45,14 @@ impl LocalGateway {
                 if photos && record.state == State::Observed {
                     return Ok(Some(self.replayed(&query.id)?));
                 }
+                if photos
+                    && matches!(
+                        record.state,
+                        State::Prepared | State::Dispatched | State::Indeterminate
+                    )
+                {
+                    return Err(Code::Indeterminate.into());
+                }
                 let record = self.expire(record)?;
                 if record.admission_era != self.state.admission_era()?
                     || timestamp(&record.expires_at)? <= self.clock.now()
@@ -64,9 +72,6 @@ impl LocalGateway {
                         let record = self.transition(record, State::Prepared, None, None, None)?;
                         self.transition(record, State::Dispatched, None, None, None)?;
                         return Ok(None);
-                    }
-                    State::Prepared | State::Dispatched | State::Indeterminate if photos => {
-                        return Err(Code::Indeterminate.into());
                     }
                     _ => return Err(Code::Forbidden.into()),
                 }

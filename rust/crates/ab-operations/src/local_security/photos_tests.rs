@@ -633,3 +633,35 @@ async fn delegated_ask_first_photos_write_uses_the_same_owner_gate() {
     assert!(replay.get().contains("\"replayed\":true"));
     assert_eq!(queries_reaching_native(&f), 1);
 }
+
+#[tokio::test]
+async fn an_uncertain_photos_write_stays_uncertain_after_it_expires() {
+    let mut f = fixture();
+    let clock = Arc::new(ApprovalClock(StdMutex::new(jiff::Timestamp::now())));
+    Arc::get_mut(&mut f.gateway).expect("exclusive").clock = clock.clone();
+    let mut request = query(
+        "photos.favorite",
+        &json!({"asset_id":"synthetic-asset","favorite":true}),
+    );
+    request.id = "qry_photos_failure".into();
+    assert_eq!(
+        f.gateway
+            .query(&owner(), request.clone())
+            .await
+            .expect_err("failed")
+            .code,
+        Code::Indeterminate
+    );
+    *clock.0.lock().expect("clock") = jiff::Timestamp::now()
+        .checked_add(jiff::SignedDuration::from_mins(11))
+        .expect("later");
+    assert_eq!(
+        f.gateway
+            .query(&owner(), request)
+            .await
+            .expect_err("still uncertain")
+            .code,
+        Code::Indeterminate
+    );
+    assert_eq!(queries_reaching_native(&f), 1);
+}
