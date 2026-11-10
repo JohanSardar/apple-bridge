@@ -946,6 +946,7 @@ fn piped_receipts_are_sentences_at_column_zero() -> Check {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn on_a_terminal(arguments: &[&str], color: bool) -> Result<String, Box<dyn std::error::Error>> {
     let mut command = Command::new("/usr/bin/script");
     command
