@@ -26,7 +26,7 @@ for mode in ('json', 'sse'):
             connection.close()
             return status, data
         for headers in ({'Authorization': None}, {'Host': 'evil.invalid'}, {'Origin': 'null'}, {'Origin': 'https://fixture.example.com:444'}):
-            status, data = request('/v1/health', extra=headers)
+            status, data = request('/v1/openapi.json', extra=headers)
             assert status == 401, (status, data)
             assert json.loads(data)['error']['code'] == 'unauthorized'
             checks += 1
@@ -67,6 +67,40 @@ for mode in ('json', 'sse'):
             data = '\n'.join(line[5:].strip() for line in data.decode().splitlines() if line.startswith('data:')).encode()
         result = json.loads(data)['result']
         assert result['structuredContent'] == json.loads(result['content'][0]['text'])
+        checks += 1
+        def call(name, arguments, ident):
+            status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','id':ident,'method':'tools/call','params':{'name':name,'arguments':arguments}}))
+            assert status == 200, (name, status, data)
+            body = data.decode()
+            if mode == 'sse':
+                body = '\n'.join(line[5:].strip() for line in body.splitlines() if line.startswith('data:'))
+            return json.loads(body)
+        listed = request('/mcp', json.dumps({'jsonrpc':'2.0','id':11,'method':'tools/list','params':{}}))
+        body = listed[1].decode()
+        if mode == 'sse':
+            body = '\n'.join(line[5:].strip() for line in body.splitlines() if line.startswith('data:'))
+        served = [tool['name'] for tool in json.loads(body)['result']['tools']]
+        assert served[0] == 'apple_status' and len(served) == 13, served
+        checks += 1
+        legacy_tools = json.loads((root / 'contracts/golden/mcp-legacy-tools.json').read_text())['tools']
+        assert len(legacy_tools) == 160
+        for index, tool in enumerate(legacy_tools):
+            reply = call(tool['name'], {'args': {}} if 'args' in tool['inputSchema'].get('properties', {}) else {}, 100 + index)
+            assert 'result' in reply, (tool['name'], reply)
+            text = json.loads(reply['result']['content'][0]['text'])
+            assert reply['result']['structuredContent'] == text, tool['name']
+            assert 'unknown tool' not in json.dumps(text), tool['name']
+        checks += 1
+        reply = call('apple_describe', {'operation': 'reminders.complete'}, 400)
+        contract = reply['result']['structuredContent']
+        assert contract['tool'] == 'apple_change' and 'expected_version' in contract['arguments']['required'], contract
+        checks += 1
+        reply = call('apple_read', {'operation': 'reminders.items', 'arguments': {'smart': 'today', 'colour': 'red'}}, 401)
+        error = reply['result']['structuredContent']['error']
+        assert reply['result']['isError'] and error['field'] == 'colour' and error['example'], error
+        checks += 1
+        reply = call('no_such_tool', {}, 402)
+        assert reply['error']['code'] == -32602 and 'apple_describe' in json.dumps(reply['error']), reply
         checks += 1
     finally:
         process.terminate()
