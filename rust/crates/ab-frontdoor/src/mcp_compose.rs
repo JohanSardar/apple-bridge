@@ -966,14 +966,16 @@ impl Call<'_> {
         if !arguments.contains_key("reminder") || arguments.contains_key("id") {
             return Ok(false);
         }
-        let Ok(record) = self
+        let record = match self
             .invoke(
                 self.operation("commands.status")?,
                 &json!({"command_id": request_id}),
             )
             .await
-        else {
-            return Ok(false);
+        {
+            Ok(record) => record,
+            Err(problem) if problem.code == "not_found" => return Ok(false),
+            Err(problem) => return Err(problem),
         };
         let command = &record["command"];
         let reused = || {
