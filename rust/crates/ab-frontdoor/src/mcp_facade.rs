@@ -697,6 +697,7 @@ impl Call<'_> {
             self.require(&operation.scope, &operation.name)?;
         }
         let id = request_id(input)?;
+        let mut selected = None;
         if BY_TITLE.contains(&operation.name.as_str())
             && !self.bound_target(operation, &id, &mut arguments).await?
         {
@@ -705,9 +706,12 @@ impl Call<'_> {
                 .and_then(Value::as_str)
                 .map(str::to_owned);
             self.reminder_target(operation, &mut arguments).await?;
-            if let Some(title) = title {
-                crate::mcp_compose::bind_selector(&self.principal.id, &id, &title);
-            }
+            selected = title.zip(
+                arguments
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            );
         }
         if operation.name == "calendar.create_event" {
             let name = arguments.remove("calendar");
@@ -718,8 +722,35 @@ impl Call<'_> {
                 arguments.insert("calendar_id".into(), json!(calendar));
             }
         }
-        self.run_change(operation, arguments, &id, flag(input, "verbose"))
+        let outcome = self
+            .run_change(operation, arguments, &id, flag(input, "verbose"))
+            .await;
+        if let Some((title, target)) = selected {
+            self.bind_if_admitted(operation, &id, &title, &target).await;
+        }
+        outcome
+    }
+
+    async fn bind_if_admitted(
+        &self,
+        operation: &AgentOperation,
+        request_id: &str,
+        title: &str,
+        target: &str,
+    ) {
+        let Ok(status) = self.operation("commands.status") else {
+            return;
+        };
+        let Ok(record) = self
+            .invoke(status, &json!({"command_id": request_id}))
             .await
+        else {
+            return;
+        };
+        let command = &record["command"];
+        if command["op"] == operation.name.as_str() && command["args"]["id"] == target {
+            crate::mcp_compose::bind_selector(&self.principal.id, request_id, title);
+        }
     }
 
     pub(crate) async fn run_change(

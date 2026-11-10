@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 const SELECTOR_TTL: Duration = Duration::from_hours(24);
-const SELECTOR_CAP: usize = 4096;
+const SELECTOR_CAP: usize = 1024;
 
 type Selectors = Mutex<HashMap<(String, String), (String, Instant)>>;
 
@@ -27,9 +27,10 @@ pub(crate) fn bind_selector(principal: &str, request_id: &str, title: &str) {
         return;
     };
     map.retain(|_, (_, at)| at.elapsed() < SELECTOR_TTL);
-    if map.len() >= SELECTOR_CAP
+    if map.keys().filter(|(owner, _)| owner == principal).count() >= SELECTOR_CAP
         && let Some(oldest) = map
             .iter()
+            .filter(|((owner, _), _)| owner == principal)
             .min_by_key(|(_, (_, at))| *at)
             .map(|(key, _)| key.clone())
     {
@@ -969,19 +970,18 @@ impl Call<'_> {
             .and_then(Value::as_str)
             .map(|title| fold(title.trim()))
             .unwrap_or_default();
-        let same = match selector(&self.principal.id, request_id) {
-            Some(bound) => bound == wanted,
-            None => self
-                .quiet(
-                    "records.get",
-                    json!({"collection": "reminders.reminder", "id": id, "include_deleted": true}),
+        match selector(&self.principal.id, request_id) {
+            Some(bound) if bound == wanted => {}
+            Some(_) => return Err(reused()),
+            None => {
+                return Err(Problem::new(
+                    "id_reused",
+                    "this request_id was already used, and Apple Bridge can no longer confirm which reminder title it named",
                 )
-                .await
-                .and_then(|found| found["records"][0]["data"]["title"].as_str().map(fold))
-                .is_some_and(|title| !wanted.is_empty() && title.contains(&wanted)),
-        };
-        if !same {
-            return Err(reused().hint("If this repeats the same call, pass the reminder's id with expected_version from apple_command_status instead; otherwise use a new request_id."));
+                .operation(&operation.name)
+                .field("request_id")
+                .hint("Call apple_command_status with this request_id to see what happened. To repeat it, pass the id and expected_version shown there instead of reminder; for a new change, use a new request_id."));
+            }
         }
         arguments.remove("reminder");
         arguments.insert("id".into(), json!(id));
