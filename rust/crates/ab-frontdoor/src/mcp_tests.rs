@@ -991,3 +991,24 @@ fn reminder_lists_come_back_small_with_counts() {
     assert_eq!(shown["smart_counts"], json!({"today": 2}));
     assert!(shown["lists"][1].get("sections").is_none());
 }
+
+#[test]
+fn every_request_id_can_be_checked_including_query_prefixed_ones() {
+    let agent = "agent:gateway/agt_ana";
+    for id in ["send-1", "qry_retry", "qry_qry_retry"] {
+        let scoped = crate::mcp_facade::scoped_id(agent, id);
+        let candidates = crate::mcp_facade::status_ids(agent, id);
+        assert!(candidates.contains(&scoped), "{id}: {candidates:?}");
+        assert!(candidates.contains(&id.to_owned()), "{id}: {candidates:?}");
+        if !id.starts_with("qry_") {
+            assert!(
+                candidates.contains(&format!("qry_{scoped}")),
+                "{id}: {candidates:?}"
+            );
+        }
+        assert!(
+            crate::mcp_facade::legacy_ids(id).contains(&id.to_owned()),
+            "{id}"
+        );
+    }
+}

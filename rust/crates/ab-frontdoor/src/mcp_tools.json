@@ -38,7 +38,7 @@
   {
     "name": "apple_read",
     "title": "Read Apple data",
-    "description": "Run any read operation; reads never change anything. Common reads need no lookup, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; notes.note {\"id\":\"nte_…\"}. For others, apple_describe gives the arguments. Records carry id and version: use the id in later calls and the version as expected_version when changing that record. Paging: pass next back as after, or next_cursor as cursor for Photos. reads runs up to 10 reads in one call.",
+    "description": "Run any read operation; reads never change anything. Common reads need no lookup, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; one record by id: records.get {\"id\":\"nte_…\"}. For others, apple_describe gives the arguments. Records carry id and version: use the id in later calls and the version as expected_version when changing that record. Paging: pass next back as after, or next_cursor as cursor for Photos. reads runs up to 10 reads in one call.",
     "inputSchema": {"type": "object", "properties": {
       "operation": {"type": "string", "description": "Read operation name, such as reminders.items."},
       "arguments": {"type": "object", "description": "The operation's arguments, as apple_describe lists them."},

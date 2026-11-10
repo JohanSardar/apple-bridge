@@ -996,7 +996,7 @@ impl Call<'_> {
         if !arguments.contains_key("reminder") || arguments.contains_key("id") {
             return Ok(false);
         }
-        let command_id = self.command_id(request_id).await;
+        let command_id = self.command_id(request_id).await?;
         let record = match self
             .invoke(
                 self.operation("commands.status")?,

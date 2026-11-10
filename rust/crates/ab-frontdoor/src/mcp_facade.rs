@@ -180,6 +180,27 @@ pub(crate) fn scoped_id(principal: &str, request_id: &str) -> String {
     format!("{readable}.{}", &digest[..16])
 }
 
+pub(crate) fn legacy_ids(request_id: &str) -> Vec<String> {
+    let mut ids = vec![request_id.to_owned()];
+    if !request_id.starts_with("qry_") {
+        ids.push(format!("qry_{request_id}"));
+    }
+    ids.retain(|id| mcp_registry::valid_id(id));
+    ids
+}
+
+pub(crate) fn status_ids(principal: &str, request_id: &str) -> Vec<String> {
+    let mut ids = Vec::new();
+    for id in [scoped_id(principal, request_id), request_id.to_owned()] {
+        if !id.starts_with("qry_") {
+            ids.push(format!("qry_{id}"));
+        }
+        ids.push(id);
+    }
+    ids.retain(|id| mcp_registry::valid_id(id));
+    ids
+}
+
 pub(crate) fn source_of(collection: &str) -> &str {
     collection.split('.').next().unwrap_or(collection)
 }
@@ -266,22 +287,20 @@ impl Call<'_> {
         }
     }
 
-    pub(crate) async fn command_id(&self, request_id: &str) -> String {
-        let scoped = scoped_id(&self.principal.id, request_id);
-        let Ok(status) = self.operation("commands.status") else {
-            return scoped;
-        };
-        for legacy in [request_id.to_owned(), format!("qry_{request_id}")] {
-            if mcp_registry::valid_id(&legacy)
-                && self
-                    .invoke(status, &json!({"command_id": legacy}))
-                    .await
-                    .is_ok()
-            {
-                return request_id.to_owned();
+    pub(crate) async fn command_id(&self, request_id: &str) -> Step<String> {
+        let status = self.operation("commands.status")?;
+        for legacy in legacy_ids(request_id) {
+            match self.invoke(status, &json!({"command_id": legacy})).await {
+                Ok(_) => return Ok(request_id.to_owned()),
+                Err(problem) if problem.code == "not_found" => {}
+                Err(problem) => {
+                    return Err(problem.field("request_id").hint(
+                        "Apple Bridge could not check whether this request_id was already used, so nothing was done. Retry the same call with the same request_id.",
+                    ));
+                }
             }
         }
-        scoped
+        Ok(scoped_id(&self.principal.id, request_id))
     }
 
     pub(crate) async fn quiet(&self, name: &str, input: Value) -> Option<Value> {
@@ -662,7 +681,7 @@ impl Call<'_> {
         let body = if operation.kind == OperationKind::Query {
             let mut body = json!({"args": arguments});
             if input.get("request_id").is_some_and(|id| !id.is_null()) {
-                let id = self.command_id(&request_id(input)?).await;
+                let id = self.command_id(&request_id(input)?).await?;
                 body["id"] = json!(if id.starts_with("qry_") {
                     id
                 } else {
@@ -797,7 +816,9 @@ impl Call<'_> {
         let Ok(status) = self.operation("commands.status") else {
             return;
         };
-        let command_id = self.command_id(request_id).await;
+        let Ok(command_id) = self.command_id(request_id).await else {
+            return;
+        };
         let Ok(record) = self
             .invoke(status, &json!({"command_id": command_id}))
             .await
@@ -829,7 +850,7 @@ impl Call<'_> {
             return self.blob_stage(operation, &arguments).await;
         }
         let external = id;
-        let internal = self.command_id(id).await;
+        let internal = self.command_id(id).await?;
         let id = internal.as_str();
         if operation.photos_write() {
             let query_id = if id.starts_with("qry_") {
@@ -906,17 +927,8 @@ impl Call<'_> {
                 .expected(json!("the request_id an earlier change returned"))
         })?;
         let operation = self.operation("commands.status")?;
-        let scoped = scoped_id(&self.principal.id, id);
         let mut record = Err(Problem::new("not_found", "no such change"));
-        for candidate in [
-            scoped.clone(),
-            format!("qry_{scoped}"),
-            id.to_owned(),
-            format!("qry_{id}"),
-        ] {
-            if candidate.starts_with("qry_qry_") || !mcp_registry::valid_id(&candidate) {
-                continue;
-            }
+        for candidate in status_ids(&self.principal.id, id) {
             record = self
                 .invoke(operation, &json!({"command_id": candidate}))
                 .await;
