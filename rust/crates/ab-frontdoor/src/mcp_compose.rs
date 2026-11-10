@@ -160,6 +160,30 @@ fn top_apps(apps: &BTreeMap<String, u64>, top: usize) -> Vec<Value> {
         .collect()
 }
 
+pub(crate) type UsageTally = (BTreeMap<String, u64>, BTreeMap<String, u64>);
+
+pub(crate) fn usage_tally(rows: &[Value], device: &str, first: &str, last: &str) -> UsageTally {
+    let mut apps: BTreeMap<String, u64> = BTreeMap::new();
+    let mut days: BTreeMap<String, u64> = BTreeMap::new();
+    for row in rows {
+        let data = &row["data"];
+        let stored = data["day"].as_str().unwrap_or_default();
+        let day = stored.split_once('@').map_or(stored, |(date, _)| date);
+        if row["deleted"] == true || data["device_id"] != device || day < first || day > last {
+            continue;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let seconds = data["seconds_estimated"]
+            .as_f64()
+            .filter(|s| s.is_finite())
+            .map_or(0, |s| s.max(0.0).round() as u64);
+        let bundle = data["bundle_id"].as_str().unwrap_or("unknown").to_owned();
+        *apps.entry(bundle).or_default() += seconds;
+        *days.entry(day.to_owned()).or_default() += seconds;
+    }
+    (apps, days)
+}
+
 fn civil_date(field: &str, raw: &str) -> Step<jiff::civil::Date> {
     raw.get(..10)
         .filter(|_| raw.len() == 10)
@@ -1196,23 +1220,9 @@ impl Call<'_> {
         let mut per_device = Vec::new();
         for device in &devices {
             let id = device["id"].as_str().unwrap_or_default();
-            let mut apps: BTreeMap<String, u64> = BTreeMap::new();
-            let mut days: BTreeMap<String, u64> = BTreeMap::new();
-            for row in &rows {
-                let data = &row["data"];
-                let day = data["day"].as_str().unwrap_or_default();
-                if row["deleted"] == true
-                    || data["device_id"] != id
-                    || day < first_text.as_str()
-                    || day > last_text.as_str()
-                {
-                    continue;
-                }
-                let seconds = data["seconds_estimated"].as_u64().unwrap_or(0);
-                let bundle = data["bundle_id"].as_str().unwrap_or("unknown").to_owned();
-                *apps.entry(bundle.clone()).or_default() += seconds;
-                *overall.entry(bundle).or_default() += seconds;
-                *days.entry(day.to_owned()).or_default() += seconds;
+            let (apps, days) = usage_tally(&rows, id, &first_text, &last_text);
+            for (bundle, seconds) in &apps {
+                *overall.entry(bundle.clone()).or_default() += seconds;
             }
             let device_total: u64 = apps.values().sum();
             total += device_total;

@@ -813,3 +813,79 @@ async fn title_changes_with_one_request_id_take_turns() {
     .await;
     assert!(next.is_ok());
 }
+
+#[test]
+fn usage_tally_reads_rows_shaped_like_the_real_store() {
+    let row = |device: &str, day: &str, bundle: &str, seconds: f64| {
+        json!({"collection": "usage.app_day", "data": {
+            "device_id": device,
+            "day": day,
+            "bundle_id": bundle,
+            "seconds_estimated": seconds,
+            "clipped_seconds": 12.5,
+            "sessions": 4.0,
+            "usage_class": "app",
+            "uncertainty": "focus estimates, not active interaction",
+        }})
+    };
+    let mut gone = row(
+        "mac",
+        "2026-11-09@America/Chicago",
+        "com.google.Chrome",
+        9000.0,
+    );
+    gone["deleted"] = json!(true);
+    let rows = vec![
+        row(
+            "mac",
+            "2026-11-09@America/Chicago",
+            "com.google.Chrome",
+            20_000.4,
+        ),
+        row(
+            "mac",
+            "2026-11-09@America/Chicago",
+            "com.apple.Safari",
+            12_345.6,
+        ),
+        row(
+            "mac",
+            "2026-11-09@America/Chicago",
+            "com.t3tools.t3code",
+            6_066.5,
+        ),
+        row(
+            "mac",
+            "2026-11-08@America/Chicago",
+            "com.google.Chrome",
+            3_600.0,
+        ),
+        row(
+            "mac",
+            "2026-11-10@America/Chicago",
+            "com.google.Chrome",
+            1_800.0,
+        ),
+        row(
+            "iphone",
+            "2026-11-09@America/Chicago",
+            "com.apple.MobileSMS",
+            1_836.2,
+        ),
+        gone,
+    ];
+    let (apps, days) = crate::mcp_compose::usage_tally(&rows, "mac", "2026-11-09", "2026-11-09");
+    assert_eq!(apps["com.google.Chrome"], 20_000);
+    assert_eq!(apps["com.apple.Safari"], 12_346);
+    assert_eq!(apps.values().sum::<u64>(), 38_413);
+    assert_eq!(days.len(), 1);
+    assert_eq!(days["2026-11-09"], 38_413);
+    let (apps, days) = crate::mcp_compose::usage_tally(&rows, "mac", "2026-11-08", "2026-11-10");
+    assert_eq!(apps["com.google.Chrome"], 25_400);
+    assert_eq!(
+        days.keys().map(String::as_str).collect::<Vec<_>>(),
+        ["2026-11-08", "2026-11-09", "2026-11-10"]
+    );
+    let (apps, _) = crate::mcp_compose::usage_tally(&rows, "iphone", "2026-11-09", "2026-11-09");
+    assert_eq!(apps["com.apple.MobileSMS"], 1_836);
+}
