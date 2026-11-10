@@ -610,7 +610,7 @@ pub(crate) fn refused(principal: &Principal, what: &str, scope: &str, read_only:
     }
     let mut grants = principal.grants.clone();
     grants.push(scope.to_owned());
-    Problem::new("unauthorized", format!("this agent may not use {what}"))
+    Problem::new("unauthorized", format!("this agent lacks a scope needed for {what}"))
         .problem(format!("this agent does not have the {scope} scope"))
         .expected(json!({ "scope": scope }))
         .hint(format!(
