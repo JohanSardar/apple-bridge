@@ -1,17 +1,25 @@
 # CLI changes in this release
 
-The `bridge` command now follows one set of rules for output, errors, prompts and options. Every command, flag and output shape from the previous release still works; this page lists what moved and what to change in scripts. The full surface is in the [CLI reference](cli.md), and a machine-readable copy is in [cli-surface.json](cli-surface.json).
+The `bridge` command now follows one set of rules for output, errors, prompts and options. Every command, flag and output shape from the previous release still works; this page lists what moved and what to change in scripts.
+
+## Compatibility policy
+
+Old spellings and behaviours listed here keep working, with a warning on stderr where noted, until the next major version. Nothing on this page is removed in a minor or patch release. A major version lists every removal on this page before it ships. The exceptions below are deliberate safety corrections and are kept: refusing to replace a file silently, refusing unknown options that change safety or the target, not acting on end of input at a prompt, and requiring `--yes` for the new destructive spellings outside a terminal. The full surface is in the [CLI reference](cli.md), and a machine-readable copy is in [cli-surface.json](cli-surface.json).
 
 ## What a script should do now
 
 | If a script… | Do this |
 |---|---|
-| Parses JSON from `status`, `doctor`, `agent list`, `agent create`, `agent level`, `web devices`, `connector pending`, `connector allow` or `remote status` | Add `--json`. Piped output stays the old JSON for one more release and prints a notice on stderr; after that, piped output becomes a tab-separated table. Set `APPLE_BRIDGE_LEGACY_JSON=0` to get the new behaviour now |
+| Parses JSON from `status`, `doctor`, `agent list`, `agent create`, `agent level`, `web devices`, `connector pending`, `connector allow` or `remote status` | Add `--json`. Piped output stays the old JSON until the next major version and prints a notice on stderr; after that, piped output becomes a tab-separated table. Set `APPLE_BRIDGE_LEGACY_JSON=0` to get the new behaviour now |
 | Reads the human summary of `bridge up` or `bridge down` from stdout | Read stderr. Piped `bridge up` prints only the MCP address on stdout; `--json` is unchanged |
 | Reads the token from `bridge agent create` | Pass `--json` and read `.token`. In a terminal the token alone goes to stdout and the receipt to stderr |
-| Revokes from a script without `--yes` | Add `--yes`. For one release the old spellings `agent revoke` and `revoke` still run with a warning; the new `agents revoke` and `tokens revoke` need `--yes`; `restore`, `web lock`, `web sessions revoke` and `backup` over an existing file already need `--yes` (or `--force` for backup) |
-| Runs `bridge permissions guide` without a terminal | Name the permissions: `--only contacts,calendar`. Without a terminal and without `--only` or `--yes` it exits 2 and requests nothing |
-| Treats `doctor` exit 0 as healthy | `doctor` now exits 1 when its report says `"ok": false`; the report is still on stdout |
+| Revokes from a script without `--yes` | Add `--yes`. Until the next major version the old spellings `agent revoke`, `revoke`, `scope` and `web lock` still run with a warning; the new `agents revoke`, `tokens revoke`, `tokens update` and `web sessions revoke --all` need `--yes`; `restore` and `backup` over an existing file already need `--yes` (or `--force` for backup) |
+| Widens an agent's access from a script | `agents update --level full`, and a `--scope` that adds sources, show the agent, its old and new access and what changes, then ask. Without a terminal they need `--yes`. Narrowing access needs no confirmation |
+| Runs `bridge permissions guide` without a terminal | Name the permissions: `--only contacts,calendar`. Without a terminal and without `--only` or `--yes` it prints the list with each status on stdout, as before, then exits 2 with `terminal_required` and requests nothing |
+| Treats `doctor` exit 0 as healthy | Read `"ok"` in `doctor --json`, or run `doctor --check`, which exits 1 with `unhealthy_home` when a check fails. Plain `doctor` exits 0 whenever the report finishes, as before |
+| Waits for the first sync with `stats --follow` | Use `stats --wait`, which exits once every source has finished. `--follow` now follows until it's stopped or `--timeout` passes; in CI or under an agent it needs `--timeout` and otherwise exits 2 with `missing_timeout`. The old `stats --watch` still works exactly as before, including `--settle 0` and `--timeout 0` |
+| Parses `call --list` or `skills list` piped | Piped output is tab-separated with a header line. `call --list` has `Operation`, `Scope` and the full `Description`; `--json` gives every field |
+| Parses `read` or `search` piped | Rows are tab-separated with a header line, also when nothing matches. Long text is no longer shortened when piped. Notes such as "No results" go to stderr |
 | Checks for exit code 1 on bad input | Usage errors and missing input now exit 2; operational failures exit 1; Ctrl+C and a declined prompt exit 130 (SIGTERM 143) |
 | Reads `read notes` "Nothing to show" as empty | A source that never synced, lacks its permission or is unavailable is now an error (`source_unavailable` or `permission_missing`). A truly empty, synced source prints a note on stderr and exits 0 |
 
@@ -32,17 +40,22 @@ Without colour or a terminal the first line starts with `Error:`. With `--json`,
 {"status":"action_required","reason":"not_running","message":"Apple Bridge isn't running from /path.","next":[{"command":"bridge up","argv":["bridge","up"]}]}
 ```
 
-`status` is `error` or `action_required`. `reason` comes from a fixed list: `invalid_arguments`, `unknown_option`, `unknown_command`, `missing_argument`, `invalid_value`, `conflicting_options`, `invalid_home`, `missing_input`, `confirmation_required`, `terminal_required`, `missing_timeout`, `not_running`, `not_set_up`, `not_found`, `source_unavailable`, `permission_missing`, `permission_denied`, `read_only`, `conflict`, `destination_exists`, `port_in_use`, `gateway_busy`, `not_owned`, `ledger_missing`, `network_error`, `api_error`, `spawn_failed`, `missing_command`, `helper_failed`, `unhealthy_home`, `unproven`, `unknown_outcome`, `timeout`, `invalid_config`, `internal_error`, `canceled`. Commands in `next` keep the `--home` you passed. Text from a remote server appears as `<source> said: …`, never as the headline.
+`status` is `error` or `action_required`. `reason` comes from a fixed list: `invalid_arguments`, `unknown_option`, `unknown_command`, `missing_argument`, `invalid_value`, `conflicting_options`, `invalid_home`, `missing_input`, `confirmation_required`, `terminal_required`, `missing_timeout`, `not_running`, `not_set_up`, `not_found`, `source_unavailable`, `permission_missing`, `permission_denied`, `read_only`, `conflict`, `destination_exists`, `port_in_use`, `gateway_busy`, `not_owned`, `ledger_missing`, `network_error`, `api_error`, `spawn_failed`, `missing_command`, `helper_failed`, `unhealthy_home`, `unproven`, `unknown_outcome`, `timeout`, `invalid_config`, `internal_error`, `canceled`, `rate_limited`, `pagination_stalled`. Commands in `next` keep the `--home` you passed. Text from a remote server appears as `<source> said: …`, never as the headline.
 
 ## Options
 
 - Global options work before or after the command: `--home`, `--json`, `--fields`, `--non-interactive`, `-y/--yes`, `--no-color` (and `NO_COLOR`), `-d/--debug`, `-v/--version` (`-V` still works), `-h/--help`.
 - `APPLE_BRIDGE_HOME` sets the home; an empty value or a file fails with `invalid_home`.
-- Every command refuses options it doesn't declare. For one release, a command that used to ignore an unknown option still runs, prints `! --force is ignored by bridge status and will be refused in the next release.`, and never ignores one that changes safety or the target.
+- Global options also work after the command and its arguments, including `bridge help agents --home X` and `bridge help search revoke --json`.
+- Boolean options accept `--flag=true`, `--flag=false` and `--no-flag` without a warning; the last one wins.
+- Every command refuses options it doesn't declare. Until the next major version, a command that used to ignore an unknown option still runs, prints `! --force is ignored by bridge status and will be refused in the next major version.`, and never ignores one that changes safety or the target.
 - Nothing after `--` is rewritten.
-- Old spellings still work and warn once on stderr: `-home` and other single-dash long options, `--flag=true` and `--flag=false`, `stats --watch` (now `--follow`), `read --text` (now `--query`), `link --no-browser` (now `--no-open`), `call --args` (now `--data`).
+- Old spellings still work and warn once on stderr: `-home` and other single-dash long options, `read --text` (now `--query`), `link --no-browser` (now `--no-open`), `call --args` (now `--data`). `stats --watch` is hidden and keeps its old meaning; `--wait` is the new name.
+- `remote on`, `remote off` and `remote enable`/`disable` accept `--via system` again.
 - `--timeout` takes a duration such as `30s`, `5m` or `2h`; a bare number still means seconds.
 - `--limit` must be 1 or more. Above 200 it is clamped with a `limit_clamped` warning.
+- `read calendar --days` takes any number of days from 1 up, as before.
+- Enumerated values, such as `--level` and `--via`, are listed in `--help --json` and offered by shell completion. List commands also answer to `ls`.
 
 ## Renamed commands
 
@@ -72,3 +85,24 @@ The old names still work. Those marked *warns* print a one-line deprecation noti
 - `bridge help search <text>`, `bridge help --all [--json]`, `--help --json` on every command, and `bridge completion bash|zsh|fish`.
 - Mutations with `--json` include an `outcome`, such as `created`, `updated`, `unchanged`, `revoked`, `replaced` or `restored`. Repeating a change says "Already…" and exits 0.
 - In GitHub Actions, tokens and pairing codes are masked with `::add-mask::`.
+- `bridge stats --wait` exits once every source has finished syncing; `--timeout 0` checks once.
+- `bridge doctor --check` exits 1 with `unhealthy_home` when a check fails.
+- `bridge agents create --expires-in 30d` and `bridge tokens create --expires-in 12h` issue access that ends on its own. Without it, access doesn't expire, as before. In a terminal both show the scope and expiry before issuing.
+- `bridge remote enable --open` opens the sign-in link in a browser even without a terminal, unless the session is over SSH. Piped, the link alone goes to stdout as soon as it's known, and the address once Remote is on. The Helper's Enable Remote button uses it. `remote on` behaves exactly as before.
+- `bridge link`, `unlink` and `install-credentials` print a JSON document with `--json`, and `link --print --json` gives both commands as `argv` arrays. `--timeout` on `link` and `unlink` covers every step, including registering, checking, signing out and removing; the child process is stopped and the confirmed state is reported.
+- JSON documents are indented on a terminal and one line when piped. `--fields` works for `stats`, `read`, `search` and `permissions status`; for `read` and `search` it picks fields inside each record's `data`.
+
+## Reads and cursors
+
+- `--limit` is the total across pages; only the remaining count is asked for. `--all` stops at 10,000.
+- A cursor from `--next` carries the read's window, filters, order and home. Options you leave out come from it; one that differs is refused with `conflicting_options`, and a cursor from another home with `invalid_value`.
+- Reading stops with `pagination_stalled` when the gateway repeats a cursor or returns empty pages that claim more. `--timeout` (default 2 minutes) bounds the whole read.
+- When a later page fails, the JSON error includes `rowsFetched`, `pages`, the starting `cursor` and a `resume` cursor.
+- Transient read failures are retried a few times with backoff, honouring `Retry-After` up to 10 seconds. A 429 is reported as `rate_limited` with `retryAfterSeconds`. Writes are never retried.
+- `read messages --chat ID` for a chat that doesn't exist is `not_found`.
+- `call` reports a write whose result is uncertain as `unknown_outcome` with `operationId`, what is confirmed, and a safe command to inspect it.
+
+## Compatibility exceptions
+
+- `agents create` still defaults to `--level full` and access that doesn't expire, because the setup scripts and lab rely on it. `tokens create` still prints the bare token on stdout.
+- The old spellings `scope`, `agent revoke`, `revoke` and `web lock` still run without `--yes` outside a terminal, with a warning, until the next major version.

@@ -63,7 +63,7 @@ It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Yo
 
 **ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with the same address and OAuth. Developer mode needs a paid ChatGPT plan.
 
-A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connectors list` and `bridge connector allow --request ID --code CODE` do the same.
+A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connectors list` and `bridge connectors allow --request ID --code CODE` do the same.
 
 ## Letting other people use your relay
 
@@ -119,7 +119,7 @@ This is delayed detection, not prevention:
 
 Each check tells `crt.sh` your Mac's address, which public logs already list.
 
-If you recognise the certificate, for example you requested one for your own domain somewhere else, run `bridge remote certificate-accept FINGERPRINT` with the fingerprint from `bridge doctor`. If you don't, run `bridge remote off` and stop using that relay.
+If you recognise the certificate, for example you requested one for your own domain somewhere else, run `bridge remote certificates accept FINGERPRINT` with the fingerprint from `bridge doctor`. If you don't, run `bridge remote disable` and stop using that relay.
 
 ## Back up
 

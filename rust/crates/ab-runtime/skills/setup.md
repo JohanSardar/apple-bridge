@@ -13,7 +13,7 @@ Everything here runs on the owner's Mac. It needs no account, server or domain.
 bridge up                  # starts Apple Bridge, asks nothing
 bridge link claude         # or: bridge link codex
 bridge permissions guide   # run in a terminal; it opens Settings and macOS may ask
-bridge stats --follow      # counts per source as each one finishes
+bridge stats --wait        # counts per source as each one finishes
 ```
 
 `bridge link` registers the server, then signs in through the browser. The page shows a four-digit code. The owner allows it in the Apple Bridge window, or with `bridge connectors allow --request <id> --code <code>`. Never allow a request on the owner's behalf; they must check the code.

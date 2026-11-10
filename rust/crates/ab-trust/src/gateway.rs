@@ -463,8 +463,10 @@ impl Authority {
             serde_json::json!(jiff::Timestamp::now().to_string()),
         );
         if let Some(expires_at) = expires_at {
-            p.extra
-                .insert("expires_at".into(), serde_json::json!(expires_at.to_string()));
+            p.extra.insert(
+                "expires_at".into(),
+                serde_json::json!(expires_at.to_string()),
+            );
         }
         self.update(|d| {
             if d.enrollment

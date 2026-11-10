@@ -194,9 +194,10 @@ impl Authority {
                 ..Principal::default()
             };
             if let Some(expires_at) = expires_at {
-                principal
-                    .extra
-                    .insert("expires_at".into(), serde_json::json!(expires_at.to_string()));
+                principal.extra.insert(
+                    "expires_at".into(),
+                    serde_json::json!(expires_at.to_string()),
+                );
             }
             d.principals.push(principal);
             Ok(())
