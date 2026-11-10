@@ -20,6 +20,7 @@ public enum PhotosChecks {
         try testStreamedOriginalAndBoundedRead()
         try testMaximumReadFitsNativeQueryFrame()
         try testCapacityAndFailureRemovePartialFiles()
+        try testPreviewChecks()
     }
 
     static func testPhotoKitFetchIsBoundedBeforeEnumeration() throws {

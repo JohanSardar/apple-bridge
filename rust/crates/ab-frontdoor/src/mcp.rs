@@ -78,7 +78,14 @@ impl ServerHandler for Handler {
             result = self.frontdoor.service.invoke(principal, &descriptor.name, &input) => result,
         };
         let is_error = result.is_err();
+        let mut image = None;
         let raw = match result {
+            Ok(value) if returns_image(&descriptor.name) => {
+                let (body, attached) = detach_image(value.get())
+                    .map_err(|_| ErrorData::internal_error("encoding", None))?;
+                image = attached;
+                body
+            }
             Ok(value) => value.get().as_bytes().to_vec(),
             Err(error) => serde_json::to_vec(&ab_operations::Problem { error: &error })
                 .map_err(|_| ErrorData::internal_error("encoding", None))?,
@@ -91,7 +98,11 @@ impl ServerHandler for Handler {
             String::from_utf8(bytes).map_err(|_| ErrorData::internal_error("encoding", None))?;
         let structured: serde_json::Value =
             serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let mut value = json!({"isError":is_error,"content":[{"type":"text","text":text}],"structuredContent":structured});
+        let mut items = vec![json!({"type":"text","text":text})];
+        if let Some(Image { data, mime }) = image {
+            items.push(json!({"type":"image","data":data,"mimeType":mime}));
+        }
+        let mut value = json!({"isError":is_error,"content":items,"structuredContent":structured});
         if descriptor.read_model {
             value["_meta"] =
                 json!({"bridge/read_model_ms": started.elapsed().as_secs_f64()*1000.0});
@@ -101,6 +112,40 @@ impl ServerHandler for Handler {
             .map_err(|_| ErrorData::internal_error("encoding", None))
     }
 }
+fn returns_image(operation: &str) -> bool {
+    matches!(operation, "photos.preview" | "photos.contact_sheet")
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Image {
+    data: String,
+    mime: String,
+}
+
+fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_json::Error> {
+    let mut value: serde_json::Value = serde_json::from_str(raw)?;
+    let result = &mut value["result_json"];
+    let image = match (
+        result
+            .get("image_base64")
+            .and_then(serde_json::Value::as_str),
+        result.get("mime_type").and_then(serde_json::Value::as_str),
+    ) {
+        (Some(data), Some(mime)) if mime.starts_with("image/") => Some(Image {
+            data: data.to_owned(),
+            mime: mime.to_owned(),
+        }),
+        _ => None,
+    };
+    if let Some(fields) = result.as_object_mut() {
+        fields.remove("image_base64");
+        if image.is_some() {
+            fields.insert("image".into(), json!("attached as MCP image content"));
+        }
+    }
+    Ok((serde_json::to_vec(&value)?, image))
+}
+
 fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_json::Value {
     let mut tools = ab_catalog::mcp_tools(descriptors)["tools"].take();
     for tool in tools.as_array_mut().into_iter().flatten() {
@@ -247,6 +292,31 @@ fn tool_descriptors() -> Result<Vec<ab_catalog::OperationDescriptor>, Error> {
         descriptors
     };
     Ok(descriptors)
+}
+
+#[cfg(test)]
+mod image_tests {
+    #[test]
+    fn photo_images_move_from_text_into_image_content() -> Result<(), Box<dyn std::error::Error>> {
+        let raw = r#"{"id":"qry_1","blobs":[],"result_json":{"asset_id":"a","mime_type":"image/jpeg","width":2,"height":1,"image_base64":"/9j/AA=="}}"#;
+        let (body, image) = super::detach_image(raw)?;
+        let body: serde_json::Value = serde_json::from_slice(&body)?;
+        assert_eq!(
+            image,
+            Some(super::Image {
+                data: "/9j/AA==".into(),
+                mime: "image/jpeg".into()
+            })
+        );
+        assert!(body["result_json"].get("image_base64").is_none());
+        assert_eq!(body["result_json"]["asset_id"], "a");
+        let (_, image) =
+            super::detach_image(r#"{"result_json":{"image_base64":"x","mime_type":"text/html"}}"#)?;
+        assert_eq!(image, None);
+        assert!(super::returns_image("photos.contact_sheet"));
+        assert!(!super::returns_image("photos.fetch"));
+        Ok(())
+    }
 }
 
 #[cfg(test)]

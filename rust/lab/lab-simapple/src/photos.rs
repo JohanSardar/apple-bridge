@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
 const ORIGINAL: &[u8] = b"synthetic-photo-original";
+const PREVIEW: &str = "/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAABKADAAQAAAABAAAAAwAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAAwAEAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMABgYGBgYGCgYGCg4KCgoOEg4ODg4SFxISEhISFxwXFxcXFxccHBwcHBwcHCIiIiIiIicnJycnLCwsLCwsLCwsLP/bAEMBBwcHCwoLEwoKEy4fGh8uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLv/dAAQAAf/aAAwDAQACEQMRAD8A8+ooorwD6g//2Q==";
 
 #[derive(Debug, Default)]
 pub(super) struct Library {
@@ -118,6 +119,35 @@ impl Library {
                 }
                 asset["resources"] = json!(resources);
                 Ok(asset)
+            }
+            "photos.preview" => {
+                let asset = self
+                    .assets()
+                    .into_iter()
+                    .find(|asset| asset["id"] == args["asset_id"])
+                    .ok_or("invalid")?;
+                Ok(
+                    json!({"asset_id":asset["id"],"type":asset["type"],"created_at":asset["created_at"],"mime_type":"image/jpeg","width":4,"height":3,"bytes":STANDARD.decode(PREVIEW).map_err(|_| "corrupt")?.len(),"image_base64":PREVIEW}),
+                )
+            }
+            "photos.contact_sheet" => {
+                let assets = self.assets();
+                let mut cells = Vec::new();
+                for (index, id) in args["asset_ids"]
+                    .as_array()
+                    .ok_or("invalid")?
+                    .iter()
+                    .enumerate()
+                {
+                    let asset = assets
+                        .iter()
+                        .find(|asset| &asset["id"] == id)
+                        .ok_or("invalid")?;
+                    cells.push(json!({"number":index + 1,"asset_id":id,"type":asset["type"],"created_at":asset["created_at"],"rendered":true}));
+                }
+                Ok(
+                    json!({"cells":cells,"columns":cells.len().min(5),"mime_type":"image/jpeg","width":4,"height":3,"bytes":STANDARD.decode(PREVIEW).map_err(|_| "corrupt")?.len(),"image_base64":PREVIEW}),
+                )
             }
             "photos.albums" => Ok(
                 json!({"albums":self.albums.iter().map(|(id,(title,_))| json!({"id":id,"title":title})).collect::<Vec<_>>(),"count":self.albums.len(),"next_offset":null}),

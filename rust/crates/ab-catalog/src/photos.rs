@@ -9,7 +9,7 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
     let limit = json!({"type":"integer","minimum":1,"maximum":200});
     let transfer = json!({"type":"string","minLength":1,"maxLength":1024});
     let mut operations = Vec::new();
-    for (name, description, write, properties, required) in [
+    let mut entries = vec![
         (
             "photos.search",
             "Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.",
@@ -87,7 +87,10 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
             json!({"album_id":text}),
             vec!["album_id"],
         ),
-    ] {
+    ];
+    let viewing = viewing(&text, &boolean);
+    entries.splice(3..3, viewing);
+    for (name, description, write, properties, required) in entries {
         operations.push(descriptor(
             output,
             name,
@@ -98,6 +101,27 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
         ));
     }
     operations
+}
+
+type Entry = (&'static str, &'static str, bool, Value, Vec<&'static str>);
+
+fn viewing(text: &Value, boolean: &Value) -> [Entry; 2] {
+    [
+        (
+            "photos.preview",
+            "Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden. network_access (default true) lets PhotoKit download this one original from the owner's iCloud when the Mac keeps only a thumbnail; set false to use local data only. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.",
+            false,
+            json!({"asset_id":text,"max_px":{"type":"integer","minimum":64,"maximum":1536},"network_access":boolean,"include_hidden":boolean}),
+            vec!["asset_id"],
+        ),
+        (
+            "photos.contact_sheet",
+            "Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads, and cells that are not local otherwise show grey with rendered false. Pixels leave the Mac only for the photos named in this call.",
+            false,
+            json!({"asset_ids":{"type":"array","minItems":1,"maxItems":30,"uniqueItems":true,"items":text},"columns":{"type":"integer","minimum":1,"maximum":8},"cell_px":{"type":"integer","minimum":96,"maximum":384},"network_access":boolean,"include_hidden":boolean}),
+            vec!["asset_ids"],
+        ),
+    ]
 }
 
 fn descriptor(

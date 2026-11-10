@@ -40077,6 +40077,142 @@
         }
       }
     },
+    "/v1/op/photos.contact_sheet": {
+      "post": {
+        "description": "Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads, and cells that are not local otherwise show grey with rendered false. Pixels leave the Mac only for the photos named in this call.",
+        "operationId": "photos.contact_sheet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "asset_ids": {
+                        "items": {
+                          "maxLength": 1024,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 30,
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      },
+                      "cell_px": {
+                        "maximum": 384,
+                        "minimum": 96,
+                        "type": "integer"
+                      },
+                      "columns": {
+                        "maximum": 8,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "include_hidden": {
+                        "type": "boolean"
+                      },
+                      "network_access": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "asset_ids"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
     "/v1/op/photos.favorite": {
       "post": {
         "description": "Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
@@ -40358,6 +40494,131 @@
                         "maxLength": 1024,
                         "minLength": 1,
                         "type": "string"
+                      }
+                    },
+                    "required": [
+                      "asset_id"
+                    ],
+                    "type": "object"
+                  },
+                  "deadline_ms": {
+                    "maximum": 60000,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "maxLength": 128,
+                    "pattern": "^qry_[A-Za-z0-9._:-]+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "args"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "blobs": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "digest": {
+                                "type": "string"
+                              },
+                              "handle": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "digest",
+                              "size"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "result_json": {}
+                      },
+                      "required": [
+                        "id",
+                        "result_json",
+                        "blobs"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "awaiting_approval"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Operation result"
+          }
+        }
+      }
+    },
+    "/v1/op/photos.preview": {
+      "post": {
+        "description": "Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden. network_access (default true) lets PhotoKit download this one original from the owner's iCloud when the Mac keeps only a thumbnail; set false to use local data only. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.",
+        "operationId": "photos.preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "asset_id": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "include_hidden": {
+                        "type": "boolean"
+                      },
+                      "max_px": {
+                        "maximum": 1536,
+                        "minimum": 64,
+                        "type": "integer"
+                      },
+                      "network_access": {
+                        "type": "boolean"
                       }
                     },
                     "required": [

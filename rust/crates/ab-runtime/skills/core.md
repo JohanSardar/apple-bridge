@@ -28,11 +28,15 @@ For Photos transfers, pass `--token-env NAME` with the same existing scoped cred
 | Reminders | `reminders.items` | `time_zone`, and one of `smart`, `list` or `tag` |
 | Notes | `notes.list` | `folder`, `sort` |
 | A mail body | `mail.body` | `args` |
-| Photos, live | `photos.search` | `args: {limit, start, end, type, album_id, near, radius_m, offset}` |
+| Photos, live | `photos.search` | `args: {limit, start, end, type, album_id, favorite, near, radius_m, cursor}` |
 | Photo details/resources | `photos.get` | `args: {asset_id}` |
 | User/smart albums | `photos.albums` | `args: {smart, limit, offset}` |
+| Look at photos | `photos.contact_sheet` | `args: {asset_ids, columns, cell_px}` |
+| Look at one photo | `photos.preview` | `args: {asset_id, max_px}` |
 
-Photos uses `next_offset`, not `after`. Its coordinate filter scans bounded candidate pages; keep following non-null `next_offset` even when a page is empty. Search and `records.query` do not include Photos. The Mac must remain connected for remote queries.
+Photos search uses `next_cursor`, not `after`: pass it back as `cursor` with the same filters. Its coordinate filter scans bounded candidate pages; keep following a non-null `next_cursor` even when a page is empty. Search and `records.query` do not include Photos. The Mac must remain connected for remote queries.
+
+To find a photo by what it shows, look at it: narrow with `photos.search` filters first, pass about 20 IDs at a time to `photos.contact_sheet`, read the numbers in the grid against `cells`, then open a match with `photos.preview` (raise `max_px` to read detail). Each image you view costs time and tokens, and its pixels go to your provider, so look only at photos the task needs.
 
 Original downloads use `photos.fetch` with `args: {asset_id, resource_index, resource_key, network_access}`. Inspect the `resources` from `photos.get` to choose a resource; pass its optional `resource_key` to detect changed metadata before starting. Without an index, fetch selects an original resource by public type. Download Live Photo still/video resources separately. Poll/read with `args: {transfer_id, offset, length}` until ready, assemble the chunks, verify SHA-256, then always call `photos.release`. Maximum chunk is 512 KiB; poll within 120 seconds to retain a transfer, which expires after at most 24 hours. Do not put photo contents, filenames, locations or dates in public logs.
 

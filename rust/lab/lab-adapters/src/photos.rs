@@ -65,6 +65,7 @@ pub fn sim(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
         "",
     );
     queries(&client, evidence)?;
+    previews(&client, evidence)?;
     originals(world, &client, evidence)?;
     albums(world, &client, evidence)?;
     denial(world, &client, evidence)
@@ -144,6 +145,68 @@ fn queries(client: &Client, evidence: &mut Evidence) -> Result<()> {
         details["resources"]
             .as_array()
             .is_some_and(|rows| rows.len() == 2 && rows[1]["type"] == 9),
+        "",
+    );
+    Ok(())
+}
+
+fn previews(client: &Client, evidence: &mut Evidence) -> Result<()> {
+    let preview = client.call_mcp_result(
+        "photos.preview",
+        &json!({"id":random_id("qry")?,"args":{"asset_id":"photo-fixture","max_px":256}}),
+        10,
+    )?;
+    let image = &preview["content"][1];
+    evidence.check(
+        "mcp_preview_is_image_content",
+        image["type"] == "image"
+            && image["mimeType"] == "image/jpeg"
+            && image["data"]
+                .as_str()
+                .and_then(|data| STANDARD.decode(data).ok())
+                .is_some_and(|bytes| bytes.starts_with(&[0xff, 0xd8]))
+            && preview["structuredContent"]["result_json"]
+                .get("image_base64")
+                .is_none()
+            && !preview["content"][0]["text"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("image_base64"),
+        "",
+    );
+    let rest = call(
+        client,
+        "photos.preview",
+        json!({"asset_id":"photo-fixture"}),
+        false,
+    )?;
+    evidence.check(
+        "rest_preview_keeps_base64",
+        rest["image_base64"].is_string() && rest["mime_type"] == "image/jpeg",
+        "",
+    );
+    let sheet = client.call_mcp_result(
+        "photos.contact_sheet",
+        &json!({"id":random_id("qry")?,"args":{"asset_ids":["photo-fixture","video-fixture","live-fixture"]}}),
+        10,
+    )?;
+    let cells = &sheet["structuredContent"]["result_json"]["cells"];
+    evidence.check(
+        "contact_sheet_numbers_cells",
+        sheet["content"][1]["type"] == "image"
+            && cells.as_array().is_some_and(|cells| cells.len() == 3)
+            && cells[2]["number"] == 3
+            && cells[2]["asset_id"] == "live-fixture",
+        "",
+    );
+    let duplicate = client.call_raw(
+        "photos.contact_sheet",
+        &json!({"args":{"asset_ids":["photo-fixture","photo-fixture"]}}),
+        10,
+    )?;
+    evidence.check(
+        "contact_sheet_rejects_duplicates",
+        duplicate.is_some_and(|(_, value)| value["error"]["code"] == "invalid"),
         "",
     );
     Ok(())

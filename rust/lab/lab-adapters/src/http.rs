@@ -259,8 +259,21 @@ impl Client {
         let reply = self.request("POST", "/mcp", &MCP_HEADERS, Some(&body), seconds)?;
         mcp_structured(reply.status, &reply.body)
     }
+
+    pub fn call_mcp_result(&self, operation: &str, input: &Value, seconds: u64) -> Result<Value> {
+        let body = mcp_body(operation, input)?;
+        let reply = self.request("POST", "/mcp", &MCP_HEADERS, Some(&body), seconds)?;
+        mcp_result(&reply.body)
+    }
 }
 pub(crate) fn mcp_structured(status: u16, body: &[u8]) -> Result<Option<(u16, Value)>> {
+    let content = mcp_result(body)?["structuredContent"].clone();
+    if content.is_null() {
+        return Ok(None);
+    }
+    Ok(Some((status, content)))
+}
+pub(crate) fn mcp_result(body: &[u8]) -> Result<Value> {
     let text = String::from_utf8(body.to_vec())
         .map_err(|_| Error::Invalid("non UTF-8 MCP body".into()))?;
     let envelope = if let Ok(value) = serde_json::from_str::<Value>(&text) {
@@ -274,11 +287,7 @@ pub(crate) fn mcp_structured(status: u16, body: &[u8]) -> Result<Option<(u16, Va
             .ok_or_else(|| Error::Invalid("MCP stream without response".into()))?;
         serde_json::to_value(message)?
     };
-    let content = envelope["result"]["structuredContent"].clone();
-    if content.is_null() {
-        return Ok(None);
-    }
-    Ok(Some((status, content)))
+    Ok(envelope["result"].clone())
 }
 pub(crate) const MCP_HEADERS: [(&str, &str); 3] = [
     ("Content-Type", "application/json"),
