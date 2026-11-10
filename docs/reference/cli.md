@@ -43,6 +43,9 @@ Maintenance:
   completion  Print a shell completion script
 
 Global options:
+  --accessible       Plain text for screen readers: no color or symbols, named steps, numbered
+                     choices (also APPLE_BRIDGE_ACCESSIBLE=1)
+  --cwd <DIR>        Run as if started in this folder; relative paths resolve against it
   -d, --debug        Print redacted diagnostic detail on stderr
   --fields <FIELDS>  With --json: keep only these comma-separated fields
   -h, --help         Show help for the command
@@ -119,6 +122,7 @@ Examples:
 
 Notes:
   Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.
+  Piped, stdout holds only the server name; bridge link other prints only the MCP address.
 ```
 
 ## bridge unlink
@@ -145,6 +149,7 @@ Examples:
 Notes:
   This removes the agent's registration. To end its access on this Mac too, revoke it with bridge
   agents revoke.
+  Piped, stdout holds only the removed server name.
 ```
 
 ## bridge permissions
@@ -240,7 +245,7 @@ Options:
   --settle <DURATION>   A source counts as finished after this long without new records; 0 means at
                         once (default: 30s)
   --timeout <DURATION>  With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks
-                        once (default for --wait: no limit on a terminal, 5m otherwise)
+                        once (default for --wait: 10m)
   -w, --wait            Show sync events until every source has finished syncing, then exit
 
 Global options: see bridge --help
@@ -255,13 +260,18 @@ Examples:
   Follow sync events for 5 minutes
     bridge stats --follow --timeout 5m
 
-  Stream sync events as JSON lines
-    bridge stats --follow --json
+  Stream sync events as JSON lines for 5 minutes
+    bridge stats --follow --timeout 5m --json
 
 Notes:
-  Counts only, never content. --wait exits once every source has finished. --follow keeps going
-  until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0
-  because watching was the task.
+  Counts only, never content.
+  --wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention,
+  such as a missing permission, or when --timeout (default 10m) passes first; syncing continues
+  either way.
+  --follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout.
+  Reaching --timeout exits 0 because watching was the task.
+  With --json, --wait and --follow print one JSON event per line; warnings arrive as
+  {"type":"warning"} lines.
 ```
 
 ## bridge down
@@ -295,8 +305,8 @@ Arguments:
 Options:
   -a, --all             Fetch every page, up to 10,000 items
   --chat <CHAT>         Messages only: read this chat
-  --days <NUMBER>       Calendar only: how many days ahead [default: 7]
-  -n, --limit <NUMBER>  How many items to show in total, 1 to 200 [default: 10]
+  --days <NUMBER>       Calendar only: how many days ahead (default: 7)
+  -n, --limit <NUMBER>  How many items to show in total, 1 to 200 (default: 10)
   --next <CURSOR>       Continue from a previous page
   -q, --query <TEXT>    Messages only: find messages containing this text
   --timeout <DURATION>  Stop fetching pages after this long; what was fetched is reported (default:
@@ -316,8 +326,10 @@ Examples:
 
 Notes:
   Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is
-  fetched. Photos is queried live; everything else is read from what has synced, with its freshness
-  on stderr.
+  fetched. Photos is queried live and follows its pages like the rest; everything else is read from
+  what has synced, with its freshness on stderr.
+  With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope
+  without records, as in earlier releases.
   --next continues with the same filters, window and order. Options you leave out come from the
   cursor; ones that differ are refused.
   Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields
@@ -336,7 +348,7 @@ Arguments:
 
 Options:
   -a, --all             Fetch every page, up to 10,000 results
-  -n, --limit <NUMBER>  How many results to show in total, 1 to 200 [default: 10]
+  -n, --limit <NUMBER>  How many results to show in total, 1 to 200 (default: 10)
   --next <CURSOR>       Continue from a previous page
   --timeout <DURATION>  Stop fetching pages after this long; what was fetched is reported (default:
                         2m)
@@ -353,6 +365,7 @@ Examples:
 Notes:
   --limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000
   results. --next continues the same search; TEXT can be left out.
+  With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.
   Piped, rows are tab-separated with a header line, even when nothing matches.
 ```
 
@@ -459,6 +472,10 @@ Global options: see bridge --help
 bridge agents list [options]
 List agents
 
+Options:
+  -n, --limit <NUMBER>  How many to show, 1 to 200 (default: 50)
+  --next <CURSOR>       Continue from a previous page
+
 Global options: see bridge --help
 
 Examples:
@@ -468,7 +485,12 @@ Examples:
   List agent IDs as JSON
     bridge agents list --json --fields id,name
 
+  See the next page
+    bridge agents list --next <CURSOR>
+
 Notes:
+  Lists agents in the order they were created, oldest first, 50 at a time (--limit up to 200).
+  --next continues; the JSON gives next_cursor, null on the last page.
   Tokens are never shown again after creation.
 ```
 
@@ -489,14 +511,16 @@ Options:
 Global options: see bridge --help
 
 Examples:
-  Create a read-only agent for a bot
-    bridge agents create --name my-bot --level read --scope messages:read,contacts:read
+  Create a read-only agent for a bot that stops working in 30 days
+    bridge agents create --name my-bot --level read --scope messages:read,contacts:read --expires-in 30d
 
   Create one from a script and keep its ID
-    bridge agents create --name ci --json
+    bridge agents create --name ci --level read --expires-in 7d --json
 
 Notes:
   The token prints once, alone on stdout. --scope sets the agent's access grants.
+  Without --expires-in the token never expires. On a terminal you're asked first; without one it's
+  created with a warning.
 ```
 
 ## bridge agents inspect
@@ -539,6 +563,7 @@ Examples:
 
 Notes:
   A read agent can't be raised to full or approve; revoke it and create a new one.
+  Raising the level to full or adding sources asks first; without a terminal, pass --yes.
 ```
 
 ## bridge agents revoke
@@ -575,6 +600,10 @@ Arguments:
   <LEVEL>  New level (accepted: full, approve)
 
 Global options: see bridge --help
+
+Notes:
+  Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until
+  the next major version.
 ```
 
 ## bridge tokens
@@ -606,14 +635,16 @@ Options:
 Global options: see bridge --help
 
 Examples:
-  Create a token for a script
-    bridge tokens create --scope reminders:read
+  Create a read-only token for a script that stops working in 12 hours
+    bridge tokens create --scope reminders:read --expires-in 12h
 
   Store one in a variable
-    TOKEN=$(bridge tokens create --scope calendar:read)
+    TOKEN=$(bridge tokens create --scope calendar:read --expires-in 1h)
 
 Notes:
-  The token prints once, alone on stdout.
+  The token prints once, alone on stdout. With --json it is in secret.
+  Without --expires-in the token never expires. On a terminal you're asked first; without one it's
+  created with a warning.
 ```
 
 ## bridge tokens revoke
@@ -654,7 +685,7 @@ Examples:
     bridge tokens update <CREDENTIAL> --scope messages:read
 
 Notes:
-  Accepts token, agent and replica IDs.
+  Accepts token, agent and replica IDs. Adding sources asks first; without a terminal, pass --yes.
 ```
 
 ## bridge connectors
@@ -677,11 +708,19 @@ Global options: see bridge --help
 bridge connectors list [options]
 List apps waiting for approval
 
+Options:
+  -n, --limit <NUMBER>  How many to show, 1 to 200 (default: 50)
+  --next <CURSOR>       Continue from a previous page
+
 Global options: see bridge --help
 
 Examples:
   See which apps are waiting
     bridge connectors list
+
+Notes:
+  Lists waiting requests, the one that expires first at the top, 50 at a time (--limit up to 200).
+  --next continues.
 ```
 
 ## bridge connectors allow
@@ -765,7 +804,8 @@ Examples:
     bridge web enroll --public
 
 Notes:
-  The link is a one-time secret that works for 10 minutes. Piped, stdout holds only the link.
+  The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on.
+  Piped, stdout holds only the link and no QR code is drawn.
 ```
 
 ## bridge web sessions
@@ -787,11 +827,19 @@ Global options: see bridge --help
 bridge web sessions list [options]
 List signed-in browsers
 
+Options:
+  -n, --limit <NUMBER>  How many to show, 1 to 200 (default: 50)
+  --next <CURSOR>       Continue from a previous page
+
 Global options: see bridge --help
 
 Examples:
   List signed-in browsers
     bridge web sessions list
+
+Notes:
+  Lists browsers in the order they signed in, oldest first, 50 at a time (--limit up to 200). --next
+  continues.
 ```
 
 ## bridge web sessions revoke
@@ -875,8 +923,11 @@ Examples:
     bridge remote enable --relay-url https://relay.example.com
 
 Notes:
-  Waits until remote access is on, up to --timeout. Stopping the wait leaves the request with the
-  gateway; check it with bridge remote status.
+  Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the
+  request with the gateway; check it with bridge remote status.
+  With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending,
+  the link in remote.signInUrl and userActionRequired true.
+  --no-open never opens a browser; --open opens one even without a terminal, unless over SSH.
 ```
 
 ## bridge remote disable
@@ -916,6 +967,10 @@ Examples:
 
   Print agent connection snippets
     bridge remote status --snippets
+
+Notes:
+  With --json the state is under remote. Piped without --json it prints the state alone, as before.
+  --snippets --json gives {"snippets": TEXT}.
 ```
 
 ## bridge remote key
@@ -983,6 +1038,10 @@ Options:
   --via <ROUTE>         Route (default: relay) (accepted: relay, private, tailscale-app, both)
 
 Global options: see bridge --help
+
+Notes:
+  Prints the sign-in link and the address on stdout and opens the link in a browser unless
+  --no-open, with or without a terminal.
 ```
 
 ## bridge remote off
@@ -1060,6 +1119,9 @@ Global options: see bridge --help
 Examples:
   Join a gateway as a replica
     bridge join <CODE>
+
+Notes:
+  Piped, stdout holds only the replica's home.
 ```
 
 ## bridge status

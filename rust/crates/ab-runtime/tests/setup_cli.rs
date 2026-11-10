@@ -214,13 +214,11 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     assert!(
         warning
             .lines()
-            .any(|line| line.starts_with("    bridge down")),
+            .any(|line| line.starts_with("  bridge down")),
         "{warning}"
     );
     assert!(
-        warning
-            .lines()
-            .any(|line| line.starts_with("    bridge up")),
+        warning.lines().any(|line| line.starts_with("  bridge up")),
         "{warning}"
     );
     let updated = run(&home, &["up", "--json"])?;
@@ -238,7 +236,7 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     drop(guard);
     let stopped = run(&home, &["down"])?;
     assert!(stopped.status.success());
-    assert!(text(&stopped.stderr).contains("Already stopped"));
+    assert!(text(&stopped.stderr).contains("Apple Bridge is already stopped."));
     Ok(())
 }
 
@@ -403,7 +401,7 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     );
     assert!(!calls.contains("mcp login"));
     assert!(text(&claude.stderr).contains("claude mcp login apple-bridge"));
-    assert_eq!(claude.stdout, [] as [u8; 0]);
+    assert_eq!(text(&claude.stdout), "apple-bridge\n");
 
     let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
     assert!(project.status.success());
@@ -433,12 +431,15 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
 
     let other = link(&["link", "other"])?;
     assert_eq!(text(&other.stdout).trim(), url);
+    let other = link(&["link", "other", "--print"])?;
+    assert_eq!(text(&other.stdout), format!("{url}\n"));
 
     let unlink = bridge()
         .env("PATH", &path)
         .args(["unlink", "claude"])
         .output()?;
     assert!(unlink.status.success(), "{}", text(&unlink.stderr));
+    assert_eq!(text(&unlink.stdout), "apple-bridge\n");
     let calls = std::fs::read_to_string(&claude_log)?;
     assert!(calls.contains("mcp logout apple-bridge"));
     assert!(calls.contains("mcp remove apple-bridge --scope user"));
@@ -468,7 +469,7 @@ fn link_accepts_the_same_server_and_refuses_a_different_one() -> Check {
     };
     let same = link(format!("http://{api}/mcp"))?;
     assert!(same.status.success(), "{}", text(&same.stderr));
-    assert!(text(&same.stderr).contains("Already added"));
+    assert!(text(&same.stderr).contains("apple-bridge is already in Claude Code at"));
     let different = link("http://elsewhere.example/mcp".to_owned())?;
     assert_eq!(different.status.code(), Some(1));
     assert!(text(&different.stderr).contains("different server"));

@@ -349,7 +349,7 @@ fn checklist(backend: &Backend<'_>) -> Outcome<Vec<Vec<String>>> {
 }
 
 fn print_checklist(backend: &Backend<'_>) -> Outcome {
-    ui::table(&["Permission", "Status", "Used for"], &checklist(backend)?);
+    ui::wrapped_table(&["Permission", "Status", "Used for"], &checklist(backend)?);
     Ok(())
 }
 
@@ -413,6 +413,18 @@ impl Consent<'_> {
 fn pause(prompt: &str, consent: Consent<'_>, permission: &Permission) -> Outcome<bool> {
     if let Some(decided) = consent.covers(permission) {
         return Ok(decided);
+    }
+    if Modes::get().accessible {
+        let choice = ui::choose(
+            &format!("{}: what next?", permission.title),
+            &[("", "Continue"), ("s", "Skip")],
+        )?;
+        return match choice {
+            Some(index) => Ok(index == 0),
+            None => Err(Failure::canceled(
+                "Stopped: no answer (end of input). Nothing more was requested; grants already made are kept.",
+            )),
+        };
     }
     let Some(answer) = ui::ask(prompt)? else {
         return Err(Failure::canceled(

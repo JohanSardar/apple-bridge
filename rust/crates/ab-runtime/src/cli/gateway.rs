@@ -278,7 +278,7 @@ async fn start_gateway(home: &Path, args: &UpArgs, previous: Option<&Config>) ->
     let peer = peer_address(args, previous);
     let helper = helper_app(args, previous);
     if !Modes::get().json {
-        ui::note("Starting Apple Bridge…");
+        ui::phase(1, 2, "Starting Apple Bridge…");
     }
     let mut child = spawn_gateway(&Launch {
         home,
@@ -286,8 +286,20 @@ async fn start_gateway(home: &Path, args: &UpArgs, previous: Option<&Config>) ->
         peer: &peer,
         helper: &helper,
     })?;
+    if Modes::get().accessible && !Modes::get().json {
+        ui::phase(2, 2, "Waiting for Apple Bridge to answer…");
+    }
     wait_until_healthy(home, &api, &mut child).await?;
     Ok(load_config(home)?.map_or(api, |config| config.api_address))
+}
+
+fn remote_status(home: &Path) -> ab_remote::state::Status {
+    ab_remote::state::read::<ab_remote::state::Status>(home, "status").unwrap_or_else(|_| {
+        ab_remote::state::Status {
+            state: "off".to_owned(),
+            ..ab_remote::state::Status::default()
+        }
+    })
 }
 
 fn remote_state(home: &Path) -> String {
@@ -299,27 +311,43 @@ fn remote_state(home: &Path) -> String {
 
 fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapsed: Duration) {
     let verb = if started { "is on" } else { "was already on" };
-    ui::done(
+    let seconds = format!("({:.1} s)", elapsed.as_secs_f32());
+    ui::receipt(
         &format!("Apple Bridge {verb}"),
-        &format!(
-            "({:.1} s). No account, server or domain needed.",
-            elapsed.as_secs_f32()
-        ),
+        &seconds,
+        &format!("Apple Bridge {verb} {seconds}."),
     );
+    ui::note("No account, server or domain needed.");
     ui::row("MCP address", &mcp_address(address));
     ui::row(
         "Data folder",
         &commands::absolute(home).display().to_string(),
     );
-    let remote = remote_state(home);
+    let remote = remote_status(home);
     ui::row(
         "Remote access",
-        if remote == "off" {
+        if remote.state == "off" {
             "off (optional)"
         } else {
-            &remote
+            &remote.state
         },
     );
+    if remote.state == "error" {
+        let cause = ab_remote::failure_cause(&remote.last_error)
+            .map_or_else(|| ui::clean(&remote.last_error), ui::redact_urls);
+        ui::warn(
+            "remote_error",
+            &format!(
+                "Remote access failed{}",
+                if cause.is_empty() {
+                    ".".to_owned()
+                } else {
+                    format!(": {}.", cause.trim_end_matches('.'))
+                }
+            ),
+        );
+        ui::next_steps(&[Step::new("See why", ["bridge", "remote", "status"])]);
+    }
     if !helper {
         ui::warn(
             "helper_missing",
@@ -485,7 +513,7 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
     Ok(())
 }
 
-fn started_by_up(pid: &str, home: &Path) -> bool {
+pub fn started_by_up(pid: &str, home: &Path) -> bool {
     Command::new("ps")
         .args(["-p", pid, "-o", "command="])
         .output()
@@ -501,7 +529,11 @@ pub fn down(home: &Path) -> Outcome {
         if Modes::get().json {
             ui::json_document(json!({"home": home, "outcome": "unchanged"}));
         } else {
-            ui::done("Already stopped", "Apple Bridge");
+            ui::receipt(
+                "Already stopped",
+                "Apple Bridge",
+                "Apple Bridge is already stopped.",
+            );
             ui::row("Home", &commands::absolute(home).display().to_string());
         }
         return Ok(());
@@ -544,7 +576,7 @@ pub fn down(home: &Path) -> Outcome {
     if Modes::get().json {
         ui::json_document(json!({"home": home, "outcome": "stopped"}));
     } else {
-        ui::done("Stopped", "Apple Bridge");
+        ui::receipt("Stopped", "Apple Bridge", "Apple Bridge is stopped.");
         ui::row("Home", &commands::absolute(home).display().to_string());
     }
     Ok(())

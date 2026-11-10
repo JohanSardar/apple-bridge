@@ -56,11 +56,13 @@ fn requested(matches: &clap::ArgMatches) -> Requested {
     use clap::{FromArgMatches, parser::ValueSource};
     let globals = tree::Globals::from_arg_matches(deepest(matches)).unwrap_or(tree::Globals {
         home: None,
+        cwd: None,
         json: false,
         fields: None,
         non_interactive: None,
         yes: false,
         no_color: false,
+        accessible: false,
         debug: false,
         version: false,
         help: false,
@@ -75,7 +77,43 @@ fn requested(matches: &clap::ArgMatches) -> Requested {
         no_color: globals.no_color,
         debug: globals.debug,
         explicit_home: globals.home.filter(|_| explicit),
+        explicit_cwd: globals.cwd,
         fields: globals.fields.as_deref().map(split_fields),
+        accessible: globals.accessible,
+    }
+}
+
+fn scanned(arguments: &[OsString]) -> Requested {
+    let tokens: Vec<String> = arguments
+        .iter()
+        .skip(1)
+        .map(|argument| argument.to_string_lossy().into_owned())
+        .take_while(|token| token != "--")
+        .collect();
+    let value = |name: &str| {
+        let long = format!("--{name}");
+        let joined = format!("--{name}=");
+        let mut found = None;
+        for (index, token) in tokens.iter().enumerate() {
+            if *token == long {
+                found = tokens.get(index + 1).cloned();
+            } else if let Some(rest) = token.strip_prefix(&joined) {
+                found = Some(rest.to_owned());
+            }
+        }
+        found
+    };
+    let present = |names: &[&str]| tokens.iter().any(|token| names.contains(&token.as_str()));
+    Requested {
+        json: present(&["--json"]),
+        non_interactive: present(&["--non-interactive"]).then_some(true),
+        yes: present(&["--yes", "-y"]),
+        no_color: present(&["--no-color"]),
+        debug: present(&["--debug", "-d"]),
+        explicit_home: value("home").map(PathBuf::from),
+        explicit_cwd: value("cwd").map(PathBuf::from),
+        fields: value("fields").as_deref().map(split_fields),
+        accessible: present(&["--accessible"]),
     }
 }
 
@@ -137,18 +175,26 @@ fn help_step(path: &[String]) -> Step {
     Step::new("See all options", argv)
 }
 
+fn unknown_command(path: &[String], typed: &str) -> Failure {
+    let mut headline = format!(
+        "Unknown command {} for {}.",
+        ui::clean_input(typed),
+        shown_path(path)
+    );
+    if let Some(close) = help::suggestion(&help::child_names(path), typed) {
+        headline = format!("{headline} Did you mean {close}?");
+    }
+    let mut step = help_step(path);
+    "See the commands".clone_into(&mut step.benefit);
+    Failure::new(Reason::UnknownCommand, headline).step(step)
+}
+
 fn parse_failure(error: &clap::Error, path: &[String]) -> Failure {
     let shown = shown_path(path);
     match error.kind() {
         ErrorKind::InvalidSubcommand => {
             let typed = context(error, ContextKind::InvalidSubcommand).unwrap_or_default();
-            let mut headline = format!("Unknown command {} for {shown}.", ui::clean(&typed));
-            if let Some(close) = help::suggestion(&help::child_names(path), &typed) {
-                headline = format!("{headline} Did you mean {close}?");
-            }
-            let mut step = help_step(path);
-            "See the commands".clone_into(&mut step.benefit);
-            Failure::new(Reason::UnknownCommand, headline).step(step)
+            unknown_command(path, &typed)
         }
         ErrorKind::UnknownArgument => {
             let typed = context(error, ContextKind::InvalidArg).unwrap_or_default();
@@ -163,17 +209,14 @@ fn parse_failure(error: &clap::Error, path: &[String]) -> Failure {
                 }
                 Failure::new(Reason::UnknownOption, headline).step(help_step(path))
             } else if help::find(path).is_some_and(|command| command.has_subcommands()) {
-                let mut headline = format!("Unknown command {} for {shown}.", ui::clean(&typed));
-                if let Some(close) = help::suggestion(&help::child_names(path), &typed) {
-                    headline = format!("{headline} Did you mean {close}?");
-                }
-                let mut step = help_step(path);
-                "See the commands".clone_into(&mut step.benefit);
-                Failure::new(Reason::UnknownCommand, headline).step(step)
+                unknown_command(path, &typed)
             } else {
                 Failure::new(
                     Reason::InvalidArguments,
-                    format!("Unexpected argument {} for {shown}.", ui::clean(&typed)),
+                    format!(
+                        "Unexpected argument {} for {shown}.",
+                        ui::clean_input(&typed)
+                    ),
                 )
                 .step(help_step(path))
             }
@@ -189,7 +232,7 @@ fn parse_failure(error: &clap::Error, path: &[String]) -> Failure {
             let mut headline = if value.is_empty() {
                 format!("Can't use {argument} without a value.")
             } else {
-                format!("Can't use {} for {argument}.", ui::clean(&value))
+                format!("Can't use {} for {argument}.", ui::clean_input(&value))
             };
             if !accepted.is_empty() {
                 headline = format!("{headline} Accepted: {accepted}.");
@@ -207,6 +250,14 @@ fn parse_failure(error: &clap::Error, path: &[String]) -> Failure {
         ErrorKind::ArgumentConflict => {
             let first = context(error, ContextKind::InvalidArg).unwrap_or_default();
             let second = context(error, ContextKind::PriorArg).unwrap_or_default();
+            if first == second {
+                let name = first.split(' ').next().unwrap_or_default().to_owned();
+                return Failure::new(
+                    Reason::InvalidArguments,
+                    format!("{name} can be given once."),
+                )
+                .step(help_step(path));
+            }
             Failure::new(
                 Reason::ConflictingOptions,
                 format!("Can't use {first} with {second}."),
@@ -242,7 +293,7 @@ fn print_help(path: &[String]) -> ExitCode {
 fn finish(result: Outcome) -> ExitCode {
     match result {
         Ok(()) => {
-            ui::report_unembedded_warnings();
+            ui::report_legacy_warnings();
             ExitCode::SUCCESS
         }
         Err(failure) => {
@@ -282,12 +333,18 @@ pub async fn main() -> ExitCode {
     let raw: Vec<OsString> = std::env::args_os().collect();
     let prepared = argv::prepare(raw);
     access::typed_as(&prepared.typed);
+    modes::set_typed(&prepared.typed);
     let parsed = cli_command().try_get_matches_from(&prepared.arguments);
-    let matches = match &parsed {
-        Ok(matches) => matches.clone(),
-        Err(_) => lenient_matches(&prepared.arguments),
+    let requested = if let Ok(matches) = &parsed {
+        requested(matches)
+    } else {
+        let mut scan = scanned(&prepared.arguments);
+        let lenient = requested(&lenient_matches(&prepared.arguments));
+        scan.explicit_home = scan.explicit_home.or(lenient.explicit_home);
+        scan
     };
-    Modes::resolve(requested(&matches)).install();
+    let cwd = requested.explicit_cwd.clone();
+    Modes::resolve(requested).install();
     for (old, replacement) in &prepared.notices {
         if old.starts_with("ignored:") {
             ui::warn("deprecated", replacement);
@@ -296,6 +353,9 @@ pub async fn main() -> ExitCode {
         }
     }
     if prepared.help {
+        if let Some(stray) = &prepared.stray {
+            return finish(Err(unknown_command(&prepared.path, stray)));
+        }
         return print_help(&prepared.path);
     }
     if prepared.version {
@@ -313,6 +373,12 @@ pub async fn main() -> ExitCode {
     let Some(command) = cli.command else {
         return print_help(&[]);
     };
+    if let Some(cwd) = &cwd
+        && !matches!(command, Command::Help(_) | Command::Completion(_))
+        && let Err(failure) = enter(cwd)
+    {
+        return finish(Err(failure));
+    }
     if let Some(group) = group_without_action(&command) {
         let path: Vec<String> = group.split(' ').map(str::to_owned).collect();
         return print_help(&path);
@@ -339,6 +405,28 @@ pub async fn main() -> ExitCode {
         return finish(Err(failure));
     }
     supervise(command, home).await
+}
+
+fn enter(cwd: &Path) -> Outcome {
+    if cwd.as_os_str().is_empty() || !cwd.is_dir() {
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            format!(
+                "Can't use --cwd {}. It isn't a folder.",
+                ui::shell_quote(&cwd.to_string_lossy())
+            ),
+        ));
+    }
+    std::env::set_current_dir(cwd).map_err(|error| {
+        Failure::new(
+            Reason::PermissionDenied,
+            format!(
+                "Can't use --cwd {}.",
+                ui::shell_quote(&cwd.to_string_lossy())
+            ),
+        )
+        .row("Detail", ui::clean(&error.to_string()))
+    })
 }
 
 fn check_fields(path: &[String]) -> Outcome {
@@ -380,6 +468,7 @@ fn check_fields(path: &[String]) -> Outcome {
 
 async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     use tokio::signal::unix::{SignalKind, signal};
+    let server = matches!(command, Command::Start(_) | Command::Connect(_));
     let (Ok(mut interrupt), Ok(mut terminate), Ok(mut hangup)) = (
         signal(SignalKind::interrupt()),
         signal(SignalKind::terminate()),
@@ -394,6 +483,11 @@ async fn supervise(command: Command, home: PathBuf) -> ExitCode {
         _ = terminate.recv() => 143,
         _ = hangup.recv() => 129,
     };
+    if server {
+        let _ = tokio::time::timeout(Duration::from_secs(15), &mut task).await;
+        children::stop_all();
+        std::process::exit(code);
+    }
     if code == 130
         && OWNS_INTERRUPT.load(Ordering::SeqCst)
         && let Ok(joined) = tokio::time::timeout(Duration::from_secs(10), &mut task).await
@@ -501,7 +595,7 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             None => Ok(()),
         },
         Command::Agents(group) => match group.action {
-            Some(AgentAction::List) => access::agents_list(home),
+            Some(AgentAction::List(args)) => access::agents_list(home, &args),
             Some(AgentAction::Create(args)) => access::agents_create(home, &args),
             Some(AgentAction::Inspect(args)) => access::agents_inspect(home, &args.id),
             Some(AgentAction::Update(args)) => {
@@ -528,8 +622,9 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
         Command::Revoke(args) => access::revoke(home, &args.id, access::Selector::Any),
         Command::Scope(args) => access::update_grants(home, &args.id, &args.scope),
         Command::Connectors(group) => match group.action {
-            Some(ConnectorAction::List | ConnectorAction::Pending) => {
-                access::connectors_list(home).await
+            Some(ConnectorAction::List(args)) => access::connectors_list(home, &args).await,
+            Some(ConnectorAction::Pending) => {
+                access::connectors_list(home, &tree::ListArgs::default()).await
             }
             Some(ConnectorAction::Allow(decision)) => {
                 access::connectors_decide(home, &decision, true).await
@@ -544,12 +639,12 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
                 access::web_enroll(home, host.as_deref(), public)
             }
             Some(WebAction::Sessions(sessions)) => match sessions.action {
-                Some(SessionsAction::List) => access::sessions_list(home),
+                Some(SessionsAction::List(args)) => access::sessions_list(home, &args),
                 Some(SessionsAction::Revoke { .. }) => access::sessions_revoke(home),
                 None => Ok(()),
             },
             Some(WebAction::Lock) => access::sessions_revoke(home),
-            Some(WebAction::Devices) => access::sessions_list(home),
+            Some(WebAction::Devices) => access::sessions_list(home, &tree::ListArgs::default()),
             None => Ok(()),
         },
         Command::Remote(group) => match group.action {
@@ -557,13 +652,13 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
                 commands::remote_enable(home, &args, commands::MODERN).await
             }
             Some(RemoteAction::On(args)) => {
-                commands::remote_enable(home, &args, commands::Voice::Legacy).await
+                commands::remote_enable(home, &args, commands::LEGACY).await
             }
             Some(RemoteAction::Disable(args)) => {
                 commands::remote_disable(home, &args, commands::MODERN).await
             }
             Some(RemoteAction::Off(args)) => {
-                commands::remote_disable(home, &args, commands::Voice::Legacy).await
+                commands::remote_disable(home, &args, commands::LEGACY).await
             }
             Some(RemoteAction::Status(args)) => commands::remote_status(home, &args),
             Some(RemoteAction::Key(args)) => commands::remote_key(home, &args),
@@ -659,19 +754,7 @@ fn help_command(args: &tree::HelpArgs) -> Outcome {
     }
     let (path, _) = argv::resolve_path(&args.path);
     if path.len() != args.path.len() {
-        let known = &args.path[..path.len()];
-        let typed = &args.path[path.len()];
-        let mut headline = format!(
-            "Unknown command {} for {}.",
-            ui::clean(typed),
-            shown_path(known)
-        );
-        if let Some(close) = help::suggestion(&help::child_names(&path), typed) {
-            headline = format!("{headline} Did you mean {close}?");
-        }
-        let mut step = help_step(&path);
-        "See the commands".clone_into(&mut step.benefit);
-        return Err(Failure::new(Reason::UnknownCommand, headline).step(step));
+        return Err(unknown_command(&path, &args.path[path.len()]));
     }
     print_help(&path);
     Ok(())

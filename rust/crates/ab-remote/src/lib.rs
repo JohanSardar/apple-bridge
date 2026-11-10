@@ -61,6 +61,27 @@ impl Progress {
             link: String::new(),
         }
     }
+
+    #[must_use]
+    pub fn failed_because(cause: &str) -> Self {
+        let mut progress = Self::failed();
+        let cause = cause.trim().trim_end_matches('.');
+        if !cause.is_empty() {
+            progress.last_error =
+                format!("Remote setup failed: {cause}. Turn Remote off and try again.");
+        }
+        progress
+    }
+}
+
+#[must_use]
+pub fn failure_cause(last_error: &str) -> Option<&str> {
+    last_error
+        .strip_prefix("remote: ")
+        .unwrap_or(last_error)
+        .strip_prefix("Remote setup failed: ")
+        .and_then(|rest| rest.strip_suffix(". Turn Remote off and try again."))
+        .filter(|cause| !cause.is_empty())
 }
 #[derive(Clone, Debug)]
 pub struct IngressStatus {

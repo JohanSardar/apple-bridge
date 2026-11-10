@@ -186,7 +186,13 @@ fn usage_errors_exit_two_with_one_suggestion_and_one_json_line() -> Check {
         );
         assert_eq!(error.matches("Did you mean").count(), 1, "{error}");
     }
-    let output = run(home.path(), &["read", "notes", "--limit", "0", "--json"])?;
+    let output = run(
+        home.path(),
+        &["read", "notes", "--limit", "0", "--json=false"],
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
+    let output = run(home.path(), &["read", "notes", "--limit", "x", "--json"])?;
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(output.stdout, [] as [u8; 0]);
     let error = error_document(&output)?;
@@ -367,8 +373,27 @@ fn the_home_comes_from_the_environment_and_must_be_valid() -> Check {
         .env("APPLE_BRIDGE_HOME", &home)
         .args(["agents", "list", "--json"])
         .output()?;
-    assert!(output.status.success());
-    assert_eq!(text(&output.stdout).trim(), "[]");
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.stdout, [] as [u8; 0]);
+    let error = error_document(&output)?;
+    assert_eq!(error["reason"], "not_set_up");
+    assert!(
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.starts_with("Apple Bridge isn't set up in ")),
+        "{error}"
+    );
+    std::fs::create_dir(&home)?;
+    let output = bridge()
+        .env("APPLE_BRIDGE_HOME", &home)
+        .args(["agents", "list", "--json"])
+        .output()?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let listed: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(
+        listed,
+        serde_json::json!({"agents": [], "next_cursor": null})
+    );
     Ok(())
 }
 
@@ -515,10 +540,10 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
 
     let output = run(home.path(), &["tokens", "revoke", &id, "--yes"])?;
     assert!(output.status.success());
-    assert!(text(&output.stderr).contains("Already revoked"));
+    assert!(text(&output.stderr).contains("is already revoked."));
     let output = run(home.path(), &["web", "lock"])?;
     assert!(output.status.success());
-    assert!(text(&output.stderr).contains("Already signed out"));
+    assert!(text(&output.stderr).contains("No browsers are signed in."));
     Ok(())
 }
 
@@ -752,7 +777,7 @@ fn signals_stop_waiting_with_their_codes() -> Check {
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success());
     assert!(text(&output.stderr).contains("Stopped following after"));
-    let output = run(home.path(), &["stats", "--wait", "--timeout", "1s"])?;
+    let output = run(home.path(), &["stats", "--watch", "--timeout", "1s"])?;
     assert!(output.status.success());
     assert!(text(&output.stdout).contains("Stopped watching"));
     Ok(())
@@ -862,7 +887,7 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
     assert!(
         stopped_text
             .lines()
-            .any(|line| line.trim_start().starts_with("Stopped") && line.ends_with("Apple Bridge")),
+            .any(|line| line == "Apple Bridge is stopped."),
         "{stopped_text}"
     );
     Ok(())

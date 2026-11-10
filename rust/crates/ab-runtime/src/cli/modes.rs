@@ -29,7 +29,9 @@ pub struct Requested {
     pub no_color: bool,
     pub debug: bool,
     pub explicit_home: Option<PathBuf>,
+    pub explicit_cwd: Option<PathBuf>,
     pub fields: Option<Vec<String>>,
+    pub accessible: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +42,8 @@ pub struct Modes {
     pub debug: bool,
     pub fields: Option<Vec<String>>,
     pub explicit_home: Option<PathBuf>,
+    pub explicit_cwd: Option<PathBuf>,
+    pub accessible: bool,
     pub ci: bool,
     pub agent: Option<String>,
     pub github_actions: bool,
@@ -54,6 +58,27 @@ pub struct Modes {
 }
 
 static MODES: OnceLock<Modes> = OnceLock::new();
+static TYPED: OnceLock<Vec<String>> = OnceLock::new();
+
+pub fn set_typed(words: &[String]) {
+    let _ = TYPED.set(words.to_vec());
+}
+
+pub fn legacy_spelling() -> bool {
+    let words = TYPED.get().map(Vec::as_slice).unwrap_or_default();
+    let first = words.first().map_or("", String::as_str);
+    let second = words.get(1).map_or("", String::as_str);
+    matches!(
+        first,
+        "agent" | "token" | "connector" | "revoke" | "scope" | "setup"
+    ) || matches!(
+        (first, second),
+        ("web", "devices" | "lock")
+            | ("connectors", "pending")
+            | ("remote", "on" | "off" | "certificate-accept")
+            | ("agents", "level")
+    )
+}
 static STDIN_PAYLOAD: AtomicBool = AtomicBool::new(false);
 
 fn set(name: &str) -> bool {
@@ -66,10 +91,11 @@ impl Modes {
         let stdin_tty = std::io::stdin().is_terminal();
         let stdout_tty = std::io::stdout().is_terminal();
         let stderr_tty = std::io::stderr().is_terminal();
-        let dumb = std::env::var("TERM").is_ok_and(|term| term == "dumb");
+        let accessible = requested.accessible || set("APPLE_BRIDGE_ACCESSIBLE");
+        let dumb = accessible || std::env::var("TERM").is_ok_and(|term| term == "dumb");
         let no_color_env = std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty());
         let forced = std::env::var("FORCE_COLOR").ok();
-        let refused = requested.no_color || no_color_env;
+        let refused = requested.no_color || no_color_env || accessible;
         let forced = forced
             .as_deref()
             .filter(|force| !force.is_empty())
@@ -88,6 +114,10 @@ impl Modes {
             debug: requested.debug,
             fields: requested.fields,
             explicit_home: requested.explicit_home,
+            explicit_cwd: requested
+                .explicit_cwd
+                .map(|cwd| std::path::absolute(&cwd).unwrap_or(cwd)),
+            accessible,
             ci: set("CI"),
             agent: AGENT_VARIABLES
                 .iter()

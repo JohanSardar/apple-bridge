@@ -31,6 +31,13 @@ pub struct Globals {
         help = "Data folder (default: ~/Library/Application Support/AppleBridge; env: APPLE_BRIDGE_HOME)"
     )]
     pub home: Option<PathBuf>,
+    #[arg(
+        long,
+        global = true,
+        value_name = "DIR",
+        help = "Run as if started in this folder; relative paths resolve against it"
+    )]
+    pub cwd: Option<PathBuf>,
     #[arg(long, global = true, help = "Print the result as JSON; never prompt")]
     pub json: bool,
     #[arg(
@@ -59,6 +66,12 @@ pub struct Globals {
     pub yes: bool,
     #[arg(long, global = true, help = "Disable color (also NO_COLOR)")]
     pub no_color: bool,
+    #[arg(
+        long,
+        global = true,
+        help = "Plain text for screen readers: no color or symbols, named steps, numbered choices (also APPLE_BRIDGE_ACCESSIBLE=1)"
+    )]
+    pub accessible: bool,
     #[arg(
         short = 'd',
         long,
@@ -315,7 +328,7 @@ pub struct StatsArgs {
     #[arg(
         long,
         value_name = "DURATION",
-        help = "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: no limit on a terminal, 5m otherwise)"
+        help = "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: 10m)"
     )]
     pub timeout: Option<String>,
     #[arg(
@@ -367,7 +380,7 @@ pub struct ReadArgs {
         long,
         value_name = "NUMBER",
         allow_hyphen_values = true,
-        help = "How many items to show in total, 1 to 200 [default: 10]"
+        help = "How many items to show in total, 1 to 200 (default: 10)"
     )]
     pub limit: Option<String>,
     #[arg(
@@ -383,7 +396,7 @@ pub struct ReadArgs {
     #[arg(
         long,
         value_name = "NUMBER",
-        help = "Calendar only: how many days ahead [default: 7]"
+        help = "Calendar only: how many days ahead (default: 7)"
     )]
     pub days: Option<String>,
     #[arg(
@@ -412,7 +425,7 @@ pub struct SearchArgs {
         long,
         value_name = "NUMBER",
         allow_hyphen_values = true,
-        help = "How many results to show in total, 1 to 200 [default: 10]"
+        help = "How many results to show in total, 1 to 200 (default: 10)"
     )]
     pub limit: Option<String>,
     #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
@@ -616,7 +629,7 @@ fn level_values(switchable: bool) -> clap::builder::PossibleValuesParser {
 }
 
 #[derive(Clone)]
-pub struct LevelText;
+pub struct LevelText(pub bool);
 
 impl clap::builder::TypedValueParser for LevelText {
     type Value = String;
@@ -633,7 +646,7 @@ impl clap::builder::TypedValueParser for LevelText {
     fn possible_values(
         &self,
     ) -> Option<Box<dyn Iterator<Item = clap::builder::PossibleValue> + '_>> {
-        Some(Box::new(levels(false).into_iter()))
+        Some(Box::new(levels(self.0).into_iter()))
     }
 }
 
@@ -700,7 +713,7 @@ pub struct ConnectorsCommand {
 #[derive(Debug, Subcommand)]
 pub enum ConnectorAction {
     #[command(about = "List apps waiting for approval", visible_alias = "ls")]
-    List,
+    List(ListArgs),
     #[command(about = "Allow a waiting app after checking its code")]
     Allow(DecisionArgs),
     #[command(about = "Deny a waiting app")]
@@ -737,7 +750,7 @@ pub struct AgentsCommand {
 #[derive(Debug, Subcommand)]
 pub enum AgentAction {
     #[command(about = "List agents", visible_alias = "ls")]
-    List,
+    List(ListArgs),
     #[command(about = "Create an agent and print its token once")]
     Create(AgentCreateArgs),
     #[command(about = "Show one agent")]
@@ -751,6 +764,20 @@ pub enum AgentAction {
         about = "Change an agent's level (deprecated: bridge agents update --level)"
     )]
     Level(AgentLevelArgs),
+}
+
+#[derive(Debug, Args, Default)]
+pub struct ListArgs {
+    #[arg(
+        short = 'n',
+        long,
+        value_name = "NUMBER",
+        allow_hyphen_values = true,
+        help = "How many to show, 1 to 200 (default: 50)"
+    )]
+    pub limit: Option<String>,
+    #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
+    pub next: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -775,7 +802,7 @@ pub struct AgentCreateArgs {
         long,
         value_name = "LEVEL",
         default_value = ab_trust::AgentLevel::DEFAULT_NAME,
-        value_parser = LevelText,
+        value_parser = LevelText(false),
         help = "What the agent may do"
     )]
     pub level: String,
@@ -798,7 +825,7 @@ pub struct AgentCreateArgs {
 pub struct AgentUpdateArgs {
     #[arg(value_name = "AGENT", help = "Agent ID")]
     pub id: String,
-    #[arg(long, value_name = "LEVEL", value_parser = level_values(true), help = "New level")]
+    #[arg(long, value_name = "LEVEL", value_parser = LevelText(true), help = "New level")]
     pub level: Option<String>,
     #[arg(
         long,
@@ -901,7 +928,7 @@ pub struct SessionsCommand {
 #[derive(Debug, Subcommand)]
 pub enum SessionsAction {
     #[command(about = "List signed-in browsers", visible_alias = "ls")]
-    List,
+    List(ListArgs),
     #[command(about = "Sign out browsers")]
     Revoke {
         #[arg(long, required = true, help = "Sign out every browser")]

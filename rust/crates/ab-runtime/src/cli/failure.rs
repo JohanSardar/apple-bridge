@@ -91,7 +91,10 @@ impl Step {
     ) -> Self {
         Self {
             benefit: benefit.into(),
-            argv: argv.into_iter().map(Into::into).collect(),
+            argv: argv
+                .into_iter()
+                .map(|argument| super::ui::strip_userinfo(&argument.into()))
+                .collect(),
             when: None,
         }
     }
@@ -104,12 +107,20 @@ impl Step {
 
     pub fn full_argv(&self) -> Vec<String> {
         let mut argv = self.argv.clone();
-        if argv.first().is_some_and(|program| program == "bridge")
-            && let Some(home) = &super::modes::Modes::get().explicit_home
-            && !argv.iter().any(|argument| argument == "--home")
-        {
-            argv.push("--home".to_owned());
-            argv.push(home.to_string_lossy().into_owned());
+        let modes = super::modes::Modes::get();
+        if argv.first().is_some_and(|program| program == "bridge") {
+            if let Some(home) = &modes.explicit_home
+                && !argv.iter().any(|argument| argument == "--home")
+            {
+                argv.push("--home".to_owned());
+                argv.push(home.to_string_lossy().into_owned());
+            }
+            if let Some(cwd) = &modes.explicit_cwd
+                && !argv.iter().any(|argument| argument == "--cwd")
+            {
+                argv.push("--cwd".to_owned());
+                argv.push(cwd.to_string_lossy().into_owned());
+            }
         }
         argv
     }
@@ -162,7 +173,7 @@ impl Failure {
     pub fn new(reason: Reason, headline: impl Into<String>) -> Self {
         Self(Box::new(Details {
             reason,
-            headline: headline.into(),
+            headline: super::ui::strip_userinfo(&headline.into()),
             rows: Vec::new(),
             remote: None,
             issues: Vec::new(),
@@ -184,19 +195,20 @@ impl Failure {
 
     #[must_use]
     pub fn row(mut self, label: impl Into<String>, value: impl Into<String>) -> Self {
-        self.rows.push((label.into(), value.into()));
+        self.rows
+            .push((label.into(), super::ui::strip_userinfo(&value.into())));
         self
     }
 
     #[must_use]
     pub fn remote(mut self, source: impl Into<String>, text: impl Into<String>) -> Self {
-        self.remote = Some((source.into(), text.into()));
+        self.remote = Some((source.into(), super::ui::redact_urls(&text.into())));
         self
     }
 
     #[must_use]
     pub fn issue(mut self, issue: impl Into<String>) -> Self {
-        self.issues.push(issue.into());
+        self.issues.push(super::ui::strip_userinfo(&issue.into()));
         self
     }
 
@@ -217,13 +229,15 @@ impl Failure {
 
     #[must_use]
     pub fn sentence(mut self, sentence: impl Into<String>) -> Self {
-        self.sentence = Some(sentence.into());
+        self.sentence = Some(super::ui::strip_userinfo(&sentence.into()));
         self
     }
 
     #[must_use]
     pub fn data(mut self, key: &str, value: impl Into<Value>) -> Self {
-        self.data.insert(key.to_owned(), value.into());
+        let mut value = value.into();
+        super::ui::strip_userinfo_json(&mut value);
+        self.data.insert(key.to_owned(), value);
         self
     }
 
@@ -314,6 +328,23 @@ impl Failure {
             format!("Apple Bridge isn't set up in {}.", home.display()),
         )
         .then("Set it up", ["bridge", "up"])
+    }
+
+    pub fn missing_home(home: &Path) -> Self {
+        let shown = super::commands::absolute(home);
+        Self::new(
+            Reason::NotSetUp,
+            format!("Apple Bridge isn't set up in {}.", shown.display()),
+        )
+        .then(
+            "Set it up",
+            [
+                "bridge".to_owned(),
+                "up".to_owned(),
+                "--home".to_owned(),
+                shown.to_string_lossy().into_owned(),
+            ],
+        )
     }
 
     pub fn not_running(home: &Path) -> Self {

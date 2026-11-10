@@ -66,6 +66,64 @@ const AGENT_FIELDS: &[(&str, &str, bool)] = &[
     ("created_at", "string", false),
     ("revoked_at", "string|null", false),
     ("last_used", "object|null", false),
+    ("expires_at", "string|null", false),
+];
+
+const AGENT_LIST_FIELDS: &[(&str, &str, bool)] = &[
+    ("agents", "array", false),
+    ("next_cursor", "string|null", false),
+    ("id", "string", false),
+    ("name", "string", false),
+    ("level", "string", false),
+    ("scopes", "array", false),
+    ("created_at", "string", false),
+    ("revoked_at", "string|null", false),
+    ("last_used", "object|null", false),
+    ("expires_at", "string|null", false),
+];
+
+const CREDENTIAL_CHANGE_FIELDS: &[(&str, &str, bool)] = &[
+    ("agent", "object", false),
+    ("token", "object", false),
+    ("replica", "object", false),
+    ("previous", "object", false),
+    ("outcome", "string", false),
+    ("next", "array", false),
+    ("id", "string", false),
+    ("kind", "string", false),
+    ("scopes", "array", false),
+    ("remote", "boolean", false),
+    ("expiresAt", "string|null", false),
+    ("revokedAt", "string|null", false),
+];
+
+const REMOTE_FIELDS: &[(&str, &str, bool)] = &[
+    ("remote", "object", false),
+    ("outcome", "string", false),
+    ("next", "array", false),
+    ("userActionRequired", "boolean", false),
+    ("message", "string", false),
+    ("id", "string", false),
+    ("state", "string", false),
+    ("backend", "string", false),
+    ("url", "string", false),
+    ("last_error", "string", false),
+    ("pending_link", "string", false),
+    ("signInUrl", "string", true),
+    ("tls_termination", "string", false),
+    ("certificate_expiry", "string", false),
+];
+
+const LINK_FIELDS: &[(&str, &str, bool)] = &[
+    ("outcome", "string", false),
+    ("client", "string", false),
+    ("name", "string", false),
+    ("url", "string", false),
+    ("mcp", "string", false),
+    ("rest", "string", false),
+    ("register", "object", false),
+    ("login", "object", false),
+    ("next", "array", false),
 ];
 
 pub const LEAVES: &[Leaf] = &[
@@ -106,16 +164,23 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.",
+            "Piped, stdout holds only the server name; bridge link other prints only the MCP address.",
         ],
-        schema: &[],
+        schema: LINK_FIELDS,
     },
     Leaf {
         path: "unlink",
         examples: &[("Disconnect Claude Code", "bridge unlink claude")],
         notes: &[
             "This removes the agent's registration. To end its access on this Mac too, revoke it with bridge agents revoke.",
+            "Piped, stdout holds only the removed server name.",
         ],
-        schema: &[],
+        schema: &[
+            ("outcome", "string", false),
+            ("client", "string", false),
+            ("name", "string", false),
+            ("next", "array", false),
+        ],
     },
     Leaf {
         path: "stats",
@@ -130,12 +195,15 @@ pub const LEAVES: &[Leaf] = &[
                 "bridge stats --follow --timeout 5m",
             ),
             (
-                "Stream sync events as JSON lines",
-                "bridge stats --follow --json",
+                "Stream sync events as JSON lines for 5 minutes",
+                "bridge stats --follow --timeout 5m --json",
             ),
         ],
         notes: &[
-            "Counts only, never content. --wait exits once every source has finished. --follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
+            "Counts only, never content.",
+            "--wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention, such as a missing permission, or when --timeout (default 10m) passes first; syncing continues either way.",
+            "--follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
+            "With --json, --wait and --follow print one JSON event per line; warnings arrive as {\"type\":\"warning\"} lines.",
         ],
         schema: &[("sources", "array", false), ("total", "number", false)],
     },
@@ -146,7 +214,7 @@ pub const LEAVES: &[Leaf] = &[
             "Leaves a gateway that something else started, such as the Apple Bridge app, running.",
             "Run bridge down before updating or uninstalling. Moving or deleting the installation does not stop a running gateway.",
         ],
-        schema: &[],
+        schema: &[("home", "string", false), ("outcome", "string", false)],
     },
     Leaf {
         path: "permissions guide",
@@ -211,7 +279,8 @@ pub const LEAVES: &[Leaf] = &[
             ("Read the next page", "bridge read mail --next <CURSOR>"),
         ],
         notes: &[
-            "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+            "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
+            "With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope without records, as in earlier releases.",
             "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
             "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
             "Uses a temporary read-only credential that's revoked when the read ends.",
@@ -235,6 +304,7 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
+            "With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.",
             "Piped, rows are tab-separated with a header line, even when nothing matches.",
         ],
         schema: &[
@@ -282,23 +352,30 @@ pub const LEAVES: &[Leaf] = &[
                 "List agent IDs as JSON",
                 "bridge agents list --json --fields id,name",
             ),
+            ("See the next page", "bridge agents list --next <CURSOR>"),
         ],
-        notes: &["Tokens are never shown again after creation."],
-        schema: AGENT_FIELDS,
+        notes: &[
+            "Lists agents in the order they were created, oldest first, 50 at a time (--limit up to 200). --next continues; the JSON gives next_cursor, null on the last page.",
+            "Tokens are never shown again after creation.",
+        ],
+        schema: AGENT_LIST_FIELDS,
     },
     Leaf {
         path: "agents create",
         examples: &[
             (
-                "Create a read-only agent for a bot",
-                "bridge agents create --name my-bot --level read --scope messages:read,contacts:read",
+                "Create a read-only agent for a bot that stops working in 30 days",
+                "bridge agents create --name my-bot --level read --scope messages:read,contacts:read --expires-in 30d",
             ),
             (
                 "Create one from a script and keep its ID",
-                "bridge agents create --name ci --json",
+                "bridge agents create --name ci --level read --expires-in 7d --json",
             ),
         ],
-        notes: &["The token prints once, alone on stdout. --scope sets the agent's access grants."],
+        notes: &[
+            "The token prints once, alone on stdout. --scope sets the agent's access grants.",
+            "Without --expires-in the token never expires. On a terminal you're asked first; without one it's created with a warning.",
+        ],
         schema: &[
             ("agent", "object", false),
             ("token", "string", true),
@@ -325,8 +402,14 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "A read agent can't be raised to full or approve; revoke it and create a new one.",
+            "Raising the level to full or adding sources asks first; without a terminal, pass --yes.",
         ],
-        schema: &[("agent", "object", false), ("outcome", "string", false)],
+        schema: &[
+            ("agent", "object", false),
+            ("previous", "object", false),
+            ("outcome", "string", false),
+            ("next", "array", false),
+        ],
     },
     Leaf {
         path: "agents revoke",
@@ -340,28 +423,42 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "Asks first; without a terminal, pass --yes. The agent stays in the list, marked revoked.",
         ],
-        schema: &[("id", "string", false), ("outcome", "string", false)],
+        schema: CREDENTIAL_CHANGE_FIELDS,
     },
     Leaf {
         path: "agents level",
         examples: &[],
-        notes: &[],
+        notes: &[
+            "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version.",
+        ],
         schema: AGENT_FIELDS,
     },
     Leaf {
         path: "tokens create",
         examples: &[
             (
-                "Create a token for a script",
-                "bridge tokens create --scope reminders:read",
+                "Create a read-only token for a script that stops working in 12 hours",
+                "bridge tokens create --scope reminders:read --expires-in 12h",
             ),
             (
                 "Store one in a variable",
-                "TOKEN=$(bridge tokens create --scope calendar:read)",
+                "TOKEN=$(bridge tokens create --scope calendar:read --expires-in 1h)",
             ),
         ],
-        notes: &["The token prints once, alone on stdout."],
-        schema: &[("token", "string", true), ("outcome", "string", false)],
+        notes: &[
+            "The token prints once, alone on stdout. With --json it is in secret.",
+            "Without --expires-in the token never expires. On a terminal you're asked first; without one it's created with a warning.",
+        ],
+        schema: &[
+            ("token", "object", false),
+            ("secret", "string", true),
+            ("outcome", "string", false),
+            ("next", "array", false),
+            ("id", "string", false),
+            ("scopes", "array", false),
+            ("remote", "boolean", false),
+            ("expiresAt", "string|null", false),
+        ],
     },
     Leaf {
         path: "tokens revoke",
@@ -369,7 +466,7 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "Accepts token, agent and replica IDs. Asks first; without a terminal, pass --yes.",
         ],
-        schema: &[("id", "string", false), ("outcome", "string", false)],
+        schema: CREDENTIAL_CHANGE_FIELDS,
     },
     Leaf {
         path: "tokens update",
@@ -377,18 +474,26 @@ pub const LEAVES: &[Leaf] = &[
             "Replace a credential's access",
             "bridge tokens update <CREDENTIAL> --scope messages:read",
         )],
-        notes: &["Accepts token, agent and replica IDs."],
-        schema: &[
-            ("id", "string", false),
-            ("scopes", "array", false),
-            ("outcome", "string", false),
+        notes: &[
+            "Accepts token, agent and replica IDs. Adding sources asks first; without a terminal, pass --yes.",
         ],
+        schema: CREDENTIAL_CHANGE_FIELDS,
     },
     Leaf {
         path: "connectors list",
         examples: &[("See which apps are waiting", "bridge connectors list")],
-        notes: &[],
-        schema: &[],
+        notes: &[
+            "Lists waiting requests, the one that expires first at the top, 50 at a time (--limit up to 200). --next continues.",
+        ],
+        schema: &[
+            ("connectors", "array", false),
+            ("next_cursor", "string|null", false),
+            ("id", "string", false),
+            ("client_name", "string", false),
+            ("redirect_host", "string", false),
+            ("access", "string", false),
+            ("expires_at", "string", false),
+        ],
     },
     Leaf {
         path: "connectors allow",
@@ -424,15 +529,29 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "The link is a one-time secret that works for 10 minutes. Piped, stdout holds only the link.",
+            "The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on. Piped, stdout holds only the link and no QR code is drawn.",
         ],
-        schema: &[("url", "string", true)],
+        schema: &[
+            ("url", "string", true),
+            ("expires_in_seconds", "number", false),
+            ("outcome", "string", false),
+        ],
     },
     Leaf {
         path: "web sessions list",
         examples: &[("List signed-in browsers", "bridge web sessions list")],
-        notes: &[],
-        schema: &[],
+        notes: &[
+            "Lists browsers in the order they signed in, oldest first, 50 at a time (--limit up to 200). --next continues.",
+        ],
+        schema: &[
+            ("sessions", "array", false),
+            ("next_cursor", "string|null", false),
+            ("device_id", "string", false),
+            ("kind", "string", false),
+            ("created_at", "string", false),
+            ("last_seen", "string", false),
+            ("expires_at", "string", false),
+        ],
     },
     Leaf {
         path: "web sessions revoke",
@@ -465,15 +584,17 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "Waits until remote access is on, up to --timeout. Stopping the wait leaves the request with the gateway; check it with bridge remote status.",
+            "Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the request with the gateway; check it with bridge remote status.",
+            "With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending, the link in remote.signInUrl and userActionRequired true.",
+            "--no-open never opens a browser; --open opens one even without a terminal, unless over SSH.",
         ],
-        schema: &[],
+        schema: REMOTE_FIELDS,
     },
     Leaf {
         path: "remote disable",
         examples: &[("Turn off remote access", "bridge remote disable")],
         notes: &[],
-        schema: &[],
+        schema: REMOTE_FIELDS,
     },
     Leaf {
         path: "remote status",
@@ -484,8 +605,12 @@ pub const LEAVES: &[Leaf] = &[
                 "bridge remote status --snippets",
             ),
         ],
-        notes: &[],
+        notes: &[
+            "With --json the state is under remote. Piped without --json it prints the state alone, as before. --snippets --json gives {\"snippets\": TEXT}.",
+        ],
         schema: &[
+            ("remote", "object", false),
+            ("snippets", "string", false),
             ("id", "string", false),
             ("state", "string", false),
             ("backend", "string", false),
@@ -503,7 +628,7 @@ pub const LEAVES: &[Leaf] = &[
             "bridge remote key",
         )],
         notes: &["Prints only the 43-character key."],
-        schema: &[],
+        schema: &[("key", "string", false)],
     },
     Leaf {
         path: "remote certificates accept",
@@ -512,19 +637,24 @@ pub const LEAVES: &[Leaf] = &[
             "bridge remote certificates accept <FINGERPRINT>",
         )],
         notes: &[],
-        schema: &[],
+        schema: &[
+            ("fingerprint", "string", false),
+            ("outcome", "string", false),
+        ],
     },
     Leaf {
         path: "remote on",
         examples: &[],
-        notes: &[],
-        schema: &[],
+        notes: &[
+            "Prints the sign-in link and the address on stdout and opens the link in a browser unless --no-open, with or without a terminal.",
+        ],
+        schema: REMOTE_FIELDS,
     },
     Leaf {
         path: "remote off",
         examples: &[],
         notes: &[],
-        schema: &[],
+        schema: REMOTE_FIELDS,
     },
     Leaf {
         path: "remote certificate-accept",
@@ -547,13 +677,17 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "The code is a secret that works until --expires-in passes. Piped, stdout holds only the code.",
         ],
-        schema: &[],
+        schema: &[
+            ("code", "string", true),
+            ("expires_in_seconds", "number", false),
+            ("outcome", "string", false),
+        ],
     },
     Leaf {
         path: "join",
         examples: &[("Join a gateway as a replica", "bridge join <CODE>")],
-        notes: &[],
-        schema: &[],
+        notes: &["Piped, stdout holds only the replica's home."],
+        schema: &[("home", "string", false), ("outcome", "string", false)],
     },
     Leaf {
         path: "status",
@@ -684,19 +818,34 @@ pub const LEAVES: &[Leaf] = &[
         path: "install-credentials",
         examples: &[],
         notes: &["Used by the Apple Bridge app."],
-        schema: &[],
+        schema: &[
+            ("outcome", "string", false),
+            ("home", "string", false),
+            ("next", "array", false),
+        ],
     },
     Leaf {
         path: "revoke",
         examples: &[],
         notes: &[],
-        schema: &[],
+        schema: &[
+            ("id", "string", false),
+            ("kind", "string", false),
+            ("outcome", "string", false),
+            ("next", "array", false),
+        ],
     },
     Leaf {
         path: "scope",
         examples: &[],
         notes: &[],
-        schema: &[],
+        schema: &[
+            ("id", "string", false),
+            ("scopes", "array", false),
+            ("previous", "array", false),
+            ("outcome", "string", false),
+            ("next", "array", false),
+        ],
     },
     Leaf {
         path: "setup",
@@ -906,7 +1055,8 @@ pub fn render_with(path: &[String], width: usize) -> String {
     };
     let root = path.is_empty();
     let key = path_key(path);
-    let mut lines = vec![usage(path, &command), summary(&command)];
+    let mut lines = vec![usage(path, &command)];
+    lines.extend(ui::wrap(&summary(&command), width, "", ""));
     if let Some(replacement) = deprecated(&key) {
         lines.push(format!("Deprecated: use {replacement}."));
     }
@@ -917,7 +1067,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     if root {
         for (title, names) in GROUPS {
             lines.push(String::new());
-            lines.push(ui::bold(&format!("{title}:")));
+            lines.push(ui::heading(&format!("{title}:")));
             let entries: Vec<(String, String)> = names
                 .iter()
                 .filter_map(|name| children.iter().find(|child| child.get_name() == *name))
@@ -927,7 +1077,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         }
     } else if !children.is_empty() {
         lines.push(String::new());
-        lines.push(ui::bold("Commands:"));
+        lines.push(ui::heading("Commands:"));
         let entries: Vec<(String, String)> = children
             .iter()
             .map(|child| (child.get_name().to_owned(), summary(child)))
@@ -947,7 +1097,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         .collect();
     if !arguments.is_empty() {
         lines.push(String::new());
-        lines.push(ui::bold("Arguments:"));
+        lines.push(ui::heading("Arguments:"));
         rows(&mut lines, &arguments, width);
     }
     let options: Vec<(String, String)> = local_options(&command, false)
@@ -956,12 +1106,12 @@ pub fn render_with(path: &[String], width: usize) -> String {
         .collect();
     if !options.is_empty() && !root {
         lines.push(String::new());
-        lines.push(ui::bold("Options:"));
+        lines.push(ui::heading("Options:"));
         rows(&mut lines, &options, width);
     }
     lines.push(String::new());
     if root {
-        lines.push(ui::bold("Global options:"));
+        lines.push(ui::heading("Global options:"));
         let globals: Vec<(String, String)> = local_options(&command, true)
             .into_iter()
             .map(|argument| (syntax(argument), description(argument)))
@@ -981,7 +1131,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     };
     if !examples.is_empty() {
         lines.push(String::new());
-        lines.push(ui::bold("Examples:"));
+        lines.push(ui::heading("Examples:"));
         for (index, (text, example)) in examples.iter().enumerate() {
             if index > 0 {
                 lines.push(String::new());
@@ -994,7 +1144,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         && !leaf.notes.is_empty()
     {
         lines.push(String::new());
-        lines.push(ui::bold("Notes:"));
+        lines.push(ui::heading("Notes:"));
         for note in leaf.notes {
             lines.extend(ui::wrap(note, width, "  ", "  "));
         }
