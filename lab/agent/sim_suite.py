@@ -172,7 +172,7 @@ def tasks(tag, sim_socket=None):
         {'id': 'photo-find', 'prompt': 'Find the photo I took on 2 January 2020 and look at it. Tell me its ID.', 'grade': photo_answer},
     ]
     if sim_socket:
-        scenes.append({'id': 'partial-send', 'setup': setup_partial, 'prompt': f'Text Marko Horvat "{tag} files attached" with two small text files attached, a.txt and b.txt, each containing the word hello. Tell me exactly what happened.', 'grade': partial_reported})
+        scenes.append({'id': 'partial-send', 'setup': setup_partial, 'prompt': f'Text Ana Novak "{tag} files attached" with two small text files attached, a.txt and b.txt, each containing the word hello. Tell me exactly what happened.', 'grade': partial_reported})
     return [
         {'id': 'reminder-add', 'prompt': f'Remind me to buy oat milk on 2026-11-12 in my Bridge Test reminders list. Start the title with "{tag} oat milk".', 'grade': reminder_created},
         {'id': 'reminder-complete', 'setup': setup_complete, 'prompt': f'Mark my reminder "{tag} call the plumber" as done.', 'grade': reminder_completed},
