@@ -700,7 +700,14 @@ impl Call<'_> {
         if BY_TITLE.contains(&operation.name.as_str())
             && !self.bound_target(operation, &id, &mut arguments).await?
         {
+            let title = arguments
+                .get("reminder")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             self.reminder_target(operation, &mut arguments).await?;
+            if let Some(title) = title {
+                crate::mcp_compose::bind_selector(&self.principal.id, &id, &title);
+            }
         }
         if operation.name == "calendar.create_event" {
             let name = arguments.remove("calendar");
@@ -870,7 +877,11 @@ impl Call<'_> {
             } else {
                 Vec::new()
             };
-            if chats.len() > 1 {
+            let same_people = chats.windows(2).all(|pair| {
+                pair[0]["chat"]["data"]["participants"] == pair[1]["chat"]["data"]["participants"]
+                    && pair[0]["chat"]["data"]["service"] == pair[1]["chat"]["data"]["service"]
+            });
+            if chats.len() > 1 && !same_people {
                 return Err(
                     Problem::new("ambiguous", format!("{who} has {} chats", chats.len()))
                         .operation(&operation.name)

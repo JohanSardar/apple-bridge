@@ -8,7 +8,45 @@ use crate::{
 };
 use ab_catalog::AgentOperation;
 use serde_json::{Map, Value, json};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+
+const SELECTOR_TTL: Duration = Duration::from_hours(24);
+const SELECTOR_CAP: usize = 4096;
+
+type Selectors = Mutex<HashMap<(String, String), (String, Instant)>>;
+
+fn selectors() -> &'static Selectors {
+    static SELECTORS: OnceLock<Selectors> = OnceLock::new();
+    SELECTORS.get_or_init(Selectors::default)
+}
+
+pub(crate) fn bind_selector(principal: &str, request_id: &str, title: &str) {
+    let Ok(mut map) = selectors().lock() else {
+        return;
+    };
+    map.retain(|_, (_, at)| at.elapsed() < SELECTOR_TTL);
+    if map.len() >= SELECTOR_CAP
+        && let Some(oldest) = map
+            .iter()
+            .min_by_key(|(_, (_, at))| *at)
+            .map(|(key, _)| key.clone())
+    {
+        map.remove(&oldest);
+    }
+    map.insert(
+        (principal.to_owned(), request_id.to_owned()),
+        (fold(title.trim()), Instant::now()),
+    );
+}
+
+pub(crate) fn selector(principal: &str, request_id: &str) -> Option<String> {
+    let map = selectors().lock().ok()?;
+    map.get(&(principal.to_owned(), request_id.to_owned()))
+        .filter(|(_, at)| at.elapsed() < SELECTOR_TTL)
+        .map(|(title, _)| title.clone())
+}
 
 pub(crate) struct Person {
     pub handles: Vec<String>,
@@ -931,15 +969,19 @@ impl Call<'_> {
             .and_then(Value::as_str)
             .map(|title| fold(title.trim()))
             .unwrap_or_default();
-        let stored = self
-            .quiet(
-                "records.get",
-                json!({"collection": "reminders.reminder", "id": id, "include_deleted": true}),
-            )
-            .await
-            .and_then(|found| found["records"][0]["data"]["title"].as_str().map(fold));
-        if wanted.is_empty() || !stored.is_some_and(|title| title.contains(&wanted)) {
-            return Err(reused());
+        let same = match selector(&self.principal.id, request_id) {
+            Some(bound) => bound == wanted,
+            None => self
+                .quiet(
+                    "records.get",
+                    json!({"collection": "reminders.reminder", "id": id, "include_deleted": true}),
+                )
+                .await
+                .and_then(|found| found["records"][0]["data"]["title"].as_str().map(fold))
+                .is_some_and(|title| !wanted.is_empty() && title.contains(&wanted)),
+        };
+        if !same {
+            return Err(reused().hint("If this repeats the same call, pass the reminder's id with expected_version from apple_command_status instead; otherwise use a new request_id."));
         }
         arguments.remove("reminder");
         arguments.insert("id".into(), json!(id));

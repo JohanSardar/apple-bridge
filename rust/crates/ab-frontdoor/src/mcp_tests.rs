@@ -778,3 +778,14 @@ fn record_ids_name_their_collection() -> Check {
     assert!(!unknown.contains_key("collection"));
     Ok(())
 }
+
+#[test]
+fn a_title_is_bound_to_its_request_id() {
+    crate::mcp_compose::bind_selector("agent:bind", "req-1", "  Buy MILK ");
+    assert_eq!(
+        crate::mcp_compose::selector("agent:bind", "req-1").as_deref(),
+        Some("buy milk")
+    );
+    assert_eq!(crate::mcp_compose::selector("agent:other", "req-1"), None);
+    assert_eq!(crate::mcp_compose::selector("agent:bind", "req-2"), None);
+}
