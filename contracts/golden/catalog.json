@@ -18047,7 +18047,7 @@
   },
   {
     "capability": "focus.set",
-    "description": "Set Do Not Disturb through AB Focus and confirm Focus status; agents require approval",
+    "description": "Set Do Not Disturb through AB Focus and confirm Focus status",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -24608,7 +24608,7 @@
   },
   {
     "capability": "",
-    "description": "Read the device location. Every agent request, local or remote, first returns {id,state:awaiting_approval}; after owner approval, retry the identical request ID once. The approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.",
+    "description": "Read the device location. An agent the owner set to ask first gets {id,state:awaiting_approval} and, after owner approval, retries the identical request ID once; that approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -45595,7 +45595,7 @@
   },
   {
     "capability": "",
-    "description": "Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
+    "description": "Set an asset's favorite flag and read it back. Transient write that runs at once unless the owner set this agent to ask first; then it returns awaiting_approval and the identical request ID is retried once after approval. Completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -45703,7 +45703,7 @@
   },
   {
     "capability": "",
-    "description": "Create a regular user album. Transient write with a hash-only approval for every agent; reissue the identical ID after approval. No automatic retries.",
+    "description": "Create a regular user album. Transient write. An agent set to ask first gets a hash-only approval and reissues the identical ID after it. No automatic retries.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -45807,7 +45807,7 @@
   },
   {
     "capability": "",
-    "description": "Rename an editable regular album. Transient write with owner approval for every agent and no automatic retry.",
+    "description": "Rename an editable regular album. Transient write; asks the owner first only for an agent set to ask first. No automatic retry.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -45917,7 +45917,7 @@
   },
   {
     "capability": "",
-    "description": "Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write with owner approval for every agent.",
+    "description": "Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write; asks the owner first only for an agent set to ask first.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -46033,7 +46033,7 @@
   },
   {
     "capability": "",
-    "description": "Remove up to 200 memberships from an editable regular album, never from the library. Transient write with owner approval for every agent.",
+    "description": "Remove up to 200 memberships from an editable regular album, never from the library. Transient write; asks the owner first only for an agent set to ask first.",
     "examples": null,
     "input": {
       "additionalProperties": false,
@@ -46149,7 +46149,7 @@
   },
   {
     "capability": "",
-    "description": "Delete an editable regular album, never its assets. Transient write with owner approval for every agent. Asset deletion and permanent deletion are unavailable.",
+    "description": "Delete an editable regular album, never its assets. Transient write; asks the owner first only for an agent set to ask first. Asset deletion and permanent deletion are unavailable.",
     "examples": null,
     "input": {
       "additionalProperties": false,

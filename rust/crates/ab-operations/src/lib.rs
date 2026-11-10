@@ -169,6 +169,10 @@ impl Principal {
         local.starts_with("agent:") && local.len() > 6 && !local.contains(['/', '\r', '\n'])
     }
 
+    pub(crate) fn asks_first(&self) -> bool {
+        self.is_agent() && self.level == "approve"
+    }
+
     pub fn visibility(&self) -> Visibility {
         let mut result = Visibility::from([(format!("principal:{}", self.id), true)]);
         if self.kind == "replica" {

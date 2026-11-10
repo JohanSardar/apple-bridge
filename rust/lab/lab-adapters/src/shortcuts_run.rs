@@ -218,15 +218,26 @@ fn focus_agents(world: &World, evidence: &mut Evidence) -> Result<()> {
             &command(json!({"mode":"Do Not Disturb","on":true}))?,
             20,
         )?;
-        let waiting = reply.is_some_and(|(status, value)| {
-            status == 200 && value["error"].is_null() && value["state"] == "awaiting_approval"
+        let waiting = reply.as_ref().is_some_and(|(status, value)| {
+            *status == 200 && value["error"].is_null() && value["state"] == "awaiting_approval"
         });
-        contract |= waiting;
-        evidence.check(
-            "agent_requires_approval",
-            waiting,
-            "agent waits for approval",
-        );
+        if level == "approve" {
+            contract |= waiting;
+            evidence.check(
+                "ask_first_agent_requires_approval",
+                waiting,
+                "ask-first agent waits for approval",
+            );
+        } else {
+            let seen = reply.map_or_else(String::new, |(status, value)| {
+                format!("{status} {} {}", value["state"], value["error"])
+            });
+            evidence.check(
+                "full_agent_runs_at_once",
+                !waiting && !seen.starts_with("401") && !seen.starts_with("403"),
+                &format!("full agent does not wait for approval: {seen}"),
+            );
+        }
     }
     evidence.check("set_contract", contract, "valid focus.set accepted");
     Ok(())

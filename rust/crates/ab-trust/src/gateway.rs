@@ -370,12 +370,47 @@ pub enum AgentLevel {
     Full,
 }
 impl AgentLevel {
-    fn as_str(self) -> &'static str {
+    pub const DEFAULT: Self = Self::Full;
+    pub const DEFAULT_NAME: &'static str = "full";
+
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
         match self {
             Self::Read => "read",
             Self::Approve => "approve",
             Self::Full => "full",
         }
+    }
+
+    #[must_use]
+    pub fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "read" => Some(Self::Read),
+            "approve" => Some(Self::Approve),
+            "full" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+impl Authority {
+    pub fn set_agent_level(&self, id: &str, level: AgentLevel) -> Result<Principal, Error> {
+        if level == AgentLevel::Read {
+            return Err(Error::Invalid);
+        }
+        self.update(|d| {
+            let p = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id && p.kind == "agent" && p.active())
+                .ok_or(Error::Unauthorized)?;
+            if !matches!(p.level.as_str(), "approve" | "full") {
+                return Err(Error::Invalid);
+            }
+            p.level = level.as_str().into();
+            let mut shown = p.clone();
+            shown.token_hash.clear();
+            Ok(shown)
+        })
     }
 }
 impl Authority {

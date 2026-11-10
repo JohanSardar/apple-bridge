@@ -11919,7 +11919,7 @@
     },
     "/v1/op/focus.set": {
       "post": {
-        "description": "Set Do Not Disturb through AB Focus and confirm Focus status; agents require approval",
+        "description": "Set Do Not Disturb through AB Focus and confirm Focus status",
         "operationId": "focus.set",
         "requestBody": {
           "content": {
@@ -21879,7 +21879,7 @@
     },
     "/v1/op/location.current": {
       "post": {
-        "description": "Read the device location. Every agent request, local or remote, first returns {id,state:awaiting_approval}; after owner approval, retry the identical request ID once. The approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.",
+        "description": "Read the device location. An agent the owner set to ask first gets {id,state:awaiting_approval} and, after owner approval, retries the identical request ID once; that approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.",
         "operationId": "location.current",
         "requestBody": {
           "content": {
@@ -39354,7 +39354,7 @@
     },
     "/v1/op/photos.album_add": {
       "post": {
-        "description": "Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write with owner approval for every agent.",
+        "description": "Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write; asks the owner first only for an agent set to ask first.",
         "operationId": "photos.album_add",
         "requestBody": {
           "content": {
@@ -39481,7 +39481,7 @@
     },
     "/v1/op/photos.album_create": {
       "post": {
-        "description": "Create a regular user album. Transient write with a hash-only approval for every agent; reissue the identical ID after approval. No automatic retries.",
+        "description": "Create a regular user album. Transient write. An agent set to ask first gets a hash-only approval and reissues the identical ID after it. No automatic retries.",
         "operationId": "photos.album_create",
         "requestBody": {
           "content": {
@@ -39596,7 +39596,7 @@
     },
     "/v1/op/photos.album_delete": {
       "post": {
-        "description": "Delete an editable regular album, never its assets. Transient write with owner approval for every agent. Asset deletion and permanent deletion are unavailable.",
+        "description": "Delete an editable regular album, never its assets. Transient write; asks the owner first only for an agent set to ask first. Asset deletion and permanent deletion are unavailable.",
         "operationId": "photos.album_delete",
         "requestBody": {
           "content": {
@@ -39711,7 +39711,7 @@
     },
     "/v1/op/photos.album_remove": {
       "post": {
-        "description": "Remove up to 200 memberships from an editable regular album, never from the library. Transient write with owner approval for every agent.",
+        "description": "Remove up to 200 memberships from an editable regular album, never from the library. Transient write; asks the owner first only for an agent set to ask first.",
         "operationId": "photos.album_remove",
         "requestBody": {
           "content": {
@@ -39838,7 +39838,7 @@
     },
     "/v1/op/photos.album_rename": {
       "post": {
-        "description": "Rename an editable regular album. Transient write with owner approval for every agent and no automatic retry.",
+        "description": "Rename an editable regular album. Transient write; asks the owner first only for an agent set to ask first. No automatic retry.",
         "operationId": "photos.album_rename",
         "requestBody": {
           "content": {
@@ -40215,7 +40215,7 @@
     },
     "/v1/op/photos.favorite": {
       "post": {
-        "description": "Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
+        "description": "Set an asset's favorite flag and read it back. Transient write that runs at once unless the owner set this agent to ask first; then it returns awaiting_approval and the identical request ID is retried once after approval. Completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.",
         "operationId": "photos.favorite",
         "requestBody": {
           "content": {

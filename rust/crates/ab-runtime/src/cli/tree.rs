@@ -423,6 +423,16 @@ pub enum AgentAction {
     Create(AgentCreateArgs),
     #[command(about = "Revoke an agent")]
     Revoke(IdArgs),
+    #[command(about = "Choose whether an agent acts at once or asks you before each change")]
+    Level(AgentLevelArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct AgentLevelArgs {
+    #[arg(help = "Agent id from `bridge agent list`")]
+    pub id: String,
+    #[arg(help = "full (acts at once) or approve (asks you before each change)")]
+    pub level: String,
 }
 
 #[derive(Debug, Args)]
@@ -432,8 +442,8 @@ pub struct AgentCreateArgs {
     #[arg(
         long,
         value_name = "LEVEL",
-        default_value = "approve",
-        help = "read, approve or full"
+        default_value = ab_trust::AgentLevel::DEFAULT_NAME,
+        help = "full (acts at once), approve (asks you before each change) or read"
     )]
     pub level: String,
     #[arg(

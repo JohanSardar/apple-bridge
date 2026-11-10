@@ -74,7 +74,7 @@ Without a terminal, for example when an agent runs it, `bridge link` adds the se
 
 To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agent list`, then `bridge agent revoke <id>`.
 
-When you allow a request you choose nothing else: the agent can read what it asked for, and every change waits for your approval. See [connector approvals](connectors/approvals.md).
+When you allow a request you choose nothing else: the agent can read and change what it asked for, and its changes happen right away, with no further approval. That includes screenshots, recordings, camera photos, current location, Focus and Photos changes. To have an agent ask you before each change instead, run `bridge agent list`, then `bridge agent level <id> approve`; `bridge agent level <id> full` switches it back. Apps connected before this version act at once too. See [connector approvals](connectors/approvals.md).
 
 ## Other apps and bots
 
@@ -83,6 +83,8 @@ When you allow a request you choose nothing else: the agent can read what it ask
 ```sh
 bridge agent create --name my-bot --level read --scope messages:read,contacts:read
 ```
+
+`--level` is `full` by default, so a token with write scopes acts at once. Pass `--level approve` to make every change wait for you.
 
 Send the token as `Authorization: Bearer <token>`, to `/mcp` or to the REST API at `POST /v1/op/<operation>`.
 

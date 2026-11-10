@@ -560,7 +560,7 @@ Transform staged image and PDF blobs natively
 
 ### focus.set
 
-Set Do Not Disturb through AB Focus and confirm Focus status; agents require approval
+Set Do Not Disturb through AB Focus and confirm Focus status
 
 - Kind: `command`
 - Scope: `focus:write`
@@ -1163,7 +1163,7 @@ Operate app-owned iPhone AlarmKit alarms and timers
 
 ### location.current
 
-Read the device location. Every agent request, local or remote, first returns {id,state:awaiting_approval}; after owner approval, retry the identical request ID once. The approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.
+Read the device location. An agent the owner set to ask first gets {id,state:awaiting_approval} and, after owner approval, retries the identical request ID once; that approval expires after ten minutes and is consumed even if the read fails. Coordinates are never stored in approval records.
 
 - Kind: `query`
 - Scope: `location:read`
@@ -2297,7 +2297,7 @@ Cancel and delete this principal's temporary Photos transfer. Expired or foreign
 
 ### photos.favorite
 
-Set an asset's favorite flag and read it back. Transient write: every agent needs owner approval. Retry the identical request ID after approval once; completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.
+Set an asset's favorite flag and read it back. Transient write that runs at once unless the owner set this agent to ask first; then it returns awaiting_approval and the identical request ID is retried once after approval. Completed or ambiguous IDs never redispatch. Only a request digest, not asset details, is retained.
 
 - Kind: `query`
 - Scope: `photos:write`
@@ -2310,7 +2310,7 @@ Set an asset's favorite flag and read it back. Transient write: every agent need
 
 ### photos.album_create
 
-Create a regular user album. Transient write with a hash-only approval for every agent; reissue the identical ID after approval. No automatic retries.
+Create a regular user album. Transient write. An agent set to ask first gets a hash-only approval and reissues the identical ID after it. No automatic retries.
 
 - Kind: `query`
 - Scope: `photos:write`
@@ -2323,7 +2323,7 @@ Create a regular user album. Transient write with a hash-only approval for every
 
 ### photos.album_rename
 
-Rename an editable regular album. Transient write with owner approval for every agent and no automatic retry.
+Rename an editable regular album. Transient write; asks the owner first only for an agent set to ask first. No automatic retry.
 
 - Kind: `query`
 - Scope: `photos:write`
@@ -2336,7 +2336,7 @@ Rename an editable regular album. Transient write with owner approval for every 
 
 ### photos.album_add
 
-Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write with owner approval for every agent.
+Add up to 200 existing assets to an editable regular album. Does not import or copy media. Transient write; asks the owner first only for an agent set to ask first.
 
 - Kind: `query`
 - Scope: `photos:write`
@@ -2349,7 +2349,7 @@ Add up to 200 existing assets to an editable regular album. Does not import or c
 
 ### photos.album_remove
 
-Remove up to 200 memberships from an editable regular album, never from the library. Transient write with owner approval for every agent.
+Remove up to 200 memberships from an editable regular album, never from the library. Transient write; asks the owner first only for an agent set to ask first.
 
 - Kind: `query`
 - Scope: `photos:write`
@@ -2362,7 +2362,7 @@ Remove up to 200 memberships from an editable regular album, never from the libr
 
 ### photos.album_delete
 
-Delete an editable regular album, never its assets. Transient write with owner approval for every agent. Asset deletion and permanent deletion are unavailable.
+Delete an editable regular album, never its assets. Transient write; asks the owner first only for an agent set to ask first. Asset deletion and permanent deletion are unavailable.
 
 - Kind: `query`
 - Scope: `photos:write`

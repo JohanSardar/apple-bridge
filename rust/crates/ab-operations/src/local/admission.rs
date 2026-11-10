@@ -20,7 +20,7 @@ impl LocalGateway {
         if matches!(
             command.op.as_str(),
             "mac.lock_screen" | "mac.sleep_display" | "mac.restart" | "mac.shutdown"
-        ) && (!principal.is_agent() || principal.level != "approve")
+        ) && !principal.is_agent()
         {
             return Err(Code::Forbidden.into());
         }
@@ -79,16 +79,7 @@ impl LocalGateway {
         let expiry = crate::command_contract::expiry(&command.op, created, requested)?;
         let deadline = tokio::time::Instant::now()
             + Duration::try_from(expiry.duration_since(created)).map_err(|_| Code::Expired)?;
-        let approval = principal.is_agent()
-            && (principal.level == "approve"
-                || matches!(
-                    command.op.as_str(),
-                    "focus.set"
-                        | "capture.screenshot"
-                        | "mac.screen_record"
-                        | "capture.camera_photo"
-                        | "capture.record_audio"
-                ));
+        let approval = principal.asks_first();
         if !(approval
             || self.peer.available()
             || command.op.starts_with("iphone.") && self.phone_notify.is_some())

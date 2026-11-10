@@ -253,15 +253,15 @@ pub fn levels(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resu
         effect(world, &id_of(&read_command)) == 0,
         "no effect",
     );
-    let approve_token = create(world, evidence, "");
+    let approve_token = create(world, evidence, "approve");
     let pending = make()?;
     let (code, row) = call(world, &approve_token, &pending);
     evidence.check(
-        "default_awaiting_approval",
+        "ask_first_awaiting_approval",
         code == 200
             && row["state"] == "awaiting_approval"
             && row["disposition"] == "awaiting_approval",
-        "default level awaits approval",
+        "ask-first level awaits approval",
     );
     evidence.check(
         "approval_no_effect_before_consent",
@@ -394,13 +394,13 @@ pub fn levels(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resu
         "expired request executes after approval",
     );
     replica_boundary(world, &chat, &make, evidence)?;
-    let full_token = create(world, evidence, "full");
+    let full_token = create(world, evidence, "");
     let full = make()?;
     let (code, row) = call(world, &full_token, &full);
     evidence.check(
-        "full_executes_directly",
+        "default_executes_directly",
         code == 200 && row["state"] == "observed",
-        "full level executes directly",
+        "default level executes directly",
     );
     let expected = BTreeMap::from([
         (id_of(&read_command), "rejected"),

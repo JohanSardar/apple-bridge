@@ -266,7 +266,7 @@ fn decide(
     let level = input["level"]
         .as_str()
         .filter(|level| !level.is_empty())
-        .unwrap_or("approve");
+        .unwrap_or(ab_trust::AgentLevel::DEFAULT_NAME);
     let grants = if decision == "approve" {
         let Ok(grants) = serde_json::from_value::<Vec<Grant>>(input["scopes"].clone()) else {
             return respond(400, &json!({"error": "invalid_scope"}));

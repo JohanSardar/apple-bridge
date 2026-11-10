@@ -202,11 +202,11 @@ A command submitted by a device session from a real input event; it is not bound
 _Avoid_: manual send, UI send
 
 **Agent token**:
-A credential for a remote AI agent, with source scopes and a level of `read`, `approve` or `full`.
+A credential for a remote AI agent, with source scopes and a level of `full` (the default: acts at once), `approve` (asks the owner before each change) or `read`.
 _Avoid_: API key, bot token
 
 **Approval**:
-An agent command waiting in `awaiting_approval` until the owner approves or rejects it in the web app.
+A command from an agent set to ask first, waiting in `awaiting_approval` until the owner approves or rejects it in the web app.
 _Avoid_: draft, pending send
 
 **Read model**:
