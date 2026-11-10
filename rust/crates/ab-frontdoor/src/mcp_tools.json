@@ -39,6 +39,7 @@
       "operation": {"type": "string", "description": "Read operation name, such as reminders.items."},
       "arguments": {"type": "object", "description": "The operation's arguments, as apple_describe lists them."},
       "fields": {"type": "array", "items": {"type": "string"}, "description": "Keep only these data fields in each record, such as title and due."},
+      "request_id": {"type": "string", "description": "Only for reads the owner must approve, such as location.current: repeat the call with the same request_id after approval."},
       "verbose": {"type": "boolean", "description": "Return the full result with coverage and sync details. Default false."}
     }},
     "outputSchema": {"type": "object"},

@@ -390,7 +390,7 @@ impl Call<'_> {
         tool_check(
             "apple_read",
             input,
-            &["operation", "arguments", "fields", "verbose"],
+            &["operation", "arguments", "fields", "request_id", "verbose"],
         )?;
         let name = text(input, "operation").ok_or_else(|| {
             Problem::new("invalid", "operation is required")
@@ -430,7 +430,16 @@ impl Call<'_> {
         }
         let started = std::time::Instant::now();
         let body = if operation.kind == OperationKind::Query {
-            json!({"args": arguments})
+            let mut body = json!({"args": arguments});
+            if input.get("request_id").is_some_and(|id| !id.is_null()) {
+                let id = request_id(input)?;
+                body["id"] = json!(if id.starts_with("qry_") {
+                    id
+                } else {
+                    format!("qry_{id}")
+                });
+            }
+            body
         } else {
             Value::Object(arguments)
         };
@@ -922,6 +931,16 @@ impl Call<'_> {
         } else if let Some(who) = text(input, "to") {
             let (handles, _) = self.handles_for(who).await?;
             let chats = self.chats_with(&handles).await?;
+            if chats.len() > 1 {
+                return Err(
+                    Problem::new("ambiguous", format!("{who} has {} chats", chats.len()))
+                        .operation(&operation.name)
+                        .field("to")
+                        .problem("more than one chat matches")
+                        .candidates(json!(chats.iter().map(chat_summary).collect::<Vec<_>>()))
+                        .hint("Ask the owner which chat to use, then pass its chat_id."),
+                );
+            }
             if let Some(chat) = chats.first().and_then(|c| c["chat"]["id"].as_str()) {
                 arguments.insert("chat_id".into(), json!(chat));
             } else if let [handle] = handles.as_slice() {

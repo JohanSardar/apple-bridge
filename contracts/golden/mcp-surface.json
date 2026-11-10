@@ -533,6 +533,10 @@
             "description": "Read operation name, such as reminders.items.",
             "type": "string"
           },
+          "request_id": {
+            "description": "Only for reads the owner must approve, such as location.current: repeat the call with the same request_id after approval.",
+            "type": "string"
+          },
           "verbose": {
             "description": "Return the full result with coverage and sync details. Default false.",
             "type": "boolean"
