@@ -231,8 +231,22 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
     ("number", &[("contacts.lookup", 8)]),
     ("who", &[("contacts.lookup", 6)]),
     ("birthday", &[("contacts.lookup", 4)]),
-    ("photo", &[("photos", 6)]),
-    ("picture", &[("photos", 8), ("photos.search", 10)]),
+    (
+        "photo",
+        &[
+            ("photos", 6),
+            ("photos.search", 8),
+            ("photos.contact_sheet", 7),
+        ],
+    ),
+    (
+        "picture",
+        &[
+            ("photos", 8),
+            ("photos.search", 10),
+            ("photos.contact_sheet", 8),
+        ],
+    ),
     ("pic", &[("photos", 8), ("photos.search", 10)]),
     ("image", &[("photos", 4)]),
     ("selfi", &[("photos", 8), ("photos.search", 10)]),
@@ -240,7 +254,14 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
         "preview",
         &[("photos.preview", 8), ("photos.contact_sheet", 8)],
     ),
-    ("note", &[("notes", 6), ("records.query/notes.note", 9)]),
+    (
+        "note",
+        &[
+            ("notes", 6),
+            ("notes.list", 10),
+            ("records.query/notes.note", 9),
+        ],
+    ),
     ("volum", &[("mac.set_volume", 12)]),
     ("loud", &[("mac.set_volume", 8)]),
     ("mute", &[("mac.set_mute", 12)]),
@@ -406,6 +427,45 @@ fn score(words: &[String], name: &str, domain: &str, summary: &str, about: &str)
     total
 }
 
+const LOOKING: &[&str] = &[
+    "find", "show", "look", "see", "read", "list", "what", "which", "how", "many", "view", "get",
+    "check", "open", "search", "where", "who", "when", "did",
+];
+
+const ACTING: &[&str] = &[
+    "send", "take", "captur", "snap", "record", "shoot", "reply", "mark", "flag", "rename",
+];
+
+fn looking(words: &[String]) -> bool {
+    let acting = words.iter().any(|word| {
+        ACTING.iter().any(|a| stem(a) == *word)
+            || VERBS.iter().any(|(from, to)| {
+                stem(from) == *word
+                    && matches!(
+                        *to,
+                        "create" | "delete" | "complete" | "update" | "send" | "favorite"
+                    )
+            })
+    });
+    !acting
+        && words
+            .iter()
+            .any(|word| LOOKING.iter().any(|l| stem(l) == *word))
+}
+
+fn domain_named(words: &[String], domain: &str) -> bool {
+    let domain_stem = stem(domain);
+    words.iter().any(|word| {
+        *word == domain_stem
+            || SYNONYMS.iter().any(|(key, boosts)| {
+                stem(key) == *word
+                    && boosts
+                        .iter()
+                        .any(|(target, _)| target.split('.').next() == Some(domain))
+            })
+    })
+}
+
 pub(crate) fn find<'a>(
     registry: &'a Registry,
     principal: Option<&'a Principal>,
@@ -445,6 +505,20 @@ pub(crate) fn find<'a>(
         if points > 0 {
             scored.push((points, 1, name, Hit::Route(route)));
         }
+    }
+    if looking(&tokens(query)) {
+        for (points, _, name, hit) in &mut scored {
+            let (changes, domain) = match hit {
+                Hit::Operation(o) => (o.changes && !o.read_only(), o.domain.as_str()),
+                Hit::Route(r) => (false, r.collection.split('.').next().unwrap_or_default()),
+            };
+            if changes || name.contains("capture") {
+                *points /= 3;
+            } else if domain_named(&words, domain) {
+                *points += 3;
+            }
+        }
+        scored.retain(|(p, ..)| *p > 0);
     }
     let best = scored.iter().map(|(p, ..)| *p).max().unwrap_or(0);
     scored.retain(|(p, ..)| *p * 4 >= best);

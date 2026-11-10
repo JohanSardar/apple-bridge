@@ -714,6 +714,35 @@ pub fn agents_update(
             ["bridge", "agents", "create", "--name", "<NAME>"],
         ));
     }
+    let writes: Vec<&str> = grants
+        .iter()
+        .flatten()
+        .map(Grant::as_str)
+        .filter(|grant| grant.ends_with(":write"))
+        .collect();
+    if before.level == AgentLevel::Read.as_str() && !writes.is_empty() {
+        return Err(Failure::new(
+            Reason::ReadOnly,
+            format!("Can't give {id} {}. It's a read agent.", writes.join(",")),
+        )
+        .sentence(
+            "A read agent can only read. Revoke it and create a new agent to give it write access.",
+        )
+        .then(
+            "Create a new agent",
+            [
+                "bridge",
+                "agents",
+                "create",
+                "--name",
+                "<NAME>",
+                "--level",
+                "full",
+                "--scope",
+                &writes.join(","),
+            ],
+        ));
+    }
     let unchanged_level = chosen.is_none_or(|level| level.as_str() == before.level);
     let unchanged_grants = grants
         .as_ref()

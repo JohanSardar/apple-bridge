@@ -1269,3 +1269,36 @@ fn spaces_and_missing_schemes_do_not_hide_a_password() -> Check {
     assert_eq!(listed["agents"], json!([]));
     Ok(())
 }
+
+#[test]
+fn a_read_agent_is_refused_a_write_scope_and_keeps_its_access() -> Check {
+    let home = short_home()?;
+    let id = created_agent(home.path(), "reader")?;
+    let before = run(home.path(), &["agents", "inspect", &id, "--json"])?;
+    assert!(before.status.success(), "{}", text(&before.stderr));
+    let output = run(
+        home.path(),
+        &[
+            "agents",
+            "update",
+            &id,
+            "--scope",
+            "notes:read,notes:write",
+            "--yes",
+        ],
+    )?;
+    assert_ne!(output.status.code(), Some(0));
+    let stderr = text(&output.stderr);
+    assert!(stderr.contains("It's a read agent"), "{stderr}");
+    assert!(stderr.contains("notes:write"), "{stderr}");
+    assert!(stderr.contains("bridge agents create"), "{stderr}");
+    let after = run(home.path(), &["agents", "inspect", &id, "--json"])?;
+    let (before, after) = (json_out(&before)?, json_out(&after)?);
+    assert!(
+        before.to_string().contains("notes:read") || before.to_string().contains(&id),
+        "{before}"
+    );
+    assert_eq!(before, after);
+    assert!(!after.to_string().contains("notes:write"), "{after}");
+    Ok(())
+}

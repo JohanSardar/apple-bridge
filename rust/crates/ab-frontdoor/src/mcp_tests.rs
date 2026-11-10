@@ -889,3 +889,126 @@ fn usage_tally_reads_rows_shaped_like_the_real_store() {
     let (apps, _) = crate::mcp_compose::usage_tally(&rows, "iphone", "2026-11-09", "2026-11-09");
     assert_eq!(apps["com.apple.MobileSMS"], 1_836);
 }
+
+#[test]
+fn looking_and_finding_rank_reads_above_capture() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let cases: &[(&str, &[&str])] = &[
+        (
+            "find a photo of my dog",
+            &["photos.search", "photos.contact_sheet"],
+        ),
+        (
+            "show me the photo of the beach",
+            &["photos.search", "photos.contact_sheet"],
+        ),
+        (
+            "look at my pictures from July",
+            &["photos.search", "photos.contact_sheet"],
+        ),
+        ("read my notes", &["notes.list"]),
+        ("show my notes", &["notes.list"]),
+        ("how many reminder lists do I have", &["reminders.lists"]),
+    ];
+    let mut misses = Vec::new();
+    for (query, wanted) in cases {
+        let (hits, _) = crate::mcp_find::find(registry, None, query);
+        let top: Vec<(String, bool)> = hits
+            .iter()
+            .take(5)
+            .map(|hit| match hit {
+                crate::mcp_find::Hit::Operation(o) => (o.name.clone(), o.changes && !o.read_only()),
+                crate::mcp_find::Hit::Route(r) => {
+                    (format!("records.query/{}", r.collection), false)
+                }
+            })
+            .collect();
+        let names: Vec<&str> = top.iter().map(|(n, _)| n.as_str()).collect();
+        let first_change = top.iter().position(|(_, changes)| *changes);
+        let last_wanted = wanted
+            .iter()
+            .filter_map(|w| names.iter().position(|n| n == w))
+            .max();
+        if wanted.iter().any(|w| !names.contains(w))
+            || !names.first().is_some_and(|n| wanted.contains(n))
+            || first_change.is_some_and(|c| last_wanted.is_some_and(|w| c < w))
+        {
+            misses.push(format!("{query:?}: got {names:?}"));
+        }
+    }
+    assert!(misses.is_empty(), "{}", misses.join("\n"));
+    Ok(())
+}
+
+#[test]
+fn a_request_id_belongs_to_the_agent_that_used_it() {
+    let scoped = crate::mcp_facade::scoped_id;
+    let ana = scoped("agent:gateway/agt_ana", "groceries-2026-11-12");
+    let bob = scoped("agent:gateway/agt_bob", "groceries-2026-11-12");
+    assert_ne!(ana, bob);
+    assert_eq!(ana, scoped("agent:gateway/agt_ana", "groceries-2026-11-12"));
+    assert!(ana.starts_with("groceries-2026-11-12."));
+    assert_ne!(ana, scoped("agent:gateway/agt_ana", "groceries-2026-11-13"));
+    let long = "x".repeat(120);
+    let id = scoped("agent:gateway/agt_ana", &long);
+    assert!(ab_operations::valid_command_id(&id), "{id}");
+    assert!(
+        ab_operations::valid_command_id(&format!("qry_{id}")),
+        "{id}"
+    );
+    assert_ne!(id, scoped("agent:gateway/agt_ana", &format!("{long}y")));
+}
+
+#[test]
+fn a_read_only_agent_is_told_the_truth_about_write_scopes() {
+    let reader = principal("read", &["notes:read"]);
+    let problem = mcp_check::refused(&reader, "notes_create", "notes:write", false).to_json();
+    let hint = problem["error"]["hint"].as_str().unwrap_or_default();
+    assert!(hint.contains("read-only"), "{hint}");
+    assert!(hint.contains("bridge agents create"), "{hint}");
+    assert!(!hint.contains("bridge agents update"), "{hint}");
+}
+
+#[test]
+fn reminder_lists_come_back_small_with_counts() {
+    let raw = json!({
+        "smart": [{"id": "today", "count": 2}, {"id": "assigned", "status": "unsupported"}],
+        "lists": [
+            {"list": {"collection": "reminders.list", "id": "lst_g", "version": 1, "data": {"title": "Home", "is_group": true, "color": "#fff", "account": "iCloud"}}, "sections": [], "group_id": null, "order": 1, "pinned": false},
+            {"list": {"collection": "reminders.list", "id": "lst_a", "version": 3, "data": {"title": "Groceries", "is_group": false, "color": "#f00", "account": "iCloud"}}, "sections": [], "group_id": "lst_g", "order": 2, "pinned": false, "count": 4},
+            {"list": {"collection": "reminders.list", "id": "lst_s", "version": 1, "data": {"title": "Flagged errands"}}, "sections": [], "group_id": null, "order": 3, "pinned": false, "status": "unsupported"},
+        ],
+        "tags": [],
+    });
+    let shown = crate::mcp_facade::reminder_lists(&raw);
+    assert_eq!(shown["count"], 1);
+    assert_eq!(
+        shown["lists"][1],
+        json!({"id": "lst_a", "version": 3, "title": "Groceries", "count": 4, "in_group": "lst_g"})
+    );
+    assert_eq!(shown["lists"][0]["group"], true);
+    assert_eq!(shown["lists"][2]["custom_smart_list"], true);
+    assert_eq!(shown["smart_counts"], json!({"today": 2}));
+    assert!(shown["lists"][1].get("sections").is_none());
+}
+
+#[test]
+fn every_request_id_can_be_checked_including_query_prefixed_ones() {
+    let agent = "agent:gateway/agt_ana";
+    for id in ["send-1", "qry_retry", "qry_qry_retry"] {
+        let scoped = crate::mcp_facade::scoped_id(agent, id);
+        let candidates = crate::mcp_facade::status_ids(agent, id);
+        assert!(candidates.contains(&scoped), "{id}: {candidates:?}");
+        assert!(candidates.contains(&id.to_owned()), "{id}: {candidates:?}");
+        if !id.starts_with("qry_") {
+            assert!(
+                candidates.contains(&format!("qry_{scoped}")),
+                "{id}: {candidates:?}"
+            );
+        }
+        assert!(
+            crate::mcp_facade::legacy_ids(id).contains(&id.to_owned()),
+            "{id}"
+        );
+    }
+}
