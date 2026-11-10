@@ -18,12 +18,15 @@ pub(crate) const COMPACT: &[&str] = &[
     "calendar_add",
     "contacts_find",
     "notes_create",
+    "screen_time",
+    "photos_find",
 ];
 
 pub(crate) const BLOB_READ: &str = "blobs.read";
 pub(crate) const BLOB_STAGE: &str = "blobs.stage";
 pub(crate) const USAGE_SUMMARY: &str = "usage.summary";
 pub(crate) const CALENDARS: &str = "calendar.calendars";
+pub(crate) const PHOTOS_FIND_MAX: u64 = 30;
 pub(crate) const BY_TITLE: &[&str] = &[
     "reminders.complete",
     "reminders.uncomplete",
@@ -79,6 +82,19 @@ fn load() -> Option<Registry> {
 }
 
 fn patch(operation: &mut AgentOperation) {
+    if operation.kind != OperationKind::Command
+        && operation.arguments["properties"].get("time_zone").is_some()
+    {
+        if let Some(required) = operation.arguments["required"].as_array_mut() {
+            required.retain(|field| field != "time_zone");
+        }
+        operation.arguments["properties"]["time_zone"]["description"] =
+            json!("Optional. IANA time zone; default the Mac's.");
+    }
+    if operation.name == "reminders.items" {
+        operation.arguments["properties"]["list"]["description"] =
+            json!("A list's name, such as Groceries, or its lst_ ID.");
+    }
     if operation.name == "calendar.create_event" {
         operation.arguments["properties"]["calendar"] = json!({"type":"string","description":"Calendar name, such as Work, instead of calendar_id. A name that matches no calendar or several returns the candidates."});
         operation.arguments["properties"]["calendar_id"]["description"] = json!(
@@ -301,6 +317,10 @@ pub(crate) fn normal_name(name: &str) -> String {
         .iter()
         .find(|operation| operation.name.replace('.', "_") == trimmed)
         .map_or_else(|| trimmed.to_owned(), |operation| operation.name.clone())
+}
+
+pub(crate) fn valid_id(id: &str) -> bool {
+    ab_operations::valid_command_id(id)
 }
 
 pub(crate) fn can(principal: &Principal, scope: &str) -> bool {

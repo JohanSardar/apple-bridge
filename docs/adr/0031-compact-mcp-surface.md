@@ -26,3 +26,11 @@ A change that partly happened, such as a message whose text was sent and one att
 
 A Photos change keeps its result in memory for ten minutes, never in the command ledger, which still holds only a request digest. Repeating the call with the same request ID returns that result without running again; after a restart it returns `done` without the result. `apple_command_status` reports Photos changes. The goldens `mcp-json.json`, `mcp-sse.json` and `mcp-surface.json` were re-recorded; `mcp-legacy-tools.json` is unchanged.
 
+## One call for simple reads
+
+Agents spent turns on lookups, not on the bridge: asked how many reminder lists exist, Claude Code described the domain, then the operation, because `time_zone` was listed as required, then read a 3,854-character result. The instructions and `apple_read` now name the common reads with their arguments, `time_zone` is optional wherever the frontdoor fills it in, `reminders.items` takes a list name, and `reminders.lists` returns only titles, counts, IDs and versions (`verbose` returns the full result). `screen_time` and `photos_find` are the 15th and 16th tools; `photos_find` runs `photos.search` and `photos.contact_sheet` and returns the image with the numbered asset IDs. On nine simple questions in a synthetic world, Claude Code (Opus 5.5) went from 41 model turns to 29, with every question but one at the three-turn minimum (tool search, one call, answer). Listing the tools and instructions costs about 4,900 tokens (o200k).
+
+Messages from `messages_read` and `apple_search` carry `from` (the contact's name, the address without a contact, or `me`) and `chat_title`, resolved through `messages.handles` and the chat record. `apple_describe` treats a query about looking, finding, showing or reading, with no change or capture words, as a read: changing and capture operations drop and reads in the named domain rise.
+
+An agent's `request_id` is scoped to that agent: the command ID is the readable request ID followed by a hash of the principal and the full request ID, and results show the agent its own ID. A change admitted before this under the raw ID is still found by that agent, so a retry never acts twice. A read-only agent cannot be given write access, so its refusals say to connect a new agent, and `bridge agents update` refuses write scopes for a read agent.
+

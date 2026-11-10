@@ -423,6 +423,7 @@ impl Call<'_> {
                 .as_array()
                 .map(|items| items.iter().map(message_summary).collect())
                 .unwrap_or_default();
+            let messages = self.with_names(messages).await;
             let mut value = json!({
                 "chat_id": chat_id,
                 "messages": messages,
@@ -453,8 +454,12 @@ impl Call<'_> {
             let found = self
                 .invoke(self.operation("messages.search")?, &arguments)
                 .await?;
+            let messages = found["items"]
+                .as_array()
+                .map(|items| items.iter().map(message_summary).collect::<Vec<_>>())
+                .unwrap_or_default();
             let mut value = json!({
-                "messages": found["items"].as_array().map(|items| items.iter().map(message_summary).collect::<Vec<_>>()).unwrap_or_default(),
+                "messages": self.with_names(messages).await,
                 "next": "Pass a message's chat_id to messages_read to read the conversation.",
             });
             if let Some(next) = found["next"].as_str().filter(|n| !n.is_empty()) {
@@ -606,6 +611,7 @@ impl Call<'_> {
                             .as_array()
                             .map(|items| items.iter().map(message_summary).collect())
                             .unwrap_or_default();
+                        let items = self.with_names(items).await;
                         if let Some(next) = found["next"].as_str().filter(|n| !n.is_empty()) {
                             more.insert("messages".into(), json!(next));
                         }
@@ -990,10 +996,11 @@ impl Call<'_> {
         if !arguments.contains_key("reminder") || arguments.contains_key("id") {
             return Ok(false);
         }
+        let command_id = self.command_id(request_id).await?;
         let record = match self
             .invoke(
                 self.operation("commands.status")?,
-                &json!({"command_id": request_id}),
+                &json!({"command_id": command_id}),
             )
             .await
         {
@@ -1265,6 +1272,217 @@ impl Call<'_> {
                 json!("There were too many usage rows to read them all; totals may be low.");
         }
         Ok(value)
+    }
+
+    pub(crate) async fn with_names(&self, mut messages: Vec<Value>) -> Vec<Value> {
+        let mut chats: BTreeMap<String, (String, Vec<String>)> = BTreeMap::new();
+        for message in &messages {
+            if let Some(id) = message["chat_id"].as_str()
+                && !chats.contains_key(id)
+                && chats.len() < 50
+                && let Some(chat) = self
+                    .quiet(
+                        "records.get",
+                        json!({"collection": "messages.chat", "id": id}),
+                    )
+                    .await
+            {
+                let data = [
+                    &chat["records"][0]["data"],
+                    &chat["record"]["data"],
+                    &chat["data"],
+                ]
+                .into_iter()
+                .find(|d| d.is_object())
+                .unwrap_or(&Value::Null);
+                let participants = data["participants"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect();
+                let title = data["display_name"].as_str().unwrap_or_default().to_owned();
+                chats.insert(id.to_owned(), (title, participants));
+            }
+        }
+        let mut handles: Vec<String> = messages
+            .iter()
+            .filter_map(|m| m["sender_handle_id"].as_str().map(str::to_owned))
+            .collect();
+        for (title, participants) in chats.values() {
+            if title.is_empty() {
+                handles.extend(participants.iter().cloned());
+            }
+        }
+        handles.sort();
+        handles.dedup();
+        handles.truncate(500);
+        let mut names: HashMap<String, String> = HashMap::new();
+        if !handles.is_empty()
+            && let Some(found) = self
+                .quiet("messages.handles", json!({"ids": handles}))
+                .await
+        {
+            for handle in found["handles"].as_array().into_iter().flatten() {
+                if let (Some(id), Some(name)) = (
+                    handle["handle_id"].as_str(),
+                    handle["display_name"]
+                        .as_str()
+                        .filter(|n| !n.is_empty())
+                        .or_else(|| handle["address"].as_str()),
+                ) {
+                    names.insert(id.to_owned(), name.to_owned());
+                }
+            }
+        }
+        for message in &mut messages {
+            if message["from_me"] == true {
+                message["from"] = json!("me");
+            } else if let Some(name) = message["sender_handle_id"]
+                .as_str()
+                .and_then(|id| names.get(id))
+            {
+                message["from"] = json!(name);
+            }
+            if let Some((title, participants)) =
+                message["chat_id"].as_str().and_then(|id| chats.get(id))
+            {
+                let title = if title.is_empty() {
+                    chat_title(
+                        &participants
+                            .iter()
+                            .filter_map(|p| names.get(p).cloned())
+                            .collect::<Vec<_>>(),
+                    )
+                } else {
+                    title.clone()
+                };
+                if !title.is_empty() {
+                    message["chat_title"] = json!(title);
+                }
+            }
+        }
+        messages
+    }
+
+    pub(crate) async fn screen_time(&self, input: &Map<String, Value>) -> Step<Outcome> {
+        let mut arguments = input.clone();
+        if !["date", "start", "end"]
+            .iter()
+            .any(|key| text(input, key).is_some())
+        {
+            let zone = jiff::tz::TimeZone::get(&mac_zone()).unwrap_or(jiff::tz::TimeZone::UTC);
+            let today = jiff::Zoned::now().with_time_zone(zone).date();
+            let yesterday = today.yesterday().unwrap_or(today);
+            arguments.insert("date".into(), json!(yesterday.to_string()));
+        }
+        arguments.entry("top").or_insert(json!(5));
+        let mut value = self.usage_summary(&arguments).await?;
+        if let Some(devices) = value["devices"].as_array_mut() {
+            for device in devices {
+                if let Some(fields) = device.as_object_mut()
+                    && fields
+                        .get("days")
+                        .and_then(Value::as_array)
+                        .is_some_and(|d| d.len() <= 1)
+                {
+                    fields.remove("days");
+                }
+            }
+        }
+        Ok(Outcome::ok(value).named(crate::mcp_registry::USAGE_SUMMARY))
+    }
+
+    pub(crate) async fn photos_find(&self, input: &Map<String, Value>) -> Step<Outcome> {
+        let limit = input
+            .get("limit")
+            .and_then(Value::as_u64)
+            .unwrap_or(20)
+            .clamp(1, crate::mcp_registry::PHOTOS_FIND_MAX);
+        let mut filters = input.clone();
+        filters.insert("limit".into(), json!(limit));
+        let found = self
+            .read_one(&Map::from_iter([
+                ("operation".to_owned(), json!("photos.search")),
+                ("arguments".to_owned(), Value::Object(filters)),
+            ]))
+            .await?;
+        let next_cursor = found.value["next_cursor"].clone();
+        let ids: Vec<Value> = found.value["assets"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|asset| {
+                asset["asset_id"]
+                    .as_str()
+                    .or_else(|| asset["id"].as_str())
+                    .map(|id| json!(id))
+            })
+            .take(usize::try_from(limit).unwrap_or(30))
+            .collect();
+        if ids.is_empty() {
+            let mut value = json!({
+                "photos": [],
+                "next": "No photos match these filters. Try a wider date range or fewer filters.",
+            });
+            if next_cursor.is_string() {
+                value["next_cursor"] = next_cursor;
+                value["next"] = json!(
+                    "No matches on this page, but more remain: pass next_cursor as cursor with the same filters."
+                );
+            }
+            return Ok(Outcome::ok(value).named("photos.search"));
+        }
+        let sheet = self
+            .read_one(&Map::from_iter([
+                ("operation".to_owned(), json!("photos.contact_sheet")),
+                ("arguments".to_owned(), json!({"asset_ids": ids})),
+            ]))
+            .await?;
+        let photos: Vec<Value> = sheet.value["cells"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|cell| {
+                let mut photo = json!({
+                    "number": cell["number"],
+                    "asset_id": cell["asset_id"],
+                    "type": cell["type"],
+                    "taken_at": cell["created_at"],
+                });
+                if let Some(local) = crate::mcp_facade::local_time_of(cell["created_at"].as_str()) {
+                    photo["taken_at_local"] = json!(local);
+                }
+                if cell["rendered"] == false {
+                    photo["shown"] = json!("grey: not on this Mac");
+                }
+                photo
+            })
+            .collect();
+        let mut value = json!({
+            "photos": photos,
+            "next": "The image shows the photos numbered as listed. To open one larger, call apple_read with photos.preview and its asset_id.",
+        });
+        if next_cursor.is_string() {
+            value["next_cursor"] = next_cursor;
+        }
+        Ok(Outcome {
+            value,
+            image: sheet.image,
+            ..Outcome::default()
+        }
+        .named("photos.contact_sheet"))
+    }
+}
+
+pub(crate) fn chat_title(names: &[String]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => one.clone(),
+        [a, b] => format!("{a} & {b}"),
+        [a, b, c] => format!("{a}, {b} & {c}"),
+        [a, b, rest @ ..] => format!("{a}, {b} & {} others", rest.len()),
     }
 }
 

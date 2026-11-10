@@ -2,7 +2,7 @@
   {
     "name": "apple_status",
     "title": "Apple Bridge status",
-    "description": "Shows your access on this Mac (level and scopes), which Apple sources are ready, and the Mac's time zone and current time. Optional: call it when you need your access, the time zone or why a source is empty. Reads nothing private.",
+    "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused. Reads nothing private.",
     "inputSchema": {"type": "object", "properties": {}},
     "outputSchema": {"type": "object", "properties": {"access": {"type": "object"}, "sources": {"type": "array"}, "time_zone": {"type": "string"}, "now": {"type": "string"}, "next": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -38,7 +38,7 @@
   {
     "name": "apple_read",
     "title": "Read Apple data",
-    "description": "Run any read operation, such as reminders.items, usage.summary or photos.search; reads never change anything. Get the operation's arguments from apple_describe. Records carry id and version: use the id in later calls and the version as expected_version when changing that record. Paging: pass next back as after, or next_cursor as cursor for Photos. reads runs up to 10 reads in one call.",
+    "description": "Run any read operation; reads never change anything. Common reads need no lookup, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; one record by id: records.get {\"id\":\"nte_…\"}. For others, apple_describe gives the arguments. Records carry id and version: use the id in later calls and the version as expected_version when changing that record. Paging: pass next back as after, or next_cursor as cursor for Photos. reads runs up to 10 reads in one call.",
     "inputSchema": {"type": "object", "properties": {
       "operation": {"type": "string", "description": "Read operation name, such as reminders.items."},
       "arguments": {"type": "object", "description": "The operation's arguments, as apple_describe lists them."},
@@ -200,5 +200,41 @@
     "outputSchema": {"$ref": "#change"},
     "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
     "example": {"title": "Packing", "text": "Passport\nCharger"}
+  },
+  {
+    "name": "screen_time",
+    "title": "Screen Time",
+    "scope": "usage:read",
+    "description": "Screen Time per device (Mac, iPhone, iPad): total and top apps, estimated from app focus. Default yesterday in the Mac's time zone; date for one day, or start and end.",
+    "inputSchema": {"type": "object", "properties": {
+      "date": {"type": "string", "description": "One day as YYYY-MM-DD. Default yesterday."},
+      "start": {"type": "string", "description": "First day of a range, YYYY-MM-DD."},
+      "end": {"type": "string", "description": "Last day of a range, inclusive."},
+      "device": {"type": "string", "description": "Only this device, by part of its name, such as iPhone."},
+      "top": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Top apps per device. Default 5."}
+    }},
+    "outputSchema": {"type": "object", "properties": {"total": {"type": "string"}, "top_apps": {"type": "array"}, "devices": {"type": "array"}, "start": {"type": "string"}, "end": {"type": "string"}}},
+    "annotations": {"readOnlyHint": true, "openWorldHint": false},
+    "example": {"date": "2026-11-09"}
+  },
+  {
+    "name": "photos_find",
+    "title": "Find photos",
+    "scope": "photos:read",
+    "description": "Find photos by date, type, album, favorite or place and see them in one call: a numbered contact-sheet image of the matches, with each number's asset_id. Look at it to find what a photo shows; open one larger with apple_read photos.preview and its asset_id.",
+    "inputSchema": {"type": "object", "properties": {
+      "start": {"type": "string", "description": "Taken on or after, RFC 3339 or YYYY-MM-DD."},
+      "end": {"type": "string", "description": "Taken before, RFC 3339 or YYYY-MM-DD."},
+      "type": {"type": "string", "enum": ["image", "video", "audio", "live_photo", "screenshot", "panorama", "hdr", "depth", "slow_motion", "timelapse"], "description": "Only this kind."},
+      "album_id": {"type": "string", "description": "Only this album, from photos.albums."},
+      "favorite": {"type": "boolean", "description": "Only favorites."},
+      "near": {"type": "object", "properties": {"lat": {"type": "number", "description": "Latitude."}, "lon": {"type": "number", "description": "Longitude."}}, "required": ["lat", "lon"], "description": "Near this point, with radius_m."},
+      "radius_m": {"type": "number", "description": "Meters from near, up to 100000."},
+      "cursor": {"type": "string", "description": "next_cursor from the last result, same filters."},
+      "limit": {"type": "integer", "minimum": 1, "maximum": 30, "description": "Photos on the sheet. Default 20."}
+    }},
+    "outputSchema": {"type": "object", "properties": {"photos": {"type": "array"}, "next_cursor": {"type": "string"}, "next": {"type": "string"}}},
+    "annotations": {"readOnlyHint": true, "openWorldHint": false},
+    "example": {"start": "2026-07-01", "end": "2026-08-01", "type": "image"}
   }
 ]

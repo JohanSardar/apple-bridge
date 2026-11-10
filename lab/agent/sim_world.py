@@ -58,10 +58,11 @@ def fixtures():
         record('usage.device', 'x-mac', {'name': 'Synthetic MacBook', 'platform': 'mac', 'build': 'sim', 'is_local': True, 'latest_event_at': iso(now), 'provenance': 'biome.app_infocus', 'decoder_version': 'infocus-segb-1'}),
         record('usage.device', 'x-iphone', {'name': 'Synthetic iPhone', 'platform': 'iphone', 'build': 'sim', 'is_local': False, 'latest_event_at': iso(now), 'provenance': 'biome.app_infocus', 'decoder_version': 'infocus-segb-1'}),
     ]
+    zone = os.environ.get('TZ') or subprocess.run(['readlink', '/etc/localtime'], capture_output=True, text=True).stdout.strip().split('zoneinfo/')[-1] or 'UTC'
     usage = [('x-mac', 'com.apple.Safari', 5400), ('x-mac', 'com.microsoft.VSCode', 9000), ('x-mac', 'com.apple.MobileSMS', 1200), ('x-iphone', 'com.burbn.instagram', 3600), ('x-iphone', 'com.apple.MobileSMS', 1800), ('x-iphone', 'com.google.ios.youtube', 2400)]
     for n, (device, bundle, seconds) in enumerate(usage):
         for back in (1, 2):
-            rows.append(record('usage.app_day', f'x-u{n}-{back}', {'device_id': ref('usage.device', device), 'day': day(back), 'bundle_id': bundle, 'seconds_estimated': seconds * back, 'clipped_seconds': 0, 'provenance': 'biome.app_infocus', 'decoder_version': 'infocus-segb-1', 'uncertainty': 'focus estimates, not active interaction'}))
+            rows.append(record('usage.app_day', f'x-u{n}-{back}', {'device_id': ref('usage.device', device), 'day': f'{day(back)}@{zone}', 'bundle_id': bundle, 'seconds_estimated': seconds * back + 0.4, 'clipped_seconds': 12.5, 'sessions': 3.0, 'usage_class': 'app', 'provenance': 'biome.app_infocus', 'decoder_version': 'infocus-segb-1', 'uncertainty': 'focus estimates, not active interaction'}))
     for i in range(12):
         start = (local + datetime.timedelta(days=i % 9)).replace(hour=10, minute=0, second=0, microsecond=0).astimezone(datetime.timezone.utc)
         rows.append(event(f'x-noise-{i}', 'demo-cal-work', f'searchcapnoise sync {i}', start, start + datetime.timedelta(hours=1)))
