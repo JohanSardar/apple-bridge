@@ -1110,5 +1110,70 @@ fn credentials_in_any_url_spelling_never_reach_the_output() -> Check {
         }
     }
     assert!(!home.path().join("remote/config.json").exists());
+
+    let output = run(
+        home.path(),
+        &[
+            "remote",
+            "enable",
+            "--relay-url",
+            "https://me:\thunter2@c.example.test",
+            "--json",
+            "--debug",
+        ],
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        !text(&output.stderr).contains("hunter2"),
+        "{}",
+        text(&output.stderr)
+    );
+
+    let output = run(
+        home.path(),
+        &[
+            "agents",
+            "create",
+            "--name",
+            "https://me:hunter2@c.example.test",
+            "--level",
+            "read",
+            "--expires-in",
+            "1d",
+            "--json",
+        ],
+    )?;
+    let named = json_out(&output)?["agent"]["id"]
+        .as_str()
+        .ok_or("id")?
+        .to_owned();
+    let output = run(
+        home.path(),
+        &["agents", "revoke", &named, "--json", "--debug"],
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        !text(&output.stderr).contains("hunter2"),
+        "{}",
+        text(&output.stderr)
+    );
+    Ok(())
+}
+
+#[test]
+fn a_value_that_looks_like_flags_is_left_alone() -> Check {
+    let home = short_home()?;
+    let output = run(
+        home.path(),
+        &["agents", "list", "-n", "-yd", "--yes=false", "--json"],
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    let error = error_document(&output)?;
+    assert!(
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("--limit -yd")),
+        "{error}"
+    );
     Ok(())
 }

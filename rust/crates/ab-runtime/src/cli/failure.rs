@@ -235,7 +235,9 @@ impl Failure {
 
     #[must_use]
     pub fn data(mut self, key: &str, value: impl Into<Value>) -> Self {
-        self.data.insert(key.to_owned(), value.into());
+        let mut value = value.into();
+        super::ui::strip_userinfo_json(&mut value);
+        self.data.insert(key.to_owned(), value);
         self
     }
 

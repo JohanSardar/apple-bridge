@@ -82,9 +82,10 @@ pub fn clean_block(text: &str) -> String {
 fn url_parts(text: &str) -> Option<(&str, &str, &str, &str)> {
     let (scheme, after) = text.split_once(':')?;
     let mut characters = scheme.chars();
-    if !characters
-        .next()
-        .is_some_and(|first| first.is_ascii_alphabetic())
+    if scheme.len() < 2
+        || !characters
+            .next()
+            .is_some_and(|first| first.is_ascii_alphabetic())
         || !characters.all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
     {
         return None;
@@ -117,13 +118,35 @@ pub fn redact_url(text: &str) -> String {
     format!("{scheme}:{slashes}{}{tail}", without_userinfo(authority))
 }
 
+fn scheme_start(word: &str) -> usize {
+    let limit = word.find('@').unwrap_or(word.len());
+    let bytes = word.as_bytes();
+    let part = |b: u8| b.is_ascii_alphanumeric() || b"+.-".contains(&b);
+    let mut best = None;
+    for (index, byte) in bytes.iter().enumerate().take(limit) {
+        if !byte.is_ascii_alphabetic() || index > 0 && part(bytes[index - 1]) {
+            continue;
+        }
+        let mut end = index;
+        while end < limit && part(bytes[end]) {
+            end += 1;
+        }
+        if end < limit && bytes[end] == b':' && end - index >= 2 {
+            best = Some(index);
+            break;
+        }
+    }
+    best.unwrap_or_else(|| {
+        word.find(|c: char| c.is_ascii_alphabetic())
+            .unwrap_or(word.len())
+    })
+}
+
 fn each_word(text: &str, change: impl Fn(&str) -> String) -> String {
     let mut out = String::with_capacity(text.len());
     for piece in text.split_inclusive(char::is_whitespace) {
         let word = piece.trim_end_matches(char::is_whitespace);
-        let start = word
-            .find(|c: char| c.is_ascii_alphabetic())
-            .unwrap_or(word.len());
+        let start = scheme_start(word);
         out.push_str(&word[..start]);
         out.push_str(&change(&word[start..]));
         out.push_str(&piece[word.len()..]);
@@ -147,7 +170,41 @@ pub fn strip_userinfo(text: &str) -> String {
     })
 }
 
+pub fn strip_userinfo_json(value: &mut Value) {
+    match value {
+        Value::String(text) => *text = strip_userinfo(text),
+        Value::Array(items) => items.iter_mut().for_each(strip_userinfo_json),
+        Value::Object(map) => map.values_mut().for_each(strip_userinfo_json),
+        _ => {}
+    }
+}
+
+fn parsed_without_userinfo(text: &str) -> Option<String> {
+    let parsed = reqwest::Url::parse(text).ok()?;
+    if parsed.username().is_empty() && parsed.password().is_none() {
+        return None;
+    }
+    let host = parsed.host_str().unwrap_or_default();
+    let port = parsed
+        .port()
+        .map(|port| format!(":{port}"))
+        .unwrap_or_default();
+    Some(format!(
+        "{}://***@{host}{port}{}",
+        parsed.scheme(),
+        parsed.path()
+    ))
+}
+
 pub fn clean_input(text: &str) -> String {
+    if text.contains('@')
+        && let Some(shown) = parsed_without_userinfo(text)
+    {
+        return clean(&shown);
+    }
+    if text.contains('@') && text.contains(':') && text.chars().any(char::is_whitespace) {
+        return "***".to_owned();
+    }
     clean(&redact_urls(text))
 }
 
@@ -1047,6 +1104,34 @@ pub fn age(timestamp: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn userinfo_is_stripped_and_ordinary_text_is_kept() {
+        for (text, shown) in [
+            ("see https://me:pw@h.test/x", "see https://***@h.test/x"),
+            ("https:me:pw@h.test", "https:***@h.test"),
+            ("https:/me:pw@h.test", "https:/***@h.test"),
+            ("url=https://me:pw@h.test", "url=https://***@h.test"),
+            ("(HTTPS://me:pw@h.test)", "(HTTPS://***@h.test)"),
+        ] {
+            assert_eq!(strip_userinfo(text), shown, "{text}");
+        }
+        for text in [
+            "mail a@b.com now",
+            "user@host:22",
+            "127.0.0.1:7780",
+            "at 14:03 today",
+            r"C:\a@b.com\config",
+            "https://relay.test/sign-in?code=abc#x",
+            "ssh me@host.test",
+        ] {
+            assert_eq!(strip_userinfo(text), text, "{text}");
+        }
+        assert_eq!(clean_input("https://me:\tpw@h.test"), "https://***@h.test/");
+        let mut value = json!({"effects": [{"value": "https://me:pw@h.test"}]});
+        strip_userinfo_json(&mut value);
+        assert_eq!(value["effects"][0]["value"], "https://***@h.test");
+    }
 
     #[test]
     fn untrusted_text_loses_controls_and_shows_newlines() {

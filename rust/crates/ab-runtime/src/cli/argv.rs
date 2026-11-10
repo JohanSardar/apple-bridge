@@ -319,18 +319,46 @@ fn short_of(command: &clap::Command, name: &str) -> Option<char> {
         .and_then(clap::Arg::get_short)
 }
 
+fn wants_value(command: &clap::Command, token: &str) -> bool {
+    let root = Cli::command();
+    let mut arguments = command.get_arguments().chain(root.get_arguments());
+    if let Some(long) = token.strip_prefix("--") {
+        return !long.contains('=')
+            && arguments.any(|argument| {
+                argument.get_action().takes_values()
+                    && (argument.get_long() == Some(long)
+                        || argument
+                            .get_all_aliases()
+                            .is_some_and(|aliases| aliases.contains(&long)))
+            });
+    }
+    let Some(letters) = token.strip_prefix('-') else {
+        return false;
+    };
+    let mut characters = letters.chars();
+    match (characters.next(), characters.next()) {
+        (Some(letter), None) => arguments.any(|argument| {
+            argument.get_short() == Some(letter) && argument.get_action().takes_values()
+        }),
+        _ => false,
+    }
+}
+
 fn forget_flag(output: &mut Vec<OsString>, command: &clap::Command, name: &str) {
     let plain = format!("--{name}");
-    output.retain(|kept: &OsString| {
-        let kept = kept.to_string_lossy();
-        kept != plain && !same_flag(command, &kept, name)
-    });
-    let Some(short) = short_of(command, name) else {
-        return;
-    };
-    let mut kept = Vec::with_capacity(output.len());
+    let short = short_of(command, name);
+    let mut kept: Vec<OsString> = Vec::with_capacity(output.len());
+    let mut value_next = false;
     for token in output.drain(..) {
         let text = token.to_string_lossy().into_owned();
+        if std::mem::take(&mut value_next) {
+            kept.push(token);
+            continue;
+        }
+        value_next = wants_value(command, &text);
+        if text == plain || same_flag(command, &text, name) {
+            continue;
+        }
         let grouped = text
             .strip_prefix('-')
             .filter(|letters| !letters.starts_with('-') && letters.chars().count() > 1)
@@ -339,8 +367,8 @@ fn forget_flag(output: &mut Vec<OsString>, command: &clap::Command, name: &str) 
                     .chars()
                     .all(|letter| short_flag(command, &format!("-{letter}")).is_some())
             });
-        match grouped {
-            Some(letters) if letters.contains(short) => {
+        match (grouped, short) {
+            (Some(letters), Some(short)) if letters.contains(short) => {
                 let rest: String = letters.chars().filter(|letter| *letter != short).collect();
                 if !rest.is_empty() {
                     kept.push(format!("-{rest}").into());
@@ -448,6 +476,7 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
     let mut output = Vec::with_capacity(rewritten.len());
     let mut remaining = rewritten.into_iter();
     let mut after = false;
+    let mut value_next = false;
     while let Some(mut argument) = remaining.next() {
         let mut text = argument.to_string_lossy().into_owned();
         if after || text == "--" {
@@ -455,6 +484,11 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
             output.push(argument);
             continue;
         }
+        if std::mem::take(&mut value_next) {
+            output.push(argument);
+            continue;
+        }
+        value_next = wants_value(&leaf, &text);
         if let Some(long) = text.strip_prefix("--").map(str::to_owned) {
             if let Some((flag_name, value)) = long.split_once('=')
                 && matches!(value, "true" | "false")
@@ -475,13 +509,13 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 forget_flag(&mut output, &leaf, negated);
                 continue;
             } else if !long.contains('=') && flag(&leaf, &long) {
-                output.retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), &long));
+                forget_flag(&mut output, &leaf, &long);
             }
         } else if text.len() == 2
             && text.starts_with('-')
             && let Some(name) = short_flag(&leaf, &text)
         {
-            output.retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), &name));
+            forget_flag(&mut output, &leaf, &name);
         }
         let name = text.strip_prefix("--").map(|long| {
             long.split_once('=')
