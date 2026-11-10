@@ -229,7 +229,7 @@ pub fn selftest(args: &SelftestArgs) -> Outcome {
             ["bridge", "selftest", "messages", "--force"],
         ));
     }
-    ui::done("Proven", "Messages");
+    ui::receipt("Proven", "Messages", "Messages is proven.");
     Ok(())
 }
 
@@ -436,7 +436,11 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
     ui::block(if ok { ui::Mark::Good } else { ui::Mark::Bad }, &rows);
     if let Some(warnings) = report["warnings"].as_array() {
         for warning in warnings.iter().filter_map(Value::as_str) {
-            ui::warn("doctor", warning);
+            let (sentence, step) = doctor_warning(warning);
+            ui::warn("doctor", &sentence);
+            if let Some(step) = step {
+                ui::next_step(&step);
+            }
         }
     }
     if !ok && !args.check {
@@ -449,6 +453,30 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
         }
     }
     verdict()
+}
+
+fn doctor_warning(text: &str) -> (String, Option<Step>) {
+    if let Some(source) = text.strip_suffix(
+        " document source is not ready; start the current Helper and check sources.status",
+    ) {
+        return (
+            format!(
+                "The {} document source isn't ready. Start the current Apple Bridge app, then check the source.",
+                label_case(&ui::clean(source))
+            ),
+            Some(Step::new("Check it", ["bridge", "call", "sources.status"])),
+        );
+    }
+    let text = ui::clean(text);
+    let mut characters = text.chars();
+    let sentence = characters.next().map_or_else(String::new, |first| {
+        first.to_uppercase().chain(characters).collect::<String>()
+    });
+    if sentence.ends_with('.') {
+        (sentence, None)
+    } else {
+        (format!("{sentence}."), None)
+    }
 }
 
 fn file_size(path: &Path) -> u64 {
@@ -603,9 +631,14 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
     if !Modes::get().stdout_tty() {
         ui::outln(&destination.display().to_string());
     }
-    ui::done(
+    ui::receipt(
         "Backed up",
         &format!("{} ({})", destination.display(), ui::size(bytes)),
+        &format!(
+            "Backed up to {} ({}).",
+            destination.display(),
+            ui::size(bytes)
+        ),
     );
     if existed {
         ui::row("Replaced", "the previous file");
@@ -831,7 +864,11 @@ fn report_restore(home: &Path, backup: Option<&PathBuf>, replaced: bool) -> Outc
         }));
         return Ok(());
     }
-    ui::done("Restored", &home.display().to_string());
+    ui::receipt(
+        "Restored",
+        &home.display().to_string(),
+        &format!("Restored {}.", home.display()),
+    );
     if let Some(backup) = backup {
         ui::row("From", &backup.display().to_string());
     }
@@ -944,15 +981,35 @@ fn valid_domain(domain: &str) -> bool {
 }
 
 fn relay_url(url: &str) -> Outcome<String> {
-    let parsed = reqwest::Url::parse(url)
-        .ok()
-        .filter(|parsed| parsed.scheme() == "https" && parsed.host_str().is_some());
+    let parsed = reqwest::Url::parse(url).ok();
+    if parsed
+        .as_ref()
+        .is_some_and(|parsed| !parsed.username().is_empty() || parsed.password().is_some())
+        || url.split_once("://").is_some_and(|(_, rest)| {
+            rest.split(['/', '?', '#'])
+                .next()
+                .unwrap_or_default()
+                .contains('@')
+        })
+    {
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            format!(
+                "Can't use --relay-url {}. Relay addresses can't include a user name or password.",
+                ui::clean_input(url)
+            ),
+        )
+        .sentence(
+            "Nothing was saved. Pass the relay's address alone, such as https://relay.example.com.",
+        ));
+    }
+    let parsed = parsed.filter(|parsed| parsed.scheme() == "https" && parsed.host_str().is_some());
     if parsed.is_none() {
         return Err(Failure::new(
             Reason::InvalidValue,
             format!(
                 "Can't use --relay-url {}. Relays use https://HOST.",
-                ui::clean(url)
+                ui::clean_input(url)
             ),
         ));
     }
@@ -996,9 +1053,11 @@ pub const MODERN: Voice = Voice::Modern {
     no_open: false,
 };
 
+pub const LEGACY: Voice = Voice::Legacy { no_open: false };
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Voice {
-    Legacy,
+    Legacy { no_open: bool },
     Modern { open: bool, no_open: bool },
 }
 
@@ -1006,13 +1065,82 @@ fn ssh() -> bool {
     std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some()
 }
 
+fn relay_host(home: &Path) -> String {
+    let saved = remote_file::<ab_remote::state::Config>(home, "config")
+        .map(|config| config.relay_url)
+        .unwrap_or_default();
+    let url = if saved.is_empty() {
+        std::env::var("APPLE_BRIDGE_RELAY_URL")
+            .unwrap_or_else(|_| "https://applebridge.eilmer.si".to_owned())
+    } else {
+        saved
+    };
+    reqwest::Url::parse(&url)
+        .ok()
+        .and_then(|parsed| parsed.host_str().map(str::to_owned))
+        .unwrap_or_else(|| ui::redact_url(&url))
+}
+
+fn sentence_case(text: &str) -> String {
+    let text = text.trim().trim_end_matches('.');
+    let mut characters = text.chars();
+    characters.next().map_or_else(String::new, |first| {
+        format!("{}{}.", first.to_uppercase(), characters.as_str())
+    })
+}
+
+fn remote_failed(home: &Path, route: &str, verb_past: &str, error: &ab_remote::Error) -> Failure {
+    let text = error.to_string();
+    let detail = text.strip_prefix("remote: ").unwrap_or(&text).to_owned();
+    let cause = ab_remote::failure_cause(&detail).map(str::to_owned);
+    let headline = match (&cause, route) {
+        (Some(cause), "relay" | "both") => format!(
+            "Couldn't reach {}. {}",
+            relay_host(home),
+            sentence_case(&ui::redact_urls(cause))
+        ),
+        (Some(cause), _) => format!(
+            "Couldn't turn remote access {verb_past}. {}",
+            sentence_case(&ui::redact_urls(cause))
+        ),
+        (None, "relay" | "both") if verb_past == "on" => format!(
+            "Couldn't turn remote access on through {}.",
+            relay_host(home)
+        ),
+        (None, _) => format!("Failed to turn remote access {verb_past}."),
+    };
+    let mut failure = Failure::new(
+        if cause.is_some() {
+            Reason::NetworkError
+        } else {
+            Reason::ApiError
+        },
+        headline,
+    );
+    if cause.is_none() {
+        failure = failure.remote("Gateway", detail);
+    }
+    failure
+        .then("Check remote access", ["bridge", "remote", "status"])
+        .then(
+            "Turn it off before trying again",
+            ["bridge", "remote", "disable"],
+        )
+}
+
+struct Pending {
+    link: std::sync::Mutex<Option<String>>,
+    seen: tokio::sync::Notify,
+}
+
+#[allow(clippy::too_many_lines)]
 async fn onboard(
     home: &Path,
     action: &str,
     route: &str,
     timeout: Option<&str>,
     voice: Voice,
-) -> Outcome<ab_remote::state::Status> {
+) -> Outcome<Result<ab_remote::state::Status, String>> {
     let limit = timeout
         .map(|text| duration("--timeout", text))
         .transpose()?
@@ -1026,15 +1154,35 @@ async fn onboard(
     } else {
         "Turning off"
     };
-    ui::note(&format!("{verb} remote access ({route})…"));
+    let modes = Modes::get();
+    let machine = modes.json;
+    ui::phase(1, 2, &format!("{verb} remote access ({route})…"));
+    let pending = Arc::new(Pending {
+        link: std::sync::Mutex::new(None),
+        seen: tokio::sync::Notify::new(),
+    });
+    let recorder = pending.clone();
+    let record = move |link: &str| {
+        if let Ok(mut slot) = recorder.link.lock() {
+            *slot = Some(link.to_owned());
+        }
+        recorder.seen.notify_one();
+    };
     let opener: ab_remote::onboarding::Opener = match voice {
-        Voice::Legacy => Arc::new(ab_remote::onboarding::open_link),
+        Voice::Legacy { no_open } => Arc::new(move |link: &str| {
+            record(link);
+            !no_open && ab_remote::onboarding::open_link(link)
+        }),
         Voice::Modern { open, no_open } => {
-            let launch = !no_open && (Modes::get().browser_allowed() || (open && !ssh()));
-            let echo = !Modes::get().stdout_tty() && !Modes::get().json;
+            let launch = !no_open && (modes.browser_allowed() || (open && !ssh()));
+            let echo = !modes.stdout_tty() && !modes.json;
             Arc::new(move |link: &str| {
+                record(link);
                 if echo {
                     ui::outln(link);
+                }
+                if launch {
+                    ui::phase(2, 2, "Opening the sign-in page in your browser…");
                 }
                 launch && ab_remote::onboarding::open_link(link)
             })
@@ -1042,60 +1190,99 @@ async fn onboard(
     };
     let mut legacy_out = std::io::stdout();
     let mut modern_out = Stderr;
-    let out: &mut (dyn std::io::Write + Send) = if voice == Voice::Legacy {
+    let out: &mut (dyn std::io::Write + Send) = if matches!(voice, Voice::Legacy { .. }) && !machine
+    {
         &mut legacy_out
     } else {
         &mut modern_out
     };
-    let waited = tokio::time::timeout(
-        limit,
-        ab_remote::onboarding::settle(home, action, route, out, opener, Duration::from_millis(100)),
-    )
+    let settling =
+        ab_remote::onboarding::settle(home, action, route, out, opener, Duration::from_millis(100));
+    let link_needed = async {
+        loop {
+            pending.seen.notified().await;
+            if let Some(link) = pending.link.lock().ok().and_then(|slot| slot.clone()) {
+                return link;
+            }
+        }
+    };
+    let waited = tokio::time::timeout(limit, async {
+        if machine && action == "on" {
+            tokio::select! {
+                settled = settling => Ok(settled),
+                link = link_needed => Err(link),
+            }
+        } else {
+            Ok(settling.await)
+        }
+    })
     .await;
     let verb_past = if action == "on" { "on" } else { "off" };
     match waited {
-        Err(_) => Err(Failure::new(
-            Reason::Timeout,
-            format!(
-                "Stopped waiting after {}. Remote access isn't confirmed {verb_past} yet.",
-                friendly(limit)
-            ),
-        )
-        .sentence("The gateway keeps working on the request; nothing was canceled.")
-        .then("Check it", ["bridge", "remote", "status"])),
-        Ok(Err(ab_remote::Error::Remote(message))) if message == "interrupted" => {
+        Err(_) => {
+            let link = pending.link.lock().ok().and_then(|slot| slot.clone());
+            let mut failure = Failure::new(
+                Reason::Timeout,
+                format!(
+                    "Stopped waiting after {}. Remote access isn't confirmed {verb_past} yet.",
+                    friendly(limit)
+                ),
+            )
+            .sentence("The gateway keeps working on the request; nothing was canceled.");
+            if let Some(link) = link {
+                failure = failure
+                    .row("Sign-in link", link.clone())
+                    .data("signInUrl", link);
+            }
+            Err(failure.then("Check it", ["bridge", "remote", "status"]))
+        }
+        Ok(Err(link)) => Ok(Err(link)),
+        Ok(Ok(Err(ab_remote::Error::Remote(message)))) if message == "interrupted" => {
             Err(Failure::canceled(format!(
                 "Canceled. The request to turn remote access {verb_past} was withdrawn."
             )))
         }
-        Ok(Err(ab_remote::Error::Remote(message))) if message.contains("superseded") => {
+        Ok(Ok(Err(ab_remote::Error::Remote(message)))) if message.contains("superseded") => {
             Err(Failure::new(
                 Reason::Conflict,
                 "Stopped waiting. Another remote access request replaced this one.",
             )
             .then("Check it", ["bridge", "remote", "status"]))
         }
-        Ok(Err(error)) => Err(Failure::new(
-            Reason::ApiError,
-            format!("Failed to turn remote access {verb_past}."),
-        )
-        .remote("Gateway", error.to_string())
-        .then("Check it", ["bridge", "remote", "status"])),
-        Ok(Ok(status)) => Ok(status),
+        Ok(Ok(Err(error))) => Err(remote_failed(home, route, verb_past, &error)),
+        Ok(Ok(Ok(status))) => Ok(Ok(status)),
     }
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn report_pending(link: &str) -> Outcome {
+    ui::json_keyed(
+        "remote",
+        json!({
+            "remote": {"state": "pending", "signInUrl": link},
+            "outcome": "pending",
+            "userActionRequired": true,
+            "message": "A person must open the sign-in link and approve this Mac. Remote access turns on after that; the gateway keeps waiting.",
+            "next": [Step::new("Check whether it's on", ["bridge", "remote", "status", "--json"]).to_json()],
+        }),
+    );
+    Ok(())
 }
 
 #[allow(clippy::unnecessary_wraps)]
 fn report_remote(status: &ab_remote::state::Status, on: bool, voice: Voice) -> Outcome {
     if Modes::get().json {
-        ui::json_document(json!({
-            "remote": status,
-            "outcome": if on { "enabled" } else { "disabled" },
-            "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()],
-        }));
+        ui::json_keyed(
+            "remote",
+            json!({
+                "remote": status,
+                "outcome": if on { "enabled" } else { "disabled" },
+                "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()],
+            }),
+        );
         return Ok(());
     }
-    if voice == Voice::Legacy {
+    if matches!(voice, Voice::Legacy { .. }) {
         if status.url.is_empty() {
             ui::outln(&status.state);
         } else {
@@ -1108,13 +1295,17 @@ fn report_remote(status: &ab_remote::state::Status, on: bool, voice: Voice) -> O
         if !Modes::get().stdout_tty() && !status.url.is_empty() {
             ui::outln(&status.url);
         }
-        ui::done("Remote access on", &status.url);
+        ui::receipt(
+            "Remote access on",
+            &status.url,
+            &format!("Remote access is on at {}.", status.url),
+        );
         if !status.url.is_empty() {
             ui::row("MCP address", &format!("{}/mcp", status.url));
         }
         ui::row("Route", &status.backend);
     } else {
-        ui::done("Remote access off", "");
+        ui::receipt("Remote access off", "", "Remote access is off.");
     }
     ui::next_steps(&[Step::new("Check it", ["bridge", "remote", "status"])]);
     Ok(())
@@ -1162,14 +1353,18 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -
         ab_remote::state::annotate(home, name)?;
     }
     let voice = match voice {
-        Voice::Legacy => Voice::Legacy,
+        Voice::Legacy { .. } => Voice::Legacy {
+            no_open: args.no_open,
+        },
         Voice::Modern { .. } => Voice::Modern {
             open: args.open,
             no_open: args.no_open,
         },
     };
-    let status = onboard(home, "on", &route, args.timeout.as_deref(), voice).await?;
-    report_remote(&status, true, voice)
+    match onboard(home, "on", &route, args.timeout.as_deref(), voice).await? {
+        Ok(status) => report_remote(&status, true, voice),
+        Err(link) => report_pending(&link),
+    }
 }
 
 pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice) -> Outcome {
@@ -1184,11 +1379,18 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice)
     let current = ab_remote::state::status(home)?;
     if current.state == "off" {
         if Modes::get().json {
-            ui::json_document(json!({"remote": current, "outcome": "unchanged"}));
-        } else if voice == Voice::Legacy {
+            ui::json_keyed(
+                "remote",
+                json!({"remote": current, "outcome": "unchanged", "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()]}),
+            );
+        } else if matches!(voice, Voice::Legacy { .. }) {
             ui::outln("off");
         } else {
-            ui::done("Already off", "remote access");
+            ui::receipt(
+                "Already off",
+                "remote access",
+                "Remote access is already off.",
+            );
         }
         return Ok(());
     }
@@ -1196,14 +1398,16 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice)
         ab_remote::state::annotate(home, name)?;
     }
     let voice = match voice {
-        Voice::Legacy => Voice::Legacy,
+        Voice::Legacy { .. } => LEGACY,
         Voice::Modern { .. } => Voice::Modern {
             open: false,
             no_open: true,
         },
     };
-    let status = onboard(home, "off", &route, args.timeout.as_deref(), voice).await?;
-    report_remote(&status, false, voice)
+    match onboard(home, "off", &route, args.timeout.as_deref(), voice).await? {
+        Ok(status) => report_remote(&status, false, voice),
+        Err(link) => report_pending(&link),
+    }
 }
 
 pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
@@ -1216,7 +1420,11 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
             )
             .then("Turn it on", ["bridge", "remote", "enable"])
         })?;
-        ui::out(&snippets);
+        if Modes::get().json {
+            ui::json_document(json!({"snippets": snippets}));
+        } else {
+            ui::out(&snippets);
+        }
         return Ok(());
     }
     let status = ab_remote::state::status(home).map_err(|error| {
@@ -1233,7 +1441,7 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
         }
         let value = serde_json::to_value(&status)?;
         if modes.json {
-            ui::json_document(value);
+            ui::json_keyed("remote", json!({"remote": value}));
         } else {
             ui::exact_json(&value);
         }
@@ -1260,6 +1468,7 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
     let mark = match status.state.as_str() {
         "on" => ui::Mark::Good,
         "error" => ui::Mark::Bad,
+        "off" => ui::Mark::Plain,
         _ => ui::Mark::Warn,
     };
     ui::block(mark, &rows);
@@ -1281,7 +1490,7 @@ pub fn remote_key(home: &Path, args: &RemoteKeyArgs) -> Outcome {
     let endpoint = args.relay_url.clone().unwrap_or(config.relay_url);
     let key = ab_remote::relay::public_key(home, &endpoint).map_err(|error| {
         Failure::new(Reason::ApiError, "Failed to read this Mac's relay key.")
-            .remote("Remote", error.to_string())
+            .remote("Remote", ui::redact_urls(&error.to_string()))
     })?;
     if Modes::get().json {
         ui::json_document(json!({"key": key}));
@@ -1316,7 +1525,11 @@ pub fn certificate_accept(home: &Path, fingerprint: Option<&str>) -> Outcome {
     if Modes::get().json {
         ui::json_document(json!({"fingerprint": normalized, "outcome": "accepted"}));
     } else {
-        ui::done("Accepted", &normalized);
+        ui::receipt(
+            "Accepted",
+            &normalized,
+            &format!("Accepted certificate {normalized}."),
+        );
     }
     Ok(())
 }
@@ -1346,7 +1559,11 @@ pub async fn shortcuts(pack: PathBuf) -> Outcome {
             Failure::new(Reason::SpawnFailed, "Failed to open the Shortcuts pack.")
                 .remote("Shortcuts", error.to_string())
         })?;
-    ui::done("Opened", &shown);
+    ui::receipt(
+        "Opened",
+        &shown,
+        &format!("Opened the Shortcuts pack at {shown}."),
+    );
     ui::note("Import each shortcut in the Shortcuts app.");
     Ok(())
 }
@@ -1390,8 +1607,18 @@ pub async fn join(home: &Path, args: &JoinArgs) -> Outcome {
     if Modes::get().json {
         ui::json_document(json!({"home": home, "outcome": "joined"}));
     } else {
-        ui::done("Joined", "the gateway as a replica");
-        ui::row("Home", &home.display().to_string());
+        if !Modes::get().stdout_tty() {
+            ui::outln(&absolute(home).display().to_string());
+        }
+        ui::receipt(
+            "Joined",
+            "the gateway as a replica",
+            &format!(
+                "Joined the gateway as a replica in {}.",
+                absolute(home).display()
+            ),
+        );
+        ui::row("Home", &absolute(home).display().to_string());
     }
     Ok(())
 }
@@ -1405,7 +1632,11 @@ pub fn install_credentials(home: &Path) -> Outcome {
             "next": [Step::new("Check this home", ["bridge", "status"]).to_json()],
         }));
     } else if Modes::get().stdout_tty() {
-        ui::done("Credentials ready", &absolute(home).display().to_string());
+        ui::receipt(
+            "Credentials ready",
+            &absolute(home).display().to_string(),
+            &format!("Credentials are ready in {}.", absolute(home).display()),
+        );
     }
     Ok(())
 }

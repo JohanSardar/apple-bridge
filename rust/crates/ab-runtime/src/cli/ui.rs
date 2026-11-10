@@ -14,7 +14,7 @@ const LABEL: usize = 16;
 const MIN_WIDTH: usize = 40;
 
 static WARNINGS: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
-static WARNINGS_EMBEDDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static STREAMING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static DEPRECATIONS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 static CANCEL_NOTE: Mutex<Option<String>> = Mutex::new(None);
 static PRINTED_STDERR: Mutex<bool> = Mutex::new(false);
@@ -77,6 +77,41 @@ pub fn clean(text: &str) -> String {
 
 pub fn clean_block(text: &str) -> String {
     strip(text, true)
+}
+
+pub fn redact_url(text: &str) -> String {
+    let Some((scheme, rest)) = text.split_once("://") else {
+        return text.to_owned();
+    };
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (authority, tail) = rest.split_at(end);
+    let authority = match authority.rsplit_once('@') {
+        Some((_, host)) => format!("***@{host}"),
+        None => authority.to_owned(),
+    };
+    let tail = match tail.find(['?', '#']) {
+        Some(at) => format!("{}{}…", &tail[..at], &tail[at..=at]),
+        None => tail.to_owned(),
+    };
+    format!("{scheme}://{authority}{tail}")
+}
+
+pub fn redact_urls(text: &str) -> String {
+    text.split(' ')
+        .map(|word| {
+            if word.contains("://") {
+                let start = word.find(|c: char| c.is_ascii_alphabetic()).unwrap_or(0);
+                format!("{}{}", &word[..start], redact_url(&word[start..]))
+            } else {
+                word.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn clean_input(text: &str) -> String {
+    clean(&redact_urls(text))
 }
 
 pub fn shell_quote(text: &str) -> String {
@@ -177,6 +212,14 @@ pub fn bold(text: &str) -> String {
     }
 }
 
+pub fn heading(text: &str) -> String {
+    if Modes::get().stdout_styled() {
+        format!("\u{1b}[1;35m{text}\u{1b}[0m")
+    } else {
+        text.to_owned()
+    }
+}
+
 pub fn wrap(text: &str, width: usize, first: &str, rest: &str) -> Vec<String> {
     let width = width.max(MIN_WIDTH);
     let mut lines = Vec::new();
@@ -199,8 +242,18 @@ pub fn wrap(text: &str, width: usize, first: &str, rest: &str) -> Vec<String> {
 
 pub fn note(text: &str) {
     let modes = Modes::get();
-    for line in wrap(text, modes.width(), "  ", "  ") {
+    let indent = if modes.rich() { "  " } else { "" };
+    for line in wrap(text, modes.width(), indent, indent) {
         err_line(&line);
+    }
+}
+
+pub fn phase(number: usize, total: usize, text: &str) {
+    let modes = Modes::get();
+    if modes.accessible {
+        err_line(&format!("Step {number} of {total}: {text}"));
+    } else {
+        note(text);
     }
 }
 
@@ -210,22 +263,38 @@ pub fn blank() {
 
 fn labeled(label: &str, value: &str) -> Vec<String> {
     let width = Modes::get().width();
-    let head = if display_width(label) + 2 > LABEL {
-        format!("{label}  ")
-    } else {
-        format!("{label:<LABEL$}")
-    };
+    let column = " ".repeat(LABEL + 2);
+    if value.is_empty() {
+        return vec![label.to_owned()];
+    }
+    if display_width(label) + 2 > LABEL {
+        let mut lines = vec![label.to_owned()];
+        lines.extend(wrap(value, width, &column, &column));
+        return lines;
+    }
+    let head = format!("{label:<LABEL$}");
     if 2 + LABEL + display_width(value) <= width
         || display_width(value) <= width.saturating_sub(4) / 2
     {
         vec![format!("{head}{value}")]
     } else {
-        vec![head.trim_end().to_owned(), format!("    {value}")]
+        let mut lines = vec![head.trim_end().to_owned()];
+        lines.extend(wrap(value, width.saturating_sub(2), "    ", "    "));
+        lines
     }
 }
 
 pub fn row(label: &str, value: &str) {
-    for (index, line) in labeled(label, &clean(value)).into_iter().enumerate() {
+    let value = clean(value);
+    if !Modes::get().rich() {
+        if value.is_empty() {
+            err_line(label);
+        } else {
+            err_line(&format!("{label}: {value}"));
+        }
+        return;
+    }
+    for (index, line) in labeled(label, &value).into_iter().enumerate() {
         if index == 0 {
             err_line(&format!("  {line}"));
         } else {
@@ -236,10 +305,32 @@ pub fn row(label: &str, value: &str) {
 
 pub fn done(label: &str, value: &str) {
     let value = clean(value);
-    if Modes::get().rich() {
-        for (index, line) in labeled(label, &value).into_iter().enumerate() {
+    let sentence = if value.is_empty() {
+        format!("{label}.")
+    } else {
+        format!("{label} {value}.")
+    };
+    receipt(label, &value, &sentence);
+}
+
+pub fn receipt(label: &str, value: &str, sentence: &str) {
+    let value = clean(value);
+    if !Modes::get().rich() {
+        for line in wrap(&clean(sentence), Modes::get().width(), "", "") {
+            err_line(&line);
+        }
+        return;
+    }
+    let glyph = paint("32", "✓");
+    if value.is_empty() {
+        err_line(&format!("{glyph} {label}"));
+    } else if display_width(label) + 2 > LABEL {
+        for (index, line) in wrap(&format!("{label} {value}"), Modes::get().width(), "", "  ")
+            .into_iter()
+            .enumerate()
+        {
             if index == 0 {
-                err_line(&format!("{} {line}", paint("32", "✓")));
+                err_line(&format!("{glyph} {line}"));
             } else {
                 err_line(&line);
             }
@@ -247,7 +338,7 @@ pub fn done(label: &str, value: &str) {
     } else {
         for (index, line) in labeled(label, &value).into_iter().enumerate() {
             if index == 0 {
-                err_line(&format!("  {}", line.trim_end()));
+                err_line(&format!("{glyph} {line}"));
             } else {
                 err_line(&line);
             }
@@ -260,6 +351,7 @@ pub enum Mark {
     Good,
     Warn,
     Bad,
+    Plain,
 }
 
 fn mark(mark: Mark) -> String {
@@ -270,6 +362,7 @@ fn mark(mark: Mark) -> String {
         Mark::Good => ("32", "✓"),
         Mark::Warn => ("33", "!"),
         Mark::Bad => ("31", "✗"),
+        Mark::Plain => return " ".to_owned(),
     };
     if Modes::get().color() && Modes::get().stdout_styled() {
         format!("\u{1b}[{code}m{glyph}\u{1b}[0m")
@@ -292,12 +385,30 @@ pub fn block(first: Mark, rows: &[(String, String)]) {
     }
 }
 
+pub fn stream_warnings() {
+    STREAMING.store(true, std::sync::atomic::Ordering::Relaxed);
+    if super::modes::legacy_spelling() {
+        return;
+    }
+    for (reason, message) in warnings() {
+        warning_line(&reason, &message);
+    }
+}
+
+fn warning_line(reason: &str, message: &str) {
+    outln(&json!({"type": "warning", "reason": reason, "message": message}).to_string());
+}
+
 pub fn warn(reason: &str, text: &str) {
     if let Ok(mut warnings) = WARNINGS.lock() {
         warnings.push((reason.to_owned(), text.to_owned()));
     }
     let modes = Modes::get();
     if modes.json {
+        if STREAMING.load(std::sync::atomic::Ordering::Relaxed) && !super::modes::legacy_spelling()
+        {
+            warning_line(reason, text);
+        }
         return;
     }
     if modes.rich() {
@@ -333,8 +444,14 @@ pub fn deprecated(old: &str, replacement: &str) {
     }
 }
 
-pub fn report_unembedded_warnings() {
-    if !Modes::get().json || WARNINGS_EMBEDDED.load(std::sync::atomic::Ordering::Relaxed) {
+static EMBEDDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn report_legacy_warnings() {
+    if !Modes::get().json
+        || !super::modes::legacy_spelling()
+        || EMBEDDED.load(std::sync::atomic::Ordering::Relaxed)
+        || STREAMING.load(std::sync::atomic::Ordering::Relaxed)
+    {
         return;
     }
     for (reason, message) in warnings() {
@@ -350,15 +467,20 @@ pub fn warnings() -> Vec<(String, String)> {
 }
 
 pub fn next_step(step: &Step) {
+    let (lead, command) = if Modes::get().rich() {
+        ("  ", "    ")
+    } else {
+        ("", "  ")
+    };
     for line in wrap(
         &format!("{}:", step.benefit),
         Modes::get().width(),
-        "  ",
-        "  ",
+        lead,
+        lead,
     ) {
         err_line(&line);
     }
-    err_line(&format!("    {}", paint("36", &step.command())));
+    err_line(&format!("{command}{}", paint("36", &step.command())));
 }
 
 pub fn next_steps(steps: &[Step]) {
@@ -457,11 +579,11 @@ pub fn render_failure(failure: &Failure) {
             lines.push(line);
         }
     }
-    let shown: Vec<&Step> = failure.next.iter().take(2).collect();
+    let shown: Vec<&Step> = failure.next.iter().take(3).collect();
     if !shown.is_empty() {
         lines.push(String::new());
         for (index, step) in shown.iter().enumerate() {
-            let keeps_lead = ["or ", "then "]
+            let keeps_lead = ["or ", "then ", "and "]
                 .iter()
                 .any(|lead| step.benefit.to_lowercase().starts_with(lead));
             let benefit = if index == 0 || keeps_lead {
@@ -505,6 +627,37 @@ fn select_fields(value: &Value, fields: &[String]) -> Value {
     }
 }
 
+fn select_keyed(value: &Value, noun: &str, fields: &[String]) -> Value {
+    let Value::Object(map) = value else {
+        return select_fields(value, fields);
+    };
+    let inner: Vec<String> = fields
+        .iter()
+        .filter(|field| !map.contains_key(field.as_str()))
+        .cloned()
+        .collect();
+    Value::Object(
+        map.iter()
+            .filter_map(|(key, child)| {
+                if fields.iter().any(|field| field == key) {
+                    Some((key.clone(), child.clone()))
+                } else if key == noun && !inner.is_empty() {
+                    Some((key.clone(), select_fields(child, &inner)))
+                } else {
+                    None
+                }
+            })
+            .collect(),
+    )
+}
+
+pub fn json_keyed(noun: &str, mut value: Value) {
+    if let Some(fields) = &Modes::get().fields {
+        value = select_keyed(&value, noun, fields);
+    }
+    json_document_unfiltered(value);
+}
+
 pub fn json_document(mut value: Value) {
     if let Some(fields) = &Modes::get().fields {
         value = select_fields(&value, fields);
@@ -518,7 +671,7 @@ pub fn json_document_unfiltered(mut value: Value) {
     if !warnings.is_empty()
         && let Value::Object(map) = &mut value
     {
-        WARNINGS_EMBEDDED.store(true, std::sync::atomic::Ordering::Relaxed);
+        EMBEDDED.store(true, std::sync::atomic::Ordering::Relaxed);
         map.insert(
             "warnings".into(),
             Value::Array(
@@ -609,6 +762,61 @@ pub fn table(headers: &[&str], rows: &[Vec<String>]) {
     }
 }
 
+pub fn wrapped_table(headers: &[&str], rows: &[Vec<String>]) {
+    let modes = Modes::get();
+    if !modes.stdout_table() || headers.len() < 2 {
+        table(headers, rows);
+        return;
+    }
+    let cleaned: Vec<Vec<String>> = rows
+        .iter()
+        .map(|row| row.iter().map(|cell| clean(cell)).collect())
+        .collect();
+    let last = headers.len() - 1;
+    let mut widths: Vec<usize> = headers.iter().map(|header| display_width(header)).collect();
+    for row in &cleaned {
+        for (index, cell) in row.iter().enumerate().take(last) {
+            if let Some(width) = widths.get_mut(index) {
+                *width = (*width).max(display_width(cell));
+            }
+        }
+    }
+    let fixed: usize = 2 + widths
+        .iter()
+        .take(last)
+        .map(|width| width + 3)
+        .sum::<usize>();
+    let room = modes.width().saturating_sub(fixed);
+    if room < 16 {
+        table(headers, rows);
+        return;
+    }
+    let indent = " ".repeat(fixed);
+    let line = |cells: &[String]| {
+        let mut text = String::from("  ");
+        for (index, cell) in cells.iter().enumerate().take(last) {
+            text.push_str(cell);
+            text.push_str(&" ".repeat(widths[index].saturating_sub(display_width(cell)) + 3));
+        }
+        let tail = cells.get(last).map(String::as_str).unwrap_or_default();
+        let mut wrapped = wrap(tail, fixed + room, &indent, &indent).into_iter();
+        text.push_str(wrapped.next().unwrap_or_default().trim_start());
+        outln(text.trim_end());
+        for more in wrapped {
+            outln(&more);
+        }
+    };
+    line(
+        &headers
+            .iter()
+            .map(|header| (*header).to_owned())
+            .collect::<Vec<_>>(),
+    );
+    for row in &cleaned {
+        line(row);
+    }
+}
+
 pub fn mask_secret(secret: &str) {
     if Modes::get().github_actions {
         err_raw(&format!("::add-mask::{secret}\n"));
@@ -642,6 +850,37 @@ pub fn ask(question: &str) -> Outcome<Option<String>> {
     Ok(answer)
 }
 
+pub fn choose(question: &str, choices: &[(&str, &str)]) -> Outcome<Option<usize>> {
+    if !Modes::get().accessible {
+        let keys: Vec<&str> = choices.iter().map(|(key, _)| *key).collect();
+        let answer = ask(&format!("{question} ({})", keys.join("/")))?;
+        return Ok(answer.map(|answer| {
+            let answer = answer.to_lowercase();
+            choices
+                .iter()
+                .position(|(key, label)| {
+                    answer == key.to_lowercase()
+                        || answer == label.to_lowercase()
+                        || answer.is_empty() && key.chars().all(char::is_uppercase)
+                })
+                .unwrap_or(usize::MAX)
+        }));
+    }
+    err_raw(&format!("{question}\n"));
+    for (index, (_, label)) in choices.iter().enumerate() {
+        err_raw(&format!("  {}. {label}\n", index + 1));
+    }
+    let answer = ask(&format!("Type a number from 1 to {}:", choices.len()))?;
+    Ok(answer.map(|answer| {
+        answer
+            .trim()
+            .parse::<usize>()
+            .ok()
+            .filter(|number| (1..=choices.len()).contains(number))
+            .map_or(usize::MAX, |number| number - 1)
+    }))
+}
+
 pub struct Consent<'a> {
     pub action: String,
     pub rows: Vec<(String, String)>,
@@ -673,8 +912,7 @@ pub fn confirm(consent: &Consent<'_>) -> Outcome {
             ),
         )
         .needs_action()
-        .data("effects", effects)
-        .data("why", modes.why_not_interactive());
+        .data("effects", effects);
         for (label, value) in &consent.rows {
             failure = failure.row(label.clone(), value.clone());
         }
@@ -695,13 +933,26 @@ pub fn confirm(consent: &Consent<'_>) -> Outcome {
     if !consent.consequence.is_empty() {
         note(&consent.consequence);
     }
-    match ask(&format!("{} (y/N)", consent.question))? {
-        Some(answer) if matches!(answer.to_lowercase().as_str(), "y" | "yes") => Ok(()),
-        _ => Err(Failure::canceled(format!(
+    if yes_or_no(&consent.question)? {
+        Ok(())
+    } else {
+        Err(Failure::canceled(format!(
             "Canceled. {}",
             consent.nothing_changed
-        ))),
+        )))
     }
+}
+
+pub fn yes_or_no(question: &str) -> Outcome<bool> {
+    if Modes::get().accessible {
+        return Ok(choose(question, &[("y", "Yes"), ("N", "No")])? == Some(0));
+    }
+    Ok(matches!(
+        ask(&format!("{question} (y/N)"))?
+            .map(|answer| answer.to_lowercase())
+            .as_deref(),
+        Some("y" | "yes")
+    ))
 }
 
 pub fn size(bytes: u64) -> String {
@@ -715,6 +966,28 @@ pub fn size(bytes: u64) -> String {
         format!("{:.0} MB", value / 1e6)
     } else {
         format!("{:.1} GB", value / 1e9)
+    }
+}
+
+pub fn age_short(timestamp: &str) -> String {
+    let shown = age(timestamp);
+    shown
+        .strip_suffix(" ago")
+        .map_or(shown.clone(), str::to_owned)
+}
+
+pub fn local_time(timestamp: &str) -> String {
+    let Ok(then) = timestamp.parse::<jiff::Timestamp>() else {
+        return clean(timestamp);
+    };
+    let zoned = then.to_zoned(jiff::tz::TimeZone::system());
+    let stamp = zoned.strftime("%Y-%m-%d %H:%M %Z").to_string();
+    if then > jiff::Timestamp::now() {
+        let left = then.as_second() - jiff::Timestamp::now().as_second();
+        let left = std::time::Duration::from_secs(u64::try_from(left).unwrap_or(0));
+        format!("{stamp} (in {})", super::commands::friendly(left))
+    } else {
+        format!("{stamp} ({})", age(timestamp))
     }
 }
 

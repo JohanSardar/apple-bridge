@@ -81,6 +81,12 @@ fn shown(program: &str, arguments: &[String]) -> String {
     format!("{program} {}", quoted.join(" "))
 }
 
+fn piped_result(text: &str) {
+    if !Modes::get().json && !Modes::get().stdout_tty() {
+        ui::outln(text);
+    }
+}
+
 fn print_other(url: &str) {
     if Modes::get().json {
         ui::json_document(serde_json::json!({"mcp": url, "rest": url.trim_end_matches("/mcp")}));
@@ -244,6 +250,9 @@ fn run_bounded(
     let began = Instant::now();
     let until = deadline.within(PHASE_BUDGET);
     let mut announced = false;
+    if Modes::get().accessible {
+        ui::note(&format!("Now {}…", phase.what));
+    }
     let status = loop {
         if let Some(status) = child.0.try_wait()? {
             break status;
@@ -328,9 +337,10 @@ fn register(plan: &Plan, name: &str, url: &str, deadline: &Deadline) -> Outcome<
             &format!("{} already has a server named {name}", plan.title),
         )?;
         if details.contains(url) {
-            ui::done(
+            ui::receipt(
                 "Already added",
                 &format!("{name} to {} at {url}", plan.title),
+                &format!("{name} is already in {} at {url}.", plan.title),
             );
             return Ok(Added::Already);
         }
@@ -610,6 +620,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
                     ),
                 ]);
             }
+            piped_result(&args.name);
             if Modes::get().json {
                 ui::json_document(linked_json(
                     "pending_approval",
@@ -640,6 +651,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
             ));
             return Ok(());
         }
+        piped_result(&args.name);
         ui::note(&format!(
             "{} is registered. Signing in needs a terminal and a browser.",
             plan.title
@@ -668,7 +680,12 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         SignIn::Finished(true) => {
             ui::set_cancel_note(None);
             ui::set_cancel_step(None);
-            ui::done("Connected", plan.title);
+            piped_result(&args.name);
+            ui::receipt(
+                "Connected",
+                plan.title,
+                &format!("Connected {} as {}.", plan.title, args.name),
+            );
             try_it();
             Ok(())
         }
@@ -750,7 +767,17 @@ pub fn unlink(args: &UnlinkArgs) -> Outcome {
                 "next": next.iter().map(Step::to_json).collect::<Vec<_>>(),
             }));
         } else {
-            ui::done(label, &format!("{} from {}", args.name, plan.title));
+            piped_result(&args.name);
+            let sentence = if outcome == "removed" {
+                format!("Removed {} from {}.", args.name, plan.title)
+            } else {
+                format!("{} isn't in {}.", args.name, plan.title)
+            };
+            ui::receipt(
+                label,
+                &format!("{} from {}", args.name, plan.title),
+                &sentence,
+            );
             ui::next_steps(next);
         }
     };

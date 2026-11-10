@@ -9,6 +9,7 @@ use std::{
 };
 
 const NON_INTERACTIVE_WATCH_LIMIT: Duration = Duration::from_secs(300);
+const WAIT_LIMIT: Duration = Duration::from_secs(600);
 const PROGRESS_EVERY: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(1);
 
@@ -169,25 +170,64 @@ impl SourceStats {
     }
 
     fn advice(&self) -> Option<&'static str> {
+        let owned = OWNED.load(std::sync::atomic::Ordering::Relaxed);
         match self.state.as_str() {
-            "permission_missing" => Some(
+            "permission_missing" if owned => Some(
                 "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes, Mail or Safari), then run bridge down and bridge up",
+            ),
+            "permission_missing" => Some(
+                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes, Mail or Safari), then quit and reopen the Apple Bridge app",
             ),
             "capture_failed" => Some("could not be read: run bridge doctor"),
             "unavailable" if self.source == "mail" => {
                 Some("no supported local Mail data; check that Mail has an account on this Mac")
             }
             "unavailable" => Some("not available on this Mac right now"),
-            "degraded" => Some(
+            "degraded" if owned => Some(
                 "partly available; if this follows an update, run bridge down, then bridge up; otherwise run bridge doctor",
             ),
+            "degraded" => Some("partly available: run bridge doctor"),
             _ => None,
         }
     }
 
+    fn problem(&self) -> String {
+        match self.state.as_str() {
+            "permission_missing" => format!("{} needs a Mac permission.", self.label),
+            "capture_failed" => format!("{} couldn't be read.", self.label),
+            "unavailable" if self.source == "mail" => {
+                "Mail has no supported local data. Check that Mail has an account on this Mac."
+                    .to_owned()
+            }
+            "unavailable" => format!("{} isn't available on this Mac right now.", self.label),
+            other => format!("{} is {}.", self.label, other.replace('_', " ")),
+        }
+    }
+
+    fn status_word(&self) -> &'static str {
+        match self.state.as_str() {
+            "permission_missing" => "needs a Mac permission",
+            "capture_failed" => "couldn't be read",
+            _ => "not available",
+        }
+    }
+
     fn line(&self) -> String {
+        self.line_with(true)
+    }
+
+    fn line_with(&self, with_advice: bool) -> String {
+        if !with_advice && self.attention() {
+            return ui::clean(&format!(
+                "{} {:<16}{}",
+                self.mark(),
+                self.label,
+                self.status_word()
+            ));
+        }
         let advice = self
             .advice()
+            .filter(|_| with_advice)
             .map_or_else(String::new, |advice| format!("  ({advice})"));
         ui::clean(&format!(
             "{} {:<16}{}{advice}",
@@ -358,14 +398,23 @@ fn snapshot_lines(snapshot: &Snapshot, all: bool) -> Vec<String> {
 
 const NOTHING_YET: &str = "Nothing has synced yet. Sources appear here as they connect.";
 
+static OWNED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 pub fn print_once_stderr(home: &Path) -> Outcome {
+    OWNED.store(restart_is_ours(home), std::sync::atomic::Ordering::Relaxed);
     let snapshot = match open(home)? {
         Some(connection) => read_snapshot(&connection)?,
         None => Snapshot::default(),
     };
     ui::blank();
     for line in snapshot_lines(&snapshot, false) {
-        ui::err_line(&line);
+        if ui::display_width(&line) <= Modes::get().width() {
+            ui::err_line(&line);
+            continue;
+        }
+        for wrapped in ui::wrap(&line, Modes::get().width(), "", "  ") {
+            ui::err_line(&wrapped);
+        }
     }
     Ok(())
 }
@@ -483,6 +532,10 @@ impl Tracker {
 }
 
 fn emit(event: &Event, json_lines: bool, all: bool) {
+    emit_with(event, json_lines, all, true);
+}
+
+fn emit_with(event: &Event, json_lines: bool, all: bool, advise: bool) {
     if json_lines {
         ui::outln(&event_json(event).to_string());
         return;
@@ -504,8 +557,9 @@ fn emit(event: &Event, json_lines: bool, all: bool) {
             )));
         }
         Event::Finished(source, _) | Event::Attention(source) if visible(source, all) => {
-            ui::outln(&source.line());
+            ui::outln(&source.line_with(advise));
         }
+        Event::AllFinished(_, _) if !advise => {}
         Event::AllFinished(total, elapsed) => {
             ui::outln(&format!(
                 "Finished: {} items in {}. Counts only, no content.",
@@ -549,7 +603,140 @@ fn event_json(event: &Event) -> Value {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Watch {
     UntilSettled,
+    Wait,
     Follow,
+}
+
+fn owned_gateway(home: &Path) -> bool {
+    std::fs::read_to_string(home.join("run/gateway.pid"))
+        .is_ok_and(|pid| super::gateway::started_by_up(pid.trim(), home))
+}
+
+fn restart_is_ours(home: &Path) -> bool {
+    !home.join("run/gateway.pid").is_file() || owned_gateway(home)
+}
+
+fn shown_home(home: &Path) -> String {
+    commands::absolute(home).display().to_string()
+}
+
+fn settled(home: &Path, snapshot: &Snapshot, began: Instant, json_lines: bool) -> Outcome {
+    let failed: Vec<&SourceStats> = snapshot
+        .sources
+        .iter()
+        .filter(|source| source.attention())
+        .collect();
+    let elapsed = began.elapsed();
+    let outcome = if failed.is_empty() {
+        "finished"
+    } else if failed.len() == snapshot.sources.len() {
+        "failed"
+    } else {
+        "partial"
+    };
+    if json_lines {
+        ui::outln(
+            &json!({
+                "event": "all_finished",
+                "outcome": outcome,
+                "total": snapshot.total,
+                "seconds": elapsed.as_secs_f64(),
+                "failed": failed.iter().map(|source| json!({"source": source.source, "state": source.state})).collect::<Vec<_>>(),
+            })
+            .to_string(),
+        );
+    } else if failed.is_empty() {
+        ui::outln(&format!(
+            "Finished: {} items in {}. Counts only, no content.",
+            thousands(snapshot.total),
+            friendly_duration(elapsed)
+        ));
+    }
+    if failed.is_empty() {
+        return Ok(());
+    }
+    let permission = failed
+        .iter()
+        .any(|source| source.state == "permission_missing");
+    let count = failed.len();
+    let headline = if outcome == "failed" {
+        format!(
+            "Sync finished, but no source in {} synced.",
+            shown_home(home)
+        )
+    } else {
+        format!(
+            "Sync finished, but {count} {} in {} didn't sync.",
+            if count == 1 { "source" } else { "sources" },
+            shown_home(home)
+        )
+    };
+    let mut failure = Failure::new(
+        if permission {
+            Reason::PermissionMissing
+        } else {
+            Reason::SourceUnavailable
+        },
+        headline,
+    )
+    .data("outcome", outcome)
+    .data("total", snapshot.total)
+    .data(
+        "failed",
+        failed
+            .iter()
+            .map(|source| json!({"source": source.source, "state": source.state}))
+            .collect::<Vec<_>>(),
+    );
+    for source in &failed {
+        failure = failure.issue(source.problem());
+    }
+    if permission {
+        failure = failure.then(
+            "Allow the Mac permissions",
+            ["bridge", "permissions", "guide"],
+        );
+        if owned_gateway(home) {
+            failure = failure
+                .then("Then restart Apple Bridge", ["bridge", "down"])
+                .then("And start it again", ["bridge", "up"]);
+        } else {
+            failure = failure.sentence(
+                "If you allow one in System Settings instead, quit and reopen the Apple Bridge app afterwards.",
+            );
+        }
+    } else {
+        failure = failure.then("See each source", ["bridge", "stats", "--all"]);
+        if failed.iter().any(|source| source.state == "capture_failed") {
+            failure = failure.then("Check this home", ["bridge", "doctor"]);
+        }
+    }
+    Err(failure)
+}
+
+fn waited_too_long(home: &Path, snapshot: &Snapshot, began: Instant) -> Failure {
+    let syncing = snapshot
+        .sources
+        .iter()
+        .filter(|source| !source.attention())
+        .count();
+    Failure::new(
+        Reason::Timeout,
+        format!(
+            "Stopped waiting after {}. Sources in {} are still syncing.",
+            friendly_duration(began.elapsed()),
+            shown_home(home)
+        ),
+    )
+    .data("total", snapshot.total)
+    .data("syncing", syncing)
+    .row("So far", format!("{} items", thousands(snapshot.total)))
+    .sentence("Syncing continues in the background; nothing was stopped.")
+    .then("Check progress", ["bridge", "stats"])
+    .then(
+        "Or keep waiting",
+        ["bridge", "stats", "--wait", "--timeout", "30m"],
+    )
 }
 
 async fn watch(
@@ -576,11 +763,28 @@ async fn watch(
             ui::err_line("Waiting for sources to connect…");
             told_waiting = true;
         }
-        for event in tracker.observe(&snapshot, Instant::now()) {
-            emit(&event, json_lines, all);
+        let now = Instant::now();
+        let mut events = tracker.observe(&snapshot, now);
+        if mode == Watch::Wait && settle.is_zero() {
+            events.extend(tracker.observe(&snapshot, now));
+        }
+        for event in events {
+            if mode == Watch::Wait {
+                if !matches!(event, Event::AllFinished(..)) {
+                    emit_with(&event, json_lines, all, false);
+                }
+            } else {
+                emit(&event, json_lines, all);
+            }
         }
         if tracker.done() && mode == Watch::UntilSettled {
             return Ok(());
+        }
+        if tracker.done() && mode == Watch::Wait {
+            return settled(home, &snapshot, began, json_lines);
+        }
+        if mode == Watch::Wait && timeout.is_some_and(|limit| began.elapsed() >= limit) {
+            return Err(waited_too_long(home, &snapshot, began));
         }
         if timeout.is_some_and(|limit| began.elapsed() >= limit) {
             if mode == Watch::Follow {
@@ -638,6 +842,7 @@ fn follow_limit(timeout: Option<Duration>) -> Outcome<Option<Duration>> {
 }
 
 pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
+    OWNED.store(restart_is_ours(home), std::sync::atomic::Ordering::Relaxed);
     let waiting = args.wait || args.watch;
     let settle = commands::duration_or_zero("--settle", &args.settle)?;
     let timeout = args
@@ -664,14 +869,25 @@ pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
     let json = Modes::get().json;
     if args.follow {
         let timeout = follow_limit(timeout)?;
+        if json {
+            ui::stream_warnings();
+        }
         ui::set_cancel_note(Some(""));
         return watch(home, settle, timeout, json, args.all, Watch::Follow).await;
     }
-    if waiting {
+    if args.watch {
         ui::set_cancel_note(Some(""));
         let timeout = timeout
             .or_else(|| (!Modes::get().interactive()).then_some(NON_INTERACTIVE_WATCH_LIMIT));
         return watch(home, settle, timeout, json, args.all, Watch::UntilSettled).await;
+    }
+    if waiting {
+        ui::set_cancel_note(Some(""));
+        if json {
+            ui::stream_warnings();
+        }
+        let timeout = timeout.unwrap_or(WAIT_LIMIT);
+        return watch(home, settle, Some(timeout), json, args.all, Watch::Wait).await;
     }
     let Some(connection) = open(home)? else {
         return Err(commands::not_set_up(home));
@@ -818,9 +1034,7 @@ mod tests {
             );
             assert_eq!(
                 source("phone", "degraded", total).advice(),
-                Some(
-                    "partly available; if this follows an update, run bridge down, then bridge up; otherwise run bridge doctor"
-                )
+                Some("partly available: run bridge doctor")
             );
         }
     }

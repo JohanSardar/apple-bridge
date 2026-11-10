@@ -265,7 +265,7 @@ impl Session {
 
 fn tracing_detail(detail: &str) {
     if Modes::get().debug {
-        ui::err_line(&format!("debug: {detail}"));
+        ui::err_line(&format!("debug: {}", ui::clean_input(detail)));
     }
 }
 
@@ -386,7 +386,7 @@ fn days(text: &str) -> Outcome<i64> {
     }
 }
 
-fn home_tag(home: &Path) -> String {
+pub fn home_tag(home: &Path) -> String {
     use sha2::Digest;
     let canonical = std::fs::canonicalize(home).unwrap_or_else(|_| home.to_owned());
     let digest = sha2::Sha256::digest(canonical.to_string_lossy().as_bytes());
@@ -403,6 +403,33 @@ struct Pager {
     next: &'static str,
     argument: &'static str,
     older_first: bool,
+    nested: bool,
+}
+
+impl Pager {
+    fn body<'a>(&self, page: &'a Value) -> &'a Value {
+        if self.nested {
+            &page["result_json"]
+        } else {
+            page
+        }
+    }
+
+    fn body_mut<'a>(&self, page: &'a mut Value) -> &'a mut Value {
+        if self.nested {
+            &mut page["result_json"]
+        } else {
+            page
+        }
+    }
+
+    fn arguments<'a>(&self, arguments: &'a mut Value) -> &'a mut Value {
+        if self.nested {
+            &mut arguments["args"]
+        } else {
+            arguments
+        }
+    }
 }
 
 fn pager(operation: &str) -> Option<Pager> {
@@ -411,8 +438,13 @@ fn pager(operation: &str) -> Option<Pager> {
         next,
         argument,
         older_first,
+        nested: false,
     };
     match operation {
+        "photos.search" => Some(Pager {
+            nested: true,
+            ..pager("assets", "next_cursor", "cursor", false)
+        }),
         "messages.chats" => Some(pager("chats", "next", "after", false)),
         "messages.thread" => Some(pager("items", "before", "before", true)),
         "messages.search" | "messages.collection" => Some(pager("items", "next", "after", false)),
@@ -547,6 +579,10 @@ fn filters(arguments: &Value) -> Value {
         object.remove("limit");
         object.remove("after");
         object.remove("before");
+    }
+    if let Some(object) = copy.get_mut("args").and_then(Value::as_object_mut) {
+        object.remove("limit");
+        object.remove("cursor");
     }
     copy
 }
@@ -1000,10 +1036,20 @@ fn stalled(progress: &Progress<'_>, why: &str) -> Failure {
 }
 
 fn merge(answer: &mut Option<Value>, page: Value, pager: Pager) {
-    let Some(current) = answer else {
+    let Some(whole) = answer else {
         *answer = Some(page);
         return;
     };
+    let page = pager.body(&page).clone();
+    let current = pager.body_mut(whole);
+    if pager.nested
+        && let (Some(before), Some(added)) = (
+            current["examined_count"].as_f64(),
+            page["examined_count"].as_f64(),
+        )
+    {
+        current["examined_count"] = json!(before + added);
+    }
     let extra = page[pager.items].as_array().cloned().unwrap_or_default();
     if let Some(items) = current[pager.items].as_array_mut() {
         if pager.older_first {
@@ -1046,11 +1092,12 @@ async fn gather_pages(
     let mut next: Option<String>;
     loop {
         let mut arguments = plan.arguments.clone();
+        let target = pager.arguments(&mut arguments);
         if let Some(after) = &after {
-            arguments[pager.argument] = json!(after);
+            target[pager.argument] = json!(after);
         }
-        if arguments.get("limit").is_some() {
-            arguments["limit"] = json!((wanted - progress.rows).clamp(1, LIMIT_CAP));
+        if target.get("limit").is_some() {
+            target["limit"] = json!((wanted - progress.rows).clamp(1, LIMIT_CAP));
         }
         let page = match budget
             .read(session, plan.operation, &arguments, plan.subject.as_deref())
@@ -1061,8 +1108,10 @@ async fn gather_pages(
             Err(failure) => return Err(progress.annotate(failure)),
         };
         progress.pages += 1;
-        let count = page[pager.items].as_array().map_or(0, Vec::len);
-        next = page[pager.next]
+        let count = pager.body(&page)[pager.items]
+            .as_array()
+            .map_or(0, Vec::len);
+        next = pager.body(&page)[pager.next]
             .as_str()
             .filter(|token| !token.is_empty())
             .map(str::to_owned);
@@ -1081,7 +1130,7 @@ async fn gather_pages(
                 "returned a page cursor it had already given",
             ));
         }
-        if empty >= EMPTY_PAGES {
+        if empty >= EMPTY_PAGES && !pager.nested {
             return Err(stalled(
                 &progress,
                 &format!("returned {EMPTY_PAGES} empty pages in a row that each claimed more"),
@@ -1431,6 +1480,7 @@ struct Started {
     limit: usize,
     wanted: usize,
     budget: Budget,
+    zero: bool,
 }
 
 fn start(
@@ -1445,6 +1495,11 @@ fn start(
     if let Some(cursor) = &cursor {
         cursor.check(kind, home)?;
     }
+    let zero = Modes::get().json
+        && cursor.is_none()
+        && !all
+        && limit_text.is_some_and(|text| text.trim() == "0");
+    let limit_text = if zero { None } else { limit_text };
     let limit = match limit_text {
         Some(text) => limit(text)?,
         None => cursor
@@ -1461,7 +1516,33 @@ fn start(
         limit,
         wanted: if all { ALL_CAP } else { limit },
         budget,
+        zero,
     })
+}
+
+async fn zero_limit(
+    session: &Session,
+    plan: &Plan,
+    budget: &Budget,
+    keep_records: bool,
+) -> Outcome {
+    let mut arguments = plan.arguments.clone();
+    if let Some(object) = arguments.get_mut("args").and_then(Value::as_object_mut) {
+        object.insert("limit".into(), json!(1));
+    } else if arguments.get("limit").is_some() {
+        arguments["limit"] = json!(0);
+    }
+    let mut answer = budget
+        .read(session, plan.operation, &arguments, plan.subject.as_deref())
+        .await?;
+    if !keep_records && !plan.collections.is_empty() {
+        window(&mut answer, plan.collections, &mut 0, &mut 0);
+    }
+    if let Some(object) = answer.as_object_mut() {
+        object.insert("next_cursor".into(), Value::Null);
+    }
+    ui::json_document_unfiltered(answer);
+    Ok(())
 }
 
 pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
@@ -1480,29 +1561,10 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
     }
     check_record_fields(plan.collections, "bridge read")?;
     let session = Session::open(home).await?;
-    if plan.operation == "photos.search" {
-        let result = session.read(plan.operation, &plan.arguments, None).await;
+    if started.zero {
+        let result = zero_limit(&session, &plan, &started.budget, false).await;
         session.close();
-        let answer = result?;
-        if Modes::get().json {
-            ui::json_document(answer);
-        } else {
-            ui::outln(&serde_json::to_string_pretty(&answer["result_json"])?);
-            if let Some(next) = answer["result_json"]["next_cursor"].as_str() {
-                ui::warn(
-                    "truncated",
-                    "More photos match. Continue with the same filters and this cursor.",
-                );
-                let mut arguments = plan.arguments.clone();
-                arguments["cursor"] = json!(next);
-                let data = arguments.to_string();
-                ui::next_steps(&[Step::new(
-                    "See the next page",
-                    ["bridge", "call", "photos.search", "--data", data.as_str()],
-                )]);
-            }
-        }
-        return Ok(());
+        return result;
     }
     let result = gather(
         &session,
@@ -1526,6 +1588,9 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
         judge(args.kind.as_str(), source, &coverage(home, source)?, empty)?;
     }
     let cursor = continuation(&plan, &gathered, started.limit, home);
+    if plan.operation == "photos.search" {
+        return print_photos(gathered.answer, cursor);
+    }
     if Modes::get().json {
         let mut answer = gathered.answer;
         window(
@@ -1547,6 +1612,21 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
             "Read one chat",
             ["bridge", "read", "messages", "--chat", "<CHAT>"],
         )]);
+    }
+    Ok(())
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn print_photos(mut answer: Value, cursor: Option<String>) -> Outcome {
+    if Modes::get().json {
+        answer["next_cursor"] = cursor.map_or(Value::Null, Value::from);
+        ui::json_document(answer);
+        return Ok(());
+    }
+    ui::outln(&serde_json::to_string_pretty(&answer["result_json"])?);
+    if let Some(cursor) = cursor {
+        ui::note("More photos match.");
+        ui::next_steps(&[next_command("photos", &cursor)]);
     }
     Ok(())
 }
@@ -1596,6 +1676,11 @@ pub async fn search(home: &Path, args: &SearchArgs) -> Outcome {
         return Err(super::commands::not_set_up(home));
     }
     let session = Session::open(home).await?;
+    if started.zero {
+        let result = zero_limit(&session, &plan, &started.budget, true).await;
+        session.close();
+        return result;
+    }
     let result = gather(
         &session,
         &plan,

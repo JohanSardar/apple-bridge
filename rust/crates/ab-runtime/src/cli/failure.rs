@@ -104,12 +104,20 @@ impl Step {
 
     pub fn full_argv(&self) -> Vec<String> {
         let mut argv = self.argv.clone();
-        if argv.first().is_some_and(|program| program == "bridge")
-            && let Some(home) = &super::modes::Modes::get().explicit_home
-            && !argv.iter().any(|argument| argument == "--home")
-        {
-            argv.push("--home".to_owned());
-            argv.push(home.to_string_lossy().into_owned());
+        let modes = super::modes::Modes::get();
+        if argv.first().is_some_and(|program| program == "bridge") {
+            if let Some(home) = &modes.explicit_home
+                && !argv.iter().any(|argument| argument == "--home")
+            {
+                argv.push("--home".to_owned());
+                argv.push(home.to_string_lossy().into_owned());
+            }
+            if let Some(cwd) = &modes.explicit_cwd
+                && !argv.iter().any(|argument| argument == "--cwd")
+            {
+                argv.push("--cwd".to_owned());
+                argv.push(cwd.to_string_lossy().into_owned());
+            }
         }
         argv
     }
@@ -190,7 +198,7 @@ impl Failure {
 
     #[must_use]
     pub fn remote(mut self, source: impl Into<String>, text: impl Into<String>) -> Self {
-        self.remote = Some((source.into(), text.into()));
+        self.remote = Some((source.into(), super::ui::redact_urls(&text.into())));
         self
     }
 
@@ -314,6 +322,23 @@ impl Failure {
             format!("Apple Bridge isn't set up in {}.", home.display()),
         )
         .then("Set it up", ["bridge", "up"])
+    }
+
+    pub fn missing_home(home: &Path) -> Self {
+        let shown = super::commands::absolute(home);
+        Self::new(
+            Reason::NotSetUp,
+            format!("Apple Bridge isn't set up in {}.", shown.display()),
+        )
+        .then(
+            "Set it up",
+            [
+                "bridge".to_owned(),
+                "up".to_owned(),
+                "--home".to_owned(),
+                shown.to_string_lossy().into_owned(),
+            ],
+        )
     }
 
     pub fn not_running(home: &Path) -> Self {

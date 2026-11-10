@@ -14,6 +14,32 @@
           "aliases": [],
           "default": "false",
           "global": true,
+          "name": "--accessible",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Plain text for screen readers: no color or symbols, named steps, numbered choices (also APPLE_BRIDGE_ACCESSIBLE=1)",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": true,
+          "name": "--cwd",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Run as if started in this folder; relative paths resolve against it",
+          "type": "string",
+          "value_hint": "<DIR>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": true,
           "name": "--debug",
           "repeatable": false,
           "required": false,
@@ -385,7 +411,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-link",
       "lifecycle": "stable",
       "notes": [
-        "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed."
+        "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.",
+        "Piped, stdout holds only the server name; bridge link other prints only the MCP address."
       ],
       "options": [
         {
@@ -474,7 +501,55 @@
         }
       ],
       "path": "bridge link",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "rest",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "register",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "login",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Connect Claude Code or Codex to this Mac",
       "usage": "bridge link <CLIENT> [options]"
@@ -504,7 +579,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-unlink",
       "lifecycle": "stable",
       "notes": [
-        "This removes the agent's registration. To end its access on this Mac too, revoke it with bridge agents revoke."
+        "This removes the agent's registration. To end its access on this Mac too, revoke it with bridge agents revoke.",
+        "Piped, stdout holds only the removed server name."
       ],
       "options": [
         {
@@ -552,7 +628,30 @@
         }
       ],
       "path": "bridge unlink",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Disconnect Claude Code or Codex",
       "usage": "bridge unlink <CLIENT> [options]"
@@ -805,15 +904,18 @@
           "summary": "Follow sync events for 5 minutes"
         },
         {
-          "command": "bridge stats --follow --json",
-          "summary": "Stream sync events as JSON lines"
+          "command": "bridge stats --follow --timeout 5m --json",
+          "summary": "Stream sync events as JSON lines for 5 minutes"
         }
       ],
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-stats",
       "lifecycle": "stable",
       "notes": [
-        "Counts only, never content. --wait exits once every source has finished. --follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task."
+        "Counts only, never content.",
+        "--wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention, such as a missing permission, or when --timeout (default 10m) passes first; syncing continues either way.",
+        "--follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
+        "With --json, --wait and --follow print one JSON event per line; warnings arrive as {\"type\":\"warning\"} lines."
       ],
       "options": [
         {
@@ -863,7 +965,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: no limit on a terminal, 5m otherwise)",
+          "summary": "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: 10m)",
           "type": "string",
           "value_hint": "<DURATION>",
           "values": []
@@ -920,7 +1022,20 @@
       ],
       "options": [],
       "path": "bridge down",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "home",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Stop a gateway that bridge up started",
       "usage": "bridge down [options]"
@@ -964,7 +1079,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-read",
       "lifecycle": "stable",
       "notes": [
-        "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+        "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
+        "With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope without records, as in earlier releases.",
         "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
         "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
         "Uses a temporary read-only credential that's revoked when the read ends."
@@ -1004,7 +1120,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Calendar only: how many days ahead [default: 7]",
+          "summary": "Calendar only: how many days ahead (default: 7)",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
@@ -1017,7 +1133,7 @@
           "repeatable": false,
           "required": false,
           "short": "-n",
-          "summary": "How many items to show in total, 1 to 200 [default: 10]",
+          "summary": "How many items to show in total, 1 to 200 (default: 10)",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
@@ -1126,6 +1242,7 @@
       "lifecycle": "stable",
       "notes": [
         "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
+        "With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.",
         "Piped, rows are tab-separated with a header line, even when nothing matches."
       ],
       "options": [
@@ -1150,7 +1267,7 @@
           "repeatable": false,
           "required": false,
           "short": "-n",
-          "summary": "How many results to show in total, 1 to 200 [default: 10]",
+          "summary": "How many results to show in total, 1 to 200 (default: 10)",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
@@ -1455,18 +1572,60 @@
         {
           "command": "bridge agents list --json --fields id,name",
           "summary": "List agent IDs as JSON"
+        },
+        {
+          "command": "bridge agents list --next <CURSOR>",
+          "summary": "See the next page"
         }
       ],
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-agents-list",
       "lifecycle": "stable",
       "notes": [
+        "Lists agents in the order they were created, oldest first, 50 at a time (--limit up to 200). --next continues; the JSON gives next_cursor, null on the last page.",
         "Tokens are never shown again after creation."
       ],
-      "options": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--limit",
+          "repeatable": false,
+          "required": false,
+          "short": "-n",
+          "summary": "How many to show, 1 to 200 (default: 50)",
+          "type": "string",
+          "value_hint": "<NUMBER>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--next",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Continue from a previous page",
+          "type": "string",
+          "value_hint": "<CURSOR>",
+          "values": []
+        }
+      ],
       "path": "bridge agents list",
       "result_schema": {
         "fields": [
+          {
+            "name": "agents",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "next_cursor",
+            "secret": false,
+            "type": "string|null"
+          },
           {
             "name": "id",
             "secret": false,
@@ -1501,6 +1660,11 @@
             "name": "last_used",
             "secret": false,
             "type": "object|null"
+          },
+          {
+            "name": "expires_at",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -1514,11 +1678,11 @@
       "deprecated": null,
       "examples": [
         {
-          "command": "bridge agents create --name my-bot --level read --scope messages:read,contacts:read",
-          "summary": "Create a read-only agent for a bot"
+          "command": "bridge agents create --name my-bot --level read --scope messages:read,contacts:read --expires-in 30d",
+          "summary": "Create a read-only agent for a bot that stops working in 30 days"
         },
         {
-          "command": "bridge agents create --name ci --json",
+          "command": "bridge agents create --name ci --level read --expires-in 7d --json",
           "summary": "Create one from a script and keep its ID"
         }
       ],
@@ -1526,7 +1690,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-agents-create",
       "lifecycle": "stable",
       "notes": [
-        "The token prints once, alone on stdout. --scope sets the agent's access grants."
+        "The token prints once, alone on stdout. --scope sets the agent's access grants.",
+        "Without --expires-in the token never expires. On a terminal you're asked first; without one it's created with a warning."
       ],
       "options": [
         {
@@ -1669,6 +1834,11 @@
             "name": "last_used",
             "secret": false,
             "type": "object|null"
+          },
+          {
+            "name": "expires_at",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -1701,7 +1871,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-agents-update",
       "lifecycle": "stable",
       "notes": [
-        "A read agent can't be raised to full or approve; revoke it and create a new one."
+        "A read agent can't be raised to full or approve; revoke it and create a new one.",
+        "Raising the level to full or adding sources asks first; without a terminal, pass --yes."
       ],
       "options": [
         {
@@ -1743,9 +1914,19 @@
             "type": "object"
           },
           {
+            "name": "previous",
+            "secret": false,
+            "type": "object"
+          },
+          {
             "name": "outcome",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
           }
         ]
       },
@@ -1785,14 +1966,64 @@
       "result_schema": {
         "fields": [
           {
-            "name": "id",
+            "name": "agent",
             "secret": false,
-            "type": "string"
+            "type": "object"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "replica",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "previous",
+            "secret": false,
+            "type": "object"
           },
           {
             "name": "outcome",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "scopes",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "expiresAt",
+            "secret": false,
+            "type": "string|null"
+          },
+          {
+            "name": "revokedAt",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -1824,7 +2055,9 @@
       "hidden": true,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-agents-level",
       "lifecycle": "deprecated",
-      "notes": [],
+      "notes": [
+        "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version."
+      ],
       "options": [],
       "path": "bridge agents level",
       "result_schema": {
@@ -1863,6 +2096,11 @@
             "name": "last_used",
             "secret": false,
             "type": "object|null"
+          },
+          {
+            "name": "expires_at",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -1907,11 +2145,11 @@
       "deprecated": null,
       "examples": [
         {
-          "command": "bridge tokens create --scope reminders:read",
-          "summary": "Create a token for a script"
+          "command": "bridge tokens create --scope reminders:read --expires-in 12h",
+          "summary": "Create a read-only token for a script that stops working in 12 hours"
         },
         {
-          "command": "TOKEN=$(bridge tokens create --scope calendar:read)",
+          "command": "TOKEN=$(bridge tokens create --scope calendar:read --expires-in 1h)",
           "summary": "Store one in a variable"
         }
       ],
@@ -1919,7 +2157,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-tokens-create",
       "lifecycle": "stable",
       "notes": [
-        "The token prints once, alone on stdout."
+        "The token prints once, alone on stdout. With --json it is in secret.",
+        "Without --expires-in the token never expires. On a terminal you're asked first; without one it's created with a warning."
       ],
       "options": [
         {
@@ -1967,6 +2206,11 @@
         "fields": [
           {
             "name": "token",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "secret",
             "secret": true,
             "type": "string"
           },
@@ -1974,6 +2218,31 @@
             "name": "outcome",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "scopes",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "expiresAt",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -2009,14 +2278,64 @@
       "result_schema": {
         "fields": [
           {
-            "name": "id",
+            "name": "agent",
             "secret": false,
-            "type": "string"
+            "type": "object"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "replica",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "previous",
+            "secret": false,
+            "type": "object"
           },
           {
             "name": "outcome",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "scopes",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "expiresAt",
+            "secret": false,
+            "type": "string|null"
+          },
+          {
+            "name": "revokedAt",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -2045,7 +2364,7 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-tokens-update",
       "lifecycle": "stable",
       "notes": [
-        "Accepts token, agent and replica IDs."
+        "Accepts token, agent and replica IDs. Adding sources asks first; without a terminal, pass --yes."
       ],
       "options": [
         {
@@ -2066,7 +2385,42 @@
       "result_schema": {
         "fields": [
           {
+            "name": "agent",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "replica",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "previous",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
             "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
             "secret": false,
             "type": "string"
           },
@@ -2076,9 +2430,19 @@
             "type": "array"
           },
           {
-            "name": "outcome",
+            "name": "remote",
             "secret": false,
-            "type": "string"
+            "type": "boolean"
+          },
+          {
+            "name": "expiresAt",
+            "secret": false,
+            "type": "string|null"
+          },
+          {
+            "name": "revokedAt",
+            "secret": false,
+            "type": "string|null"
           }
         ]
       },
@@ -2132,10 +2496,77 @@
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-connectors-list",
       "lifecycle": "stable",
-      "notes": [],
-      "options": [],
+      "notes": [
+        "Lists waiting requests, the one that expires first at the top, 50 at a time (--limit up to 200). --next continues."
+      ],
+      "options": [
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--limit",
+          "repeatable": false,
+          "required": false,
+          "short": "-n",
+          "summary": "How many to show, 1 to 200 (default: 50)",
+          "type": "string",
+          "value_hint": "<NUMBER>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--next",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Continue from a previous page",
+          "type": "string",
+          "value_hint": "<CURSOR>",
+          "values": []
+        }
+      ],
       "path": "bridge connectors list",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "connectors",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "next_cursor",
+            "secret": false,
+            "type": "string|null"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client_name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "redirect_host",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "access",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "expires_at",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "List apps waiting for approval",
       "usage": "bridge connectors list [options]"
@@ -2323,7 +2754,7 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-web-enroll",
       "lifecycle": "stable",
       "notes": [
-        "The link is a one-time secret that works for 10 minutes. Piped, stdout holds only the link."
+        "The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on. Piped, stdout holds only the link and no QR code is drawn."
       ],
       "options": [
         {
@@ -2359,6 +2790,16 @@
           {
             "name": "url",
             "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "expires_in_seconds",
+            "secret": false,
+            "type": "number"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
             "type": "string"
           }
         ]
@@ -2407,10 +2848,77 @@
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-web-sessions-list",
       "lifecycle": "stable",
-      "notes": [],
-      "options": [],
+      "notes": [
+        "Lists browsers in the order they signed in, oldest first, 50 at a time (--limit up to 200). --next continues."
+      ],
+      "options": [
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--limit",
+          "repeatable": false,
+          "required": false,
+          "short": "-n",
+          "summary": "How many to show, 1 to 200 (default: 50)",
+          "type": "string",
+          "value_hint": "<NUMBER>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--next",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Continue from a previous page",
+          "type": "string",
+          "value_hint": "<CURSOR>",
+          "values": []
+        }
+      ],
       "path": "bridge web sessions list",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "sessions",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "next_cursor",
+            "secret": false,
+            "type": "string|null"
+          },
+          {
+            "name": "device_id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "created_at",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "last_seen",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "expires_at",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "List signed-in browsers",
       "usage": "bridge web sessions list [options]"
@@ -2552,7 +3060,9 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-remote-enable",
       "lifecycle": "stable",
       "notes": [
-        "Waits until remote access is on, up to --timeout. Stopping the wait leaves the request with the gateway; check it with bridge remote status."
+        "Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the request with the gateway; check it with bridge remote status.",
+        "With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending, the link in remote.signInUrl and userActionRequired true.",
+        "--no-open never opens a browser; --open opens one even without a terminal, unless over SSH."
       ],
       "options": [
         {
@@ -2666,7 +3176,80 @@
         }
       ],
       "path": "bridge remote enable",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "userActionRequired",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "message",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "backend",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "last_error",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "pending_link",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "signInUrl",
+            "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "tls_termination",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "certificate_expiry",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Turn on remote access through the relay or a private route",
       "usage": "bridge remote enable [options]"
@@ -2745,7 +3328,80 @@
         }
       ],
       "path": "bridge remote disable",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "userActionRequired",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "message",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "backend",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "last_error",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "pending_link",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "signInUrl",
+            "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "tls_termination",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "certificate_expiry",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Turn off remote access",
       "usage": "bridge remote disable [options]"
@@ -2767,7 +3423,9 @@
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-remote-status",
       "lifecycle": "stable",
-      "notes": [],
+      "notes": [
+        "With --json the state is under remote. Piped without --json it prints the state alone, as before. --snippets --json gives {\"snippets\": TEXT}."
+      ],
       "options": [
         {
           "aliases": [],
@@ -2786,6 +3444,16 @@
       "path": "bridge remote status",
       "result_schema": {
         "fields": [
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "snippets",
+            "secret": false,
+            "type": "string"
+          },
           {
             "name": "id",
             "secret": false,
@@ -2864,7 +3532,15 @@
         }
       ],
       "path": "bridge remote key",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "key",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Print this Mac's relay key for a self-hosted relay",
       "usage": "bridge remote key [options]"
@@ -2913,7 +3589,20 @@
       "notes": [],
       "options": [],
       "path": "bridge remote certificates accept",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "fingerprint",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Accept a certificate you requested yourself",
       "usage": "bridge remote certificates accept [FINGERPRINT] [options]"
@@ -2926,7 +3615,9 @@
       "hidden": true,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-remote-on",
       "lifecycle": "deprecated",
-      "notes": [],
+      "notes": [
+        "Prints the sign-in link and the address on stdout and opens the link in a browser unless --no-open, with or without a terminal."
+      ],
       "options": [
         {
           "aliases": [],
@@ -3039,7 +3730,80 @@
         }
       ],
       "path": "bridge remote on",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "userActionRequired",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "message",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "backend",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "last_error",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "pending_link",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "signInUrl",
+            "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "tls_termination",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "certificate_expiry",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Turn on remote access",
       "usage": "bridge remote on [options]"
@@ -3113,7 +3877,80 @@
         }
       ],
       "path": "bridge remote off",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "remote",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "userActionRequired",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "message",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "backend",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "last_error",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "pending_link",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "signInUrl",
+            "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "tls_termination",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "certificate_expiry",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Turn off remote access",
       "usage": "bridge remote off [options]"
@@ -3242,7 +4079,25 @@
         }
       ],
       "path": "bridge pair",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "code",
+            "secret": true,
+            "type": "string"
+          },
+          {
+            "name": "expires_in_seconds",
+            "secret": false,
+            "type": "number"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Create a pairing code for a replica or iPhone",
       "usage": "bridge pair [options]"
@@ -3267,7 +4122,9 @@
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-join",
       "lifecycle": "stable",
-      "notes": [],
+      "notes": [
+        "Piped, stdout holds only the replica's home."
+      ],
       "options": [
         {
           "aliases": [],
@@ -3284,7 +4141,20 @@
         }
       ],
       "path": "bridge join",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "home",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Join a gateway as a replica with a pairing code",
       "usage": "bridge join <CODE> [options]"
@@ -4052,7 +4922,25 @@
       ],
       "options": [],
       "path": "bridge install-credentials",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "home",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Prepare credentials for the background service",
       "usage": "bridge install-credentials [options]"
@@ -4075,7 +4963,30 @@
       "notes": [],
       "options": [],
       "path": "bridge revoke",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Revoke an agent or token",
       "usage": "bridge revoke <CREDENTIAL> [options]"
@@ -4112,7 +5023,35 @@
         }
       ],
       "path": "bridge scope",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "id",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "scopes",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "previous",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Change a token's access",
       "usage": "bridge scope <CREDENTIAL> [options]"

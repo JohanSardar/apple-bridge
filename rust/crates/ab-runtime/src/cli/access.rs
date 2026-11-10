@@ -1,12 +1,13 @@
 use super::{
     Failure, Outcome,
     failure::{Reason, Step},
-    modes::Modes,
-    tree::{AgentCreateArgs, DecisionArgs},
+    modes::{self, Modes},
+    tree::{AgentCreateArgs, DecisionArgs, ListArgs},
     ui,
 };
 use crate::product_cli;
 use ab_trust::{AgentLevel, Authority, Grant, Principal};
+use data_encoding::BASE64URL_NOPAD;
 use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -17,6 +18,7 @@ pub fn typed_as(words: &[String]) {
     let first = words.first().map(String::as_str);
     let second = words.get(1).map(String::as_str);
     let legacy = matches!(first, Some("revoke" | "scope"))
+        || (matches!(first, Some("agent" | "agents")) && second == Some("level"))
         || (first == Some("agent") && second == Some("revoke"))
         || (first == Some("web") && second == Some("lock"));
     LEGACY_REVOKE.store(legacy, Ordering::Relaxed);
@@ -65,16 +67,134 @@ fn expiry(text: Option<&str>) -> Outcome<Option<jiff::Timestamp>> {
 fn expires_text(expires_at: Option<&jiff::Timestamp>) -> String {
     expires_at.map_or_else(
         || "never".to_owned(),
-        |when| {
-            let left = when.as_second() - jiff::Timestamp::now().as_second();
-            let left = std::time::Duration::from_secs(u64::try_from(left).unwrap_or(0));
-            format!(
-                "{} (in {})",
-                when.strftime("%Y-%m-%d %H:%M UTC"),
-                super::commands::friendly(left)
-            )
-        },
+        |when| ui::local_time(&when.to_string()),
     )
+}
+
+const LIST_DEFAULT: usize = 50;
+
+struct Page {
+    list: &'static str,
+    limit: usize,
+    after: Option<String>,
+    bounded: bool,
+}
+
+fn page(list: &'static str, args: &ListArgs, home: &Path) -> Outcome<Page> {
+    let given = args.limit.as_deref().map(super::read::limit).transpose()?;
+    let mut page = Page {
+        list,
+        limit: given.unwrap_or(LIST_DEFAULT),
+        after: None,
+        bounded: given.is_some() || args.next.is_some(),
+    };
+    let Some(text) = &args.next else {
+        return Ok(page);
+    };
+    let invalid = || {
+        Failure::new(
+            Reason::InvalidValue,
+            "Can't use that --next cursor. Copy it whole from the previous page.",
+        )
+    };
+    let bytes = BASE64URL_NOPAD
+        .decode(text.trim().as_bytes())
+        .map_err(|_| invalid())?;
+    let cursor: Value = serde_json::from_slice(&bytes).map_err(|_| invalid())?;
+    if cursor["list"] != list {
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            format!("Can't use that --next cursor here. It doesn't continue bridge {list} list."),
+        ));
+    }
+    if cursor["home"] != super::read::home_tag(home) {
+        return Err(Failure::new(
+            Reason::InvalidValue,
+            "Can't use that --next cursor here. It belongs to another home.",
+        )
+        .sentence("Pass the same --home as the list that printed it."));
+    }
+    page.after = Some(cursor["after"].as_str().ok_or_else(invalid)?.to_owned());
+    if given.is_none() {
+        page.limit = cursor["limit"]
+            .as_u64()
+            .and_then(|limit| usize::try_from(limit).ok())
+            .unwrap_or(LIST_DEFAULT);
+    }
+    Ok(page)
+}
+
+struct Sliced<T> {
+    items: Vec<T>,
+    total: usize,
+    next: Option<String>,
+}
+
+fn slice<T>(
+    items: Vec<T>,
+    id: impl Fn(&T) -> String,
+    page: &Page,
+    home: &Path,
+) -> Outcome<Sliced<T>> {
+    let total = items.len();
+    let start = match &page.after {
+        Some(after) => {
+            items
+                .iter()
+                .position(|item| id(item) == *after)
+                .ok_or_else(|| {
+                    Failure::new(
+                        Reason::InvalidValue,
+                        "Can't continue that list. The entry its --next cursor points at is gone."
+                            .to_owned(),
+                    )
+                    .then(
+                        "List from the start",
+                        std::iter::once("bridge")
+                            .chain(page.list.split(' '))
+                            .chain(["list"]),
+                    )
+                })?
+                + 1
+        }
+        None => 0,
+    };
+    let rest: Vec<T> = items.into_iter().skip(start).collect();
+    let more = rest.len() > page.limit;
+    let items: Vec<T> = rest.into_iter().take(page.limit).collect();
+    let next = if more {
+        items.last().map(|last| {
+            BASE64URL_NOPAD.encode(
+                json!({"v": 1, "list": page.list, "after": id(last), "limit": page.limit, "home": super::read::home_tag(home)})
+                    .to_string()
+                    .as_bytes(),
+            )
+        })
+    } else {
+        None
+    };
+    Ok(Sliced { items, total, next })
+}
+
+fn more_note<T>(sliced: &Sliced<T>, argv: &[&str]) {
+    let Some(next) = &sliced.next else {
+        return;
+    };
+    ui::note(&format!(
+        "Showing {} of {}.",
+        sliced.items.len(),
+        sliced.total
+    ));
+    let mut command: Vec<String> = argv.iter().map(|word| (*word).to_owned()).collect();
+    command.extend(["--next".to_owned(), next.clone()]);
+    ui::next_steps(&[Step::new("See the next page", command)]);
+}
+
+fn set_up(home: &Path) -> Outcome<Authority> {
+    if !home.is_dir() {
+        return Err(Failure::missing_home(home));
+    }
+    open(home)
 }
 
 fn widens(before: &[Grant], after: &[Grant]) -> bool {
@@ -273,29 +393,54 @@ fn legacy_notice(command: &str) {
     );
 }
 
-pub fn agents_list(home: &Path) -> Outcome {
-    let agents = match existing(home)? {
-        Some(authority) => authority.agents()?,
-        None => Vec::new(),
-    };
-    let documents: Vec<AgentSummary<'_>> = agents.iter().map(summary).collect();
+pub fn agents_list(home: &Path, args: &ListArgs) -> Outcome {
+    let paging = page("agents", args, home)?;
+    let authority = set_up(home)?;
+    let agents = authority.agents()?;
     let modes = Modes::get();
-    if modes.json || modes.legacy_json() {
-        if !modes.json {
-            legacy_notice("bridge agents list");
+    let legacy = modes.legacy_json() || modes.json && modes::legacy_spelling();
+    let sliced = if legacy && !paging.bounded {
+        let total = agents.len();
+        Sliced {
+            items: agents,
+            total,
+            next: None,
         }
-        if modes.json && modes.fields.is_some() {
+    } else {
+        slice(agents, |agent| agent.id.clone(), &paging, home)?
+    };
+    let documents: Vec<AgentSummary<'_>> = sliced.items.iter().map(summary).collect();
+    if legacy {
+        if modes.json {
             ui::json_document(serde_json::to_value(&documents)?);
         } else {
+            legacy_notice("bridge agents list");
             ui::exact(&documents);
         }
         return Ok(());
     }
-    if agents.is_empty() {
+    if modes.json {
+        ui::json_keyed(
+            "agents",
+            json!({"agents": documents, "next_cursor": sliced.next}),
+        );
+        return Ok(());
+    }
+    if sliced.items.is_empty() {
         ui::note("No agents on this Mac.");
         ui::next_steps(&[Step::new(
             "Create one",
-            ["bridge", "agents", "create", "--name", "<NAME>"],
+            [
+                "bridge",
+                "agents",
+                "create",
+                "--name",
+                "<NAME>",
+                "--level",
+                "read",
+                "--expires-in",
+                "30d",
+            ],
         )]);
         if !modes.stdout_table() {
             ui::table(
@@ -305,13 +450,14 @@ pub fn agents_list(home: &Path) -> Outcome {
         }
         return Ok(());
     }
-    let rows: Vec<Vec<String>> = agents
+    let rows: Vec<Vec<String>> = sliced
+        .items
         .iter()
         .map(|agent| {
             let shown = summary(agent);
             let when = |value: &str| {
                 if modes.stdout_table() {
-                    ui::age(value)
+                    ui::age_short(value)
                 } else {
                     value.to_owned()
                 }
@@ -333,6 +479,7 @@ pub fn agents_list(home: &Path) -> Outcome {
         &["ID", "Name", "Level", "Access", "Created", "Revoked"],
         &rows,
     );
+    more_note(&sliced, &["bridge", "agents", "list"]);
     Ok(())
 }
 
@@ -366,14 +513,21 @@ pub fn agents_inspect(home: &Path, id: &str) -> Outcome {
         ("Name", shown.name.to_owned()),
         ("Level", shown.level.to_owned()),
         ("Access", access_text(shown.scopes)),
-        ("Created", shown.created_at.to_owned()),
+        ("Created", ui::local_time(shown.created_at)),
+        (
+            "Expires",
+            shown
+                .expires_at
+                .and_then(Value::as_str)
+                .filter(|when| !when.starts_with("0001"))
+                .map_or_else(|| "never".to_owned(), ui::local_time),
+        ),
         (
             "Revoked",
             shown
                 .revoked_at
                 .and_then(Value::as_str)
-                .unwrap_or("no")
-                .to_owned(),
+                .map_or_else(|| "no".to_owned(), ui::local_time),
         ),
         (
             "Last used",
@@ -382,7 +536,7 @@ pub fn agents_inspect(home: &Path, id: &str) -> Outcome {
                 |value| {
                     value
                         .as_str()
-                        .map_or_else(|| value.to_string(), str::to_owned)
+                        .map_or_else(|| value.to_string(), ui::local_time)
                 },
             ),
         ),
@@ -393,6 +547,31 @@ pub fn agents_inspect(home: &Path, id: &str) -> Outcome {
     Ok(())
 }
 
+fn lasting_consent(owner: &str, what: &str, rows: &[(&str, String)]) -> Outcome<bool> {
+    let modes = Modes::get();
+    if modes.yes {
+        return Ok(false);
+    }
+    if !modes.interactive() {
+        ui::warn(
+            "never_expires",
+            &format!("{owner} never expires. Pass --expires-in to limit it."),
+        );
+        return Ok(false);
+    }
+    for (label, value) in rows {
+        ui::row(label, value);
+    }
+    if ui::yes_or_no(&format!("Create {what} with access that never expires?"))? {
+        Ok(true)
+    } else {
+        Err(Failure::canceled(
+            "Canceled. Nothing was created. Pass --expires-in, such as --expires-in 30d, to limit it.",
+        ))
+    }
+}
+
+#[allow(clippy::too_many_lines)]
 pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
     let name = args.name.trim();
     let mut problems = Vec::new();
@@ -419,13 +598,21 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
         }
     };
     let modes = Modes::get();
-    if !modes.json && modes.rich() && !modes.legacy_json() {
-        ui::note(&format!("Creating agent {}:", ui::clean(name)));
-        ui::row("Level", level.as_str());
-        ui::row("Access", &access_text(&grants));
-        ui::row("Expires", &expires_text(expires.as_ref()));
-    }
     let authority = open(home)?;
+    let asked = if expires.is_none() {
+        lasting_consent(
+            &format!("{}'s token", ui::clean(name)),
+            &format!("agent {}", ui::clean(name)),
+            &[
+                ("Name", ui::clean(name)),
+                ("Level", level.as_str().to_owned()),
+                ("Access", access_text(&grants)),
+                ("Expires", "never".to_owned()),
+            ],
+        )?
+    } else {
+        false
+    };
     let (agent, token) = authority
         .create_agent_until(name, level, grants, expires)
         .map_err(|error| match error {
@@ -460,20 +647,24 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
                 ]
             }),
         };
-        if !modes.json {
-            legacy_notice("bridge agents create");
-        }
-        if modes.fields.is_some() {
-            ui::json_document(serde_json::to_value(&created)?);
+        if modes.json {
+            ui::json_keyed("agent", serde_json::to_value(&created)?);
         } else {
+            legacy_notice("bridge agents create");
             ui::exact(&created);
         }
         return Ok(());
     }
     ui::outln(&token);
-    ui::done("Created", &agent.id);
-    agent_rows(&agent);
-    ui::row("Expires", &expires_text(expires.as_ref()));
+    ui::receipt(
+        "Created",
+        &agent.id,
+        &format!("Created agent {} ({}).", ui::clean(name), agent.id),
+    );
+    if !asked {
+        agent_rows(&agent);
+        ui::row("Expires", &expires_text(expires.as_ref()));
+    }
     ui::note("The token above is shown once. Keep it secret.");
     Ok(())
 }
@@ -496,8 +687,17 @@ pub fn agents_update(
             ["bridge", "agents", "update", id, "--level", "<LEVEL>"],
         ));
     }
-    let chosen = new_level.map(|text| level(text, true)).transpose()?;
-    let grants = scope.map(|scope| parse_grants(scope, true)).transpose()?;
+    let chosen = new_level.map(|text| level(text, true)).transpose();
+    let grants = scope.map(|scope| parse_grants(scope, true)).transpose();
+    let (chosen, grants) = match (chosen, grants) {
+        (Ok(chosen), Ok(grants)) => (chosen, grants),
+        (chosen, grants) => {
+            let mut problems = Vec::new();
+            problems.extend(chosen.err());
+            problems.extend(grants.err());
+            return Err(combine("Can't update that agent.", problems));
+        }
+    };
     let (authority, before) = find_agent(home, id)?;
     if !before.active() {
         return Err(Failure::new(
@@ -614,14 +814,22 @@ fn report_agent_change(before: &Principal, after: &Principal, unchanged: bool) -
         return Ok(());
     }
     if modes.legacy_json() {
-        legacy_notice("bridge agents level");
+        legacy_notice("bridge agents update");
         ui::exact(&summary(after));
         return Ok(());
     }
     if unchanged {
-        ui::done("Already set", &after.id);
+        ui::receipt(
+            "Already set",
+            &after.id,
+            &format!("Agent {} already has that access.", after.id),
+        );
     } else {
-        ui::done("Updated", &after.id);
+        ui::receipt(
+            "Updated",
+            &after.id,
+            &format!("Updated agent {}.", after.id),
+        );
     }
     if before.level == after.level {
         ui::row("Level", &after.level);
@@ -649,13 +857,20 @@ pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<
         }
     };
     let modes = Modes::get();
-    if !modes.json && modes.rich() {
-        ui::note("Creating a token:");
-        ui::row("Access", &access_text(&grants));
-        ui::row("Remote", if remote { "allowed" } else { "no" });
-        ui::row("Expires", &expires_text(expires.as_ref()));
-    }
     let authority = open(home)?;
+    let asked = if expires.is_none() {
+        lasting_consent(
+            "This token",
+            "a token",
+            &[
+                ("Access", access_text(&grants)),
+                ("Remote", if remote { "allowed" } else { "no" }.to_owned()),
+                ("Expires", "never".to_owned()),
+            ],
+        )?
+    } else {
+        false
+    };
     let token = authority
         .create_token_until(grants.clone(), remote, expires)
         .map_err(|_| {
@@ -669,28 +884,76 @@ pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<
         .authenticate_token(&token)
         .map(|principal| principal.id)
         .unwrap_or_default();
-    if modes.json {
+    let scopes: Vec<&str> = grants.iter().map(Grant::as_str).collect();
+    if modes.json && modes::legacy_spelling() {
         ui::json_document(json!({
             "token": token,
             "id": id,
-            "scopes": access_text(&grants).split(',').collect::<Vec<_>>(),
+            "scopes": scopes,
             "remote": remote,
             "expires_at": expires.map(|when| when.to_string()),
             "outcome": "created",
         }));
         return Ok(());
     }
+    if modes.json {
+        ui::json_keyed(
+            "token",
+            json!({
+                "token": {
+                    "id": id,
+                    "scopes": scopes,
+                    "remote": remote,
+                    "expiresAt": expires.map(|when| when.to_string()),
+                },
+                "secret": token,
+                "outcome": "created",
+                "next": [Step::new("Revoke it when you're done", ["bridge", "tokens", "revoke", &id]).to_json()],
+            }),
+        );
+        return Ok(());
+    }
     ui::outln(&token);
     if modes.stdout_tty() {
-        ui::done("Created", &id);
-        ui::row("Access", &access_text(&grants));
-        if remote {
-            ui::row("Remote", "allowed");
+        ui::receipt("Created", &id, &format!("Created token {id}."));
+        if !asked {
+            ui::row("Access", &access_text(&grants));
+            if remote {
+                ui::row("Remote", "allowed");
+            }
+            ui::row("Expires", &expires_text(expires.as_ref()));
         }
-        ui::row("Expires", &expires_text(expires.as_ref()));
         ui::note("The token above is shown once. Keep it secret.");
     }
     Ok(())
+}
+
+fn principal_json(principal: &Principal) -> Value {
+    if principal.kind == "agent" {
+        return summary_json(principal);
+    }
+    let present = |key: &str| {
+        principal
+            .extra
+            .get(key)
+            .filter(|value| !value.is_null())
+            .cloned()
+    };
+    let mut value = json!({
+        "id": principal.id,
+        "kind": principal.kind,
+        "scopes": principal.grants,
+    });
+    if principal.kind == "token" {
+        value["remote"] = json!(principal.remote);
+        value["expiresAt"] = present("expires_at")
+            .filter(|when| when.as_str().is_none_or(|when| !when.starts_with("0001")))
+            .unwrap_or(Value::Null);
+    }
+    if let Some(revoked) = present("revoked_at") {
+        value["revokedAt"] = revoked;
+    }
+    value
 }
 
 fn label_case(text: &str) -> String {
@@ -730,11 +993,21 @@ pub fn revoke(home: &Path, id: &str, selector: Selector) -> Outcome {
         "replica" => "replica",
         _ => "credential",
     };
+    let list = ["bridge", "agents", "list", "--json"];
     if !principal.active() {
-        if Modes::get().json {
+        if Modes::get().json && modes::legacy_spelling() {
             ui::json_document(json!({"id": id, "kind": noun, "outcome": "unchanged"}));
+        } else if Modes::get().json {
+            ui::json_keyed(
+                noun,
+                json!({noun: principal_json(&principal), "outcome": "unchanged", "next": [Step::new("Check it", list).to_json()]}),
+            );
         } else {
-            ui::done("Already revoked", id);
+            ui::receipt(
+                "Already revoked",
+                id,
+                &format!("{} {id} is already revoked.", label_case(noun)),
+            );
         }
         return Ok(());
     }
@@ -771,16 +1044,29 @@ pub fn revoke(home: &Path, id: &str, selector: Selector) -> Outcome {
         })?;
     }
     authority.revoke(id).map_err(|_| not_found(id))?;
-    if modes.json {
+    if modes.json && modes::legacy_spelling() {
         ui::json_document(json!({
             "id": id,
             "kind": noun,
             "outcome": "revoked",
-            "next": [Step::new("Check it", ["bridge", "agents", "list", "--json"]).to_json()],
+            "next": [Step::new("Check it", list).to_json()],
         }));
         return Ok(());
     }
-    ui::done("Revoked", id);
+    if modes.json {
+        let after = credential(&authority, id)?.unwrap_or(principal);
+        ui::json_keyed(
+            noun,
+            json!({noun: principal_json(&after), "outcome": "revoked", "next": [Step::new("Check it", list).to_json()]}),
+        );
+        return Ok(());
+    }
+    let sentence = if name.is_empty() {
+        format!("Revoked {shown}.")
+    } else {
+        format!("Revoked {shown} ({id}).")
+    };
+    ui::receipt("Revoked", id, &sentence);
     if !name.is_empty() {
         ui::row("Name", &name);
     }
@@ -788,6 +1074,7 @@ pub fn revoke(home: &Path, id: &str, selector: Selector) -> Outcome {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
     check_credential_id(id)?;
     let for_agent = id.starts_with("agent:");
@@ -806,11 +1093,26 @@ pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
             ["bridge", "agents", "create", "--name", "<NAME>"],
         ));
     }
+    let noun = match before.kind.as_str() {
+        "agent" => "agent",
+        "token" => "token",
+        "replica" => "replica",
+        _ => "credential",
+    };
     if access_text(&before.grants) == access_text(&grants) {
-        if Modes::get().json {
+        if Modes::get().json && modes::legacy_spelling() {
             ui::json_document(json!({"id": id, "scopes": before.grants, "outcome": "unchanged"}));
+        } else if Modes::get().json {
+            ui::json_keyed(
+                noun,
+                json!({noun: principal_json(&before), "outcome": "unchanged", "next": [Step::new("Check it", ["bridge", "agents", "list", "--json"]).to_json()]}),
+            );
         } else {
-            ui::done("Already set", id);
+            ui::receipt(
+                "Already set",
+                id,
+                &format!("{} {id} already has that access.", label_case(noun)),
+            );
             ui::row("Access", &access_text(&before.grants));
         }
         return Ok(());
@@ -857,7 +1159,7 @@ pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
                 format!("Can't change the access of {id}. This home can't grant it."),
             ),
         })?;
-    if Modes::get().json {
+    if Modes::get().json && modes::legacy_spelling() {
         ui::json_document(json!({
             "id": id,
             "scopes": after.grants,
@@ -867,7 +1169,19 @@ pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
         }));
         return Ok(());
     }
-    ui::done("Updated", id);
+    if Modes::get().json {
+        ui::json_keyed(
+            noun,
+            json!({
+                noun: principal_json(&after),
+                "previous": {"scopes": before.grants},
+                "outcome": "updated",
+                "next": [Step::new("Check it", ["bridge", "agents", "list", "--json"]).to_json()],
+            }),
+        );
+        return Ok(());
+    }
+    ui::receipt("Updated", id, &format!("Updated {noun} {id}."));
     ui::row(
         "Access",
         &format!(
@@ -891,27 +1205,58 @@ fn connector_unreachable(home: &Path) -> Failure {
     }
 }
 
-pub async fn connectors_list(home: &Path) -> Outcome {
+pub async fn connectors_list(home: &Path, args: &ListArgs) -> Outcome {
+    let paging = page("connectors", args, home)?;
+    if !home.is_dir() {
+        return Err(Failure::missing_home(home));
+    }
     let pending = crate::connector::command(home, "pending", "", "")
         .await
         .map_err(|_| connector_unreachable(home))?;
     let modes = Modes::get();
-    if modes.json || modes.legacy_json() {
-        if !modes.json {
+    let legacy = modes.legacy_json() || modes.json && modes::legacy_spelling();
+    if legacy && !paging.bounded {
+        if modes.json {
+            ui::json_document(pending);
+        } else {
             legacy_notice("bridge connectors list");
+            ui::exact_json(&pending);
         }
-        ui::exact_json(&pending);
         return Ok(());
     }
-    let items = pending.as_array().cloned().unwrap_or_default();
-    if items.is_empty() {
+    let mut items = pending.as_array().cloned().unwrap_or_default();
+    items.sort_by(|a, b| {
+        a["expires_at"]
+            .as_str()
+            .cmp(&b["expires_at"].as_str())
+            .then_with(|| a["id"].as_str().cmp(&b["id"].as_str()))
+    });
+    let sliced = slice(
+        items,
+        |item| item["id"].as_str().unwrap_or_default().to_owned(),
+        &paging,
+        home,
+    )?;
+    if legacy {
+        ui::json_document(Value::Array(sliced.items));
+        return Ok(());
+    }
+    if modes.json {
+        ui::json_keyed(
+            "connectors",
+            json!({"connectors": sliced.items, "next_cursor": sliced.next}),
+        );
+        return Ok(());
+    }
+    if sliced.items.is_empty() {
         ui::note("No apps are waiting to connect.");
         if !modes.stdout_table() {
             ui::table(&["Request", "App", "Redirect", "Access", "Expires"], &[]);
         }
         return Ok(());
     }
-    let rows: Vec<Vec<String>> = items
+    let rows: Vec<Vec<String>> = sliced
+        .items
         .iter()
         .map(|item| {
             let text = |key: &str| item[key].as_str().unwrap_or_default().to_owned();
@@ -920,12 +1265,16 @@ pub async fn connectors_list(home: &Path) -> Outcome {
                 text("client_name"),
                 text("redirect_host"),
                 text("access"),
-                text("expires_at"),
+                if modes.stdout_table() {
+                    ui::local_time(&text("expires_at"))
+                } else {
+                    text("expires_at")
+                },
             ]
         })
         .collect();
     ui::table(&["Request", "App", "Redirect", "Access", "Expires"], &rows);
-    if let Some(first) = items.first().and_then(|item| item["id"].as_str()) {
+    if let Some(first) = sliced.items.first().and_then(|item| item["id"].as_str()) {
         ui::next_steps(&[Step::new(
             "Allow it after checking the code on the app's page",
             [
@@ -939,6 +1288,7 @@ pub async fn connectors_list(home: &Path) -> Outcome {
             ],
         )]);
     }
+    more_note(&sliced, &["bridge", "connectors", "list"]);
     Ok(())
 }
 
@@ -1052,7 +1402,15 @@ pub async fn connectors_decide(home: &Path, decision: &DecisionArgs, allow: bool
         .and_then(|item| item["client_name"].as_str())
         .unwrap_or("The app")
         .to_owned();
-    ui::done(if allow { "Allowed" } else { "Denied" }, &app);
+    ui::receipt(
+        if allow { "Allowed" } else { "Denied" },
+        &app,
+        &format!(
+            "{} {}.",
+            if allow { "Allowed" } else { "Denied" },
+            ui::clean(&app)
+        ),
+    );
     ui::row("Request", request_id);
     if allow && let Some(access) = request.as_ref().and_then(|item| item["access"].as_str()) {
         ui::row("Access", access);
@@ -1129,7 +1487,7 @@ pub fn web_enroll(home: &Path, host: Option<&str>, public: bool) -> Outcome {
             Reason::InvalidValue,
             format!(
                 "Can't use --host {}. Use https://HOST, or http://localhost:PORT on this Mac.",
-                ui::clean(&host)
+                ui::clean_input(&host)
             ),
         ));
     }
@@ -1150,20 +1508,51 @@ pub fn web_enroll(home: &Path, host: Option<&str>, public: bool) -> Outcome {
     Ok(())
 }
 
-pub fn sessions_list(home: &Path) -> Outcome {
-    let sessions = match existing(home)? {
-        Some(authority) => authority.device_sessions()?,
-        None => Vec::new(),
-    };
+pub fn sessions_list(home: &Path, args: &ListArgs) -> Outcome {
+    let paging = page("web sessions", args, home)?;
+    let mut sessions = set_up(home)?.device_sessions()?;
+    sessions.sort_by(|a, b| {
+        a.created_at
+            .cmp(&b.created_at)
+            .then_with(|| a.device_id.cmp(&b.device_id))
+    });
     let modes = Modes::get();
-    if modes.json || modes.legacy_json() {
-        if !modes.json {
+    let legacy = modes.legacy_json() || modes.json && modes::legacy_spelling();
+    if legacy && !paging.bounded {
+        if modes.json {
+            ui::json_document(serde_json::to_value(&sessions)?);
+        } else {
             legacy_notice("bridge web sessions list");
+            ui::exact_json(&serde_json::to_value(&sessions)?);
         }
-        ui::exact_json(&serde_json::to_value(&sessions)?);
         return Ok(());
     }
-    if sessions.is_empty() {
+    let sliced = slice(sessions, |session| session.device_id.clone(), &paging, home)?;
+    if legacy {
+        ui::json_document(serde_json::to_value(&sliced.items)?);
+        return Ok(());
+    }
+    if modes.json {
+        let shown: Vec<Value> = sliced
+            .items
+            .iter()
+            .map(|session| {
+                json!({
+                    "device_id": session.device_id,
+                    "kind": session.kind,
+                    "created_at": session.created_at,
+                    "last_seen": session.last_seen,
+                    "expires_at": session.expires_at,
+                })
+            })
+            .collect();
+        ui::json_keyed(
+            "sessions",
+            json!({"sessions": shown, "next_cursor": sliced.next}),
+        );
+        return Ok(());
+    }
+    if sliced.items.is_empty() {
         ui::note("No browsers are signed in.");
         if !modes.stdout_table() {
             ui::table(
@@ -1173,12 +1562,13 @@ pub fn sessions_list(home: &Path) -> Outcome {
         }
         return Ok(());
     }
-    let rows: Vec<Vec<String>> = sessions
+    let rows: Vec<Vec<String>> = sliced
+        .items
         .iter()
         .map(|session| {
             let when = |value: &str| {
                 if modes.stdout_table() {
-                    ui::age(value)
+                    ui::age_short(value)
                 } else {
                     value.to_owned()
                 }
@@ -1188,7 +1578,11 @@ pub fn sessions_list(home: &Path) -> Outcome {
                 session.kind.clone(),
                 when(&session.created_at),
                 when(&session.last_seen),
-                session.expires_at.clone(),
+                if modes.stdout_table() {
+                    ui::local_time(&session.expires_at)
+                } else {
+                    session.expires_at.clone()
+                },
             ]
         })
         .collect();
@@ -1196,6 +1590,7 @@ pub fn sessions_list(home: &Path) -> Outcome {
         &["Device", "Kind", "Signed in", "Last seen", "Expires"],
         &rows,
     );
+    more_note(&sliced, &["bridge", "web", "sessions", "list"]);
     Ok(())
 }
 
@@ -1239,7 +1634,11 @@ pub fn sessions_revoke(home: &Path) -> Outcome {
             "next": [Step::new("Check it", ["bridge", "web", "sessions", "list", "--json"]).to_json()],
         }));
     } else {
-        ui::done("Signed out", &format!("{count} {plural}"));
+        ui::receipt(
+            "Signed out",
+            &format!("{count} {plural}"),
+            &format!("Signed out {count} {plural}."),
+        );
     }
     Ok(())
 }
@@ -1249,7 +1648,11 @@ fn already_signed_out() -> Outcome {
     if Modes::get().json {
         ui::json_document(json!({"revoked": 0, "outcome": "unchanged"}));
     } else {
-        ui::done("Already signed out", "No browser sessions were open.");
+        ui::receipt(
+            "Already signed out",
+            "No browser sessions were open.",
+            "No browsers are signed in.",
+        );
     }
     Ok(())
 }

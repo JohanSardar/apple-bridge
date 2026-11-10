@@ -54,7 +54,7 @@ Operations that change data, such as `messages.send`, `reminders.create` and `ca
 
 ## When something fails
 
-- `unauthorized` or `forbidden`: this agent's access does not cover it. The owner can change it with `bridge agents update <id> --scope` or by reconnecting.
+- `unauthorized` or `forbidden`: this agent's access does not cover it. The owner can change it with `bridge agents update <id> --scope <ACCESS>` or by reconnecting.
 - `unavailable`: the source is not ready. Check `sources.status`, and suggest `bridge permissions guide` if a permission is missing.
 - A connection failure: the gateway may be off. The owner can run `bridge up`.
 
