@@ -335,7 +335,12 @@ fn a_too_long_home_is_refused_before_anything_starts() -> Check {
     assert_eq!(output.status.code(), Some(2));
     let error = text(&output.stderr);
     assert!(error.contains("Its socket path is"), "{error}");
-    assert!(error.contains("macOS allows 103."), "{error}");
+    let limit = if cfg!(target_os = "macos") {
+        "macOS allows 103."
+    } else {
+        "this system allows 107."
+    };
+    assert!(error.contains(limit), "{error}");
     assert!(!error.contains("SUN_LEN"), "{error}");
     assert!(!home.exists());
     Ok(())
