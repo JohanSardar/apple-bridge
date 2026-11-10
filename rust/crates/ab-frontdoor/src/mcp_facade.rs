@@ -73,6 +73,8 @@ const TOOL_SCOPES: &[(&str, &str)] = &[
     ("calendar_add", "calendar:write"),
     ("contacts_find", "contacts:read"),
     ("notes_create", "notes:write"),
+    ("screen_time", "usage:read"),
+    ("photos_find", "photos:read"),
 ];
 
 pub(crate) async fn call(
@@ -115,6 +117,8 @@ pub(crate) async fn call(
         "calendar_add" => call.calendar_add(&input).await,
         "contacts_find" => call.contacts_find(&input).await,
         "notes_create" => call.notes_create(&input).await,
+        "screen_time" => call.screen_time(&input).await,
+        "photos_find" => call.photos_find(&input).await,
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
     };
     result.unwrap_or_else(|problem| Outcome::fail(&problem))
@@ -168,6 +172,12 @@ pub(crate) fn request_id(input: &Map<String, Value>) -> Step<String> {
             .expected(json!("1 to 120 letters, digits or . _ : -"))
             .example(json!("groceries-2026-11-12"))),
     }
+}
+
+pub(crate) fn scoped_id(principal: &str, request_id: &str) -> String {
+    let digest = ab_trust::fingerprint(format!("{principal}\n{request_id}").as_bytes());
+    let readable: String = request_id.chars().take(100).collect();
+    format!("{readable}.{}", &digest[..16])
 }
 
 pub(crate) fn source_of(collection: &str) -> &str {
@@ -254,6 +264,24 @@ impl Call<'_> {
                 })
             }
         }
+    }
+
+    pub(crate) async fn command_id(&self, request_id: &str) -> String {
+        let scoped = scoped_id(&self.principal.id, request_id);
+        let Ok(status) = self.operation("commands.status") else {
+            return scoped;
+        };
+        for legacy in [request_id.to_owned(), format!("qry_{request_id}")] {
+            if mcp_registry::valid_id(&legacy)
+                && self
+                    .invoke(status, &json!({"command_id": legacy}))
+                    .await
+                    .is_ok()
+            {
+                return request_id.to_owned();
+            }
+        }
+        scoped
     }
 
     pub(crate) async fn quiet(&self, name: &str, input: Value) -> Option<Value> {
@@ -527,7 +555,7 @@ impl Call<'_> {
     }
 
     #[allow(clippy::too_many_lines)]
-    async fn read_one(&self, input: &Map<String, Value>) -> Step<Outcome> {
+    pub(crate) async fn read_one(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let name = text(input, "operation").ok_or_else(|| {
             Problem::new("invalid", "operation is required")
                 .field("operation")
@@ -550,9 +578,16 @@ impl Call<'_> {
             mcp_check::infer_collection(operation, arguments);
             mcp_check::local_dates(operation, arguments);
         }
-        let arguments = mcp_check::arguments(operation, given.as_ref())?;
+        let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
         if !operation.scope.is_empty() {
             self.require(&operation.scope, &operation.name)?;
+        }
+        if operation.name == "reminders.items"
+            && let Some(list) = text(&arguments, "list").filter(|l| !l.starts_with("lst_"))
+        {
+            let list = list.to_owned();
+            let (id, _) = self.reminder_list(Some(&list)).await?;
+            arguments.insert("list".into(), json!(id));
         }
         if matches!(
             operation.name.as_str(),
@@ -627,7 +662,7 @@ impl Call<'_> {
         let body = if operation.kind == OperationKind::Query {
             let mut body = json!({"args": arguments});
             if input.get("request_id").is_some_and(|id| !id.is_null()) {
-                let id = request_id(input)?;
+                let id = self.command_id(&request_id(input)?).await;
                 body["id"] = json!(if id.starts_with("qry_") {
                     id
                 } else {
@@ -652,7 +687,18 @@ impl Call<'_> {
         let value: Value =
             serde_json::from_str(&raw).map_err(|_| Problem::new("corrupt", "unreadable result"))?;
         let value = if operation.kind == OperationKind::Query {
-            query_result(&value, verbose, fields.as_deref())
+            let mut out = query_result(&value, verbose, fields.as_deref());
+            if out["status"] == "awaiting_approval"
+                && let Some(Value::String(external)) = input.get("request_id")
+            {
+                out["query_id"] = json!(external);
+                out["next"] = json!(format!(
+                    "The owner set this agent to ask first. Tell them; after they approve, repeat this exact call with request_id {external} within ten minutes."
+                ));
+            }
+            out
+        } else if operation.name == "reminders.lists" && !verbose {
+            reminder_lists(&value)
         } else {
             compact(&value, verbose, fields.as_deref())
         };
@@ -751,8 +797,9 @@ impl Call<'_> {
         let Ok(status) = self.operation("commands.status") else {
             return;
         };
+        let command_id = self.command_id(request_id).await;
         let Ok(record) = self
-            .invoke(status, &json!({"command_id": request_id}))
+            .invoke(status, &json!({"command_id": command_id}))
             .await
         else {
             return;
@@ -781,6 +828,9 @@ impl Call<'_> {
         if operation.name == BLOB_STAGE {
             return self.blob_stage(operation, &arguments).await;
         }
+        let external = id;
+        let internal = self.command_id(id).await;
+        let id = internal.as_str();
         if operation.photos_write() {
             let query_id = if id.starts_with("qry_") {
                 id.to_owned()
@@ -792,7 +842,7 @@ impl Call<'_> {
                 .await?;
             return Ok(Outcome::ok(photos_change(
                 &operation.name,
-                id,
+                external,
                 &arguments,
                 &value,
                 verbose,
@@ -806,6 +856,7 @@ impl Call<'_> {
         }
         let record = self.invoke(operation, &envelope).await?;
         let mut value = change_result(&record, verbose);
+        value["request_id"] = json!(external);
         self.attach_record(&mut value, operation).await;
         Ok(Outcome::ok(value).named(&operation.name))
     }
@@ -855,15 +906,26 @@ impl Call<'_> {
                 .expected(json!("the request_id an earlier change returned"))
         })?;
         let operation = self.operation("commands.status")?;
-        let mut record = self.invoke(operation, &json!({"command_id": id})).await;
-        if record
-            .as_ref()
-            .is_err_and(|problem| problem.code == "not_found")
-            && !id.starts_with("qry_")
-        {
+        let scoped = scoped_id(&self.principal.id, id);
+        let mut record = Err(Problem::new("not_found", "no such change"));
+        for candidate in [
+            scoped.clone(),
+            format!("qry_{scoped}"),
+            id.to_owned(),
+            format!("qry_{id}"),
+        ] {
+            if candidate.starts_with("qry_qry_") || !mcp_registry::valid_id(&candidate) {
+                continue;
+            }
             record = self
-                .invoke(operation, &json!({"command_id": format!("qry_{id}")}))
+                .invoke(operation, &json!({"command_id": candidate}))
                 .await;
+            if !record
+                .as_ref()
+                .is_err_and(|problem| problem.code == "not_found")
+            {
+                break;
+            }
         }
         let record = record.map_err(|problem| {
             if problem.code == "not_found" {
@@ -887,6 +949,7 @@ impl Call<'_> {
             return Ok(Outcome::ok(photos_status(&op, id, &record, verbose)).named(&op));
         }
         let mut value = change_result(&record, verbose);
+        value["request_id"] = json!(id);
         if let Some(op) = self.registry.find(&op) {
             self.attach_record(&mut value, op).await;
         }
@@ -962,16 +1025,8 @@ impl Call<'_> {
         self.run_change(operation, arguments, &id, false).await
     }
 
-    async fn reminders_add(&self, input: &Map<String, Value>) -> Step<Outcome> {
-        let operation = self.operation("reminders.create")?;
-        let title = content(input, "title", &operation.name)?.ok_or_else(|| {
-            Problem::new("invalid", "title is required")
-                .operation(&operation.name)
-                .field("title")
-        })?;
-        let id = request_id(input)?;
-        let list = text(input, "list");
-        let (list_id, list_name) = match list {
+    pub(crate) async fn reminder_list(&self, list: Option<&str>) -> Step<(String, Option<String>)> {
+        Ok(match list {
             Some(list) if list.starts_with("lst_") => (list.to_owned(), None),
             _ => {
                 if list.is_some() {
@@ -1000,7 +1055,18 @@ impl Call<'_> {
                     .collect();
                 pick("list", list, &entries, "reminder list")?
             }
-        };
+        })
+    }
+
+    async fn reminders_add(&self, input: &Map<String, Value>) -> Step<Outcome> {
+        let operation = self.operation("reminders.create")?;
+        let title = content(input, "title", &operation.name)?.ok_or_else(|| {
+            Problem::new("invalid", "title is required")
+                .operation(&operation.name)
+                .field("title")
+        })?;
+        let id = request_id(input)?;
+        let (list_id, list_name) = self.reminder_list(text(input, "list")).await?;
         let mut arguments = Map::new();
         arguments.insert("list_id".into(), json!(list_id));
         arguments.insert("title".into(), json!(title));
@@ -1750,6 +1816,54 @@ fn photos_status(name: &str, request_id: &str, record: &Value, verbose: bool) ->
         value["details"] = record.clone();
     }
     value
+}
+
+pub(crate) fn reminder_lists(value: &Value) -> Value {
+    let lists: Vec<Value> = value["lists"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|entry| {
+            let record = &entry["list"];
+            let mut list = json!({
+                "id": record["id"],
+                "version": record["version"],
+                "title": record["data"]["title"],
+                "count": entry["count"],
+            });
+            if record["data"]["is_group"] == true {
+                list["group"] = json!(true);
+            } else if entry["status"] == "unsupported" {
+                list["custom_smart_list"] = json!(true);
+            }
+            if entry["group_id"].is_string() {
+                list["in_group"] = entry["group_id"].clone();
+            }
+            if let Some(fields) = list.as_object_mut() {
+                fields.retain(|_, v| !v.is_null());
+            }
+            list
+        })
+        .collect();
+    let smart: Map<String, Value> = value["smart"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|s| Some((s["id"].as_str()?.to_owned(), s.get("count")?.clone())))
+        .collect();
+    let mut out = json!({
+        "count": lists
+            .iter()
+            .filter(|l| l.get("group").is_none() && l.get("custom_smart_list").is_none())
+            .count(),
+        "lists": lists,
+        "smart_counts": smart,
+        "next": "Read a list with reminders.items and list set to its title, or smart set to today.",
+    });
+    if let Some(tags) = value["tags"].as_array().filter(|t| !t.is_empty()) {
+        out["tags"] = json!(tags);
+    }
+    out
 }
 
 fn query_result(value: &Value, verbose: bool, fields: Option<&[String]>) -> Value {

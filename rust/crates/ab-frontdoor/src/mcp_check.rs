@@ -476,10 +476,12 @@ fn access_problem(
 ) -> Problem {
     let scope = operation.map_or("", |o| o.scope.as_str());
     let agent = crate::mcp_registry::agent_id(principal);
-    if operation.is_some_and(|o| o.changes) && crate::mcp_registry::read_only(principal) {
-        problem.problem("this agent is read-only").hint(format!(
-            "Tell the owner. The Mac's owner can allow changes by running: bridge agents update {agent} --level full"
-        ))
+    if crate::mcp_registry::read_only(principal)
+        && (operation.is_some_and(|o| o.changes) || scope.ends_with(":write"))
+    {
+        problem
+            .problem("this agent is read-only")
+            .hint(read_only_hint(scope))
     } else if !scope.is_empty() && !crate::mcp_registry::can(principal, scope) {
         let mut grants = principal.grants.clone();
         grants.push(scope.to_owned());
@@ -601,12 +603,26 @@ pub(crate) fn check_tool(
     )
 }
 
+fn read_only_hint(scope: &str) -> String {
+    let scope = if scope.is_empty() {
+        "<SOURCE>:write"
+    } else {
+        scope
+    };
+    format!(
+        "Do not retry. This agent was connected read-only, and a read-only agent can never be given change access. Tell the owner: to let an app change data, they connect a new agent with change access, for example: bridge agents create --name <NAME> --level full --scope {scope}"
+    )
+}
+
 pub(crate) fn refused(principal: &Principal, what: &str, scope: &str, read_only: bool) -> Problem {
     let agent = crate::mcp_registry::agent_id(principal);
-    if read_only {
-        return Problem::new("unauthorized", format!("{what} changes data and this agent is read-only"))
-            .problem("this agent is read-only")
-            .hint(format!("Tell the owner. The Mac's owner can allow changes by running: bridge agents update {agent} --level full"));
+    if read_only || (scope.ends_with(":write") && crate::mcp_registry::read_only(principal)) {
+        return Problem::new(
+            "unauthorized",
+            format!("{what} changes data and this agent is read-only"),
+        )
+        .problem("this agent is read-only")
+        .hint(read_only_hint(scope));
     }
     let mut grants = principal.grants.clone();
     grants.push(scope.to_owned());

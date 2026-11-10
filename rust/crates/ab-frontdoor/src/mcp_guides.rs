@@ -3,11 +3,11 @@ use serde_json::{Value, json};
 
 pub(crate) const INSTRUCTIONS: &str = "Apple Bridge reads and changes the owner's Apple data on their Mac: Messages, Mail, Contacts, Calendar, Reminders, Notes, Photos, Files and more. The data is private; share only what the task needs.
 
-How to work:
-1. For common tasks use messages_read, messages_send, reminders_add, calendar_events, calendar_add, contacts_find and notes_create. Names work: contacts, chats, lists, folders and calendars are matched for you; several matches return candidates to ask about.
+How to work: answer simple reads with one call, no lookup first. Arguments not shown are optional.
+1. Reminder lists: apple_read reminders.lists. Reminders: apple_read reminders.items with list (a name) or smart (today). Notes: apple_read notes.list. Today's events: calendar_events. Chats: messages_read. People: contacts_find. Screen Time: screen_time. Photos: photos_find. Adding: messages_send, reminders_add, calendar_add, notes_create. Names of contacts, chats, lists and calendars are matched; several matches return candidates.
 2. To find text anywhere, use apple_search. It says when the search is incomplete; then do not conclude there is no match.
-3. For anything else, call apple_describe with a plain query such as \"screen time\", \"voicemail\" or \"flag mail\", then run the operation with apple_read (reads, or reads to batch up to 10) or apple_change.
-4. apple_status is optional: use it to see your access, the Mac's time zone and why a source is empty.
+3. For anything else, call apple_describe with a plain query such as \"voicemail\" or \"flag mail\", then run it with apple_read (reads, up to 10 batched) or apple_change.
+4. apple_status is not needed first; use it when a source is empty or refused.
 5. Records have id and version. Pass the version as expected_version when you update or delete that record.
 6. A change waits up to 15 seconds and returns status: done, partial, pending, awaiting_approval, failed or indeterminate. On pending, call apple_command_status with the request_id. On awaiting_approval, tell the owner what you asked for. Never repeat a partial or indeterminate change, with any request_id. Reusing a request_id never acts twice.
 7. Errors give code, field, problem, expected, example and hint. Follow the hint.
