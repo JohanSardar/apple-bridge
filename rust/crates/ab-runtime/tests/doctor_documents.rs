@@ -34,7 +34,7 @@ fn doctor(home: &std::path::Path) -> Result<serde_json::Value, Box<dyn std::erro
         .output()?;
     let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(output.status.success(), report["ok"] == true);
-    assert!(output.stderr.is_empty());
+    assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(report)
 }
 

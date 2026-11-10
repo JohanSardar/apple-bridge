@@ -62,12 +62,11 @@ fn pty(arguments: &[&str], home: &Path, input: &[u8]) -> Result<Output, std::io:
     let mut command = Command::new("python3");
     command
         .args(["-c", script])
-        .arg(
-            input
-                .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect::<String>(),
-        )
+        .arg(input.iter().fold(String::new(), |mut hex, byte| {
+            use std::fmt::Write as _;
+            let _ = write!(hex, "{byte:02x}");
+            hex
+        }))
         .arg(env!("CARGO_BIN_EXE_bridge"))
         .args(arguments)
         .arg("--home")
@@ -189,7 +188,7 @@ fn usage_errors_exit_two_with_one_suggestion_and_one_json_line() -> Check {
     }
     let output = run(home.path(), &["read", "notes", "--limit", "0", "--json"])?;
     assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.stdout, [] as [u8; 0]);
     let error = error_document(&output)?;
     assert_eq!(error["status"], "error");
     assert_eq!(error["reason"], "invalid_value");
@@ -281,7 +280,7 @@ fn nothing_after_the_separator_is_rewritten_and_old_spellings_warn() -> Check {
         enrolled["warnings"][0]["message"],
         "--public=false is deprecated. Use no --public."
     );
-    assert!(output.stderr.is_empty());
+    assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(())
 }
 
@@ -398,7 +397,7 @@ fn backup_never_replaces_a_file_without_force() -> Check {
         &["backup", destination.to_str().ok_or("path")?],
     )?;
     assert_eq!(output.status.code(), Some(1));
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.stdout, [] as [u8; 0]);
     assert!(text(&output.stderr).contains("--force"));
     assert_eq!(std::fs::read(&destination)?, b"keep me");
     let output = run(
@@ -582,7 +581,7 @@ fn piped_reads_keep_json_for_one_release_with_a_notice() -> Check {
         "{}",
         text(&output.stdout)
     );
-    assert!(output.stderr.is_empty());
+    assert_eq!(output.stderr, [] as [u8; 0]);
     let output = bridge()
         .env("APPLE_BRIDGE_LEGACY_JSON", "0")
         .args(["agents", "create", "--name", "two", "--home"])
@@ -742,7 +741,7 @@ fn signals_stop_waiting_with_their_codes() -> Check {
             .status()?;
         let output = child.wait_with_output()?;
         assert_eq!(output.status.code(), Some(code), "{signal}");
-        assert!(output.stdout.is_empty());
+        assert_eq!(output.stdout, [] as [u8; 0]);
     }
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success());
@@ -844,7 +843,7 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
     let stopped = stop()?;
     outcome?;
     assert!(stopped.status.success());
-    assert!(stopped.stdout.is_empty());
+    assert_eq!(stopped.stdout, [] as [u8; 0]);
     assert!(text(&stopped.stderr).contains("stopped"));
     Ok(())
 }

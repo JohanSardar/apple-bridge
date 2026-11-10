@@ -324,7 +324,7 @@ fn up_reports_a_busy_port_and_leaves_it_alone() -> Check {
     let output = run(home.path(), &["up", "--api-addr", &address])?;
     assert_eq!(output.status.code(), Some(1));
     assert!(text(&output.stderr).contains("already in use"));
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.stdout, [] as [u8; 0]);
     Ok(())
 }
 
@@ -391,7 +391,7 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     );
     assert!(!calls.contains("mcp login"));
     assert!(text(&claude.stderr).contains("claude mcp login apple-bridge"));
-    assert!(claude.stdout.is_empty());
+    assert_eq!(claude.stdout, [] as [u8; 0]);
 
     let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
     assert!(project.status.success());
@@ -654,7 +654,7 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     }
     let human = run(home.path(), &["read", "contacts"])?;
     assert!(human.status.success());
-    assert!(human.stdout.is_empty());
+    assert_eq!(human.stdout, [] as [u8; 0]);
     assert!(text(&human.stderr).contains("No contacts. Contacts synced and has none."));
     let never = run(home.path(), &["read", "notes"])?;
     assert_eq!(never.status.code(), Some(1));
@@ -858,7 +858,7 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
 
     let no_terminal = run(&home, &["permissions", "guide", "--fixture", &fixture_arg])?;
     assert_eq!(no_terminal.status.code(), Some(2));
-    assert!(no_terminal.stdout.is_empty());
+    assert_eq!(no_terminal.stdout, [] as [u8; 0]);
     assert!(
         text(&no_terminal.stderr).contains("Can't walk through permissions without a terminal.")
     );
