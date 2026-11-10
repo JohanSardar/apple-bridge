@@ -545,7 +545,9 @@ impl Call<'_> {
                 continue;
             }
             if !can(self.principal, &format!("{source}:read")) {
-                if explicit(collection) && !hidden.iter().any(|h| h == source) {
+                if (explicit(collection) || can(self.principal, &format!("{source}:write")))
+                    && !hidden.iter().any(|h| h == source)
+                {
                     hidden.push(source.to_owned());
                 }
                 continue;
@@ -910,15 +912,35 @@ impl Call<'_> {
             return Ok(false);
         };
         let command = &record["command"];
-        if command["op"] != operation.name.as_str() {
-            return Err(Problem::new("id_reused", "this request_id was already used for a different request")
+        let reused = || {
+            Problem::new("id_reused", "this request_id was already used for a different request")
                 .operation(&operation.name)
                 .field("request_id")
-                .hint("Use a new request_id for a new change. Reuse a request_id only to repeat exactly the same call."));
+                .hint("Use a new request_id for a new change. Reuse a request_id only to repeat exactly the same call.")
+        };
+        if command["op"] != operation.name.as_str() {
+            return Err(reused());
         }
         let Some(id) = command["args"]["id"].as_str() else {
             return Ok(false);
         };
+        self.require("reminders:read", "finding a reminder by its title")
+            .map_err(|problem| problem.field("reminder").hint("Pass the reminder's id with expected_version instead, or ask the owner to grant reminders:read."))?;
+        let wanted = arguments
+            .get("reminder")
+            .and_then(Value::as_str)
+            .map(|title| fold(title.trim()))
+            .unwrap_or_default();
+        let stored = self
+            .quiet(
+                "records.get",
+                json!({"collection": "reminders.reminder", "id": id, "include_deleted": true}),
+            )
+            .await
+            .and_then(|found| found["records"][0]["data"]["title"].as_str().map(fold));
+        if wanted.is_empty() || !stored.is_some_and(|title| title.contains(&wanted)) {
+            return Err(reused());
+        }
         arguments.remove("reminder");
         arguments.insert("id".into(), json!(id));
         arguments.insert(

@@ -196,6 +196,18 @@ impl Call<'_> {
         Err(mcp_check::refused(self.principal, what, scope, false))
     }
 
+    fn write_only_source(&self) -> Option<String> {
+        if can(self.principal, "admin") {
+            return None;
+        }
+        self.principal
+            .grants
+            .iter()
+            .filter_map(|grant| grant.strip_suffix(":write"))
+            .find(|source| !can(self.principal, &format!("{source}:read")))
+            .map(str::to_owned)
+    }
+
     pub(crate) fn operation(&self, name: &str) -> Step<&AgentOperation> {
         self.registry.find(name).ok_or_else(|| {
             let close = self.registry.closest(name, Some(self.principal));
@@ -558,6 +570,23 @@ impl Call<'_> {
                 false,
             ));
         }
+        if matches!(
+            operation.name.as_str(),
+            "records.query" | "records.get" | "search"
+        ) && arguments
+            .get("collection")
+            .and_then(Value::as_str)
+            .is_none_or(str::is_empty)
+            && let Some(source) = self.write_only_source()
+        {
+            return Err(mcp_check::refused(
+                self.principal,
+                &format!("{} across every collection", operation.name),
+                &format!("{source}:read"),
+                false,
+            )
+            .field("collection"));
+        }
         let verbose = flag(input, "verbose");
         let fields: Option<Vec<String>> = input.get("fields").and_then(Value::as_array).map(|f| {
             f.iter()
@@ -749,6 +778,15 @@ impl Call<'_> {
         let Some(collection) = collection_of(id) else {
             return;
         };
+        if !can(self.principal, &format!("{}:read", source_of(&collection))) {
+            if value["status"] == "done" {
+                value["next"] = json!(format!(
+                    "Done. This agent cannot read {}, so the changed record is not shown.",
+                    source_of(&collection)
+                ));
+            }
+            return;
+        }
         if let Some(found) = self
             .quiet("records.get", json!({"collection": collection, "id": id}))
             .await
@@ -884,6 +922,10 @@ impl Call<'_> {
         let (list_id, list_name) = match list {
             Some(list) if list.starts_with("lst_") => (list.to_owned(), None),
             _ => {
+                if list.is_some() {
+                    self.require("reminders:read", "finding a reminder list by name")
+                        .map_err(|problem| problem.field("list").hint("Pass the list's lst_ ID instead, or ask the owner to grant reminders:read."))?;
+                }
                 let lists = self
                     .invoke(
                         self.operation("reminders.lists")?,
@@ -925,7 +967,7 @@ impl Call<'_> {
         }
         mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
         let mut outcome = self.run_change(operation, arguments, &id, false).await?;
-        if let Some(name) = list_name {
+        if let Some(name) = list_name.filter(|_| can(self.principal, "reminders:read")) {
             outcome.value["list"] = json!(name);
         }
         Ok(outcome)
@@ -965,6 +1007,10 @@ impl Call<'_> {
         let (folder_id, folder_name) = match folder {
             Some(folder) if folder.starts_with("fld_") => (folder.to_owned(), None),
             _ => {
+                if folder.is_some() {
+                    self.require("notes:read", "finding a notes folder by name")
+                        .map_err(|problem| problem.field("folder").hint("Pass the folder's fld_ ID instead, or ask the owner to grant notes:read."))?;
+                }
                 let notes = self
                     .invoke(
                         self.operation("notes.list")?,
@@ -1008,7 +1054,7 @@ impl Call<'_> {
         }
         mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
         let mut outcome = self.run_change(operation, arguments, &id, false).await?;
-        if let Some(name) = folder_name {
+        if let Some(name) = folder_name.filter(|_| can(self.principal, "notes:read")) {
             outcome.value["folder"] = json!(name);
         }
         Ok(outcome)

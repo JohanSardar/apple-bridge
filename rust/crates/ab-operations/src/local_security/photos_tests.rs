@@ -665,3 +665,46 @@ async fn an_uncertain_photos_write_stays_uncertain_after_it_expires() {
     );
     assert_eq!(queries_reaching_native(&f), 1);
 }
+
+#[derive(Debug)]
+struct FailingAudit;
+impl crate::QueryAuditSink for FailingAudit {
+    fn record(&self, _: &Principal, _: &str, _: &crate::QueryAudit, _: bool) -> Result<(), Error> {
+        Err(Code::Unavailable.into())
+    }
+}
+
+#[tokio::test]
+async fn a_photos_write_whose_audit_fails_is_uncertain_not_retryable() {
+    for id in ["qry_photos_once", "qry_photos_failure"] {
+        let mut f = fixture();
+        Arc::get_mut(&mut f.gateway).expect("unshared").query_audit = Some(Arc::new(FailingAudit));
+        let p = principal("agent:photos", "agent", "full", &["photos:write"]);
+        let mut request = query(
+            "photos.favorite",
+            &json!({"asset_id":"synthetic-asset","favorite":true}),
+        );
+        request.id = id.into();
+        assert_eq!(
+            f.gateway
+                .query(&p, request.clone())
+                .await
+                .expect_err("uncertain")
+                .code,
+            Code::Indeterminate,
+            "{id}"
+        );
+        assert_eq!(queries_reaching_native(&f), 1, "{id}");
+        let again = f.gateway.query(&p, request).await;
+        assert_eq!(queries_reaching_native(&f), 1, "{id}");
+        if id == "qry_photos_once" {
+            let again: Value = serde_json::from_str(again.expect("replayed").get()).expect("JSON");
+            assert_eq!(again["replayed"], true);
+        } else {
+            assert_eq!(
+                again.expect_err("still uncertain").code,
+                Code::Indeterminate
+            );
+        }
+    }
+}

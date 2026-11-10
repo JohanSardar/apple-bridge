@@ -106,12 +106,14 @@ impl LocalGateway {
                 &mut audit.stats,
             )
             .await;
-        self.finish_location(&principal, &id, &operation, result.as_deref().ok())?;
+        let finished = self.finish_location(&principal, &id, &operation, result.as_deref().ok());
         let recorded = audit.finish();
-        if super::photos::mutation(&operation) && result.is_err() {
-            recorded?;
+        if super::photos::mutation(&operation)
+            && (result.is_err() || finished.is_err() || recorded.is_err())
+        {
             return Err(Code::Indeterminate.into());
         }
+        finished?;
         match (result, recorded) {
             (Ok(_), Err(error)) => Err(error),
             (result, _) => result,

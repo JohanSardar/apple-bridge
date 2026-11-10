@@ -694,20 +694,12 @@ pub(crate) fn infer_collection(operation: &AgentOperation, arguments: &mut Map<S
     if operation.name != "records.get" || arguments.contains_key("collection") {
         return;
     }
-    let Some(prefix) = arguments
+    if let Some(collection) = arguments
         .get("id")
         .and_then(Value::as_str)
-        .and_then(|id| id.rsplit_once('_'))
-        .map(|(prefix, _)| prefix)
-    else {
-        return;
-    };
-    if let Some(collection) = ab_trust::domain::Collection::ALL
-        .iter()
-        .find(|collection| collection.prefix() == prefix)
-        .and_then(|collection| serde_json::to_value(collection).ok())
+        .and_then(crate::mcp_facade::collection_of)
     {
-        arguments.insert("collection".to_owned(), collection);
+        arguments.insert("collection".to_owned(), json!(collection));
     }
 }
 
