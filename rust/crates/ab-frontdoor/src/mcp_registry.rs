@@ -1,0 +1,233 @@
+use ab_catalog::{AgentOperation, OperationKind, VersionRule};
+use ab_operations::Principal;
+use serde_json::{Value, json};
+use std::sync::OnceLock;
+
+pub(crate) const COMPACT: &[&str] = &[
+    "apple_status",
+    "apple_describe",
+    "apple_search",
+    "apple_read",
+    "apple_change",
+    "apple_command_status",
+    "apple_guide",
+    "messages_read",
+    "messages_send",
+    "reminders_add",
+    "calendar_events",
+    "contacts_find",
+    "notes_create",
+];
+
+pub(crate) const BLOB_READ: &str = "blobs.read";
+pub(crate) const BLOB_STAGE: &str = "blobs.stage";
+
+#[derive(Debug)]
+pub(crate) struct Registry {
+    pub operations: Vec<AgentOperation>,
+    pub domains: Vec<(String, String)>,
+    tools: Vec<Value>,
+}
+
+pub(crate) fn registry() -> Option<&'static Registry> {
+    static REGISTRY: OnceLock<Option<Registry>> = OnceLock::new();
+    REGISTRY.get_or_init(load).as_ref()
+}
+
+fn load() -> Option<Registry> {
+    let descriptors = ab_catalog::operations().ok()?;
+    let mut operations = ab_catalog::agent_operations(&descriptors).ok()?;
+    operations.extend(blob_operations());
+    let domains = ab_catalog::agent_domains().ok()?;
+    let mut tools: Vec<Value> = serde_json::from_str(include_str!("mcp_tools.json")).ok()?;
+    let change = change_schema();
+    for tool in &mut tools {
+        if tool["outputSchema"]["$ref"] == "#change" {
+            tool["outputSchema"] = change.clone();
+        }
+    }
+    Some(Registry {
+        operations,
+        domains,
+        tools,
+    })
+}
+
+pub(crate) fn change_schema() -> Value {
+    json!({"type":"object","properties":{
+        "status":{"type":"string","enum":["done","pending","awaiting_approval","failed","indeterminate"]},
+        "request_id":{"type":"string"},
+        "operation":{"type":"string"},
+        "ids":{"type":"array","items":{"type":"string"}},
+        "record":{"type":"object"},
+        "verification":{"type":"string"},
+        "next":{"type":"string"}
+    }})
+}
+
+fn blob_operations() -> Vec<AgentOperation> {
+    let reference = json!({
+        "digest":{"type":"string","minLength":64,"maxLength":64,"description":"SHA-256 of the bytes, 64 lowercase hex characters, from the result that mentioned the file."},
+        "query_id":{"type":"string","description":"The qry_ ID of the read or capture that returned the file. Give this, or record_id."},
+        "record_id":{"type":"string","description":"The record the file belongs to, such as an att_ message attachment. Give this, or query_id."},
+        "offset":{"type":"integer","minimum":0,"description":"Byte offset to start from. Default 0."},
+        "length":{"type":"integer","minimum":1,"maximum":524_288,"description":"Bytes to return, up to 524288. Default 524288."}
+    });
+    vec![
+        AgentOperation {
+            name: BLOB_READ.into(),
+            domain: "blobs".into(),
+            kind: OperationKind::Read,
+            changes: false,
+            scope: String::new(),
+            summary: "Fetch the bytes of a file a result referred to, such as an attachment, capture or query output, in chunks.".into(),
+            detail: "Use the digest with the query_id or record_id that came with it. Repeat with a larger offset until done is true. Access follows the record's source or the query's owner.".into(),
+            returns: "data_base64 with the requested bytes, size of the whole file, and done when the last byte was returned.".into(),
+            arguments: json!({"type":"object","additionalProperties":false,"properties":reference,"required":["digest"]}),
+            example: json!({"digest":"4f0c0f5e8f6a1c6b2a7d6f1e3b9c0d2e4f6a8b0c1d3e5f7a9b1c3d5e7f9a1b3c","record_id":"att_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"}),
+            version: VersionRule::None,
+            unavailable: None,
+            annotations: json!({"readOnlyHint":true,"openWorldHint":false}),
+        },
+        AgentOperation {
+            name: BLOB_STAGE.into(),
+            domain: "blobs".into(),
+            kind: OperationKind::Command,
+            changes: true,
+            scope: "messages:write".into(),
+            summary: "Upload a file's bytes once and get an upload_id to attach to messages.send.".into(),
+            detail: "For files up to about 700 KB through MCP; larger files can be sent inline as files[].data in smaller messages or uploaded by the owner through POST /v1/blobs.".into(),
+            returns: "upload_id to use as files[].upload_id in messages.send.".into(),
+            arguments: json!({"type":"object","additionalProperties":false,"properties":{
+                "data_base64":{"type":"string","minLength":1,"description":"The file's bytes, base64 encoded."}
+            },"required":["data_base64"]}),
+            example: json!({"data_base64":"aGVsbG8K"}),
+            version: VersionRule::None,
+            unavailable: None,
+            annotations: json!({"readOnlyHint":false,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false}),
+        },
+    ]
+}
+
+impl Registry {
+    pub fn find(&self, name: &str) -> Option<&AgentOperation> {
+        let normal = normal_name(name);
+        self.operations
+            .iter()
+            .find(|operation| operation.name == normal || operation.name.replace('.', "_") == name)
+    }
+
+    pub fn tools(&self, principal: Option<&Principal>) -> Vec<Value> {
+        self.tools
+            .iter()
+            .filter(|tool| {
+                let name = tool["name"].as_str().unwrap_or_default();
+                let scope = tool["scope"].as_str().unwrap_or_default();
+                let writes = tool["annotations"]["readOnlyHint"] == false;
+                principal.is_none_or(|principal| {
+                    if writes && read_only(principal) {
+                        return false;
+                    }
+                    if name == "apple_change" {
+                        return self.operations.iter().any(|operation| {
+                            operation.changes
+                                && !operation.read_only()
+                                && allowed(principal, operation)
+                        });
+                    }
+                    scope.is_empty() || can(principal, scope)
+                })
+            })
+            .map(|tool| {
+                let mut tool = tool.clone();
+                if let Some(fields) = tool.as_object_mut() {
+                    fields.remove("scope");
+                }
+                tool
+            })
+            .collect()
+    }
+
+    pub fn visible<'a>(
+        &'a self,
+        principal: Option<&'a Principal>,
+    ) -> impl Iterator<Item = &'a AgentOperation> + 'a {
+        self.operations
+            .iter()
+            .filter(move |operation| principal.is_none_or(|p| allowed(p, operation)))
+    }
+
+    pub fn closest(&self, name: &str, principal: Option<&Principal>) -> Vec<String> {
+        let wanted = normal_name(name).to_lowercase();
+        let mut scored: Vec<(usize, &str)> = self
+            .visible(principal)
+            .map(|operation| (distance(&wanted, &operation.name), operation.name.as_str()))
+            .collect();
+        scored.sort_unstable();
+        scored
+            .into_iter()
+            .take_while(|(score, _)| *score <= wanted.len().max(4) / 2 + 2)
+            .take(3)
+            .map(|(_, name)| name.to_owned())
+            .collect()
+    }
+}
+
+pub(crate) fn normal_name(name: &str) -> String {
+    let trimmed = name.trim();
+    if trimmed.contains('.') {
+        return trimmed.to_owned();
+    }
+    let Some(registry) = registry() else {
+        return trimmed.to_owned();
+    };
+    registry
+        .operations
+        .iter()
+        .find(|operation| operation.name.replace('.', "_") == trimmed)
+        .map_or_else(|| trimmed.to_owned(), |operation| operation.name.clone())
+}
+
+pub(crate) fn can(principal: &Principal, scope: &str) -> bool {
+    scope.is_empty()
+        || principal
+            .grants
+            .iter()
+            .any(|grant| grant == "admin" || grant == scope)
+}
+
+pub(crate) fn read_only(principal: &Principal) -> bool {
+    principal.level == "read" && matches!(principal.kind.as_str(), "agent" | "delegated")
+}
+
+pub(crate) fn allowed(principal: &Principal, operation: &AgentOperation) -> bool {
+    if !can(principal, &operation.scope) {
+        return false;
+    }
+    !(operation.changes && read_only(principal))
+}
+
+pub(crate) fn agent_id(principal: &Principal) -> &str {
+    principal
+        .id
+        .split_once('/')
+        .map_or(principal.id.as_str(), |(_, local)| local)
+}
+
+fn distance(a: &str, b: &str) -> usize {
+    let b: Vec<char> = b.chars().collect();
+    let mut previous: Vec<usize> = (0..=b.len()).collect();
+    for (i, left) in a.chars().enumerate() {
+        let mut current = vec![i + 1];
+        for (j, right) in b.iter().enumerate() {
+            let cost = usize::from(left != *right);
+            current.push(
+                (previous[j] + cost)
+                    .min(previous[j + 1] + 1)
+                    .min(current[j] + 1),
+            );
+        }
+        previous = current;
+    }
+    previous[b.len()]
+}

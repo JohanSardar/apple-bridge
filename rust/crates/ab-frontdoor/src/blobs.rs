@@ -13,20 +13,29 @@ pub(super) async fn blob(
     let Some(record) = query.get("record") else {
         return problem(Code::Unauthorized.into());
     };
-    let current = match frontdoor.service.identity.current(&principal) {
-        Ok(p) => p,
-        Err(e) => return problem(e),
-    };
-    let result = if record.starts_with("qry_") {
+    match blob_bytes(&frontdoor, &principal, record, &digest).await {
+        Ok(bytes) => blob_response(bytes, &headers),
+        Err(e) => problem(e),
+    }
+}
+
+pub(crate) async fn blob_bytes(
+    frontdoor: &Frontdoor,
+    principal: &Principal,
+    record: &str,
+    digest: &str,
+) -> Result<Vec<u8>, ab_operations::Error> {
+    let current = frontdoor.service.identity.current(principal)?;
+    if record.starts_with("qry_") {
         match &frontdoor.service.target {
             ab_operations::CommandTarget::Remote(target) => {
-                target.query_blob(&current, record, &digest).await
+                target.query_blob(&current, record, digest).await
             }
             ab_operations::CommandTarget::Local(_) => {
                 frontdoor
                     .service
                     .store
-                    .cached_query_blob(&current, record, &digest)
+                    .cached_query_blob(&current, record, digest)
                     .await
             }
         }
@@ -34,12 +43,8 @@ pub(super) async fn blob(
         frontdoor
             .service
             .store
-            .blob(&current.visibility(), record, &digest)
+            .blob(&current.visibility(), record, digest)
             .await
-    };
-    match result {
-        Ok(bytes) => blob_response(bytes, &headers),
-        Err(e) => problem(e),
     }
 }
 

@@ -1,8 +1,12 @@
 #![forbid(unsafe_code)]
+mod agent;
 mod descriptors;
 mod photos;
 mod reference;
 use ab_domain::Source;
+pub use agent::{
+    AgentOperation, VersionRule, agent_domains, agent_operations, domain_of, undescribed,
+};
 pub use reference::operations_reference_markdown;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
