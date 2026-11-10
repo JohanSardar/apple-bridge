@@ -21,22 +21,39 @@ use std::{
 
 const REMOTE_WAIT: Duration = Duration::from_secs(600);
 
-pub fn duration(option: &str, text: &str) -> Outcome<Duration> {
+pub fn duration_or_zero(option: &str, text: &str) -> Outcome<Duration> {
     let invalid = || {
         Failure::new(
             Reason::InvalidValue,
             format!(
-                "Can't use {option} {}. Durations look like 30s, 5m or 2h.",
+                "Can't use {option} {}. Durations look like 30s, 5m, 2h or 7d.",
                 ui::clean(text)
             ),
         )
     };
-    let parsed = if let Ok(seconds) = text.parse::<u64>() {
-        Duration::from_secs(seconds)
-    } else {
-        let nanos = crate::duration::parse(text).map_err(|_| invalid())?;
-        Duration::from_nanos(u64::try_from(nanos).map_err(|_| invalid())?)
-    };
+    let trimmed = text.trim();
+    if let Ok(seconds) = trimmed.parse::<u64>() {
+        return Ok(Duration::from_secs(seconds));
+    }
+    for (suffix, hours) in [("d", 24_u64), ("w", 168)] {
+        if let Some(count) = trimmed.strip_suffix(suffix)
+            && let Ok(count) = count.parse::<u64>()
+        {
+            return count
+                .checked_mul(hours * 3600)
+                .filter(|seconds| *seconds <= 100 * 365 * 86_400)
+                .map(Duration::from_secs)
+                .ok_or_else(invalid);
+        }
+    }
+    let nanos = crate::duration::parse(trimmed).map_err(|_| invalid())?;
+    Ok(Duration::from_nanos(
+        u64::try_from(nanos).map_err(|_| invalid())?,
+    ))
+}
+
+pub fn duration(option: &str, text: &str) -> Outcome<Duration> {
+    let parsed = duration_or_zero(option, text)?;
     if parsed.is_zero() {
         return Err(Failure::new(
             Reason::InvalidValue,
@@ -55,8 +72,10 @@ pub fn friendly(duration: Duration) -> String {
         format!("{seconds}s")
     } else if seconds < 5400 {
         format!("{}m", seconds.div_ceil(60))
-    } else {
+    } else if seconds < 2 * 86_400 {
         format!("{}h", seconds / 3600)
+    } else {
+        format!("{}d", seconds / 86_400)
     }
 }
 
@@ -213,6 +232,50 @@ pub fn selftest(args: &SelftestArgs) -> Outcome {
     Ok(())
 }
 
+pub fn replica_start(home: &Path) -> Option<Step> {
+    let config_replica = load_config(home)
+        .ok()
+        .flatten()
+        .is_some_and(|config| config.role == "replica");
+    let enrollment = home
+        .join("credentials.json")
+        .is_file()
+        .then(|| access::open(home).ok())
+        .flatten()
+        .and_then(|authority| authority.enrollment().ok().flatten());
+    if !config_replica && enrollment.is_none() {
+        return None;
+    }
+    let mut argv = vec![
+        "bridge".to_owned(),
+        "start".to_owned(),
+        "--role".to_owned(),
+        "replica".to_owned(),
+    ];
+    if let Some(dial) = enrollment
+        .as_ref()
+        .map(|enrollment| enrollment.dial.clone())
+        .filter(|dial| !dial.is_empty())
+    {
+        argv.extend(["--listen".to_owned(), dial]);
+    }
+    Some(Step::new("Start the replica", argv))
+}
+
+pub fn not_set_up(home: &Path) -> Failure {
+    match replica_start(home) {
+        Some(step) => Failure::new(
+            Reason::NotSetUp,
+            format!(
+                "The replica in {} hasn't started yet, so it has no data.",
+                home.display()
+            ),
+        )
+        .step(step),
+        None => Failure::not_set_up(home),
+    }
+}
+
 fn inspection_failure(home: &Path, error: &Error) -> Failure {
     if home.join("state.db").exists() {
         Failure::new(
@@ -222,13 +285,23 @@ fn inspection_failure(home: &Path, error: &Error) -> Failure {
         .row("Detail", ui::clean(&error.to_string()))
         .then("Check it", ["bridge", "doctor"])
     } else {
-        Failure::not_set_up(home)
+        not_set_up(home)
     }
 }
 
 pub fn status(home: &Path) -> Outcome {
     let config = load_config(home)?;
     if config.is_none() {
+        if let Some(step) = replica_start(home) {
+            return Err(Failure::new(
+                Reason::NotSetUp,
+                format!(
+                    "Can't show status. The replica in {} hasn't started yet.",
+                    home.display()
+                ),
+            )
+            .step(step));
+        }
         if home.join("state.db").exists() {
             return Err(Failure::new(
                 Reason::NotSetUp,
@@ -240,7 +313,7 @@ pub fn status(home: &Path) -> Outcome {
             .sentence("This happens after restoring into a new home.")
             .then("Start it to write its settings", ["bridge", "up"]));
         }
-        return Err(Failure::not_set_up(home));
+        return Err(not_set_up(home));
     }
     let report =
         crate::inspection::status(home).map_err(|error| inspection_failure(home, &error))?;
@@ -257,35 +330,58 @@ pub fn status(home: &Path) -> Outcome {
         return Ok(());
     }
     let cursor = &report["cursor"];
-    let rows = [
+    let role = report["role"].as_str().unwrap_or_default();
+    let mut rows = vec![
+        (label_case(role), absolute(home).display().to_string()),
         (
-            "Role",
-            report["role"].as_str().unwrap_or_default().to_owned(),
-        ),
-        ("Home", home.display().to_string()),
-        (
-            "Epoch",
+            "Epoch".to_owned(),
             cursor["epoch"].as_str().unwrap_or_default().to_owned(),
         ),
-        ("Sequence", cursor["sequence"].to_string()),
-        ("Subscription", cursor["subscription_revision"].to_string()),
+        ("Sequence".to_owned(), cursor["sequence"].to_string()),
+        (
+            "Subscription".to_owned(),
+            cursor["subscription_revision"].to_string(),
+        ),
     ];
-    for (label, value) in rows {
-        ui::outln(&format!("{label:<16}{}", ui::clean(&value)));
-    }
+    rows.retain(|(_, value)| value != "null");
+    ui::block(ui::Mark::Good, &rows);
     Ok(())
+}
+
+pub fn absolute(path: &Path) -> PathBuf {
+    std::path::absolute(path).unwrap_or_else(|_| path.to_owned())
+}
+
+fn label_case(text: &str) -> String {
+    let mut characters = text.chars();
+    characters.next().map_or_else(String::new, |first| {
+        first.to_uppercase().chain(characters).collect()
+    })
 }
 
 fn legacy(command: &str) {
     ui::warn(
         "deprecated",
         &format!(
-            "Piped {command} prints JSON for one more release, then a table. Pass --json to keep JSON."
+            "Piped {command} prints JSON until the next major version, then a table. Pass --json to keep JSON."
         ),
     );
 }
 
-pub fn doctor(home: &Path) -> Outcome {
+fn yes_no(value: &Value) -> String {
+    match value {
+        Value::Bool(true) => "yes".to_owned(),
+        Value::Bool(false) => "no".to_owned(),
+        Value::String(text) => match text.as_str() {
+            "ok" | "enabled" | "complete" => "yes".to_owned(),
+            other => other.replace('_', " "),
+        },
+        Value::Null => "null".to_owned(),
+        other => other.to_string(),
+    }
+}
+
+pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
     let report =
         crate::inspection::doctor(home).map_err(|error| inspection_failure(home, &error))?;
     let ok = report["ok"].as_bool().unwrap_or(false);
@@ -294,12 +390,14 @@ pub fn doctor(home: &Path) -> Outcome {
         let mut failure = Failure::new(
             Reason::UnhealthyHome,
             format!("Doctor found problems in {}.", home.display()),
-        );
+        )
+        .data("report", report.clone());
         if let Some(remedy) = report["credentials"]["last_error"]["remedy"].as_str() {
             failure = failure.sentence(ui::clean(remedy));
         }
         failure
     };
+    let verdict = || if ok || !args.check { Ok(()) } else { Err(failed()) };
     if modes.json || modes.legacy_json() {
         if !modes.json {
             legacy("bridge doctor");
@@ -309,43 +407,38 @@ pub fn doctor(home: &Path) -> Outcome {
         } else {
             ui::exact_json(&report);
         }
-        return if ok {
-            Ok(())
-        } else {
-            Err(failed().quiet_in_json())
-        };
+        return verdict();
     }
-    let text = |value: &Value| {
-        value
-            .as_str()
-            .map_or_else(|| value.to_string(), str::to_owned)
-    };
     let mut rows = vec![
+        ("Healthy".to_owned(), yes_no(&json!(ok))),
+        ("Home".to_owned(), absolute(home).display().to_string()),
+        ("SQLite intact".to_owned(), yes_no(&report["sqlite"])),
+        ("Schema".to_owned(), yes_no(&report["schema"])),
+        ("Private files".to_owned(), yes_no(&report["private_modes"])),
+        ("Disk encrypted".to_owned(), yes_no(&report["disk_encryption"])),
         (
-            "Healthy",
-            if ok {
-                "yes".to_owned()
-            } else {
-                "no".to_owned()
-            },
+            "Credentials".to_owned(),
+            yes_no(&report["credentials"]["store"]),
         ),
-        ("SQLite", text(&report["sqlite"])),
-        ("Schema", text(&report["schema"])),
-        ("Private files", text(&report["private_modes"])),
-        ("Disk encryption", text(&report["disk_encryption"])),
-        ("Credentials", text(&report["credentials"]["store"])),
-        ("Exactly once", text(&report["exactly_once"])),
+        ("Exactly once".to_owned(), yes_no(&report["exactly_once"])),
     ];
     rows.retain(|(_, value)| value != "null");
-    for (label, value) in rows {
-        ui::outln(&format!("{label:<16}{}", ui::clean(&value)));
-    }
+    ui::block(if ok { ui::Mark::Good } else { ui::Mark::Bad }, &rows);
     if let Some(warnings) = report["warnings"].as_array() {
         for warning in warnings.iter().filter_map(Value::as_str) {
             ui::warn("doctor", warning);
         }
     }
-    if ok { Ok(()) } else { Err(failed()) }
+    if !ok && !args.check {
+        ui::warn(
+            "unhealthy_home",
+            "Doctor found problems. Pass --check to make that exit 1.",
+        );
+        if let Some(remedy) = report["credentials"]["last_error"]["remedy"].as_str() {
+            ui::note(&ui::clean(remedy));
+        }
+    }
+    verdict()
 }
 
 fn file_size(path: &Path) -> u64 {
@@ -391,21 +484,25 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
         ));
     }
     if !home.join("state.db").is_file() {
-        return Err(Failure::not_set_up(home));
+        return Err(not_set_up(home));
     }
     let existed = destination.exists();
     if existed && !args.force {
         let refused = || {
-            Failure::new(
+            let failure = Failure::new(
                 Reason::DestinationExists,
                 format!(
                     "Can't back up to {}. The file exists.",
                     destination.display()
                 ),
             )
-            .needs_action()
-            .sentence("--yes doesn't replace files; only --force does.")
-            .then(
+            .needs_action();
+            let failure = if Modes::get().yes {
+                failure.sentence("--yes doesn't replace files; only --force does.")
+            } else {
+                failure
+            };
+            failure.then(
                 "Replace it, after checking you don't need it",
                 [
                     "bridge".to_owned(),
@@ -418,15 +515,16 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
         if Modes::get().yes || !Modes::get().interactive() {
             return Err(refused());
         }
-        ui::confirm(
-            &[format!(
-                "{} exists ({}, changed {}). It will be replaced; the old file can't be recovered.",
-                destination.display(),
-                ui::size(file_size(destination)),
-                modified(destination)
-            )],
-            &format!("Replace {}?", destination.display()),
-            &Step::new(
+        ui::confirm(&ui::Consent {
+            action: format!("replace {}", destination.display()),
+            rows: vec![
+                ("File".to_owned(), destination.display().to_string()),
+                ("Size".to_owned(), ui::size(file_size(destination))),
+                ("Changed".to_owned(), modified(destination)),
+            ],
+            consequence: "It will be replaced; the old file can't be recovered.".to_owned(),
+            question: format!("Replace {}?", destination.display()),
+            with_yes: Step::new(
                 "Replace it",
                 [
                     "bridge".to_owned(),
@@ -435,8 +533,8 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
                     "--force".to_owned(),
                 ],
             ),
-            "The existing file was kept.",
-        )?;
+            nothing_changed: "The existing file was kept.",
+        })?;
     }
     let name = destination
         .file_name()
@@ -447,7 +545,7 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
     crate::maintenance::backup(home, &staged).map_err(|error| {
         let _ = std::fs::remove_file(&staged);
         match error {
-            Error::Invalid => Failure::not_set_up(home),
+            Error::Invalid => not_set_up(home),
             other => Failure::new(
                 Reason::UnhealthyHome,
                 format!("Failed to back up {}.", home.display()),
@@ -560,29 +658,45 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
     }
     let current = home.join("state.db");
     let had_data = current.exists();
-    let mut preview = vec![
-        format!("Home: {}", home.display()),
-        format!(
-            "Backup: {} ({}, changed {})",
-            backup.display(),
-            ui::size(file_size(&backup)),
-            modified(&backup)
+    let mut rows = vec![
+        ("Home".to_owned(), home.display().to_string()),
+        (
+            "Backup".to_owned(),
+            format!(
+                "{} ({}, changed {})",
+                backup.display(),
+                ui::size(file_size(&backup)),
+                modified(&backup)
+            ),
         ),
     ];
     if current.exists() {
-        preview.push(format!(
-            "Replaces: {} ({}). Its synced data is lost; credentials, settings and remote setup are kept.",
-            current.display(),
-            ui::size(file_size(&current))
+        rows.push((
+            "Replaces".to_owned(),
+            format!("{} ({})", current.display(), ui::size(file_size(&current))),
+        ));
+        rows.push((
+            "Kept".to_owned(),
+            "credentials, settings and remote setup".to_owned(),
         ));
     } else {
-        preview.push("Creates this home's data; it has none yet.".to_owned());
+        rows.push(("Replaces".to_owned(), "nothing; this home has no data yet".to_owned()));
     }
-    preview.push(if args.accept_ledger_loss {
-        "Skips the command ledger check. Commands recorded since this backup may run again. This cannot be undone.".to_owned()
+    rows.push((
+        "Ledger check".to_owned(),
+        if args.accept_ledger_loss {
+            "skipped".to_owned()
+        } else {
+            "checked first; stops if it doesn't match".to_owned()
+        },
+    ));
+    let consequence = if args.accept_ledger_loss {
+        "The synced data is replaced and commands recorded since this backup may run again. This cannot be undone."
+    } else if current.exists() {
+        "This home's synced data is replaced by the backup and sync restarts from it."
     } else {
-        "Checks the command ledger first and stops if it doesn't match. Sync restarts from the backup.".to_owned()
-    });
+        "This home gets its data from the backup."
+    };
     let mut words = vec![
         "bridge".to_owned(),
         "restore".to_owned(),
@@ -592,12 +706,14 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
         words.push("--accept-ledger-loss".to_owned());
     }
     words.push("--yes".to_owned());
-    ui::confirm(
-        &preview,
-        &format!("Restore {} into {}?", backup.display(), home.display()),
-        &Step::new("Restore it", words),
-        "Nothing was changed.",
-    )?;
+    ui::confirm(&ui::Consent {
+        action: format!("restore {} into {}", backup.display(), home.display()),
+        rows,
+        consequence: consequence.to_owned(),
+        question: format!("Restore {} into {}?", backup.display(), home.display()),
+        with_yes: Step::new("Restore it", words),
+        nothing_changed: "Nothing was changed.",
+    })?;
     crate::maintenance::restore(home, &backup, args.accept_ledger_loss)
         .map_err(|error| restore_failure(home, &backup, &error))?;
     report_restore(home, Some(&backup), had_data)
@@ -606,7 +722,7 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
 fn rebuild_in_place(home: &Path) -> Outcome {
     let current = home.join("state.db");
     if !current.is_file() {
-        return Err(Failure::not_set_up(home));
+        return Err(not_set_up(home));
     }
     if gateway::lock_held(home) {
         return Err(Failure::new(
@@ -618,22 +734,23 @@ fn rebuild_in_place(home: &Path) -> Outcome {
         )
         .then("Stop it first", ["bridge", "down"]));
     }
-    ui::confirm(
-        &[
-            format!(
-                "Rebuilds {} without the command ledger check.",
-                current.display()
-            ),
+    ui::confirm(&ui::Consent {
+        action: format!("rebuild {}", home.display()),
+        rows: vec![
+            ("Home".to_owned(), home.display().to_string()),
+            ("Data".to_owned(), current.display().to_string()),
+            ("Ledger check".to_owned(), "skipped".to_owned()),
+        ],
+        consequence:
             "Commands recorded before the ledger was lost may run again. This cannot be undone."
                 .to_owned(),
-        ],
-        &format!("Rebuild {}?", home.display()),
-        &Step::new(
+        question: format!("Rebuild {}?", home.display()),
+        with_yes: Step::new(
             "Rebuild it",
             ["bridge", "restore", "--accept-ledger-loss", "--yes"],
         ),
-        "Nothing was changed.",
-    )?;
+        nothing_changed: "Nothing was changed.",
+    })?;
     crate::maintenance::restore(home, Path::new(""), true)
         .map_err(|error| restore_failure(home, &current, &error))?;
     report_restore(home, None, true)
@@ -744,7 +861,7 @@ fn route(via: Option<&str>, private: bool, domain: Option<&str>) -> Outcome<Stri
     } else {
         via.unwrap_or("relay")
     };
-    if !matches!(route, "relay" | "private" | "tailscale-app" | "both") {
+    if !matches!(route, "relay" | "private" | "tailscale-app" | "system" | "both") {
         return Err(Failure::new(
             Reason::InvalidValue,
             format!(
@@ -754,6 +871,44 @@ fn route(via: Option<&str>, private: bool, domain: Option<&str>) -> Outcome<Stri
         ));
     }
     Ok(route.to_owned())
+}
+
+fn json_problem(path: &Path, error: &serde_json::Error) -> Failure {
+    let location = if error.line() > 0 {
+        format!("{}:{}:{}", path.display(), error.line(), error.column())
+    } else {
+        path.display().to_string()
+    };
+    let problem = match error.classify() {
+        serde_json::error::Category::Data => "doesn't match the expected format",
+        serde_json::error::Category::Eof => "ends early",
+        _ => "isn't valid JSON",
+    };
+    Failure::new(Reason::InvalidConfig, format!("{location} {problem}."))
+        .data("file", path.display().to_string())
+        .data("line", error.line())
+        .data("column", error.column())
+        .row("Detail", ui::clean(&error.to_string()))
+}
+
+pub fn remote_file<T: serde::de::DeserializeOwned + Default>(home: &Path, name: &str) -> Outcome<T> {
+    let path = home.join("remote").join(format!("{name}.json"));
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(T::default()),
+        Err(error) => return Err(Failure::from(error)),
+    };
+    serde_json::from_slice(&bytes).map_err(|error| {
+        json_problem(&path, &error).sentence(
+            "Nothing was changed and no keys were created. Fix the file, or move it away to start remote setup again.",
+        )
+    })
+}
+
+fn check_remote_files(home: &Path) -> Outcome {
+    remote_file::<ab_remote::state::Config>(home, "config")?;
+    remote_file::<Value>(home, "status")?;
+    Ok(())
 }
 
 fn valid_domain(domain: &str) -> bool {
@@ -816,12 +971,27 @@ impl std::io::Write for Stderr {
     }
 }
 
+pub const MODERN: Voice = Voice::Modern {
+    open: false,
+    no_open: false,
+};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Voice {
+    Legacy,
+    Modern { open: bool, no_open: bool },
+}
+
+fn ssh() -> bool {
+    std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some()
+}
+
 async fn onboard(
     home: &Path,
     action: &str,
     route: &str,
     timeout: Option<&str>,
-    no_open: bool,
+    voice: Voice,
 ) -> Outcome<ab_remote::state::Status> {
     let limit = timeout
         .map(|text| duration("--timeout", text))
@@ -837,17 +1007,33 @@ async fn onboard(
         "Turning off"
     };
     ui::note(&format!("{verb} remote access ({route})…"));
-    let open = !no_open && Modes::get().browser_allowed();
-    let opener: ab_remote::onboarding::Opener =
-        Arc::new(move |link: &str| open && ab_remote::onboarding::open_link(link));
-    let mut out = Stderr;
+    let opener: ab_remote::onboarding::Opener = match voice {
+        Voice::Legacy => Arc::new(ab_remote::onboarding::open_link),
+        Voice::Modern { open, no_open } => {
+            let launch = !no_open && (Modes::get().browser_allowed() || (open && !ssh()));
+            let echo = !Modes::get().stdout_tty() && !Modes::get().json;
+            Arc::new(move |link: &str| {
+                if echo {
+                    ui::outln(link);
+                }
+                launch && ab_remote::onboarding::open_link(link)
+            })
+        }
+    };
+    let mut legacy_out = std::io::stdout();
+    let mut modern_out = Stderr;
+    let out: &mut (dyn std::io::Write + Send) = if voice == Voice::Legacy {
+        &mut legacy_out
+    } else {
+        &mut modern_out
+    };
     let waited = tokio::time::timeout(
         limit,
         ab_remote::onboarding::settle(
             home,
             action,
             route,
-            &mut out,
+            out,
             opener,
             Duration::from_millis(100),
         ),
@@ -887,11 +1073,22 @@ async fn onboard(
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn report_remote(status: &ab_remote::state::Status, on: bool) -> Outcome {
+fn report_remote(status: &ab_remote::state::Status, on: bool, voice: Voice) -> Outcome {
     if Modes::get().json {
-        ui::json_document(
-            json!({"remote": status, "outcome": if on { "enabled" } else { "disabled" }}),
-        );
+        ui::json_document(json!({
+            "remote": status,
+            "outcome": if on { "enabled" } else { "disabled" },
+            "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()],
+        }));
+        return Ok(());
+    }
+    if voice == Voice::Legacy {
+        if status.url.is_empty() {
+            ui::outln(&status.state);
+        } else {
+            ui::outln(&status.url);
+            ui::outln(&format!("{}/mcp", status.url));
+        }
         return Ok(());
     }
     if on {
@@ -906,10 +1103,11 @@ fn report_remote(status: &ab_remote::state::Status, on: bool) -> Outcome {
     } else {
         ui::done("Remote access off", "");
     }
+    ui::next_steps(&[Step::new("Check it", ["bridge", "remote", "status"])]);
     Ok(())
 }
 
-pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs) -> Outcome {
+pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -> Outcome {
     let route = route(args.via.as_deref(), args.private, args.domain.as_deref())?;
     if let Some(domain) = &args.domain
         && (route != "relay" || !valid_domain(domain))
@@ -937,6 +1135,7 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs) -> Outcome {
     if let Some(timeout) = &args.timeout {
         duration("--timeout", timeout)?;
     }
+    check_remote_files(home)?;
     if !gateway::lock_held(home) {
         return Err(Failure::not_running(home));
     }
@@ -949,11 +1148,18 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs) -> Outcome {
     if let Some(name) = &args.name {
         ab_remote::state::annotate(home, name)?;
     }
-    let status = onboard(home, "on", &route, args.timeout.as_deref(), args.no_open).await?;
-    report_remote(&status, true)
+    let voice = match voice {
+        Voice::Legacy => Voice::Legacy,
+        Voice::Modern { .. } => Voice::Modern {
+            open: args.open,
+            no_open: args.no_open,
+        },
+    };
+    let status = onboard(home, "on", &route, args.timeout.as_deref(), voice).await?;
+    report_remote(&status, true, voice)
 }
 
-pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs) -> Outcome {
+pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice) -> Outcome {
     let route = route(args.via.as_deref(), args.private, None)?;
     if let Some(name) = &args.name {
         device_name(name)?;
@@ -961,10 +1167,13 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs) -> Outcome {
     if let Some(timeout) = &args.timeout {
         duration("--timeout", timeout)?;
     }
+    check_remote_files(home)?;
     let current = ab_remote::state::status(home)?;
     if current.state == "off" {
         if Modes::get().json {
             ui::json_document(json!({"remote": current, "outcome": "unchanged"}));
+        } else if voice == Voice::Legacy {
+            ui::outln("off");
         } else {
             ui::done("Already off", "remote access");
         }
@@ -973,11 +1182,19 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs) -> Outcome {
     if let Some(name) = &args.name {
         ab_remote::state::annotate(home, name)?;
     }
-    let status = onboard(home, "off", &route, args.timeout.as_deref(), true).await?;
-    report_remote(&status, false)
+    let voice = match voice {
+        Voice::Legacy => Voice::Legacy,
+        Voice::Modern { .. } => Voice::Modern {
+            open: false,
+            no_open: true,
+        },
+    };
+    let status = onboard(home, "off", &route, args.timeout.as_deref(), voice).await?;
+    report_remote(&status, false, voice)
 }
 
 pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
+    check_remote_files(home)?;
     if args.snippets {
         let snippets = ab_remote::state::snippets(home).map_err(|_| {
             Failure::new(
@@ -989,7 +1206,10 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
         ui::out(&snippets);
         return Ok(());
     }
-    let status = ab_remote::state::status(home)?;
+    let status = ab_remote::state::status(home).map_err(|error| {
+        Failure::new(Reason::InvalidConfig, "Couldn't read the remote access state.")
+            .remote("Remote", error.to_string())
+    })?;
     let modes = Modes::get();
     if modes.json || modes.legacy_json() {
         if !modes.json {
@@ -1003,7 +1223,7 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
         }
         return Ok(());
     }
-    let mut rows = vec![("State", status.state.clone())];
+    let mut rows = vec![("Remote access".to_owned(), status.state.clone())];
     for (label, value) in [
         ("Route", &status.backend),
         ("URL", &status.url),
@@ -1012,18 +1232,21 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
         ("Last error", &status.last_error),
     ] {
         if !value.is_empty() {
-            rows.push((label, value.clone()));
+            rows.push((label.to_owned(), value.clone()));
         }
     }
-    if !status.certificate_expiry.starts_with("0001") {
+    if !status.certificate_expiry.starts_with("0001") && !status.certificate_expiry.is_empty() {
         rows.push((
-            "Certificate",
+            "Certificate".to_owned(),
             format!("expires {}", status.certificate_expiry),
         ));
     }
-    for (label, value) in rows {
-        ui::outln(&format!("{label:<16}{}", ui::clean(&value)));
-    }
+    let mark = match status.state.as_str() {
+        "on" => ui::Mark::Good,
+        "error" => ui::Mark::Bad,
+        _ => ui::Mark::Warn,
+    };
+    ui::block(mark, &rows);
     if !status.ct_warning.is_empty() {
         ui::warn("certificate", &status.ct_warning);
     }
@@ -1034,13 +1257,13 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
 }
 
 pub fn remote_key(home: &Path, args: &RemoteKeyArgs) -> Outcome {
+    let config = remote_file::<ab_remote::state::Config>(home, "config")?;
     if let Some(url) = &args.relay_url {
         relay_url(url)?;
         ab_remote::state::set_relay(home, url)?;
     }
-    let config =
-        ab_remote::state::read::<ab_remote::state::Config>(home, "config").unwrap_or_default();
-    let key = ab_remote::relay::public_key(home, &config.relay_url).map_err(|error| {
+    let endpoint = args.relay_url.clone().unwrap_or(config.relay_url);
+    let key = ab_remote::relay::public_key(home, &endpoint).map_err(|error| {
         Failure::new(Reason::ApiError, "Failed to read this Mac's relay key.")
             .remote("Remote", error.to_string())
     })?;

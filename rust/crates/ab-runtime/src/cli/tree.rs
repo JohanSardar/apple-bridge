@@ -118,7 +118,7 @@ pub enum Command {
     #[command(about = "Show this home's role and sync position")]
     Status,
     #[command(about = "Check this home's data, files and credentials")]
-    Doctor,
+    Doctor(DoctorArgs),
     #[command(about = "Copy this home's data to a file")]
     Backup(BackupArgs),
     #[command(about = "Replace this home's data with a backup")]
@@ -258,6 +258,15 @@ pub struct LinkArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct DoctorArgs {
+    #[arg(
+        long,
+        help = "Exit 1 with an unhealthy_home error when the report finds problems"
+    )]
+    pub check: bool,
+}
+
+#[derive(Debug, Args)]
 pub struct UnlinkArgs {
     #[arg(value_enum, value_name = "CLIENT", help = "Which agent to disconnect")]
     pub client: LinkClient,
@@ -276,28 +285,44 @@ pub struct UnlinkArgs {
         help = "Name shown in the agent"
     )]
     pub name: String,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Stop waiting for the agent's commands after this long (default: 1m)"
+    )]
+    pub timeout: Option<String>,
 }
 
 #[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct StatsArgs {
     #[arg(
         short = 'f',
         long,
-        alias = "watch",
-        help = "Keep updating until every source has finished syncing"
+        conflicts_with_all = ["wait", "watch"],
+        help = "Keep showing sync events until you stop it or --timeout passes"
     )]
     pub follow: bool,
     #[arg(
+        short = 'w',
+        long,
+        conflicts_with = "watch",
+        help = "Show sync events until every source has finished syncing, then exit"
+    )]
+    pub wait: bool,
+    #[arg(long, hide = true)]
+    pub watch: bool,
+    #[arg(
         long,
         value_name = "DURATION",
-        help = "With --follow: stop watching after this long, such as 30s or 5m (default: no limit on a terminal, 5m otherwise)"
+        help = "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: no limit on a terminal, 5m otherwise)"
     )]
     pub timeout: Option<String>,
     #[arg(
         long,
         value_name = "DURATION",
         default_value = "30s",
-        help = "A source counts as finished after this long without new records"
+        help = "A source counts as finished after this long without new records; 0 means at once"
     )]
     pub settle: String,
     #[arg(short = 'a', long, help = "Include sources with nothing synced")]
@@ -341,11 +366,10 @@ pub struct ReadArgs {
         short = 'n',
         long,
         value_name = "NUMBER",
-        default_value = "10",
         allow_hyphen_values = true,
-        help = "How many items to show, 1 to 200"
+        help = "How many items to show in total, 1 to 200 [default: 10]"
     )]
-    pub limit: String,
+    pub limit: Option<String>,
     #[arg(
         short = 'q',
         long,
@@ -359,10 +383,16 @@ pub struct ReadArgs {
     #[arg(
         long,
         value_name = "NUMBER",
-        default_value = "7",
-        help = "Calendar only: how many days ahead"
+        help = "Calendar only: how many days ahead [default: 7]"
     )]
-    pub days: String,
+    pub days: Option<String>,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        default_value = "2m",
+        help = "Stop fetching pages after this long; what was fetched is reported"
+    )]
+    pub timeout: String,
     #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
     pub next: Option<String>,
     #[arg(short = 'a', long, help = "Fetch every page, up to 10,000 items")]
@@ -371,21 +401,31 @@ pub struct ReadArgs {
 
 #[derive(Debug, Args)]
 pub struct SearchArgs {
-    #[arg(value_name = "TEXT", help = "Text to find")]
-    pub text: String,
+    #[arg(
+        value_name = "TEXT",
+        required_unless_present = "next",
+        help = "Text to find; optional with --next"
+    )]
+    pub text: Option<String>,
     #[arg(
         short = 'n',
         long,
         value_name = "NUMBER",
-        default_value = "10",
         allow_hyphen_values = true,
-        help = "How many results to show, 1 to 200"
+        help = "How many results to show in total, 1 to 200 [default: 10]"
     )]
-    pub limit: String,
+    pub limit: Option<String>,
     #[arg(long, value_name = "CURSOR", help = "Continue from a previous page")]
     pub next: Option<String>,
     #[arg(short = 'a', long, help = "Fetch every page, up to 10,000 results")]
     pub all: bool,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        default_value = "2m",
+        help = "Stop fetching pages after this long; what was fetched is reported"
+    )]
+    pub timeout: String,
 }
 
 #[derive(Debug, Args)]
@@ -432,7 +472,7 @@ pub struct SkillsCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum SkillsAction {
-    #[command(about = "List the skills in this binary")]
+    #[command(about = "List the skills in this binary", visible_alias = "ls")]
     List,
     #[command(about = "Print one skill")]
     Get {
@@ -523,7 +563,8 @@ pub struct RemoteEnableArgs {
     #[arg(
         long,
         value_name = "ROUTE",
-        help = "Route: relay, private, tailscale-app or both (default: relay)"
+        value_parser = route_values(),
+        help = "Route (default: relay)"
     )]
     pub via: Option<String>,
     #[arg(long, help = "Use the private route; same as --via private")]
@@ -540,8 +581,62 @@ pub struct RemoteEnableArgs {
         help = "Stop waiting after this long (default: 10m)"
     )]
     pub timeout: Option<String>,
+    #[arg(
+        long,
+        conflicts_with = "no_open",
+        help = "Open sign-in links in the browser even without a terminal, unless over SSH"
+    )]
+    pub open: bool,
     #[arg(long, help = "Print sign-in links instead of opening a browser")]
     pub no_open: bool,
+}
+
+fn route_values() -> clap::builder::PossibleValuesParser {
+    clap::builder::PossibleValuesParser::new([
+        clap::builder::PossibleValue::new("relay"),
+        clap::builder::PossibleValue::new("private"),
+        clap::builder::PossibleValue::new("tailscale-app"),
+        clap::builder::PossibleValue::new("both"),
+        clap::builder::PossibleValue::new("system").hide(true),
+    ])
+}
+
+fn levels(switchable: bool) -> [clap::builder::PossibleValue; 3] {
+    [
+        clap::builder::PossibleValue::new("full").help("Acts at once"),
+        clap::builder::PossibleValue::new("approve").help("Asks you before each change"),
+        clap::builder::PossibleValue::new("read")
+            .help("Reads only")
+            .hide(switchable),
+    ]
+}
+
+fn level_values(switchable: bool) -> clap::builder::PossibleValuesParser {
+    clap::builder::PossibleValuesParser::new(levels(switchable))
+}
+
+/// Accepts any level text so `agents create` can report every problem at once,
+/// while still listing the levels for help and completion.
+#[derive(Clone)]
+pub struct LevelText;
+
+impl clap::builder::TypedValueParser for LevelText {
+    type Value = String;
+
+    fn parse_ref(
+        &self,
+        _command: &clap::Command,
+        _argument: Option<&clap::Arg>,
+        value: &std::ffi::OsStr,
+    ) -> Result<String, clap::Error> {
+        Ok(value.to_string_lossy().into_owned())
+    }
+
+    fn possible_values(
+        &self,
+    ) -> Option<Box<dyn Iterator<Item = clap::builder::PossibleValue> + '_>> {
+        Some(Box::new(levels(false).into_iter()))
+    }
 }
 
 #[derive(Debug, Args)]
@@ -549,6 +644,7 @@ pub struct RemoteDisableArgs {
     #[arg(
         long,
         value_name = "ROUTE",
+        value_parser = route_values(),
         help = "Route to turn off (default: relay)"
     )]
     pub via: Option<String>,
@@ -605,7 +701,7 @@ pub struct ConnectorsCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum ConnectorAction {
-    #[command(about = "List apps waiting for approval")]
+    #[command(about = "List apps waiting for approval", visible_alias = "ls")]
     List,
     #[command(about = "Allow a waiting app after checking its code")]
     Allow(DecisionArgs),
@@ -623,15 +719,15 @@ pub struct DecisionArgs {
     #[arg(
         long,
         value_name = "REQUEST",
-        help = "Request ID from bridge connectors list"
+        help = "Request ID from bridge connectors list (required)"
     )]
-    pub request: String,
+    pub request: Option<String>,
     #[arg(
         long,
         value_name = "CODE",
-        help = "Four-digit code shown on the app's page"
+        help = "Four-digit code shown on the app's page (required)"
     )]
-    pub code: String,
+    pub code: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -642,7 +738,7 @@ pub struct AgentsCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum AgentAction {
-    #[command(about = "List agents")]
+    #[command(about = "List agents", visible_alias = "ls")]
     List,
     #[command(about = "Create an agent and print its token once")]
     Create(AgentCreateArgs),
@@ -669,7 +765,7 @@ pub struct AgentArgs {
 pub struct AgentLevelArgs {
     #[arg(value_name = "AGENT", help = "Agent ID")]
     pub id: String,
-    #[arg(value_name = "LEVEL", help = "full or approve")]
+    #[arg(value_name = "LEVEL", value_parser = level_values(true), help = "New level")]
     pub level: String,
 }
 
@@ -681,7 +777,8 @@ pub struct AgentCreateArgs {
         long,
         value_name = "LEVEL",
         default_value = ab_trust::AgentLevel::DEFAULT_NAME,
-        help = "full (acts at once), approve (asks you before each change) or read"
+        value_parser = LevelText,
+        help = "What the agent may do"
     )]
     pub level: String,
     #[arg(
@@ -691,13 +788,19 @@ pub struct AgentCreateArgs {
         help = "Access grants, comma-separated, such as messages:read,contacts:read"
     )]
     pub scope: String,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Stop the token working after this long, such as 1h, 7d or 90d (default: never)"
+    )]
+    pub expires_in: Option<String>,
 }
 
 #[derive(Debug, Args)]
 pub struct AgentUpdateArgs {
     #[arg(value_name = "AGENT", help = "Agent ID")]
     pub id: String,
-    #[arg(long, value_name = "LEVEL", help = "full or approve")]
+    #[arg(long, value_name = "LEVEL", value_parser = level_values(true), help = "New level")]
     pub level: Option<String>,
     #[arg(
         long,
@@ -735,6 +838,12 @@ pub enum TokenAction {
         scope: String,
         #[arg(long, help = "Allow use through remote access")]
         remote: bool,
+        #[arg(
+            long,
+            value_name = "DURATION",
+            help = "Stop the token working after this long, such as 1h, 7d or 90d (default: never)"
+        )]
+        expires_in: Option<String>,
     },
     #[command(about = "Revoke a token, agent or replica")]
     Revoke(CredentialArgs),
@@ -765,10 +874,9 @@ pub enum WebAction {
         #[arg(
             long,
             value_name = "URL",
-            default_value = "http://localhost:7780",
-            help = "Page address: https://HOST, or http://localhost:PORT"
+            help = "Page address: https://HOST, or http://localhost:PORT (default: this Mac's gateway address)"
         )]
-        host: String,
+        host: Option<String>,
         #[arg(long, help = "Use the remote access address")]
         public: bool,
     },
@@ -794,7 +902,7 @@ pub struct SessionsCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum SessionsAction {
-    #[command(about = "List signed-in browsers")]
+    #[command(about = "List signed-in browsers", visible_alias = "ls")]
     List,
     #[command(about = "Sign out browsers")]
     Revoke {
@@ -809,7 +917,8 @@ pub struct StartArgs {
         long,
         value_name = "ROLE",
         default_value = "gateway",
-        help = "gateway or replica"
+        value_parser = ["gateway", "replica"],
+        help = "What this process runs as"
     )]
     pub role: String,
     #[arg(
@@ -1012,11 +1121,7 @@ pub struct CompletionArgs {
 pub struct HelpArgs {
     #[arg(long, help = "List every command")]
     pub all: bool,
-    #[arg(
-        value_name = "COMMAND",
-        trailing_var_arg = true,
-        help = "Command path, or search <TEXT>"
-    )]
+    #[arg(value_name = "COMMAND", help = "Command path, or search <TEXT>")]
     pub path: Vec<String>,
 }
 

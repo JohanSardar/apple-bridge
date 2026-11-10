@@ -346,7 +346,7 @@ fn snapshot_lines(snapshot: &Snapshot, all: bool) -> Vec<String> {
         .map(SourceStats::line)
         .collect();
     if lines.is_empty() {
-        lines.push("Nothing has synced yet. Sources appear here as they connect.".to_owned());
+        lines.push(NOTHING_YET.to_owned());
     } else {
         lines.push(format!(
             "{} items in total. Counts only, no content.",
@@ -355,6 +355,8 @@ fn snapshot_lines(snapshot: &Snapshot, all: bool) -> Vec<String> {
     }
     lines
 }
+
+const NOTHING_YET: &str = "Nothing has synced yet. Sources appear here as they connect.";
 
 pub fn print_once_stderr(home: &Path) -> Outcome {
     let snapshot = match open(home)? {
@@ -544,12 +546,19 @@ fn event_json(event: &Event) -> Value {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Watch {
+    UntilSettled,
+    Follow,
+}
+
 async fn watch(
     home: &Path,
     settle: Duration,
     timeout: Option<Duration>,
     json_lines: bool,
     all: bool,
+    mode: Watch,
 ) -> Outcome {
     let began = Instant::now();
     let mut tracker = Tracker::new(settle, began);
@@ -570,10 +579,22 @@ async fn watch(
         for event in tracker.observe(&snapshot, Instant::now()) {
             emit(&event, json_lines, all);
         }
-        if tracker.done() {
+        if tracker.done() && mode == Watch::UntilSettled {
             return Ok(());
         }
         if timeout.is_some_and(|limit| began.elapsed() >= limit) {
+            if mode == Watch::Follow {
+                if json_lines {
+                    ui::outln(&json!({"event":"timeout","total":snapshot.total}).to_string());
+                } else {
+                    ui::err_line(&format!(
+                        "Stopped following after {}: {} items so far.",
+                        friendly_duration(began.elapsed()),
+                        thousands(snapshot.total)
+                    ));
+                }
+                return Ok(());
+            }
             if json_lines {
                 ui::outln(&json!({"event":"timeout","total":snapshot.total}).to_string());
             } else {
@@ -589,39 +610,82 @@ async fn watch(
     }
 }
 
+fn follow_limit(timeout: Option<Duration>) -> Outcome<Option<Duration>> {
+    let modes = Modes::get();
+    if timeout.is_some() || modes.interactive() {
+        return Ok(timeout);
+    }
+    let place = if modes.ci {
+        "in CI"
+    } else if modes.agent.is_some() {
+        "when run by an agent"
+    } else {
+        return Ok(None);
+    };
+    Err(Failure::new(
+        Reason::MissingTimeout,
+        format!("Can't follow without --timeout {place}."),
+    )
+    .sentence("--follow runs until it's stopped, which would hang this run.")
+    .then(
+        "Follow for a fixed time",
+        ["bridge", "stats", "--follow", "--timeout", "5m"],
+    )
+    .then(
+        "Or wait until every source has finished syncing",
+        ["bridge", "stats", "--wait", "--timeout", "10m"],
+    ))
+}
+
 pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
-    let settle = commands::duration("--settle", &args.settle)?;
+    let waiting = args.wait || args.watch;
+    let settle = commands::duration_or_zero("--settle", &args.settle)?;
     let timeout = args
         .timeout
         .as_deref()
-        .map(|text| commands::duration("--timeout", text))
+        .map(|text| {
+            if args.follow {
+                commands::duration("--timeout", text)
+            } else {
+                commands::duration_or_zero("--timeout", text)
+            }
+        })
         .transpose()?;
-    if timeout.is_some() && !args.follow {
+    if timeout.is_some() && !args.follow && !waiting {
         return Err(Failure::new(
             Reason::ConflictingOptions,
-            "Can't use --timeout without --follow.",
+            "Can't use --timeout without --follow or --wait.",
         )
         .then(
-            "Follow the sync for a while",
-            ["bridge", "stats", "--follow", "--timeout", "5m"],
+            "Wait for the sync to finish, for up to 10 minutes",
+            ["bridge", "stats", "--wait", "--timeout", "10m"],
         ));
     }
     let json = Modes::get().json;
     if args.follow {
+        let timeout = follow_limit(timeout)?;
+        ui::set_cancel_note(Some(""));
+        return watch(home, settle, timeout, json, args.all, Watch::Follow).await;
+    }
+    if waiting {
         ui::set_cancel_note(Some(""));
         let timeout = timeout
             .or_else(|| (!Modes::get().interactive()).then_some(NON_INTERACTIVE_WATCH_LIMIT));
-        return watch(home, settle, timeout, json, args.all).await;
+        return watch(home, settle, timeout, json, args.all, Watch::UntilSettled).await;
     }
     let Some(connection) = open(home)? else {
-        return Err(Failure::not_set_up(home));
+        return Err(commands::not_set_up(home));
     };
     let snapshot = read_snapshot(&connection)?;
     if json {
-        ui::outln(&serde_json::to_string(&snapshot)?);
+        ui::json_document(serde_json::to_value(&snapshot)?);
     } else {
         for line in snapshot_lines(&snapshot, args.all) {
-            ui::outln(&line);
+            if line == NOTHING_YET {
+                ui::err_line(&line);
+            } else {
+                ui::outln(&line);
+            }
         }
     }
     Ok(())

@@ -420,6 +420,15 @@ impl Authority {
         level: AgentLevel,
         scopes: Vec<Grant>,
     ) -> Result<(Principal, String), Error> {
+        self.create_agent_until(name, level, scopes, None)
+    }
+    pub fn create_agent_until(
+        &self,
+        name: &str,
+        level: AgentLevel,
+        scopes: Vec<Grant>,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> Result<(Principal, String), Error> {
         let name = name.trim();
         if name.is_empty() || name.len() > 120 || scopes.is_empty() {
             return Err(Error::Invalid);
@@ -453,6 +462,10 @@ impl Authority {
             "created_at".into(),
             serde_json::json!(jiff::Timestamp::now().to_string()),
         );
+        if let Some(expires_at) = expires_at {
+            p.extra
+                .insert("expires_at".into(), serde_json::json!(expires_at.to_string()));
+        }
         self.update(|d| {
             if d.enrollment
                 .as_ref()

@@ -276,10 +276,7 @@ fn nothing_after_the_separator_is_rewritten_and_old_spellings_warn() -> Check {
     let output = run(home.path(), &["web", "enroll", "--public=false", "--json"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let enrolled: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(
-        enrolled["warnings"][0]["message"],
-        "--public=false is deprecated. Use no --public."
-    );
+    assert!(enrolled.get("warnings").is_none(), "{enrolled}");
     assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(())
 }
@@ -451,7 +448,7 @@ fn restore_needs_consent_and_reports_what_it_kept() -> Check {
     let output = run(target.path(), &["restore", backup_text])?;
     assert_eq!(output.status.code(), Some(2));
     let error = text(&output.stderr);
-    for shown in ["Home:", "Backup:", "Replaces:", "ledger", "--yes"] {
+    for shown in ["Home ", "Backup ", "Replaces ", "Ledger check", "--yes"] {
         assert!(error.contains(shown), "{shown}: {error}");
     }
     assert_eq!(std::fs::read(target.path().join("state.db"))?, before);
@@ -509,7 +506,8 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
     assert!(output.status.success(), "{}", text(&output.stderr));
     let receipt = text(&output.stderr);
     assert!(receipt.contains("deprecated"), "{receipt}");
-    assert!(receipt.contains(&format!("Revoked {id}")), "{receipt}");
+    assert!(receipt.contains("Revoked "), "{receipt}");
+    assert!(receipt.contains(&id), "{receipt}");
     assert!(receipt.contains("reminders:read"), "{receipt}");
 
     let output = run(home.path(), &["tokens", "revoke", &id, "--yes"])?;
@@ -749,6 +747,9 @@ fn signals_stop_waiting_with_their_codes() -> Check {
         assert_eq!(output.stdout, [] as [u8; 0]);
     }
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
+    assert!(output.status.success());
+    assert!(text(&output.stderr).contains("Stopped following after"));
+    let output = run(home.path(), &["stats", "--wait", "--timeout", "1s"])?;
     assert!(output.status.success());
     assert!(text(&output.stdout).contains("Stopped watching"));
     Ok(())
