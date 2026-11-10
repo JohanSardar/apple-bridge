@@ -8,6 +8,12 @@ import UniformTypeIdentifiers
 import SourceSupport
 
 let photoImageByteLimit = 172 << 10
+let photoResultByteLimit = 250_000
+
+func fitsNativeFrame(_ result: JSON) throws -> JSON {
+    guard try JSONEncoder().encode(result).count <= photoResultByteLimit else { throw SourceFailure.unavailable }
+    return result
+}
 
 func photoPreview(_ args: JSON) async throws -> JSON {
     try fields(args, ["asset_id", "max_px", "network_access", "include_hidden"])
@@ -24,7 +30,7 @@ func photoPreview(_ args: JSON) async throws -> JSON {
     result["created_at"] = photo.creationDate.map { .string(timestamp($0)) } ?? .null
     result["original_width"] = .number(Double(photo.pixelWidth))
     result["original_height"] = .number(Double(photo.pixelHeight))
-    return .object(result)
+    return try fitsNativeFrame(.object(result))
 }
 
 func photoContactSheet(_ args: JSON) async throws -> JSON {
@@ -72,7 +78,7 @@ func photoContactSheet(_ args: JSON) async throws -> JSON {
     var result = try encodedImage(sheet).object
     result["cells"] = .array(cells)
     result["columns"] = .number(Double(columns))
-    return .object(result)
+    return try fitsNativeFrame(.object(result))
 }
 
 private func visibleAsset(_ id: String, includeHidden: Bool) throws -> PHAsset {
@@ -86,22 +92,52 @@ private func mediaTypeName(_ photo: PHAsset) -> String {
     [PHAssetMediaType.image: "image", .video: "video", .audio: "audio"][photo.mediaType] ?? "unknown"
 }
 
-private final class ImageRequest: @unchecked Sendable {
+final class ImageRequest: @unchecked Sendable {
     private let lock = NSLock()
+    private var continuation: CheckedContinuation<CGImage, Error>?
     private var id: PHImageRequestID?
     private var cancelled = false
+    private var finished = false
 
-    func start(_ body: () -> PHImageRequestID) -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        guard !cancelled else { return false }
-        id = body()
+    func begin(_ continuation: CheckedContinuation<CGImage, Error>) -> Bool {
+        lock.lock()
+        if cancelled {
+            finished = true
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return false
+        }
+        self.continuation = continuation
+        lock.unlock()
         return true
     }
 
+    func started(_ request: PHImageRequestID) {
+        lock.lock()
+        id = request
+        let cancel = cancelled
+        lock.unlock()
+        if cancel { PHImageManager.default().cancelImageRequest(request) }
+    }
+
+    func finish(_ result: Result<CGImage, Error>) {
+        lock.lock()
+        let waiting = continuation
+        continuation = nil
+        finished = true
+        lock.unlock()
+        waiting?.resume(with: result)
+    }
+
     func cancel() {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
         cancelled = true
-        if let id { PHImageManager.default().cancelImageRequest(id) }
+        let waiting = continuation
+        continuation = nil
+        let request = id
+        lock.unlock()
+        waiting?.resume(throwing: CancellationError())
+        if let request { PHImageManager.default().cancelImageRequest(request) }
     }
 }
 
@@ -116,21 +152,18 @@ private func renderedImage(_ photo: PHAsset, longestSide: Int, network: Bool) as
     let request = ImageRequest()
     let image: CGImage = try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CGImage, Error>) in
-            let resumed = ResumeOnce()
-            let started = request.start {
-                PHImageManager.default().requestImage(for: photo, targetSize: target, contentMode: .aspectFit, options: options) { result, info in
-                    if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
-                    guard resumed.claim() else { return }
-                    if (info?[PHImageCancelledKey] as? Bool) == true {
-                        continuation.resume(throwing: CancellationError())
-                    } else if let result, let cgImage = result.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                        continuation.resume(returning: cgImage)
-                    } else {
-                        continuation.resume(throwing: SourceFailure.unavailable)
-                    }
+            guard request.begin(continuation) else { return }
+            let id = PHImageManager.default().requestImage(for: photo, targetSize: target, contentMode: .aspectFit, options: options) { result, info in
+                if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                if (info?[PHImageCancelledKey] as? Bool) == true {
+                    request.finish(.failure(CancellationError()))
+                } else if let result, let cgImage = result.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                    request.finish(.success(cgImage))
+                } else {
+                    request.finish(.failure(SourceFailure.unavailable))
                 }
             }
-            if !started, resumed.claim() { continuation.resume(throwing: CancellationError()) }
+            request.started(id)
         }
     } onCancel: {
         request.cancel()
@@ -145,17 +178,6 @@ private func renderedImage(_ photo: PHAsset, longestSide: Int, network: Bool) as
     canvas.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
     guard let resized = canvas.makeImage() else { throw SourceFailure.unavailable }
     return resized
-}
-
-private final class ResumeOnce: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
-    func claim() -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        if done { return false }
-        done = true
-        return true
-    }
 }
 
 private func drawingContext(width: Int, height: Int) throws -> CGContext {
