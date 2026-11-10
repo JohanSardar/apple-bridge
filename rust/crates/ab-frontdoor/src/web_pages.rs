@@ -141,10 +141,7 @@ pub(crate) fn access_sentence(scopes: &[Grant]) -> String {
         parts.push(format!("Read: {}", access.read.join(", ")));
     }
     if !access.change.is_empty() {
-        parts.push(format!(
-            "Ask to change (each change needs your approval): {}",
-            access.change.join(", ")
-        ));
+        parts.push(format!("Change, right away: {}", access.change.join(", ")));
     }
     parts.join("\n")
 }
@@ -169,7 +166,7 @@ fn access_section(scopes: &[Grant]) -> String {
     if access.read == access.change {
         let _ = write!(
             body,
-            "<div><h2>Can read, and ask to make changes</h2>{}<p class=\"small\">Nothing changes until you approve that change.</p></div></section>",
+            "<div><h2>Can read and make changes</h2>{}<p class=\"small\">Changes happen right away unless you set this app to ask you first.</p></div></section>",
             list(&access.read)
         );
         return body;
@@ -180,7 +177,7 @@ fn access_section(scopes: &[Grant]) -> String {
     if !access.change.is_empty() {
         let _ = write!(
             body,
-            "<div><h2>Can ask to make changes</h2>{}<p class=\"small\">Nothing changes until you approve that change.</p></div>",
+            "<div><h2>Can make changes</h2>{}<p class=\"small\">Changes happen right away unless you set this app to ask you first.</p></div>",
             list(&access.change)
         );
     }
@@ -215,7 +212,7 @@ pub(crate) fn consent(c: &Consent<'_>) -> Response {
     let mut body = request_header(c.client, c.redirect_host);
     body.push_str(&access_section(c.scopes));
     if c.signed_in {
-        body.push_str("<form method=\"post\" class=\"section\"><fieldset class=\"stack\"><div><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"approve\" checked><span><strong>Read, and ask me before any change</strong><span class=\"muted small\">Recommended</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"read\"><span><strong>Read only</strong><span class=\"muted small\">Change requests are refused</span></span></label></div></fieldset>");
+        body.push_str("<form method=\"post\" class=\"section\"><fieldset class=\"stack\"><div><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"full\" checked><span><strong>Read and make changes</strong><span class=\"muted small\">Changes happen right away</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"approve\"><span><strong>Read, and ask me before any change</strong><span class=\"muted small\">Each change waits for you</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"read\"><span><strong>Read only</strong><span class=\"muted small\">Change requests are refused</span></span></label></div></fieldset>");
         for grant in c.scopes {
             let _ = write!(
                 body,
@@ -420,13 +417,10 @@ mod tests {
         );
         assert_eq!(
             access_sentence(&grants),
-            "Read: Messages\nAsk to change (each change needs your approval): Messages"
+            "Read: Messages\nChange, right away: Messages"
         );
         let section = access_section(&grants);
-        assert!(
-            section.contains("Can read, and ask to make changes"),
-            "{section}"
-        );
+        assert!(section.contains("Can read and make changes"), "{section}");
     }
 
     #[test]
@@ -444,7 +438,7 @@ mod tests {
         );
         assert_eq!(
             access_sentence(&grants),
-            "Read: Messages, Calendar\nAsk to change (each change needs your approval): Calendar"
+            "Read: Messages, Calendar\nChange, right away: Calendar"
         );
     }
 }

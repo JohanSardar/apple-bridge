@@ -92,7 +92,7 @@ async fn photos_writes_require_caller_ids_before_local_or_remote_dispatch() {
 }
 
 #[tokio::test]
-async fn every_photos_write_requires_approval_and_never_persists_library_details() {
+async fn an_ask_first_photos_write_waits_for_approval_and_never_persists_library_details() {
     let declared: std::collections::BTreeSet<_> = ab_catalog::operations()
         .expect("catalog")
         .into_iter()
@@ -104,7 +104,8 @@ async fn every_photos_write_requires_approval_and_never_persists_library_details
         .map(|(name, _)| name.to_owned())
         .collect();
     assert_eq!(declared, exercised);
-    for level in ["approve", "full"] {
+    {
+        let level = "approve";
         for (operation, args) in mutations() {
             let f = fixture();
             let p = principal("agent:photos", "agent", level, &["photos:write"]);
@@ -166,6 +167,28 @@ async fn every_photos_write_requires_approval_and_never_persists_library_details
                     .expect("JSON")
                     .contains("synthetic-asset")
             );
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_full_agent_photos_write_runs_at_once_and_only_once() {
+    for (operation, args) in mutations() {
+        let f = fixture();
+        let p = principal("agent:photos", "agent", "full", &["photos:write"]);
+        let mut request = query(operation, &args);
+        request.id = "qry_photos_once".into();
+        let answer = f.gateway.query(&p, request.clone()).await.expect("ran");
+        assert_ne!(state_of(&answer), "awaiting_approval", "{operation}");
+        assert_eq!(queries_reaching_native(&f), 1, "{operation}");
+        assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
+        assert!(f.gateway.query(&p, request).await.is_err(), "{operation}");
+        assert_eq!(queries_reaching_native(&f), 1, "{operation}");
+        let rows = f.gateway.state.commands().expect("ledger");
+        assert_eq!(rows[0].state, ab_trust::domain::CommandState::Observed);
+        let stored = serde_json::to_string(&rows).expect("JSON");
+        for secret in ["synthetic-asset", "synthetic-album", "synthetic-title"] {
+            assert!(!stored.contains(secret), "{operation}");
         }
     }
 }
@@ -447,7 +470,7 @@ async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
         binding: "",
         accepted_unpreviewable: false,
     };
-    let p = principal("agent:photos", "agent", "full", &["photos:write"]);
+    let p = principal("agent:photos", "agent", "approve", &["photos:write"]);
     let mut request = query(
         "photos.album_create",
         &json!({"title":"synthetic-private-title"}),
@@ -533,13 +556,13 @@ async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
 }
 
 #[tokio::test]
-async fn delegated_photos_write_uses_the_same_owner_gate() {
+async fn delegated_ask_first_photos_write_uses_the_same_owner_gate() {
     let f = fixture();
-    let p = principal("agent:photos", "agent", "full", &["photos:write"]);
+    let p = principal("agent:photos", "agent", "approve", &["photos:write"]);
     let delegated = principal(
         "replica:fixture/agent:photos",
         "delegated",
-        "full",
+        "approve",
         &["photos:write"],
     );
     let service = crate::Service {

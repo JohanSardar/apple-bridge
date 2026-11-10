@@ -185,7 +185,7 @@ impl Connectors {
             &p.state,
             &p.origin,
             approve,
-            "approve",
+            ab_trust::AgentLevel::DEFAULT_NAME,
             &p.summary.scopes,
         )?);
         Ok(())
@@ -274,6 +274,19 @@ mod tests {
                 .is_err(),
             "single use"
         );
+    }
+
+    #[test]
+    fn an_app_allowed_on_the_mac_acts_without_asking_first() {
+        let (_home, queue) = queue();
+        let summary = request(&queue, "https://mac.ab.example.com");
+        queue
+            .decide(&summary.id, &summary.code, true)
+            .expect("decide");
+        let agents = queue.authority.agents().expect("agents");
+        assert_eq!(agents.len(), 1);
+        assert_eq!(agents[0].level, "full");
+        assert!(agents[0].remote);
     }
 
     #[test]

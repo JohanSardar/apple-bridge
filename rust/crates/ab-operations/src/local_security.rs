@@ -197,7 +197,7 @@ fn queries_reaching_native(f: &Fixture) -> usize {
 }
 
 #[tokio::test]
-async fn every_agent_capture_requires_a_fresh_owner_approval() {
+async fn capture_asks_only_an_ask_first_agent_and_a_full_agent_captures_at_once() {
     for level in ["read", "approve", "full"] {
         for (op, scope, args) in [
             ("capture.screenshot", "capture:write", json!({})),
@@ -218,6 +218,12 @@ async fn every_agent_capture_requires_a_fresh_owner_approval() {
                         answer.expect_err("read cannot capture").code,
                         Code::Unauthorized
                     );
+                } else if level == "full" {
+                    if let Ok(record) = answer {
+                        assert_ne!(state_of(&record), "awaiting_approval", "{op}");
+                    }
+                    assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
+                    continue;
                 } else {
                     assert_eq!(state_of(&answer.expect("pending")), "awaiting_approval");
                     let row = f.gateway.state.command(id).expect("row");
@@ -237,14 +243,70 @@ async fn every_agent_capture_requires_a_fresh_owner_approval() {
                 }
                 assert_eq!(queries_reaching_native(&f), 0, "{level} {op}");
             }
+            if level == "full" {
+                assert_eq!(queries_reaching_native(&f), 2, "{op}");
+            }
         }
     }
 }
 
 #[tokio::test]
-async fn current_location_requires_one_owner_approval_per_local_or_remote_agent_query() {
+async fn current_location_reads_at_once_unless_the_agent_asks_first() {
     for remote in [false, true] {
-        for level in ["read", "approve", "full"] {
+        for level in ["read", "full"] {
+            let mut f = fixture();
+            let mut p = principal(
+                if remote {
+                    "replica:fixture/agent:location"
+                } else {
+                    "agent:location"
+                },
+                if remote { "delegated" } else { "agent" },
+                level,
+                &["location:read"],
+            );
+            p.remote = remote;
+            Arc::get_mut(&mut f.gateway)
+                .expect("exclusive gateway")
+                .identity = Arc::new(TestIdentity(p.clone()));
+            let mut request = query("location.current", &json!({}));
+            request.id = "qry_location_one".into();
+            let result = f.gateway.query(&p, request.clone()).await.expect("read");
+            assert_eq!(
+                serde_json::from_str::<Value>(result.get()).expect("result")["result_json"]["ok"],
+                true,
+                "{remote} {level}"
+            );
+            assert_eq!(queries_reaching_native(&f), 1);
+            assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
+            assert!(
+                f.gateway.query(&p, request.clone()).await.is_err(),
+                "a request ID reads once"
+            );
+            let other = principal("agent:other", "agent", level, &["location:read"]);
+            assert_eq!(
+                f.gateway
+                    .query(&other, request)
+                    .await
+                    .expect_err("identity bound")
+                    .code,
+                Code::IdReused
+            );
+            assert_eq!(queries_reaching_native(&f), 1);
+            assert!(
+                !serde_json::to_string(&f.gateway.state.commands().expect("ledger"))
+                    .expect("ledger JSON")
+                    .contains("result_json")
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn current_location_asks_once_per_query_for_a_local_or_remote_ask_first_agent() {
+    for remote in [false, true] {
+        {
+            let level = "approve";
             let mut f = fixture();
             let mut p = principal(
                 if remote {
@@ -337,6 +399,42 @@ async fn current_location_requires_one_owner_approval_per_local_or_remote_agent_
     }
 }
 
+#[tokio::test]
+async fn power_actions_run_for_a_full_agent_and_wait_for_an_ask_first_agent() {
+    for op in [
+        "mac.lock_screen",
+        "mac.sleep_display",
+        "mac.restart",
+        "mac.shutdown",
+    ] {
+        let f = fixture();
+        let full = principal("agent:power", "agent", "full", &["mac:write"]);
+        let answer = f
+            .gateway
+            .submit(&full, command("power_full", op, &json!({})))
+            .await;
+        if let Err(error) = &answer {
+            assert_ne!(error.code, Code::Forbidden, "{op}");
+        }
+        assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
+        let asks = principal("agent:careful", "agent", "approve", &["mac:write"]);
+        let pending = f
+            .gateway
+            .submit(&asks, command("power_asks", op, &json!({})))
+            .await
+            .expect("pending");
+        assert_eq!(state_of(&pending), "awaiting_approval", "{op}");
+        assert_eq!(
+            f.gateway
+                .submit(&owner(), command("power_owner", op, &json!({})))
+                .await
+                .expect_err("owner devices use the Mac itself")
+                .code,
+            Code::Forbidden
+        );
+    }
+}
+
 #[derive(Debug)]
 struct ApprovalClock(StdMutex<jiff::Timestamp>);
 impl crate::clock::Clock for ApprovalClock {
@@ -348,13 +446,13 @@ impl crate::clock::Clock for ApprovalClock {
 #[tokio::test]
 async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
     let mut f = fixture();
-    let p = principal("agent:location", "agent", "read", &["location:read"]);
+    let p = principal("agent:location", "agent", "approve", &["location:read"]);
     let clock = Arc::new(ApprovalClock(StdMutex::new(jiff::Timestamp::now())));
     Arc::get_mut(&mut f.gateway).expect("exclusive").clock = clock.clone();
     let mut request = query("location.current", &json!({}));
     request.id = "qry_bound_location".into();
     f.gateway.query(&p, request.clone()).await.expect("pending");
-    let other = principal("agent:other", "agent", "full", &["location:read"]);
+    let other = principal("agent:other", "agent", "approve", &["location:read"]);
     assert_eq!(
         f.gateway
             .query(&other, request.clone())
@@ -398,7 +496,7 @@ async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
 #[tokio::test]
 async fn failed_location_dispatch_also_consumes_approval() {
     let f = fixture();
-    let p = principal("agent:location", "agent", "full", &["location:read"]);
+    let p = principal("agent:location", "agent", "approve", &["location:read"]);
     let mut request = query("location.current", &json!({}));
     request.id = "qry_location_failure".into();
     f.gateway.query(&p, request.clone()).await.expect("pending");
@@ -509,6 +607,15 @@ async fn forwarded_current_location_uses_the_same_single_use_owner_gate() {
             target: crate::CommandTarget::Remote(Arc::new(remote)),
         };
         let input = br#"{"id":"qry_forwarded_location","args":{},"deadline_ms":5000}"#;
+        if level != "approve" {
+            service
+                .invoke(&p, "location.current", input)
+                .await
+                .expect("forwarded read at once");
+            assert!(service.invoke(&p, "location.current", input).await.is_err());
+            assert_eq!(queries_reaching_native(&f), 1, "{level}");
+            continue;
+        }
         let pending = service
             .invoke(&p, "location.current", input)
             .await

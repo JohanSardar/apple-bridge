@@ -4,6 +4,10 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Changed
+
+- Connected apps act without asking for approval by default, local or remote, including screenshots, screen and audio recording, camera photos, current location, Focus and Photos changes. Apps connected before this version get the same without reconnecting. Connecting a new app still needs Allow with the matching code. To make an app ask before each change, run `bridge agent level <id> approve`; the passkey consent page also offers it. This trades safety for convenience: an app tricked by something it reads can now send a message or delete a note with nothing to stop it.
+
 ## [0.1.5] - 2026-11-08
 
 ### Changed

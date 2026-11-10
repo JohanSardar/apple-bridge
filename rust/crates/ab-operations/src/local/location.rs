@@ -68,7 +68,7 @@ impl LocalGateway {
             Err(error) => return Err(error),
         }
         let now = self.clock.now();
-        if photos && principal.is_agent() {
+        if photos && principal.asks_first() {
             self.photos_previews.remember(&query.id, &query.args)?;
         }
         let record = self.state.transition(
@@ -96,7 +96,7 @@ impl LocalGateway {
                 history: Vec::new(),
             },
         )?;
-        if photos && !principal.is_agent() {
+        if !principal.asks_first() {
             let record = self.transition(record, State::Admitted, None, None, None)?;
             let record = self.transition(record, State::Prepared, None, None, None)?;
             self.transition(record, State::Dispatched, None, None, None)?;

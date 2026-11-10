@@ -1,9 +1,9 @@
 use super::{
     Failure, Outcome, permissions,
     tree::{
-        AgentAction, AgentCreateArgs, ConnectArgs, ConnectorAction, JoinArgs, PairArgs,
-        RemoteAction, RemoteArgs, RestoreArgs, ScopeArgs, SelftestArgs, ShortcutsAction, StartArgs,
-        TokenAction, WebAction,
+        AgentAction, AgentCreateArgs, AgentLevelArgs, ConnectArgs, ConnectorAction, JoinArgs,
+        PairArgs, RemoteAction, RemoteArgs, RestoreArgs, ScopeArgs, SelftestArgs, ShortcutsAction,
+        StartArgs, TokenAction, WebAction,
     },
 };
 use crate::{Config, Error, product_cli};
@@ -426,14 +426,13 @@ fn agent_summary(agent: &ab_trust::Principal) -> AgentSummary<'_> {
 }
 
 fn agent_create(authority: &Authority, args: &AgentCreateArgs) -> Outcome {
-    let level = match args.level.as_str() {
-        "read" => ab_trust::AgentLevel::Read,
-        "" | "approve" => ab_trust::AgentLevel::Approve,
-        "full" => ab_trust::AgentLevel::Full,
-        other => {
-            return Err(Failure::new(format!("`{other}` is not an agent level."))
-                .next("Choose read, approve or full."));
-        }
+    let level = if args.level.is_empty() {
+        ab_trust::AgentLevel::DEFAULT
+    } else {
+        ab_trust::AgentLevel::parse(&args.level).ok_or_else(|| {
+            Failure::new(format!("`{}` is not an agent level.", args.level))
+                .next("Choose full, approve or read.")
+        })?
     };
     let (agent, token) = authority
         .create_agent(&args.name, level, grants(&args.scope)?)
@@ -475,7 +474,31 @@ pub fn agent(home: &Path, action: AgentAction) -> Outcome {
             }
             authority.revoke(&args.id).map_err(|_| unknown_id(&args.id))
         }
+        AgentAction::Level(args) => agent_level(&authority, &args),
     }
+}
+
+fn agent_level(authority: &Authority, args: &AgentLevelArgs) -> Outcome {
+    let Some(level @ (ab_trust::AgentLevel::Full | ab_trust::AgentLevel::Approve)) =
+        ab_trust::AgentLevel::parse(&args.level)
+    else {
+        return Err(Failure::new(format!(
+            "`{}` is not a level you can switch to.",
+            args.level
+        ))
+        .next("Choose full or approve. For read-only access, revoke the agent and create a read agent."));
+    };
+    let agent = authority
+        .set_agent_level(&args.id, level)
+        .map_err(|error| match error {
+            ab_trust::Error::Invalid => {
+                Failure::new(format!("`{}` is a read-only agent.", args.id))
+                    .next("Revoke it and connect it again to give it write access.")
+            }
+            _ => unknown_id(&args.id),
+        })?;
+    println!("{}", serde_json::to_string(&agent_summary(&agent))?);
+    Ok(())
 }
 
 fn pair_iphone(
