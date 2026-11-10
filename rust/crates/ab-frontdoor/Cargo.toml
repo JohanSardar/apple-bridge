@@ -16,6 +16,7 @@ httpdate = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "blocking", "json"] }
 ab-operations = { path = "../ab-operations" }
 ab-catalog = { path = "../ab-catalog" }
+ab-domain = { path = "../ab-domain" }
 axum.workspace = true
 rmcp.workspace = true
 serde.workspace = true

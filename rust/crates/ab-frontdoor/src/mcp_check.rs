@@ -690,6 +690,27 @@ pub(crate) fn day_start(text: &str, next: bool) -> Option<String> {
     date.to_zoned(zone()).ok().map(|z| stamp(&z))
 }
 
+pub(crate) fn infer_collection(operation: &AgentOperation, arguments: &mut Map<String, Value>) {
+    if operation.name != "records.get" || arguments.contains_key("collection") {
+        return;
+    }
+    let Some(prefix) = arguments
+        .get("id")
+        .and_then(Value::as_str)
+        .and_then(|id| id.rsplit_once('_'))
+        .map(|(prefix, _)| prefix)
+    else {
+        return;
+    };
+    if let Some(collection) = ab_domain::Collection::ALL
+        .iter()
+        .find(|collection| collection.prefix() == prefix)
+        .and_then(|collection| serde_json::to_value(collection).ok())
+    {
+        arguments.insert("collection".to_owned(), collection);
+    }
+}
+
 pub(crate) fn local_dates(operation: &AgentOperation, arguments: &mut Map<String, Value>) {
     let properties = operation.arguments["properties"]
         .as_object()

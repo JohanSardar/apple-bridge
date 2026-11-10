@@ -81,6 +81,7 @@ name = "ab-frontdoor"
 version = "0.1.5"
 dependencies = [
  "ab-catalog",
+ "ab-domain",
  "ab-operations",
  "ab-pages",
  "ab-trust",

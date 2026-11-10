@@ -535,6 +535,7 @@ impl Call<'_> {
         }
         let mut given = input.get("arguments").cloned();
         if let Some(Value::Object(arguments)) = given.as_mut() {
+            mcp_check::infer_collection(operation, arguments);
             mcp_check::local_dates(operation, arguments);
         }
         let arguments = mcp_check::arguments(operation, given.as_ref())?;

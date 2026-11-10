@@ -11,5 +11,5 @@ Times are RFC 3339 timestamps with an offset, such as 2026-11-12T09:00:00-06:00,
 ## Calendar
 
 - `calendar_events` lists today's events by default. Use `date` for one day, or `start` and `end` for a range, `calendar` (a name such as Work) and `text` to filter.
-- `calendar_add` with `title` and `start`, and optionally `end` (default one hour later), `calendar` (a name; default the first calendar that accepts events), `location` and `notes`. A plain date makes an all-day event. For alarms, recurrence or availability use `apple_change` and `calendar.create_event`, which takes `calendar` or `calendar_id`. `apple_read` with `calendar.calendars` lists the calendars.
+- `calendar_add` with `title` and `start`, and optionally `end` (default one hour later), `calendar` (a name; default the first calendar that accepts events), `location` and `notes`. A plain date makes an all-day event. For alarms, recurrence or availability use `apple_change` and `calendar.create_event`, which takes `calendar` or `calendar_id`. `apple_read` with operation calendar.calendars lists the calendars.
 - Change with `calendar.update_event` or `calendar.delete_event`, passing `expected_version`. For repeating events, `span` chooses this occurrence or all future ones.

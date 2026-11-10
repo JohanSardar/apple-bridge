@@ -759,3 +759,22 @@ fn write_only_agents_cannot_read_through_name_lookups() {
     assert_eq!(problem["error"]["code"], "unauthorized");
     assert_eq!(problem["error"]["expected"]["scope"], "reminders:read");
 }
+
+#[test]
+fn record_ids_name_their_collection() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let get = registry.find("records.get").ok_or("records.get")?;
+    let mut bare = json!({"id": "hdl_01M7347WK24DMMSES7G9E72B6D"});
+    let bare = bare.as_object_mut().ok_or("object")?;
+    mcp_check::infer_collection(get, bare);
+    assert_eq!(bare["collection"], "messages.handle");
+    let mut given = json!({"id": "hdl_01M7347WK24DMMSES7G9E72B6D", "collection": "notes.note"});
+    let given = given.as_object_mut().ok_or("object")?;
+    mcp_check::infer_collection(get, given);
+    assert_eq!(given["collection"], "notes.note");
+    let mut unknown = json!({"id": "zzz_01M7347WK24DMMSES7G9E72B6D"});
+    let unknown = unknown.as_object_mut().ok_or("object")?;
+    mcp_check::infer_collection(get, unknown);
+    assert!(!unknown.contains_key("collection"));
+    Ok(())
+}
