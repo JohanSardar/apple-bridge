@@ -155,19 +155,91 @@ fn each_word(text: &str, change: impl Fn(&str) -> String) -> String {
 }
 
 pub fn redact_urls(text: &str) -> String {
-    each_word(text, redact_url)
+    each_word(&strip_userinfo(text), redact_url)
+}
+
+fn scheme_before(text: &str, end: usize) -> bool {
+    let bytes = text.as_bytes();
+    let part = |b: u8| b.is_ascii_alphanumeric() || b"+.-".contains(&b);
+    let mut start = end;
+    while start > 0 && part(bytes[start - 1]) {
+        start -= 1;
+    }
+    while start < end && !bytes[start].is_ascii_alphabetic() {
+        start += 1;
+    }
+    end - start >= 2
+}
+
+fn userinfo_spans(text: &str) -> Vec<(usize, usize)> {
+    let bytes = text.as_bytes();
+    let mut spans: Vec<(usize, usize)> = Vec::new();
+    for (at, _) in text.match_indices('@') {
+        let mut index = at;
+        let mut space = None;
+        let mut slash = None;
+        while index > 0 {
+            let byte = bytes[index - 1];
+            if matches!(byte, b'/' | b'?' | b'#') {
+                if byte == b'/' {
+                    slash = Some(index - 1);
+                }
+                break;
+            }
+            if byte == b'\\' && !matches!(bytes.get(index), Some(b'n' | b'r' | b't')) {
+                slash = Some(index - 1);
+                break;
+            }
+            if byte == b' ' && space.is_none() {
+                space = Some(index);
+            }
+            index -= 1;
+        }
+        let span = if let Some(boundary) = slash {
+            let mut colon = boundary;
+            while colon > 0 && matches!(bytes[colon - 1], b'/' | b'\\') {
+                colon -= 1;
+            }
+            let start = boundary + 1;
+            let candidate = &text[start..at];
+            let authority = colon > 0
+                && bytes[colon - 1] == b':'
+                && scheme_before(text, colon - 1)
+                && (!candidate.contains(' ') || candidate.contains(':'));
+            authority.then_some((start, at))
+        } else {
+            let word = space.unwrap_or(index);
+            text[word..at].find(':').and_then(|colon| {
+                let colon = word + colon;
+                scheme_before(text, colon).then_some((colon + 1, at))
+            })
+        };
+        if let Some((start, end)) = span
+            && start < end
+        {
+            match spans.last_mut() {
+                Some(last) if last.1 >= start => last.1 = end,
+                _ => spans.push((start, end)),
+            }
+        }
+    }
+    spans
 }
 
 pub fn strip_userinfo(text: &str) -> String {
     if !text.contains('@') {
         return text.to_owned();
     }
-    each_word(text, |word| match url_parts(word) {
-        Some((scheme, slashes, authority, tail)) if authority.contains('@') => {
-            format!("{scheme}:{slashes}{}{tail}", without_userinfo(authority))
-        }
-        _ => word.to_owned(),
-    })
+    let mut out = String::with_capacity(text.len());
+    let mut last = 0;
+    for (start, end) in userinfo_spans(text) {
+        let start = start.max(last);
+        out.push_str(&text[last..start]);
+        out.push_str("***");
+        last = end;
+    }
+    out.push_str(&text[last..]);
+    out
 }
 
 pub fn strip_userinfo_json(value: &mut Value) {
@@ -1113,6 +1185,13 @@ mod tests {
             ("https:/me:pw@h.test", "https:/***@h.test"),
             ("url=https://me:pw@h.test", "url=https://***@h.test"),
             ("(HTTPS://me:pw@h.test)", "(HTTPS://***@h.test)"),
+            ("https://me:\\npw@h.test", "https://***@h.test"),
+            ("https://me:\\tpw@h.test", "https://***@h.test"),
+            ("https://me:\npw@h.test", "https://***@h.test"),
+            ("https://me:\r\tpw@h.test", "https://***@h.test"),
+            ("https://me:p w@h.test", "https://***@h.test"),
+            ("https://me@corp:pw@h.test/x", "https://***@h.test/x"),
+            ("https:me:\\npw@h.test", "https:***@h.test"),
         ] {
             assert_eq!(strip_userinfo(text), shown, "{text}");
         }
@@ -1124,6 +1203,8 @@ mod tests {
             r"C:\a@b.com\config",
             "https://relay.test/sign-in?code=abc#x",
             "ssh me@host.test",
+            "see https://h.test and mail a@b.com",
+            "Error: Can't use a@b.com",
         ] {
             assert_eq!(strip_userinfo(text), text, "{text}");
         }

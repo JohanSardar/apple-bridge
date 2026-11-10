@@ -1177,3 +1177,69 @@ fn a_value_that_looks_like_flags_is_left_alone() -> Check {
     );
     Ok(())
 }
+
+#[test]
+fn an_option_with_an_optional_value_does_not_shield_a_later_flag() -> Check {
+    let home = short_home()?;
+    let id = created_agent(home.path(), "bot")?;
+    for arguments in [
+        ["--non-interactive", "-y", "--yes=false"],
+        ["--non-interactive", "--yes", "--no-yes"],
+    ] {
+        let output = bridge()
+            .args(["agents", "revoke", &id])
+            .args(arguments)
+            .args(["--json", "--home"])
+            .arg(home.path())
+            .output()?;
+        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+        assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+    }
+    let listed = json_out(&run(home.path(), &["agents", "list", "--json"])?)?;
+    assert!(listed["agents"][0]["revoked_at"].is_null(), "{listed}");
+    Ok(())
+}
+
+#[test]
+fn control_characters_cannot_split_a_password_from_its_url() -> Check {
+    let home = short_home()?;
+    for control in ['\n', '\t', '\r'] {
+        let url = format!("https://me:{control}hunter2@c.example.test");
+        for arguments in [
+            vec!["agents", "inspect", url.as_str(), "--json", "--debug"],
+            vec!["agents", "inspect", url.as_str()],
+            vec!["pair", "--expires-in", url.as_str()],
+        ] {
+            let output = run(home.path(), &arguments)?;
+            assert_ne!(output.status.code(), Some(0), "{arguments:?}");
+            let shown = format!("{}{}", text(&output.stdout), text(&output.stderr));
+            assert!(!shown.contains("hunter2"), "{arguments:?}: {shown}");
+        }
+    }
+    let output = run(
+        home.path(),
+        &[
+            "agents",
+            "create",
+            "--name",
+            "https://me:\thunter2@c.example.test",
+            "--level",
+            "read",
+            "--expires-in",
+            "1d",
+            "--json",
+        ],
+    )?;
+    let id = json_out(&output)?["agent"]["id"]
+        .as_str()
+        .ok_or("id")?
+        .to_owned();
+    let output = run(home.path(), &["agents", "revoke", &id, "--json", "--debug"])?;
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        !text(&output.stderr).contains("hunter2"),
+        "{}",
+        text(&output.stderr)
+    );
+    Ok(())
+}

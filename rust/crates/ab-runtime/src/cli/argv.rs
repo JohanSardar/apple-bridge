@@ -319,13 +319,21 @@ fn short_of(command: &clap::Command, name: &str) -> Option<char> {
         .and_then(clap::Arg::get_short)
 }
 
+fn consumes_next(argument: &clap::Arg) -> bool {
+    argument.get_action().takes_values()
+        && !argument.is_require_equals_set()
+        && argument
+            .get_num_args()
+            .is_none_or(|range| range.min_values() > 0)
+}
+
 fn wants_value(command: &clap::Command, token: &str) -> bool {
     let root = Cli::command();
     let mut arguments = command.get_arguments().chain(root.get_arguments());
     if let Some(long) = token.strip_prefix("--") {
         return !long.contains('=')
             && arguments.any(|argument| {
-                argument.get_action().takes_values()
+                consumes_next(argument)
                     && (argument.get_long() == Some(long)
                         || argument
                             .get_all_aliases()
@@ -337,9 +345,8 @@ fn wants_value(command: &clap::Command, token: &str) -> bool {
     };
     let mut characters = letters.chars();
     match (characters.next(), characters.next()) {
-        (Some(letter), None) => arguments.any(|argument| {
-            argument.get_short() == Some(letter) && argument.get_action().takes_values()
-        }),
+        (Some(letter), None) => arguments
+            .any(|argument| argument.get_short() == Some(letter) && consumes_next(argument)),
         _ => false,
     }
 }
