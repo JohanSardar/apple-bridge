@@ -613,7 +613,7 @@ fn stats_watch_stops_at_its_time_limit_on_an_empty_home() -> Check {
     let output = run(home.path(), &["stats", "--watch", "--timeout", "1"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(text(&output.stdout).contains("Still syncing"));
-    assert!(text(&output.stderr).contains("--watch is deprecated. Use --follow."));
+    assert!(text(&output.stderr).contains("--watch is deprecated. Use --wait."));
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(!text(&output.stderr).contains("deprecated"));

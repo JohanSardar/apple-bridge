@@ -249,7 +249,7 @@ enum Spelling {
 }
 
 const RENAMED: &[(&str, &str, &str)] = &[
-    ("stats", "--watch", "--follow"),
+    ("stats", "--watch", "--wait"),
     ("read", "--text", "--query"),
     ("link", "--no-browser", "--no-open"),
 ];
