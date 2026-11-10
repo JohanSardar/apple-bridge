@@ -15,18 +15,28 @@ pub(crate) const COMPACT: &[&str] = &[
     "messages_send",
     "reminders_add",
     "calendar_events",
+    "calendar_add",
     "contacts_find",
     "notes_create",
 ];
 
 pub(crate) const BLOB_READ: &str = "blobs.read";
 pub(crate) const BLOB_STAGE: &str = "blobs.stage";
+pub(crate) const USAGE_SUMMARY: &str = "usage.summary";
+pub(crate) const CALENDARS: &str = "calendar.calendars";
+pub(crate) const BY_TITLE: &[&str] = &[
+    "reminders.complete",
+    "reminders.uncomplete",
+    "reminders.update",
+    "reminders.delete",
+];
 
 #[derive(Debug)]
 pub(crate) struct Registry {
     pub operations: Vec<AgentOperation>,
     pub domains: Vec<(String, String)>,
     tools: Vec<Value>,
+    examples: Vec<(String, Value)>,
 }
 
 pub(crate) fn registry() -> Option<&'static Registry> {
@@ -37,29 +47,120 @@ pub(crate) fn registry() -> Option<&'static Registry> {
 fn load() -> Option<Registry> {
     let descriptors = ab_catalog::operations().ok()?;
     let mut operations = ab_catalog::agent_operations(&descriptors).ok()?;
+    for operation in &mut operations {
+        patch(operation);
+    }
     operations.extend(blob_operations());
-    let domains = ab_catalog::agent_domains().ok()?;
+    operations.extend(composite_operations());
+    let mut domains = ab_catalog::agent_domains().ok()?;
+    domains.push((
+        "usage".into(),
+        "Screen Time: app usage per device and day, estimated from app focus.".into(),
+    ));
+    domains.sort();
     let mut tools: Vec<Value> = serde_json::from_str(include_str!("mcp_tools.json")).ok()?;
     let change = change_schema();
+    let mut examples = Vec::new();
     for tool in &mut tools {
         if tool["outputSchema"]["$ref"] == "#change" {
             tool["outputSchema"] = change.clone();
+        }
+        let name = tool["name"].as_str().unwrap_or_default().to_owned();
+        if let Some(example) = tool.as_object_mut().and_then(|t| t.remove("example")) {
+            examples.push((name, example));
         }
     }
     Some(Registry {
         operations,
         domains,
         tools,
+        examples,
     })
+}
+
+fn patch(operation: &mut AgentOperation) {
+    if operation.name == "calendar.create_event" {
+        operation.arguments["properties"]["calendar"] = json!({"type":"string","description":"Calendar name, such as Work, instead of calendar_id. A name that matches no calendar or several returns the candidates."});
+        operation.arguments["properties"]["calendar_id"]["description"] = json!(
+            "Calendar to add it to: a cal_ ID from calendar.calendars. Or give calendar with its name."
+        );
+        if let Some(required) = operation.arguments["required"].as_array_mut() {
+            required.retain(|field| field != "calendar_id");
+        }
+        operation.detail = "Give calendar (a name) or calendar_id. Without either, the first writable calendar is used.".into();
+    }
+    if operation.name == "calendar.agenda" {
+        operation.arguments["properties"]["start"]["description"] = json!(
+            "Window start: RFC 3339 timestamp, or YYYY-MM-DD for midnight in the Mac's time zone."
+        );
+        operation.arguments["properties"]["end"]["description"] = json!(
+            "Window end, after start: RFC 3339 timestamp, or YYYY-MM-DD for midnight in the Mac's time zone."
+        );
+        operation.arguments["properties"]["calendar_id"]["description"] = json!(
+            "Only events in this calendar (a cal_ ID from calendar.calendars). Omit for all calendars."
+        );
+    }
+    if BY_TITLE.contains(&operation.name.as_str()) {
+        operation.arguments["properties"]["reminder"] = json!({"type":"string","description":"The reminder's title, instead of id and expected_version. It must match one reminder; otherwise you get the candidates."});
+        operation.arguments["properties"]["id"]["description"] =
+            json!("The reminder's rmd_ ID from reminders.items. Or give reminder with its title.");
+        if let Some(required) = operation.arguments["required"].as_array_mut() {
+            required.retain(|field| field != "id" && field != "expected_version");
+        }
+        operation.detail = "Give id with expected_version from your read, or only reminder with its title; the current version is then used.".into();
+    }
+}
+
+fn composite_operations() -> Vec<AgentOperation> {
+    let read = json!({"readOnlyHint":true,"openWorldHint":false});
+    vec![
+        AgentOperation {
+            name: USAGE_SUMMARY.into(),
+            domain: "usage".into(),
+            kind: OperationKind::Read,
+            changes: false,
+            scope: "usage:read".into(),
+            summary: "Summarise Screen Time: total app usage and top apps per device (Mac, iPhone, iPad) for a day or a range of days.".into(),
+            detail: "Times are estimates from app focus on each device, so they can differ from the Screen Time app. Days are in the Mac's time zone.".into(),
+            returns: "total_seconds and top_apps overall, and devices with name, platform, total_seconds, top_apps and per-day totals.".into(),
+            arguments: json!({"type":"object","additionalProperties":false,"properties":{
+                "date":{"type":"string","description":"One day as YYYY-MM-DD, such as yesterday's date."},
+                "start":{"type":"string","description":"First day of a range, YYYY-MM-DD."},
+                "end":{"type":"string","description":"Last day of a range, YYYY-MM-DD, inclusive."},
+                "device":{"type":"string","description":"Only this device: a dev_ ID or part of its name, such as iPhone."},
+                "top":{"type":"integer","minimum":1,"maximum":50,"description":"Top apps to list. Default 10."}
+            },"required":[]}),
+            example: json!({"date":"2026-11-09"}),
+            version: VersionRule::None,
+            unavailable: None,
+            annotations: read.clone(),
+        },
+        AgentOperation {
+            name: CALENDARS.into(),
+            domain: "calendar".into(),
+            kind: OperationKind::Read,
+            changes: false,
+            scope: "calendar:read".into(),
+            summary: "List the calendars, such as Work or Family, with their cal_ IDs and whether events can be added.".into(),
+            detail: String::new(),
+            returns: "calendars with id (cal_), title, writable, type and account.".into(),
+            arguments: json!({"type":"object","additionalProperties":false,"properties":{},"required":[]}),
+            example: json!({}),
+            version: VersionRule::None,
+            unavailable: None,
+            annotations: read,
+        },
+    ]
 }
 
 pub(crate) fn change_schema() -> Value {
     json!({"type":"object","properties":{
-        "status":{"type":"string","enum":["done","pending","awaiting_approval","failed","indeterminate"]},
+        "status":{"type":"string","enum":["done","partial","pending","awaiting_approval","failed","indeterminate"]},
         "request_id":{"type":"string"},
         "operation":{"type":"string"},
         "ids":{"type":"array","items":{"type":"string"}},
         "record":{"type":"object"},
+        "parts":{"type":"array","items":{"type":"object"}},
         "verification":{"type":"string"},
         "next":{"type":"string"}
     }})
@@ -115,6 +216,20 @@ impl Registry {
         self.operations
             .iter()
             .find(|operation| operation.name == normal || operation.name.replace('.', "_") == name)
+    }
+
+    pub fn example(&self, tool: &str) -> Value {
+        self.examples
+            .iter()
+            .find(|(name, _)| name == tool)
+            .map_or_else(|| json!({}), |(_, example)| example.clone())
+    }
+
+    pub fn tool_schema(&self, tool: &str) -> Option<&Value> {
+        self.tools
+            .iter()
+            .find(|t| t["name"] == tool)
+            .map(|t| &t["inputSchema"])
     }
 
     pub fn tools(&self, principal: Option<&Principal>) -> Vec<Value> {
