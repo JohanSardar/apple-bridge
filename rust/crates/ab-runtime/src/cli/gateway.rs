@@ -1,6 +1,6 @@
 use super::{
     Failure, Outcome,
-    commands::{address, load_config},
+    commands::{self, address, load_config},
     failure::{Reason, Step},
     modes::Modes,
     stats,
@@ -307,7 +307,10 @@ fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapse
         ),
     );
     ui::row("MCP address", &mcp_address(address));
-    ui::row("Data folder", &home.display().to_string());
+    ui::row(
+        "Data folder",
+        &commands::absolute(home).display().to_string(),
+    );
     let remote = remote_state(home);
     ui::row(
         "Remote access",
@@ -318,8 +321,10 @@ fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapse
         },
     );
     if !helper {
-        ui::row("Mac data", "no Helper app found, so nothing new will sync");
-        ui::note("Install Apple Bridge, or pass --helper-app.");
+        ui::warn(
+            "helper_missing",
+            "No Helper app was found, so nothing new will sync. Install Apple Bridge, or pass --helper-app.",
+        );
     }
 }
 
@@ -338,13 +343,24 @@ fn validate_up(args: &UpArgs) -> Outcome {
     if let Some(helper) = &args.helper_app
         && !Path::new(helper).exists()
     {
-        failures.push(Failure::new(
-            Reason::NotFound,
-            format!(
-                "Can't use --helper-app {}. Nothing is there.",
-                ui::clean(helper)
+        failures.push(
+            Failure::new(
+                Reason::InvalidValue,
+                format!(
+                    "Can't use --helper-app {}. Nothing is there.",
+                    ui::clean(helper)
+                ),
+            )
+            .then(
+                "Point it at the installed app",
+                [
+                    "bridge",
+                    "up",
+                    "--helper-app",
+                    "/Applications/Apple Bridge.app",
+                ],
             ),
-        ));
+        );
     }
     let mut failures = failures.into_iter();
     let Some(first) = failures.next() else {
@@ -364,6 +380,7 @@ fn validate_up(args: &UpArgs) -> Outcome {
     Err(combined)
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
     let began = Instant::now();
     validate_up(args)?;
@@ -413,37 +430,45 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
         .flatten();
     let elapsed = began.elapsed();
     if Modes::get().json {
-        ui::outln(
-            &json!({
-                "state": "on",
-                "started": !running,
-                "mcp": mcp_address(&address),
-                "home": home,
-                "helper": helper,
-                "remote": remote_state(home),
-                "seconds": elapsed.as_secs_f64(),
-                "restart_needed": older.is_some(),
-            })
-            .to_string(),
-        );
+        ui::json_document(json!({
+            "outcome": if running { "unchanged" } else { "started" },
+            "state": "on",
+            "started": !running,
+            "mcp": mcp_address(&address),
+            "home": commands::absolute(home),
+            "helper": helper,
+            "remote": remote_state(home),
+            "seconds": elapsed.as_secs_f64(),
+            "restart_needed": older.is_some(),
+            "next": [
+                Step::new("Connect Claude Code", ["bridge", "link", "claude"]).to_json(),
+                Step::new("Check that it's healthy", ["bridge", "status"]).to_json(),
+            ],
+        }));
         return Ok(());
     }
     if !Modes::get().stdout_tty() {
         ui::outln(&mcp_address(&address));
     }
     print_summary(home, &address, !running, helper, elapsed);
+    let restart = [
+        Step::new("Stop the running gateway", ["bridge", "down"]),
+        Step::new("Then start the updated one", ["bridge", "up"]),
+    ];
     if let Some(version) = older {
         ui::warn(
             "restart_needed",
             &format!(
-                "The running gateway ({version}) differs from this installed executable. Run bridge down, then bridge up to finish the update. If the app started it, restart the app instead."
+                "The running gateway ({version}) differs from this installed executable. Restart it to finish the update. If the app started it, restart the app instead."
             ),
         );
+        ui::next_steps(&restart);
     } else if running && !home.join("run/gateway-build.json").exists() {
         ui::warn(
             "restart_needed",
-            "This gateway predates update detection. If you updated, run bridge down, then bridge up.",
+            "This gateway predates update detection. If you updated, restart it.",
         );
+        ui::next_steps(&restart);
     }
     stats::print_once_stderr(home)?;
     ui::next_steps(&[
@@ -455,7 +480,7 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
             "Allow the Mac permissions you want",
             ["bridge", "permissions", "guide"],
         ),
-        Step::new("Follow the first sync", ["bridge", "stats", "--follow"]),
+        Step::new("Follow the first sync", ["bridge", "stats", "--wait"]),
     ]);
     Ok(())
 }
@@ -476,7 +501,8 @@ pub fn down(home: &Path) -> Outcome {
         if Modes::get().json {
             ui::json_document(json!({"home": home, "outcome": "unchanged"}));
         } else {
-            ui::done("Already stopped", &home.display().to_string());
+            ui::done("Already stopped", "Apple Bridge");
+            ui::row("Home", &commands::absolute(home).display().to_string());
         }
         return Ok(());
     }
@@ -518,7 +544,8 @@ pub fn down(home: &Path) -> Outcome {
     if Modes::get().json {
         ui::json_document(json!({"home": home, "outcome": "stopped"}));
     } else {
-        ui::done("Apple Bridge stopped", &home.display().to_string());
+        ui::done("Stopped", "Apple Bridge");
+        ui::row("Home", &commands::absolute(home).display().to_string());
     }
     Ok(())
 }

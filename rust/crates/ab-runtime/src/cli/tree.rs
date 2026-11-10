@@ -615,8 +615,6 @@ fn level_values(switchable: bool) -> clap::builder::PossibleValuesParser {
     clap::builder::PossibleValuesParser::new(levels(switchable))
 }
 
-/// Accepts any level text so `agents create` can report every problem at once,
-/// while still listing the levels for help and completion.
 #[derive(Clone)]
 pub struct LevelText;
 

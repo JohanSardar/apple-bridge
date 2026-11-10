@@ -386,7 +386,7 @@ pub fn status(home: &Path, args: &GuideStatusArgs) -> Outcome {
         for permission in permissions() {
             statuses.insert(permission.id, backend.status(permission)?);
         }
-        ui::outln(&serde_json::to_string(&statuses)?);
+        ui::json_document(serde_json::to_value(&statuses)?);
     } else {
         print_checklist(&backend)?;
     }
@@ -490,10 +490,15 @@ async fn settings_step(
         ui::warn(
             "not_confirmed",
             &format!(
-                "{} isn't confirmed yet. Rerun bridge permissions guide to continue. If you allowed it, run bridge down, then bridge up.",
+                "{} isn't confirmed yet. If you allowed it, restart Apple Bridge so it takes effect.",
                 permission.title
             ),
         );
+        ui::next_steps(&[
+            Step::new("Continue with the rest", ["bridge", "permissions", "guide"]),
+            Step::new("Or restart Apple Bridge", ["bridge", "down"]),
+            Step::new("Then start it again", ["bridge", "up"]),
+        ]);
     }
     Ok(())
 }
@@ -673,9 +678,19 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
         None if modes.yes => Consent::Everything,
         None if modes.interactive() => Consent::Ask,
         None => {
+            let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
+            let rows = checklist(&backend)?;
+            if !modes.json {
+                ui::table(&["Permission", "Status", "Used for"], &rows);
+            }
+            let listed: Vec<serde_json::Value> = rows
+                .iter()
+                .map(|row| serde_json::json!({"permission": row[0], "status": row[1], "usedFor": row[2]}))
+                .collect();
             return Err(Failure::new(Reason::TerminalRequired, "Can't walk through permissions without a terminal.")
                 .sentence(format!("Nothing was requested ({}). Name the ones to request with --only, such as --only contacts,calendar.", modes.why_not_interactive()))
-                .then("See which are allowed", ["bridge", "permissions", "status"]));
+                .data("permissions", listed)
+                .then("Request only the ones you name", ["bridge", "permissions", "guide", "--only", "contacts,calendar"]));
         }
     };
     let backend = backend_for(home, args.fixture.as_ref(), args.helper_app.as_deref());
@@ -736,10 +751,7 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     }
     ui::blank();
     print_checklist(&backend)?;
-    ui::next_steps(&[Step::new(
-        "Follow the sync",
-        ["bridge", "stats", "--follow"],
-    )]);
+    ui::next_steps(&[Step::new("Follow the sync", ["bridge", "stats", "--wait"])]);
     Ok(())
 }
 

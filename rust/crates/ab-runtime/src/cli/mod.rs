@@ -54,7 +54,7 @@ pub fn parse(arguments: impl IntoIterator<Item = OsString>) -> Result<Cli, clap:
 
 fn requested(matches: &clap::ArgMatches) -> Requested {
     use clap::{FromArgMatches, parser::ValueSource};
-    let globals = tree::Globals::from_arg_matches(deepest(matches)).unwrap_or_else(|_| tree::Globals {
+    let globals = tree::Globals::from_arg_matches(deepest(matches)).unwrap_or(tree::Globals {
         home: None,
         json: false,
         fields: None,
@@ -87,9 +87,22 @@ fn deepest(matches: &clap::ArgMatches) -> &clap::ArgMatches {
     current
 }
 
-fn lenient_matches(arguments: &[OsString]) -> clap::ArgMatches {
+fn empty_home_variable() -> bool {
+    std::env::var_os("APPLE_BRIDGE_HOME").is_some_and(|value| value.is_empty())
+}
+
+fn cli_command() -> clap::Command {
     use clap::CommandFactory;
-    Cli::command()
+    let command = Cli::command();
+    if empty_home_variable() {
+        command.mut_arg("home", |argument| argument.env(None::<&str>))
+    } else {
+        command
+    }
+}
+
+fn lenient_matches(arguments: &[OsString]) -> clap::ArgMatches {
+    cli_command()
         .ignore_errors(true)
         .try_get_matches_from(arguments)
         .unwrap_or_default()
@@ -228,7 +241,10 @@ fn print_help(path: &[String]) -> ExitCode {
 
 fn finish(result: Outcome) -> ExitCode {
     match result {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => {
+            ui::report_unembedded_warnings();
+            ExitCode::SUCCESS
+        }
         Err(failure) => {
             ui::render_failure(&failure);
             ExitCode::from(failure.exit_code())
@@ -262,11 +278,11 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
 }
 
 pub async fn main() -> ExitCode {
-    use clap::{CommandFactory, FromArgMatches};
+    use clap::FromArgMatches;
     let raw: Vec<OsString> = std::env::args_os().collect();
     let prepared = argv::prepare(raw);
     access::typed_as(&prepared.typed);
-    let parsed = Cli::command().try_get_matches_from(&prepared.arguments);
+    let parsed = cli_command().try_get_matches_from(&prepared.arguments);
     let matches = match &parsed {
         Ok(matches) => matches.clone(),
         Err(_) => lenient_matches(&prepared.arguments),
@@ -303,6 +319,17 @@ pub async fn main() -> ExitCode {
     }
     if let Some(replacement) = help::deprecated(&prepared.path.join(" ")) {
         ui::deprecated(&shown_path(&prepared.path), replacement);
+    }
+    if empty_home_variable() && cli.globals.home.is_none() {
+        return finish(Err(Failure::new(
+            Reason::InvalidHome,
+            "Can't use an empty APPLE_BRIDGE_HOME. It must name a folder.",
+        )
+        .sentence("Set it to a folder, or unset it to use the default.")
+        .then(
+            "Or name the folder for this run",
+            ["bridge", "status", "--home", "<DIR>"],
+        )));
     }
     let home = match resolve_home(cli.globals.home) {
         Ok(home) => home,
@@ -375,13 +402,19 @@ async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     }
     children::stop_all();
     let note = ui::cancel_note();
+    let with_step = |failure: Failure| match ui::cancel_step() {
+        Some(step) => failure.step(step),
+        None => failure,
+    };
     if Modes::get().json {
-        let failure = Failure::canceled(note.unwrap_or_else(|| "Canceled.".to_owned()));
+        let failure = with_step(Failure::canceled(
+            note.unwrap_or_else(|| "Canceled.".to_owned()),
+        ));
         ui::render_failure(&failure.data("signal", code - 128));
         std::process::exit(code);
     }
     if let Some(note) = note {
-        ui::render_failure(&Failure::canceled(format!("\n{note}")));
+        ui::render_failure(&with_step(Failure::canceled(format!("\n{note}"))));
     }
     std::process::exit(code);
 }
@@ -613,7 +646,8 @@ fn help_command(args: &tree::HelpArgs) -> Outcome {
                 "commands": matches.iter().map(|(path, summary)| serde_json::json!({"path": path, "summary": summary})).collect::<Vec<_>>()
             }));
         } else if matches.is_empty() {
-            ui::note(&format!("No commands match \"{}\".", ui::clean(&query)));
+            ui::outln(&format!("No commands match \"{}\".", ui::clean(&query)));
+            ui::next_steps(&[Step::new("See every command", ["bridge", "help", "--all"])]);
         } else {
             let rows: Vec<Vec<String>> = matches
                 .into_iter()

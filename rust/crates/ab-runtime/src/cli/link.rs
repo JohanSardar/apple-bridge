@@ -16,7 +16,6 @@ use std::{
 
 const REGISTER_BUDGET: Duration = Duration::from_secs(20);
 const SIGN_IN_WAIT: Duration = Duration::from_secs(600);
-const TRY_IT: &str = "Try it: ask your agent \"Use Apple Bridge to show my reminder lists. Then run bridge stats and tell me how much has synced.\"\nAgent instructions: bridge skills get core";
 
 struct Plan {
     program: &'static str,
@@ -36,12 +35,12 @@ fn plan(
     name: &str,
     scope: LinkScope,
     url: &str,
-    no_browser: bool,
+    no_open: bool,
 ) -> Option<Plan> {
     match client {
         LinkClient::Claude => {
             let mut login = strings(&["mcp", "login", name]);
-            if no_browser {
+            if no_open {
                 login.push("--no-browser".to_owned());
             }
             Some(Plan {
@@ -111,25 +110,145 @@ fn print_other(url: &str) {
     )]);
 }
 
-fn run_quietly(plan: &Plan, arguments: &[String]) -> Outcome<(bool, String)> {
-    let output = Command::new(plan.program)
-        .args(arguments)
-        .stdin(Stdio::null())
-        .output()
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                missing(plan)
-            } else {
-                Failure::new(
-                    Reason::SpawnFailed,
-                    format!("Couldn't run {}.", plan.program),
-                )
-                .row("Detail", ui::clean(&error.to_string()))
-            }
-        })?;
-    let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
-    text.push_str(&String::from_utf8_lossy(&output.stderr));
-    Ok((output.status.success(), text))
+#[derive(Debug, Clone, Copy)]
+struct Deadline {
+    end: Option<Instant>,
+    given: Option<Duration>,
+}
+
+impl Deadline {
+    fn new(given: Option<Duration>) -> Self {
+        Self {
+            end: given.map(|given| Instant::now() + given),
+            given,
+        }
+    }
+
+    fn within(&self, phase: Duration) -> Instant {
+        let phase_end = Instant::now() + phase;
+        self.end.map_or(phase_end, |end| end.min(phase_end))
+    }
+}
+
+struct Phase<'a> {
+    what: &'a str,
+    confirmed: String,
+    check: Option<Step>,
+}
+
+fn spawn(plan: &Plan, arguments: &[String], quiet: bool) -> Outcome<std::process::Child> {
+    let mut command = Command::new(plan.program);
+    command.args(arguments).stdin(Stdio::null());
+    if quiet {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    } else {
+        command.stdout(Stdio::null()).stderr(Stdio::null());
+    }
+    command.spawn().map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            missing(plan)
+        } else {
+            Failure::new(
+                Reason::SpawnFailed,
+                format!("Couldn't run {}.", plan.program),
+            )
+            .row("Detail", ui::clean(&error.to_string()))
+        }
+    })
+}
+
+fn drain(source: Option<impl std::io::Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
+    std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        if let Some(mut source) = source {
+            let _ = source.read_to_end(&mut bytes);
+        }
+        bytes
+    })
+}
+
+fn stopped(plan: &Plan, arguments: &[String], phase: &Phase<'_>, deadline: &Deadline) -> Failure {
+    let shown_command = shown(plan.program, arguments);
+    let headline = match deadline.given {
+        Some(given) => format!(
+            "Stopped {} after {}. --timeout passed.",
+            phase.what,
+            commands::friendly(given)
+        ),
+        None => format!(
+            "Stopped {}. {} didn't answer in time.",
+            phase.what, plan.title
+        ),
+    };
+    let mut failure = Failure::new(Reason::Timeout, headline)
+        .row("Command", &shown_command)
+        .row("Confirmed", &phase.confirmed)
+        .data("command", shown_command)
+        .data("confirmed", phase.confirmed.clone())
+        .sentence(format!(
+            "Apple Bridge stopped {} and waited for it to exit.",
+            plan.program
+        ));
+    if let Some(check) = &phase.check {
+        failure = failure.step(check.clone());
+    }
+    failure.then(
+        "Or try again with more time",
+        ["bridge", "link", plan.program, "--timeout", "2m"],
+    )
+}
+
+const PHASE_BUDGET: Duration = Duration::from_secs(30);
+const SLOW_AFTER: Duration = Duration::from_secs(3);
+
+fn run_bounded(
+    plan: &Plan,
+    arguments: &[String],
+    deadline: &Deadline,
+    phase: &Phase<'_>,
+) -> Outcome<(bool, String)> {
+    let mut child = spawn(plan, arguments, true)?;
+    let stdout = drain(child.stdout.take());
+    let stderr = drain(child.stderr.take());
+    let mut child = children::Owned::new(child);
+    let began = Instant::now();
+    let until = deadline.within(PHASE_BUDGET);
+    let mut announced = false;
+    let status = loop {
+        if let Some(status) = child.0.try_wait()? {
+            break status;
+        }
+        if Instant::now() >= until {
+            child.stop();
+            return Err(stopped(plan, arguments, phase, deadline));
+        }
+        if !announced && began.elapsed() >= SLOW_AFTER {
+            announced = true;
+            ui::note(&format!("Still waiting for {}…", phase.what));
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let mut text = String::from_utf8_lossy(&stdout.join().unwrap_or_default()).into_owned();
+    text.push_str(&String::from_utf8_lossy(&stderr.join().unwrap_or_default()));
+    Ok((status.success(), text))
+}
+
+fn check_step(plan: &Plan, name: &str) -> Step {
+    Step::new("Check what was saved", [plan.program, "mcp", "get", name])
+}
+
+fn inspect(plan: &Plan, name: &str, deadline: &Deadline, confirmed: &str) -> Outcome<String> {
+    run_bounded(
+        plan,
+        &strings(&["mcp", "get", name]),
+        deadline,
+        &Phase {
+            what: &format!("checking {name} in {}", plan.title),
+            confirmed: confirmed.to_owned(),
+            check: Some(check_step(plan, name)),
+        },
+    )
+    .map(|(_, text)| text)
 }
 
 fn missing(plan: &Plan) -> Failure {
@@ -147,20 +266,40 @@ fn missing(plan: &Plan) -> Failure {
     .then("Or connect another app", ["bridge", "link", "other"])
 }
 
-fn register(plan: &Plan, name: &str, url: &str) -> Outcome {
-    let (success, text) = run_quietly(plan, &plan.register)?;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Added {
+    Added,
+    Already,
+}
+
+fn register(plan: &Plan, name: &str, url: &str, deadline: &Deadline) -> Outcome<Added> {
+    let (success, text) = run_bounded(
+        plan,
+        &plan.register,
+        deadline,
+        &Phase {
+            what: &format!("adding {name} to {}", plan.title),
+            confirmed: format!("not known whether {} saved {name}", plan.title),
+            check: Some(check_step(plan, name)),
+        },
+    )?;
     if success {
         ui::done("Added", &format!("{name} to {} at {url}", plan.title));
-        return Ok(());
+        return Ok(Added::Added);
     }
     if text.contains("already exists") {
-        let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
+        let details = inspect(
+            plan,
+            name,
+            deadline,
+            &format!("{} already has a server named {name}", plan.title),
+        )?;
         if details.contains(url) {
             ui::done(
                 "Already added",
                 &format!("{name} to {} at {url}", plan.title),
             );
-            return Ok(());
+            return Ok(Added::Already);
         }
         return Err(Failure::new(
             Reason::Conflict,
@@ -181,34 +320,39 @@ fn register(plan: &Plan, name: &str, url: &str) -> Outcome {
     .remote(plan.title, text.trim()))
 }
 
-fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
-    let child = Command::new(plan.program)
-        .args(&plan.register)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::NotFound {
-                missing(plan)
-            } else {
-                Failure::new(
-                    Reason::SpawnFailed,
-                    format!("Couldn't run {}.", plan.program),
-                )
-                .row("Detail", ui::clean(&error.to_string()))
-            }
-        })?;
-    let mut child = children::Owned::new(child);
-    let deadline = Instant::now() + REGISTER_BUDGET;
+fn register_without_signing_in(
+    plan: &Plan,
+    name: &str,
+    url: &str,
+    deadline: &Deadline,
+) -> Outcome<Added> {
+    let mut child = children::Owned::new(spawn(plan, &plan.register, false)?);
+    let until = deadline.within(REGISTER_BUDGET);
+    let phase = Phase {
+        what: &format!("adding {name} to {}", plan.title),
+        confirmed: format!("not known whether {} saved {name}", plan.title),
+        check: Some(check_step(plan, name)),
+    };
     loop {
-        let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
+        let details = match inspect(plan, name, deadline, &phase.confirmed) {
+            Ok(details) => details,
+            Err(failure) => {
+                child.stop();
+                return Err(failure);
+            }
+        };
         if details.contains(url) {
             child.stop();
             ui::done("Added", &format!("{name} to {} at {url}", plan.title));
-            return Ok(());
+            return Ok(Added::Added);
         }
-        if Instant::now() >= deadline || child.0.try_wait()?.is_some() {
+        if Instant::now() >= until {
+            child.stop();
+            if deadline.end.is_some_and(|end| Instant::now() >= end) {
+                return Err(stopped(plan, &plan.register, &phase, deadline));
+            }
+        }
+        if Instant::now() >= until || child.0.try_wait()?.is_some() {
             child.stop();
             let mut argv = vec![plan.program.to_owned()];
             argv.extend(plan.register.iter().cloned());
@@ -222,8 +366,16 @@ fn register_without_signing_in(plan: &Plan, name: &str, url: &str) -> Outcome {
     }
 }
 
-fn awaiting_approval(plan: &Plan, name: &str) -> Outcome<bool> {
-    let (_, details) = run_quietly(plan, &strings(&["mcp", "get", name]))?;
+fn awaiting_approval(plan: &Plan, name: &str, deadline: &Deadline) -> Outcome<bool> {
+    let details = inspect(
+        plan,
+        name,
+        deadline,
+        &format!(
+            "{name} was added to {}; its approval wasn't checked",
+            plan.title
+        ),
+    )?;
     Ok(details.contains("Pending approval"))
 }
 
@@ -321,76 +473,170 @@ fn login_step(plan: &Plan) -> Step {
     Step::new("Sign in later", argv)
 }
 
+fn try_it() {
+    ui::note(
+        "Try it: ask your agent \"Use Apple Bridge to show my reminder lists and how much has synced.\"",
+    );
+    ui::next_steps(&[Step::new(
+        "Give your agent the instructions",
+        ["bridge", "skills", "get", "core"],
+    )]);
+}
+
+fn command_json(program: &str, arguments: &[String]) -> serde_json::Value {
+    let mut argv = vec![program.to_owned()];
+    argv.extend(arguments.iter().cloned());
+    serde_json::json!({"argv": argv, "command": shown(program, arguments)})
+}
+
+fn linked_json(
+    outcome: &str,
+    plan: &Plan,
+    name: &str,
+    url: &str,
+    added: Added,
+    next: &[Step],
+) -> serde_json::Value {
+    serde_json::json!({
+        "outcome": outcome,
+        "client": plan.program,
+        "name": name,
+        "url": url,
+        "added": added == Added::Added,
+        "signedIn": outcome == "connected",
+        "next": next.iter().map(Step::to_json).collect::<Vec<_>>(),
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
-    let limit = args
+    let given = args
         .timeout
         .as_deref()
         .map(|text| commands::duration("--timeout", text))
-        .transpose()?
-        .unwrap_or(SIGN_IN_WAIT);
+        .transpose()?;
     if (args.client == LinkClient::Other || args.print) && args.timeout.is_some() {
         return Err(Failure::new(
             Reason::ConflictingOptions,
             "Can't use --timeout here. Nothing waits for sign-in.",
         ));
     }
+    let deadline = Deadline::new(given);
     let address = gateway::running_address(home).await?;
     let url = gateway::mcp_address(&address);
-    let no_browser = args.no_open || (!args.print && !Modes::get().browser_allowed());
-    let Some(plan) = plan(args.client, &args.name, args.scope, &url, no_browser) else {
+    let Some(plan) = plan(args.client, &args.name, args.scope, &url, args.no_open) else {
         print_other(&url);
         return Ok(());
     };
     if args.print {
-        ui::outln(&shown(plan.program, &plan.register));
-        ui::outln(&shown(plan.program, &plan.login));
+        if Modes::get().json {
+            ui::json_document(serde_json::json!({
+                "client": plan.program,
+                "name": args.name,
+                "url": url,
+                "register": command_json(plan.program, &plan.register),
+                "login": command_json(plan.program, &plan.login),
+            }));
+        } else {
+            ui::outln(&shown(plan.program, &plan.register));
+            ui::outln(&shown(plan.program, &plan.login));
+        }
         return Ok(());
     }
     let can_sign_in = !args.no_login && Modes::get().interactive();
-    let sign_in_arguments = if plan.register_signs_in {
-        if !can_sign_in {
-            register_without_signing_in(&plan, &args.name, &url)?;
-        }
-        &plan.register
+    let mut sign_in_arguments = if plan.register_signs_in {
+        plan.register.clone()
     } else {
-        register(&plan, &args.name, &url)?;
-        if awaiting_approval(&plan, &args.name)? {
+        plan.login.clone()
+    };
+    let added = if plan.register_signs_in {
+        if can_sign_in {
+            Added::Added
+        } else {
+            register_without_signing_in(&plan, &args.name, &url, &deadline)?
+        }
+    } else {
+        let added = register(&plan, &args.name, &url, &deadline)?;
+        if awaiting_approval(&plan, &args.name, &deadline)? {
             ui::warn(
                 "pending_approval",
-                "Claude Code asks you to approve project servers first: run claude in this folder and choose \"Use this MCP server\", then run this command again.",
+                "Claude Code asks you to approve project servers first. Start it in this folder and choose \"Use this MCP server\".",
             );
+            if !Modes::get().json {
+                ui::next_steps(&[
+                    Step::new("Approve it", [plan.program]),
+                    Step::new(
+                        "Then run this again",
+                        [
+                            "bridge",
+                            "link",
+                            plan.program,
+                            "--scope",
+                            args.scope.as_str(),
+                        ],
+                    ),
+                ]);
+            }
+            if Modes::get().json {
+                ui::json_document(linked_json(
+                    "pending_approval",
+                    &plan,
+                    &args.name,
+                    &url,
+                    added,
+                    &[Step::new("Approve it", [plan.program])],
+                ));
+            }
             return Ok(());
         }
-        &plan.login
+        added
     };
     if !can_sign_in {
+        let finish = Step {
+            benefit: "To finish, run this in a terminal and approve it in the browser".to_owned(),
+            ..login_step(&plan)
+        };
+        if Modes::get().json {
+            ui::json_document(linked_json(
+                "registered",
+                &plan,
+                &args.name,
+                &url,
+                added,
+                &[finish, check_step(&plan, &args.name)],
+            ));
+            return Ok(());
+        }
         ui::note(&format!(
             "{} is registered. Signing in needs a terminal and a browser.",
             plan.title
         ));
-        ui::next_steps(&[Step {
-            benefit: "To finish, run this in a terminal and approve it in the browser".to_owned(),
-            ..login_step(&plan)
-        }]);
-        ui::note(TRY_IT);
+        ui::next_steps(&[finish]);
+        try_it();
         return Ok(());
     }
+    if !args.no_open && !Modes::get().browser_allowed() && !plan.register_signs_in {
+        sign_in_arguments.push("--no-browser".to_owned());
+    }
+    let limit = deadline.end.map_or(SIGN_IN_WAIT, |end| {
+        end.saturating_duration_since(Instant::now())
+    });
     ui::note(&format!(
         "Waiting for you to sign in to {} (up to {})…",
         plan.title,
         commands::friendly(limit)
     ));
     ui::set_cancel_note(Some(&format!(
-        "Canceled sign-in. {} stays registered in {}; sign in later with: {}",
-        args.name,
-        plan.title,
-        login_step(&plan).command()
+        "Canceled sign-in. {} stays registered in {}.",
+        args.name, plan.title
     )));
-    match sign_in(home, &plan, sign_in_arguments, limit).await? {
+    ui::set_cancel_step(Some(login_step(&plan)));
+    match sign_in(home, &plan, &sign_in_arguments, limit).await? {
         SignIn::Finished(true) => {
             ui::set_cancel_note(None);
+            ui::set_cancel_step(None);
             ui::done("Connected", plan.title);
-            ui::note(TRY_IT);
+            try_it();
             Ok(())
         }
         SignIn::Finished(false) => Err(Failure::new(
@@ -409,12 +655,22 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
                 commands::friendly(limit)
             ),
         )
-        .sentence(format!("{} stays registered in {}.", args.name, plan.title))
+        .row(
+            "Confirmed",
+            format!("{} stays registered in {}", args.name, plan.title),
+        )
+        .data("confirmed", "registered; not signed in")
         .step(login_step(&plan))),
     }
 }
 
 pub fn unlink(args: &UnlinkArgs) -> Outcome {
+    let given = args
+        .timeout
+        .as_deref()
+        .map(|text| commands::duration("--timeout", text))
+        .transpose()?;
+    let deadline = Deadline::new(given);
     let Some(plan) = plan(args.client, &args.name, args.scope, "", false) else {
         return Err(Failure::new(
             Reason::InvalidValue,
@@ -425,21 +681,56 @@ pub fn unlink(args: &UnlinkArgs) -> Outcome {
             ["bridge", "agents", "list"],
         ));
     };
-    run_quietly(&plan, &strings(&["mcp", "logout", &args.name]))?;
+    run_bounded(
+        &plan,
+        &strings(&["mcp", "logout", &args.name]),
+        &deadline,
+        &Phase {
+            what: &format!("signing {} out of {}", args.name, plan.title),
+            confirmed: format!("{} is still registered in {}", args.name, plan.title),
+            check: Some(check_step(&plan, &args.name)),
+        },
+    )?;
     let mut remove = strings(&["mcp", "remove", &args.name]);
     if args.client == LinkClient::Claude {
         remove.extend(strings(&["--scope", args.scope.as_str()]));
     }
-    let (success, text) = run_quietly(&plan, &remove)?;
+    let (success, text) = run_bounded(
+        &plan,
+        &remove,
+        &deadline,
+        &Phase {
+            what: &format!("removing {} from {}", args.name, plan.title),
+            confirmed: format!(
+                "signed out; not known whether {} removed {}",
+                plan.title, args.name
+            ),
+            check: Some(check_step(&plan, &args.name)),
+        },
+    )?;
+    let report = |outcome: &str, label: &str, next: &[Step]| {
+        if Modes::get().json {
+            ui::json_document(serde_json::json!({
+                "outcome": outcome,
+                "client": plan.program,
+                "name": args.name,
+                "next": next.iter().map(Step::to_json).collect::<Vec<_>>(),
+            }));
+        } else {
+            ui::done(label, &format!("{} from {}", args.name, plan.title));
+            ui::next_steps(next);
+        }
+    };
+    let find = Step::new(
+        "To end its access on this Mac too, find it",
+        ["bridge", "agents", "list"],
+    );
     if !success {
         if text.contains("not found")
             || text.contains("No MCP server")
             || text.contains("does not exist")
         {
-            ui::done(
-                "Already removed",
-                &format!("{} from {}", args.name, plan.title),
-            );
+            report("already_removed", "Already removed", &[]);
             return Ok(());
         }
         return Err(Failure::new(
@@ -448,10 +739,6 @@ pub fn unlink(args: &UnlinkArgs) -> Outcome {
         )
         .remote(plan.title, text.trim()));
     }
-    ui::done("Removed", &format!("{} from {}", args.name, plan.title));
-    ui::next_steps(&[Step::new(
-        "To end its access on this Mac too, find it",
-        ["bridge", "agents", "list"],
-    )]);
+    report("removed", "Removed", &[find]);
     Ok(())
 }

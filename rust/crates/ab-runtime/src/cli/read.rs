@@ -201,7 +201,12 @@ impl Session {
         ui::clean(&hide(text, &self.token))
     }
 
-    async fn read(&self, operation: &str, arguments: &Value, subject: Option<&str>) -> Outcome<Value> {
+    async fn read(
+        &self,
+        operation: &str,
+        arguments: &Value,
+        subject: Option<&str>,
+    ) -> Outcome<Value> {
         let mut attempt = 0;
         loop {
             let pause = Duration::from_millis(300 * 2_u64.pow(attempt));
@@ -369,7 +374,11 @@ fn days(text: &str) -> Outcome<i64> {
         )
     };
     let value: i64 = text.trim().parse().map_err(|_| invalid())?;
-    if value >= 1 { Ok(value) } else { Err(invalid()) }
+    if value >= 1 {
+        Ok(value)
+    } else {
+        Err(invalid())
+    }
 }
 
 fn home_tag(home: &Path) -> String {
@@ -610,7 +619,13 @@ fn plan(args: &ReadArgs, limit: usize, cursor: Option<&Cursor>) -> Outcome<Plan>
         Option<&'static str>,
         Option<String>,
     ) = match args.kind {
-        ReadKind::Photos => ("photos.search", json!({"args":{"limit":limit}}), &[], None, None),
+        ReadKind::Photos => (
+            "photos.search",
+            json!({"args":{"limit":limit}}),
+            &[],
+            None,
+            None,
+        ),
         ReadKind::Messages => {
             if let Some(chat) = chat {
                 options.insert("chat".into(), json!(chat));
@@ -661,19 +676,18 @@ fn plan(args: &ReadArgs, limit: usize, cursor: Option<&Cursor>) -> Outcome<Plan>
                 .transpose()?
                 .unwrap_or(DEFAULT_DAYS);
             options.insert("days".into(), json!(days.to_string()));
-            let arguments = match cursor.filter(|cursor| cursor.operation == "calendar.agenda") {
-                Some(cursor) => cursor.arguments.clone(),
-                None => {
-                    let now = jiff::Timestamp::now();
-                    let end = days
-                        .checked_mul(24)
-                        .and_then(|hours| jiff::Span::new().try_hours(hours).ok())
-                        .and_then(|span| now.checked_add(span).ok())
-                        .ok_or_else(|| {
-                            Failure::invalid("Can't use that --days. It's too large.")
-                        })?;
-                    json!({"start": now.to_string(), "end": end.to_string()})
-                }
+            let arguments = if let Some(cursor) =
+                cursor.filter(|cursor| cursor.operation == "calendar.agenda")
+            {
+                cursor.arguments.clone()
+            } else {
+                let now = jiff::Timestamp::now();
+                let end = days
+                    .checked_mul(24)
+                    .and_then(|hours| jiff::Span::new().try_hours(hours).ok())
+                    .and_then(|span| now.checked_add(span).ok())
+                    .ok_or_else(|| Failure::invalid("Can't use that --days. It's too large."))?;
+                json!({"start": now.to_string(), "end": end.to_string()})
             };
             (
                 "calendar.agenda",
@@ -698,7 +712,13 @@ fn plan(args: &ReadArgs, limit: usize, cursor: Option<&Cursor>) -> Outcome<Plan>
                 None,
             )
         }
-        ReadKind::Notes => ("notes.list", json!({}), &["notes.note"], Some("notes"), None),
+        ReadKind::Notes => (
+            "notes.list",
+            json!({}),
+            &["notes.note"],
+            Some("notes"),
+            None,
+        ),
         ReadKind::Mail => (
             "records.query",
             json!({"collection": "mail.message", "limit": limit}),
@@ -765,7 +785,6 @@ fn collect<'a>(value: &'a Value, wanted: &[&str], out: &mut Vec<&'a Value>) {
     }
 }
 
-
 struct Coverage {
     state: Option<String>,
     synced: Option<String>,
@@ -818,7 +837,7 @@ fn judge(kind: &str, source: &str, coverage: &Coverage, empty: bool) -> Outcome 
             format!("Can't read {kind}. {name} hasn't synced on this Mac yet, so this isn't a verified empty list."),
         )
         .sentence("Syncing needs the Apple Bridge Helper app and its permissions.")
-        .then("Follow the sync", ["bridge", "stats", "--follow"])
+        .then("Follow the sync", ["bridge", "stats", "--wait"])
         .then("Allow the Mac permissions", ["bridge", "permissions", "guide"])),
         ("permission_missing", true) => Err(permission()),
         ("unavailable" | "capture_failed", true) => Err(Failure::new(
@@ -858,7 +877,6 @@ fn judge(kind: &str, source: &str, coverage: &Coverage, empty: bool) -> Outcome 
         .then("Check it", ["bridge", "stats", "--all"])),
     }
 }
-
 
 struct Budget {
     started: Instant,
@@ -911,7 +929,10 @@ impl Progress<'_> {
                 self.start.map_or(Value::Null, |cursor| json!(cursor.text)),
             )
             .data("resume", resume.clone().map_or(Value::Null, Value::from))
-            .row("Fetched", format!("{} rows on {} pages, not printed", self.rows, self.pages));
+            .row(
+                "Fetched",
+                format!("{} rows on {} pages, not printed", self.rows, self.pages),
+            );
         if let Some(resume) = resume {
             let mut argv = vec!["bridge".to_owned()];
             if self.plan.kind == "search" {
@@ -997,7 +1018,7 @@ async fn gather_pages(
             .await
         {
             Ok(page) => page,
-            Err(failure) if progress.pages == 0 => return Err(failure),
+            Err(failure) if progress.pages == 0 && start.is_none() => return Err(failure),
             Err(failure) => return Err(progress.annotate(failure)),
         };
         progress.pages += 1;
@@ -1016,7 +1037,10 @@ async fn gather_pages(
             break;
         }
         if !consumed.insert(token.clone()) {
-            return Err(stalled(&progress, "returned a page cursor it had already given"));
+            return Err(stalled(
+                &progress,
+                "returned a page cursor it had already given",
+            ));
         }
         if empty >= EMPTY_PAGES {
             return Err(stalled(
@@ -1044,7 +1068,9 @@ async fn gather_pages(
                         super::commands::friendly(budget.limit)
                     ),
                 )
-                .sentence("Nothing was printed. Continue from the last page, or pass a longer --timeout."),
+                .sentence(
+                    "Nothing was printed. Continue from the last page, or pass a longer --timeout.",
+                ),
             ));
         }
         after = Some(token);
@@ -1197,9 +1223,13 @@ fn select_record_fields(value: &mut Value, collections: &[&str]) {
     };
     match value {
         Value::Object(map) => {
-            let is_record = map.get("collection").and_then(Value::as_str).is_some_and(|collection| {
-                collections.is_empty() || collections.contains(&collection)
-            }) && map.contains_key("data");
+            let is_record =
+                map.get("collection")
+                    .and_then(Value::as_str)
+                    .is_some_and(|collection| {
+                        collections.is_empty() || collections.contains(&collection)
+                    })
+                    && map.contains_key("data");
             if is_record {
                 if let Some(Value::Object(data)) = map.get_mut("data") {
                     data.retain(|key, _| fields.iter().any(|field| field == key));
@@ -1418,20 +1448,25 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
     check_record_fields(plan.collections, "bridge read")?;
     let session = Session::open(home).await?;
     if plan.operation == "photos.search" {
-        let result = session
-            .read(plan.operation, &plan.arguments, None)
-            .await;
+        let result = session.read(plan.operation, &plan.arguments, None).await;
         session.close();
         let answer = result?;
         if Modes::get().json {
             ui::json_document(answer);
         } else {
             ui::outln(&serde_json::to_string_pretty(&answer["result_json"])?);
-            if answer["result_json"]["next_cursor"].is_string() {
+            if let Some(next) = answer["result_json"]["next_cursor"].as_str() {
                 ui::warn(
                     "truncated",
-                    "More photos match. Use bridge call photos.search with next_cursor to continue.",
+                    "More photos match. Continue with the same filters and this cursor.",
                 );
+                let mut arguments = plan.arguments.clone();
+                arguments["cursor"] = json!(next);
+                let data = arguments.to_string();
+                ui::next_steps(&[Step::new(
+                    "See the next page",
+                    ["bridge", "call", "photos.search", "--data", data.as_str()],
+                )]);
             }
         }
         return Ok(());
@@ -1498,12 +1533,17 @@ pub async fn search(home: &Path, args: &SearchArgs) -> Outcome {
         "search",
         home,
     )?;
-    let text = inherit("TEXT", args.text.as_deref(), started.cursor.as_ref(), "text")?
-        .filter(|text| !text.trim().is_empty())
-        .ok_or_else(|| {
-            Failure::new(Reason::MissingArgument, "Can't search for empty text.")
-                .then("Search for a word", ["bridge", "search", "<TEXT>"])
-        })?;
+    let text = inherit(
+        "TEXT",
+        args.text.as_deref(),
+        started.cursor.as_ref(),
+        "text",
+    )?
+    .filter(|text| !text.trim().is_empty())
+    .ok_or_else(|| {
+        Failure::new(Reason::MissingArgument, "Can't search for empty text.")
+            .then("Search for a word", ["bridge", "search", "<TEXT>"])
+    })?;
     let mut options = Map::new();
     options.insert("text".into(), json!(text));
     let plan = Plan {
@@ -1692,7 +1732,9 @@ fn uncertain(
         format!("Can't confirm whether {operation} took effect."),
     );
     if !id.is_empty() {
-        failure = failure.row("Operation ID", id.clone()).data("operationId", id);
+        failure = failure
+            .row("Operation ID", id.clone())
+            .data("operationId", id);
     }
     failure
         .row("Confirmed", confirmed)
@@ -1934,7 +1976,8 @@ mod tests {
     }
 
     #[test]
-    fn cursors_round_trip_and_carry_what_the_read_needs() -> Result<(), Box<dyn std::error::Error>> {
+    fn cursors_round_trip_and_carry_what_the_read_needs() -> Result<(), Box<dyn std::error::Error>>
+    {
         let home = std::path::Path::new("/tmp");
         let cursor = Cursor {
             kind: "calendar".into(),
@@ -1953,14 +1996,24 @@ mod tests {
         assert_eq!(decoded.offset, 10);
         assert!(decoded.check("calendar", home).is_ok());
         assert!(decoded.check("notes", home).is_err());
-        assert!(decoded.check("calendar", std::path::Path::new("/var")).is_err());
+        assert!(
+            decoded
+                .check("calendar", std::path::Path::new("/var"))
+                .is_err()
+        );
         assert!(Cursor::decode("garbage!").is_err());
         let legacy = BASE64URL_NOPAD.encode(
             json!({"v": 1, "op": "messages.search", "filters": {"text": "hi"}, "after": "t"})
                 .to_string()
                 .as_bytes(),
         );
-        assert_eq!(Cursor::decode(&legacy).map_err(|f| f.headline.clone())?.after.as_deref(), Some("t"));
+        assert_eq!(
+            Cursor::decode(&legacy)
+                .map_err(|f| f.headline.clone())?
+                .after
+                .as_deref(),
+            Some("t")
+        );
         Ok(())
     }
 
@@ -1978,7 +2031,10 @@ mod tests {
             text: String::new(),
         };
         assert_eq!(
-            inherit("--chat", None, Some(&cursor), "chat").ok().flatten().as_deref(),
+            inherit("--chat", None, Some(&cursor), "chat")
+                .ok()
+                .flatten()
+                .as_deref(),
             Some("c1")
         );
         assert!(inherit("--chat", Some("c1"), Some(&cursor), "chat").is_ok());

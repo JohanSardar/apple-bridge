@@ -14,6 +14,7 @@ const LABEL: usize = 16;
 const MIN_WIDTH: usize = 40;
 
 static WARNINGS: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
+static WARNINGS_EMBEDDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static DEPRECATIONS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 static CANCEL_NOTE: Mutex<Option<String>> = Mutex::new(None);
 static PRINTED_STDERR: Mutex<bool> = Mutex::new(false);
@@ -283,7 +284,7 @@ pub fn block(first: Mark, rows: &[(String, String)]) {
             if line_index > 0 {
                 outln(&line);
             } else if index == 0 {
-                outln(&format!("{} {}", mark(first), line.trim_end()).trim_end().to_owned());
+                outln(format!("{} {}", mark(first), line.trim_end()).trim_end());
             } else {
                 outln(&format!("  {}", line.trim_end()));
             }
@@ -332,12 +333,29 @@ pub fn deprecated(old: &str, replacement: &str) {
     }
 }
 
+pub fn report_unembedded_warnings() {
+    if !Modes::get().json || WARNINGS_EMBEDDED.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    for (reason, message) in warnings() {
+        err_raw(&format!(
+            "{}\n",
+            json!({"status": "warning", "reason": reason, "message": message})
+        ));
+    }
+}
+
 pub fn warnings() -> Vec<(String, String)> {
     WARNINGS.lock().map(|w| w.clone()).unwrap_or_default()
 }
 
 pub fn next_step(step: &Step) {
-    for line in wrap(&format!("{}:", step.benefit), Modes::get().width(), "  ", "  ") {
+    for line in wrap(
+        &format!("{}:", step.benefit),
+        Modes::get().width(),
+        "  ",
+        "  ",
+    ) {
         err_line(&line);
     }
     err_line(&format!("    {}", paint("36", &step.command())));
@@ -357,6 +375,18 @@ pub fn set_cancel_note(note: Option<&str>) {
     if let Ok(mut current) = CANCEL_NOTE.lock() {
         *current = note.map(str::to_owned);
     }
+}
+
+static CANCEL_STEP: Mutex<Option<Step>> = Mutex::new(None);
+
+pub fn set_cancel_step(step: Option<Step>) {
+    if let Ok(mut current) = CANCEL_STEP.lock() {
+        *current = step;
+    }
+}
+
+pub fn cancel_step() -> Option<Step> {
+    CANCEL_STEP.lock().ok().and_then(|step| step.clone())
 }
 
 pub fn cancel_note() -> Option<String> {
@@ -431,9 +461,10 @@ pub fn render_failure(failure: &Failure) {
     if !shown.is_empty() {
         lines.push(String::new());
         for (index, step) in shown.iter().enumerate() {
-            let benefit = if index == 0 {
-                step.benefit.clone()
-            } else if step.benefit.to_lowercase().starts_with("or ") {
+            let keeps_lead = ["or ", "then "]
+                .iter()
+                .any(|lead| step.benefit.to_lowercase().starts_with(lead));
+            let benefit = if index == 0 || keeps_lead {
                 step.benefit.clone()
             } else {
                 format!("Or {}", lowercase_first(&step.benefit))
@@ -481,13 +512,13 @@ pub fn json_document(mut value: Value) {
     json_document_unfiltered(value);
 }
 
-/// Prints a JSON document whose `--fields` selection the caller already applied.
 pub fn json_document_unfiltered(mut value: Value) {
     let modes = Modes::get();
     let warnings = warnings();
     if !warnings.is_empty()
         && let Value::Object(map) = &mut value
     {
+        WARNINGS_EMBEDDED.store(true, std::sync::atomic::Ordering::Relaxed);
         map.insert(
             "warnings".into(),
             Value::Array(
@@ -651,8 +682,11 @@ pub fn confirm(consent: &Consent<'_>) -> Outcome {
             failure = failure.sentence(consent.consequence.clone());
         }
         return Err(failure.step(
-            Step::new("Only after you approve it, run", consent.with_yes.argv.clone())
-                .when("Only after a human approves the change shown"),
+            Step::new(
+                "Only after you approve it, run",
+                consent.with_yes.argv.clone(),
+            )
+            .when("Only after a human approves the change shown"),
         ));
     }
     for (label, value) in &consent.rows {

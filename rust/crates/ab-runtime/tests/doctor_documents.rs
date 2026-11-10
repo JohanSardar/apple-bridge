@@ -33,7 +33,13 @@ fn doctor(home: &std::path::Path) -> Result<serde_json::Value, Box<dyn std::erro
         .arg(home)
         .output()?;
     let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(output.status.success(), report["ok"] == true);
+    assert!(output.status.success(), "a finished report exits 0");
+    let checked = Command::new(env!("CARGO_BIN_EXE_bridge"))
+        .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .args(["doctor", "--check", "--json", "--home"])
+        .arg(home)
+        .output()?;
+    assert_eq!(checked.status.success(), report["ok"] == true);
     assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(report)
 }

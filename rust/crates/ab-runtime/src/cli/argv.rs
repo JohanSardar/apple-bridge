@@ -221,12 +221,16 @@ fn flag(command: &clap::Command, name: &str) -> bool {
 
 fn same_flag(command: &clap::Command, token: &str, name: &str) -> bool {
     let root = Cli::command();
-    let Some(argument) = command.get_arguments().chain(root.get_arguments()).find(|argument| {
-        argument.get_long() == Some(name)
-            || argument
-                .get_all_aliases()
-                .is_some_and(|aliases| aliases.contains(&name))
-    }) else {
+    let Some(argument) = command
+        .get_arguments()
+        .chain(root.get_arguments())
+        .find(|argument| {
+            argument.get_long() == Some(name)
+                || argument
+                    .get_all_aliases()
+                    .is_some_and(|aliases| aliases.contains(&name))
+        })
+    else {
         return false;
     };
     if let Some(long) = token.strip_prefix("--") {
@@ -278,6 +282,7 @@ fn legacy_spelling(text: &str, notices: &mut Vec<(String, String)>) -> Spelling 
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn prepare(raw: Vec<OsString>) -> Prepared {
     let mut prepared = Prepared::default();
     let mut iterator = raw.into_iter();
@@ -370,7 +375,8 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 && !declared(&leaf, long)
                 && flag(&leaf, negated)
             {
-                output.retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), negated));
+                output
+                    .retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), negated));
                 continue;
             }
         }
@@ -384,7 +390,7 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 prepared.notices.push((
                     format!("ignored:--{name}"),
                     format!(
-                        "--{name} is ignored by {} and will be refused in the next release.",
+                        "--{name} is ignored by {} and will be refused in the next major version.",
                         shown.trim_end()
                     ),
                 ));

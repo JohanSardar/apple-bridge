@@ -52,9 +52,8 @@ fn expiry(text: Option<&str>) -> Outcome<Option<jiff::Timestamp>> {
         return Ok(None);
     };
     let length = super::commands::duration("--expires-in", text)?;
-    let seconds = i64::try_from(length.as_secs()).map_err(|_| {
-        Failure::invalid("Can't use that --expires-in. It's too long.")
-    })?;
+    let seconds = i64::try_from(length.as_secs())
+        .map_err(|_| Failure::invalid("Can't use that --expires-in. It's too long."))?;
     jiff::Timestamp::now()
         .checked_add(jiff::SignedDuration::from_secs(seconds))
         .map(Some)
@@ -67,7 +66,11 @@ fn expires_text(expires_at: Option<&jiff::Timestamp>) -> String {
         |when| {
             let left = when.as_second() - jiff::Timestamp::now().as_second();
             let left = std::time::Duration::from_secs(u64::try_from(left).unwrap_or(0));
-            format!("{} (in {})", when.strftime("%Y-%m-%d %H:%M UTC"), super::commands::friendly(left))
+            format!(
+                "{} (in {})",
+                when.strftime("%Y-%m-%d %H:%M UTC"),
+                super::commands::friendly(left)
+            )
         },
     )
 }
@@ -421,16 +424,15 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
         ui::row("Expires", &expires_text(expires.as_ref()));
     }
     let authority = open(home)?;
-    let (agent, token) =
-        authority
-            .create_agent_until(name, level, grants, expires)
-            .map_err(|error| match error {
-                ab_trust::Error::Unauthorized => Failure::new(
-                    Reason::PermissionDenied,
-                    "Can't create that agent. This home can only grant the access it was given.",
-                ),
-                other => Failure::from(other),
-            })?;
+    let (agent, token) = authority
+        .create_agent_until(name, level, grants, expires)
+        .map_err(|error| match error {
+            ab_trust::Error::Unauthorized => Failure::new(
+                Reason::PermissionDenied,
+                "Can't create that agent. This home can only grant the access it was given.",
+            ),
+            other => Failure::from(other),
+        })?;
     ui::mask_secret(&token);
     if modes.json || modes.legacy_json() {
         #[derive(serde::Serialize)]
@@ -448,8 +450,11 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
             outcome: modes.json.then_some("created"),
             next: modes.json.then(|| {
                 vec![
-                    Step::new("Check it", ["bridge", "agents", "inspect", &agent.id, "--json"])
-                        .to_json(),
+                    Step::new(
+                        "Check it",
+                        ["bridge", "agents", "inspect", &agent.id, "--json"],
+                    )
+                    .to_json(),
                 ]
             }),
         };
@@ -471,6 +476,7 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn agents_update(
     home: &Path,
     id: &str,
@@ -628,12 +634,7 @@ pub fn agents_level(home: &Path, id: &str, text: &str) -> Outcome {
     agents_update(home, id, Some(text), None)
 }
 
-pub fn tokens_create(
-    home: &Path,
-    scope: &str,
-    remote: bool,
-    expires_in: Option<&str>,
-) -> Outcome {
+pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<&str>) -> Outcome {
     let grants = parse_grants(scope, false);
     let expires = expiry(expires_in);
     let (grants, expires) = match (grants, expires) {
@@ -939,6 +940,7 @@ pub async fn connectors_list(home: &Path) -> Outcome {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn connectors_decide(home: &Path, decision: &DecisionArgs, allow: bool) -> Outcome {
     let action = if allow { "allow" } else { "deny" };
     let missing: Vec<&str> = [
@@ -993,10 +995,7 @@ pub async fn connectors_decide(home: &Path, decision: &DecisionArgs, allow: bool
             ),
         ));
     }
-    if code.is_empty()
-        || code.len() > 16
-        || !code.chars().all(|c| c.is_ascii_alphanumeric())
-    {
+    if code.is_empty() || code.len() > 16 || !code.chars().all(|c| c.is_ascii_alphanumeric()) {
         return Err(Failure::new(
             Reason::InvalidValue,
             "Can't use that --code. Copy the code shown on the app's page.",
@@ -1005,12 +1004,9 @@ pub async fn connectors_decide(home: &Path, decision: &DecisionArgs, allow: bool
     let pending = crate::connector::command(home, "pending", "", "")
         .await
         .map_err(|_| connector_unreachable(home))?;
-    let request = pending.as_array().and_then(|items| {
-        items
-            .iter()
-            .find(|item| item["id"] == request_id)
-            .cloned()
-    });
+    let request = pending
+        .as_array()
+        .and_then(|items| items.iter().find(|item| item["id"] == request_id).cloned());
     let result = crate::connector::command(home, action, request_id, code)
         .await
         .map_err(|_| {
@@ -1036,7 +1032,9 @@ pub async fn connectors_decide(home: &Path, decision: &DecisionArgs, allow: bool
             map.insert("outcome".into(), json!(outcome));
             map.insert(
                 "next".into(),
-                json!([Step::new("Check it", ["bridge", "connectors", "list", "--json"]).to_json()]),
+                json!([
+                    Step::new("Check it", ["bridge", "connectors", "list", "--json"]).to_json()
+                ]),
             );
         }
         ui::json_document(document);

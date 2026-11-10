@@ -134,7 +134,7 @@ final class SetupModel: ObservableObject {
         let path = home.path
         let run = runCommand
         Task { @MainActor in
-            let data = await Task.detached { run(["remote", "on"], path) }.value
+            let data = await Task.detached { run(["remote", "enable", "--open"], path) }.value
             busy.remove("remote")
             await refresh()
             message = data == nil ? "Remote did not connect. Check your internet connection and try Enable Remote again. Local features still work." : "Remote is ready."

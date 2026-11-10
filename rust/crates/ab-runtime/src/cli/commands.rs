@@ -130,7 +130,8 @@ pub fn load_config(home: &Path) -> Outcome<Option<Config>> {
         };
         Failure::new(Reason::InvalidConfig, format!("{location} {problem}."))
             .row("Detail", ui::clean(&error.to_string()))
-            .sentence("The file was left as it is. Fix it, or move it away and run bridge up to write new settings.")
+            .sentence("The file was left as it is. Fix it, or move it away and write new settings.")
+            .then("Write new settings", ["bridge", "up"])
     })
 }
 
@@ -144,7 +145,7 @@ pub async fn permission_request(home: &Path, name: &str, helper_app: Option<&str
             ),
         )
         .row("Accepted", product_cli::PERMISSIONS.join(", "))
-        .sentence("For Full Disk Access, run bridge permissions guide."));
+        .then("For Full Disk Access", ["bridge", "permissions", "guide"]));
     }
     let report = product_cli::permissions_request(
         Path::new("open"),
@@ -397,7 +398,13 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
         }
         failure
     };
-    let verdict = || if ok || !args.check { Ok(()) } else { Err(failed()) };
+    let verdict = || {
+        if ok || !args.check {
+            Ok(())
+        } else {
+            Err(failed())
+        }
+    };
     if modes.json || modes.legacy_json() {
         if !modes.json {
             legacy("bridge doctor");
@@ -415,7 +422,10 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
         ("SQLite intact".to_owned(), yes_no(&report["sqlite"])),
         ("Schema".to_owned(), yes_no(&report["schema"])),
         ("Private files".to_owned(), yes_no(&report["private_modes"])),
-        ("Disk encrypted".to_owned(), yes_no(&report["disk_encryption"])),
+        (
+            "Disk encrypted".to_owned(),
+            yes_no(&report["disk_encryption"]),
+        ),
         (
             "Credentials".to_owned(),
             yes_no(&report["credentials"]["store"]),
@@ -610,6 +620,7 @@ fn sqlite_file(path: &Path) -> bool {
         .is_ok_and(|()| &header == b"SQLite format 3\0")
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
     let backup = match (args.path, args.backup) {
         (Some(positional), Some(named)) if positional != named => {
@@ -680,7 +691,10 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
             "credentials, settings and remote setup".to_owned(),
         ));
     } else {
-        rows.push(("Replaces".to_owned(), "nothing; this home has no data yet".to_owned()));
+        rows.push((
+            "Replaces".to_owned(),
+            "nothing; this home has no data yet".to_owned(),
+        ));
     }
     rows.push((
         "Ledger check".to_owned(),
@@ -838,7 +852,7 @@ fn report_restore(home: &Path, backup: Option<&PathBuf>, replaced: bool) -> Outc
     } else {
         ui::warn(
             "settings_missing",
-            "This home has no gateway settings yet, so bridge status fails until you start it.",
+            "This home has no gateway settings yet, so status checks fail until you start it.",
         );
         ui::next_steps(&[Step::new(
             "Start it to write its settings",
@@ -861,7 +875,10 @@ fn route(via: Option<&str>, private: bool, domain: Option<&str>) -> Outcome<Stri
     } else {
         via.unwrap_or("relay")
     };
-    if !matches!(route, "relay" | "private" | "tailscale-app" | "system" | "both") {
+    if !matches!(
+        route,
+        "relay" | "private" | "tailscale-app" | "system" | "both"
+    ) {
         return Err(Failure::new(
             Reason::InvalidValue,
             format!(
@@ -891,7 +908,10 @@ fn json_problem(path: &Path, error: &serde_json::Error) -> Failure {
         .row("Detail", ui::clean(&error.to_string()))
 }
 
-pub fn remote_file<T: serde::de::DeserializeOwned + Default>(home: &Path, name: &str) -> Outcome<T> {
+pub fn remote_file<T: serde::de::DeserializeOwned + Default>(
+    home: &Path,
+    name: &str,
+) -> Outcome<T> {
     let path = home.join("remote").join(format!("{name}.json"));
     let bytes = match std::fs::read(&path) {
         Ok(bytes) => bytes,
@@ -1029,14 +1049,7 @@ async fn onboard(
     };
     let waited = tokio::time::timeout(
         limit,
-        ab_remote::onboarding::settle(
-            home,
-            action,
-            route,
-            out,
-            opener,
-            Duration::from_millis(100),
-        ),
+        ab_remote::onboarding::settle(home, action, route, out, opener, Duration::from_millis(100)),
     )
     .await;
     let verb_past = if action == "on" { "on" } else { "off" };
@@ -1207,8 +1220,11 @@ pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
         return Ok(());
     }
     let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(Reason::InvalidConfig, "Couldn't read the remote access state.")
-            .remote("Remote", error.to_string())
+        Failure::new(
+            Reason::InvalidConfig,
+            "Couldn't read the remote access state.",
+        )
+        .remote("Remote", error.to_string())
     })?;
     let modes = Modes::get();
     if modes.json || modes.legacy_json() {
@@ -1382,8 +1398,14 @@ pub async fn join(home: &Path, args: &JoinArgs) -> Outcome {
 
 pub fn install_credentials(home: &Path) -> Outcome {
     access::open(home)?;
-    if Modes::get().stdout_tty() {
-        ui::done("Credentials ready", &home.display().to_string());
+    if Modes::get().json {
+        ui::json_document(json!({
+            "outcome": "ready",
+            "home": absolute(home),
+            "next": [Step::new("Check this home", ["bridge", "status"]).to_json()],
+        }));
+    } else if Modes::get().stdout_tty() {
+        ui::done("Credentials ready", &absolute(home).display().to_string());
     }
     Ok(())
 }
@@ -1605,9 +1627,21 @@ pub fn lab_session(home: &Path) -> Outcome {
 #[cfg(feature = "lab-harness")]
 pub fn lab_principal(home: &Path, args: &super::tree::LabPrincipalArgs) -> Outcome {
     let authority = access::open(home)?;
+    let missing = |what: &str| {
+        Failure::new(
+            Reason::NotFound,
+            format!("Couldn't find an active principal with {what}."),
+        )
+        .sentence("It may be revoked or expired, or it never existed in this home.")
+        .then("See the agents with access", ["bridge", "agents", "list"])
+    };
     let principal = match (&args.id, &args.fingerprint) {
-        (Some(id), None) => authority.principal(id)?,
-        (None, Some(fingerprint)) => authority.principal_by_fingerprint(fingerprint)?,
+        (Some(id), None) => authority
+            .principal(id)
+            .map_err(|_| missing(&format!("id {}", ui::clean(id))))?,
+        (None, Some(fingerprint)) => authority
+            .principal_by_fingerprint(fingerprint)
+            .map_err(|_| missing(&format!("fingerprint {}", ui::clean(fingerprint))))?,
         _ => {
             return Err(Failure::usage(
                 "Can't look up a principal. Pass exactly one of --id or --fingerprint.",
