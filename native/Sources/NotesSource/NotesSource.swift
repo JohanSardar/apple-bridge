@@ -8,6 +8,7 @@ public final class NotesSource: Source {
     public init() {}
     public func primitive(_ operation: String, args request: JSON) async throws -> JSON {
         guard operation == "notes.write", Self.operations.contains(request["op"].string) else { throw SourceFailure.unsupported }
+        guard await AppleScriptRunner.launch(NotesScript.bundle) else { throw SourceFailure.unavailable }
         let quote = NotesScript.quote
         let note = request["note_id"].string, folder = request["folder_id"].string
         var scriptID = note

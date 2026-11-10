@@ -33,7 +33,7 @@ public enum AppleScriptRunner {
     }
 
     @MainActor
-    private static func launch(_ bundle: String) async -> Bool {
+    public static func launch(_ bundle: String) async -> Bool {
         guard NSRunningApplication.runningApplications(withBundleIdentifier: bundle).isEmpty else { return true }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return false }
         let configuration = NSWorkspace.OpenConfiguration()

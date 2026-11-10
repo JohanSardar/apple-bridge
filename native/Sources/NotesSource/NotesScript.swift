@@ -4,12 +4,17 @@ import SourceSupport
 
 @MainActor
 public enum NotesScript {
+    public static let bundle = "com.apple.Notes"
     public static func quote(_ value: String) -> String {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\r", with: "\\r").replacingOccurrences(of: "\n", with: "\\n") + "\""
     }
     public static func run(_ body: String) throws -> String {
-        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.Notes")
-        guard AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) == noErr else { throw SourceFailure.permissionMissing }
+        let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
+        switch AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), false) {
+        case noErr: break
+        case OSStatus(procNotFound): throw SourceFailure.unavailable
+        default: throw SourceFailure.permissionMissing
+        }
         var error: NSDictionary?
         guard let script = NSAppleScript(source: "with timeout of 5 seconds\ntell application id \"com.apple.Notes\"\n" + body + "\nend tell\nend timeout") else { throw SourceFailure.invalid }
         let result = script.executeAndReturnError(&error)
