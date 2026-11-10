@@ -815,7 +815,7 @@ fn skills_are_in_the_binary_and_name_only_real_operations() -> Check {
         .into_iter()
         .map(|descriptor| descriptor.name)
         .collect();
-    for skill in ["core", "setup"] {
+    for skill in ["core", "setup", "messages", "reminders-calendar", "photos", "files"] {
         let output = bridge().args(["skills", "get", skill]).output()?;
         assert!(output.status.success());
         let body = text(&output.stdout);
