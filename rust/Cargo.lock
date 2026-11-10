@@ -338,6 +338,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower",
+ "unicode-width",
  "webpki-roots 1.0.11",
 ]
 

@@ -140,8 +140,10 @@ fn doctor_reports_credential_store_last_error_without_a_database() -> Check {
         home.path().join("credential-store-error.json"),
         serde_json::to_vec(&failure)?,
     )?;
+    let checked = bridge_with_file_store(home.path(), &["doctor", "--check", "--json"])?;
+    assert_eq!(checked.status.code(), Some(1));
     let output = bridge_with_file_store(home.path(), &["doctor"])?;
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(report["credentials"]["store"], "file_0600");
     assert_eq!(report["credentials"]["last_error"], failure);

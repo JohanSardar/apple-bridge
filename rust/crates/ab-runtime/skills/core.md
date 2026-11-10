@@ -46,7 +46,7 @@ Results carry `next`: pass it as `after` to read the next page. Collections look
 
 ## How much is there
 
-Run `bridge stats` for counts per source, or `bridge stats --json` to parse them. It shows counts only and never content. `bridge stats --follow` follows a first sync.
+Run `bridge stats` for counts per source, or `bridge stats --json` to parse them. It shows counts only and never content. `bridge stats --wait` follows a first sync until every source finishes.
 
 ## Changing things
 
@@ -54,7 +54,7 @@ Operations that change data, such as `messages.send`, `reminders.create` and `ca
 
 ## When something fails
 
-- `unauthorized` or `forbidden`: this agent's access does not cover it. The owner can change it with `bridge scope` or by reconnecting.
+- `unauthorized` or `forbidden`: this agent's access does not cover it. The owner can change it with `bridge agents update <id> --scope` or by reconnecting.
 - `unavailable`: the source is not ready. Check `sources.status`, and suggest `bridge permissions guide` if a permission is missing.
 - A connection failure: the gateway may be off. The owner can run `bridge up`.
 

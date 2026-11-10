@@ -11,8 +11,10 @@ use std::{
 };
 
 const LABEL: usize = 16;
+const MIN_WIDTH: usize = 40;
 
 static WARNINGS: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
+static WARNINGS_EMBEDDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static DEPRECATIONS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 static CANCEL_NOTE: Mutex<Option<String>> = Mutex::new(None);
 static PRINTED_STDERR: Mutex<bool> = Mutex::new(false);
@@ -104,7 +106,8 @@ pub fn shell_line(argv: &[String]) -> String {
 }
 
 fn paint(code: &str, text: &str) -> String {
-    if Modes::get().color() {
+    let modes = Modes::get();
+    if modes.color() && modes.rich() {
         format!("\u{1b}[{code}m{text}\u{1b}[0m")
     } else {
         text.to_owned()
@@ -154,15 +157,32 @@ pub fn printed_stderr() -> bool {
     PRINTED_STDERR.lock().is_ok_and(|printed| *printed)
 }
 
+fn prefix(code: &str, text: &str) -> String {
+    if Modes::get().color() {
+        format!("\u{1b}[{code}m{text}\u{1b}[0m")
+    } else {
+        text.to_owned()
+    }
+}
+
 pub fn display_width(text: &str) -> usize {
-    text.chars().count()
+    unicode_width::UnicodeWidthStr::width(text)
+}
+
+pub fn bold(text: &str) -> String {
+    if Modes::get().stdout_styled() {
+        format!("\u{1b}[1m{text}\u{1b}[0m")
+    } else {
+        text.to_owned()
+    }
 }
 
 pub fn wrap(text: &str, width: usize, first: &str, rest: &str) -> Vec<String> {
+    let width = width.max(MIN_WIDTH);
     let mut lines = Vec::new();
     let mut current = first.to_owned();
     let mut empty = true;
-    for word in text.split(' ') {
+    for word in text.split(' ').filter(|word| !word.is_empty()) {
         if !empty && display_width(&current) + 1 + display_width(word) > width {
             lines.push(std::mem::replace(&mut current, rest.to_owned()));
             empty = true;
@@ -224,10 +244,51 @@ pub fn done(label: &str, value: &str) {
                 err_line(&line);
             }
         }
-    } else if value.is_empty() {
-        err_line(label);
     } else {
-        err_line(&format!("{label} {value}"));
+        for (index, line) in labeled(label, &value).into_iter().enumerate() {
+            if index == 0 {
+                err_line(&format!("  {}", line.trim_end()));
+            } else {
+                err_line(&line);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mark {
+    Good,
+    Warn,
+    Bad,
+}
+
+fn mark(mark: Mark) -> String {
+    if !Modes::get().stdout_styled() && !Modes::get().rich() {
+        return " ".to_owned();
+    }
+    let (code, glyph) = match mark {
+        Mark::Good => ("32", "✓"),
+        Mark::Warn => ("33", "!"),
+        Mark::Bad => ("31", "✗"),
+    };
+    if Modes::get().color() && Modes::get().stdout_styled() {
+        format!("\u{1b}[{code}m{glyph}\u{1b}[0m")
+    } else {
+        glyph.to_owned()
+    }
+}
+
+pub fn block(first: Mark, rows: &[(String, String)]) {
+    for (index, (label, value)) in rows.iter().enumerate() {
+        for (line_index, line) in labeled(label, &clean(value)).into_iter().enumerate() {
+            if line_index > 0 {
+                outln(&line);
+            } else if index == 0 {
+                outln(format!("{} {}", mark(first), line.trim_end()).trim_end());
+            } else {
+                outln(&format!("  {}", line.trim_end()));
+            }
+        }
     }
 }
 
@@ -249,7 +310,14 @@ pub fn warn(reason: &str, text: &str) {
             }
         }
     } else {
-        err_line(&format!("Warning: {text}"));
+        let lines = wrap(text, modes.width(), "", "  ");
+        for (index, line) in lines.iter().enumerate() {
+            if index == 0 {
+                err_line(&format!("{} {line}", prefix("33", "Warning:")));
+            } else {
+                err_line(line);
+            }
+        }
     }
 }
 
@@ -265,12 +333,31 @@ pub fn deprecated(old: &str, replacement: &str) {
     }
 }
 
+pub fn report_unembedded_warnings() {
+    if !Modes::get().json || WARNINGS_EMBEDDED.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    for (reason, message) in warnings() {
+        err_raw(&format!(
+            "{}\n",
+            json!({"status": "warning", "reason": reason, "message": message})
+        ));
+    }
+}
+
 pub fn warnings() -> Vec<(String, String)> {
     WARNINGS.lock().map(|w| w.clone()).unwrap_or_default()
 }
 
 pub fn next_step(step: &Step) {
-    err_line(&format!("  {}:", step.benefit));
+    for line in wrap(
+        &format!("{}:", step.benefit),
+        Modes::get().width(),
+        "  ",
+        "  ",
+    ) {
+        err_line(&line);
+    }
     err_line(&format!("    {}", paint("36", &step.command())));
 }
 
@@ -288,6 +375,18 @@ pub fn set_cancel_note(note: Option<&str>) {
     if let Ok(mut current) = CANCEL_NOTE.lock() {
         *current = note.map(str::to_owned);
     }
+}
+
+static CANCEL_STEP: Mutex<Option<Step>> = Mutex::new(None);
+
+pub fn set_cancel_step(step: Option<Step>) {
+    if let Ok(mut current) = CANCEL_STEP.lock() {
+        *current = step;
+    }
+}
+
+pub fn cancel_step() -> Option<Step> {
+    CANCEL_STEP.lock().ok().and_then(|step| step.clone())
 }
 
 pub fn cancel_note() -> Option<String> {
@@ -325,7 +424,14 @@ pub fn render_failure(failure: &Failure) {
             });
         }
     } else {
-        lines.push(format!("Error: {headline}"));
+        let wrapped = wrap(&headline, modes.width(), "", "  ");
+        for (index, line) in wrapped.into_iter().enumerate() {
+            lines.push(if index == 0 {
+                format!("{} {line}", prefix("31", "Error:"))
+            } else {
+                line
+            });
+        }
     }
     for issue in failure.issues.iter().take(5) {
         lines.push(format!("  {}", clean(issue)));
@@ -355,12 +461,18 @@ pub fn render_failure(failure: &Failure) {
     if !shown.is_empty() {
         lines.push(String::new());
         for (index, step) in shown.iter().enumerate() {
-            let benefit = if index == 0 {
+            let keeps_lead = ["or ", "then "]
+                .iter()
+                .any(|lead| step.benefit.to_lowercase().starts_with(lead));
+            let benefit = if index == 0 || keeps_lead {
                 step.benefit.clone()
             } else {
                 format!("Or {}", lowercase_first(&step.benefit))
             };
-            lines.push(format!("  {benefit}:"));
+            if index > 0 {
+                lines.push(String::new());
+            }
+            lines.extend(wrap(&format!("{benefit}:"), modes.width(), "  ", "  "));
             lines.push(format!("    {}", paint("36", &step.command())));
         }
     }
@@ -394,14 +506,19 @@ fn select_fields(value: &Value, fields: &[String]) -> Value {
 }
 
 pub fn json_document(mut value: Value) {
-    let modes = Modes::get();
-    if let Some(fields) = &modes.fields {
+    if let Some(fields) = &Modes::get().fields {
         value = select_fields(&value, fields);
     }
+    json_document_unfiltered(value);
+}
+
+pub fn json_document_unfiltered(mut value: Value) {
+    let modes = Modes::get();
     let warnings = warnings();
     if !warnings.is_empty()
         && let Value::Object(map) = &mut value
     {
+        WARNINGS_EMBEDDED.store(true, std::sync::atomic::Ordering::Relaxed);
         map.insert(
             "warnings".into(),
             Value::Array(
@@ -525,47 +642,65 @@ pub fn ask(question: &str) -> Outcome<Option<String>> {
     Ok(answer)
 }
 
-pub fn confirm(
-    preview: &[String],
-    question: &str,
-    with_yes: &Step,
-    nothing_changed: &str,
-) -> Outcome {
+pub struct Consent<'a> {
+    pub action: String,
+    pub rows: Vec<(String, String)>,
+    pub consequence: String,
+    pub question: String,
+    pub with_yes: Step,
+    pub nothing_changed: &'a str,
+}
+
+pub fn confirm(consent: &Consent<'_>) -> Outcome {
     let modes = Modes::get();
     if modes.yes {
         return Ok(());
+    }
+    let mut effects: Vec<Value> = consent
+        .rows
+        .iter()
+        .map(|(label, value)| json!({"label": label, "value": value}))
+        .collect();
+    if !consent.consequence.is_empty() {
+        effects.push(json!({"label": "Consequence", "value": consent.consequence}));
     }
     if !modes.interactive() {
         let mut failure = Failure::new(
             Reason::ConfirmationRequired,
             format!(
-                "{} {} needs --yes.",
-                question.trim_end_matches('?'),
-                modes.why_not_interactive()
+                "Can't {} without --yes in non-interactive mode.",
+                consent.action
             ),
         )
         .needs_action()
-        .data(
-            "effects",
-            preview.iter().map(|line| json!(line)).collect::<Vec<_>>(),
-        )
-        .step(
-            Step::new("Only after you approve it, run", with_yes.argv.clone()).when(format!(
-                "Only after a human approves: {}",
-                preview.join(" ")
-            )),
-        );
-        for line in preview {
-            failure = failure.issue(line.clone());
+        .data("effects", effects)
+        .data("why", modes.why_not_interactive());
+        for (label, value) in &consent.rows {
+            failure = failure.row(label.clone(), value.clone());
         }
-        return Err(failure);
+        if !consent.consequence.is_empty() {
+            failure = failure.sentence(consent.consequence.clone());
+        }
+        return Err(failure.step(
+            Step::new(
+                "Only after you approve it, run",
+                consent.with_yes.argv.clone(),
+            )
+            .when("Only after a human approves the change shown"),
+        ));
     }
-    for line in preview {
-        note(line);
+    for (label, value) in &consent.rows {
+        row(label, value);
     }
-    match ask(&format!("{question} (y/N)"))? {
+    if !consent.consequence.is_empty() {
+        note(&consent.consequence);
+    }
+    match ask(&format!("{} (y/N)", consent.question))? {
         Some(answer) if matches!(answer.to_lowercase().as_str(), "y" | "yes") => Ok(()),
-        _ => Err(Failure::canceled(format!("Canceled. {nothing_changed}"))),
+        _ => Err(Failure::canceled(format!(
+            "Canceled. {}",
+            consent.nothing_changed
+        ))),
     }
 }
 
@@ -636,8 +771,11 @@ mod tests {
 
     #[test]
     fn prose_wraps_without_breaking_words() {
-        let lines = wrap("aaaa bbbb cccc", 9, "", "  ");
-        assert_eq!(lines, ["aaaa bbbb", "  cccc"]);
+        let words = "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii";
+        let lines = wrap(words, 9, "", "  ");
+        assert_eq!(lines, ["aaaa bbbb cccc dddd eeee ffff gggg hhhh", "  iiii"]);
+        let wide = wrap("界界界界界界界界界界界界界界界界界界界界 x", 40, "", "");
+        assert_eq!(wide, ["界界界界界界界界界界界界界界界界界界界界", "x"]);
         let long = wrap("/a/very/long/path/that/never/breaks", 10, "  ", "  ");
         assert_eq!(long, ["  /a/very/long/path/that/never/breaks"]);
     }

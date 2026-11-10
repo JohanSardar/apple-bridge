@@ -165,6 +165,14 @@ impl Authority {
         })
     }
     pub fn create_token(&self, grants: Vec<Grant>, remote: bool) -> Result<String, Error> {
+        self.create_token_until(grants, remote, None)
+    }
+    pub fn create_token_until(
+        &self,
+        grants: Vec<Grant>,
+        remote: bool,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> Result<String, Error> {
         let mut bytes = [0; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
         let token = format!("abt-{}", hex::encode(bytes));
@@ -176,7 +184,7 @@ impl Authority {
             {
                 return Err(Error::Unauthorized);
             }
-            d.principals.push(Principal {
+            let mut principal = Principal {
                 id,
                 kind: "token".into(),
                 grants,
@@ -184,7 +192,14 @@ impl Authority {
                 token_hash: fingerprint(token.as_bytes()),
                 revision: 1,
                 ..Principal::default()
-            });
+            };
+            if let Some(expires_at) = expires_at {
+                principal.extra.insert(
+                    "expires_at".into(),
+                    serde_json::json!(expires_at.to_string()),
+                );
+            }
+            d.principals.push(principal);
             Ok(())
         })?;
         Ok(token)

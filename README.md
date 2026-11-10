@@ -17,7 +17,7 @@ curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
-bridge stats --follow       # counts per source, as each one finishes
+bridge stats --wait         # counts per source, as each one finishes
 ```
 
 No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connectors allow`. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.

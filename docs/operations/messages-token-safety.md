@@ -1,6 +1,6 @@
 # Sending Messages with an owner token
 
-A local bearer token created with `bridge token create` and `messages:write`
+A local bearer token created with `bridge tokens create` and `messages:write`
 can send ordinary untagged text to the owner's self-chat. The gateway assigns
 `owner_self` origin only to its own non-remote token principals for
 `messages.send`. Caller-supplied origins are ignored.

@@ -205,6 +205,43 @@ fn declared(command: &clap::Command, name: &str) -> bool {
         })
 }
 
+fn flag(command: &clap::Command, name: &str) -> bool {
+    let root = Cli::command();
+    command
+        .get_arguments()
+        .chain(root.get_arguments())
+        .find(|argument| {
+            argument.get_long() == Some(name)
+                || argument
+                    .get_all_aliases()
+                    .is_some_and(|aliases| aliases.contains(&name))
+        })
+        .is_some_and(|argument| !argument.get_action().takes_values())
+}
+
+fn same_flag(command: &clap::Command, token: &str, name: &str) -> bool {
+    let root = Cli::command();
+    let Some(argument) = command
+        .get_arguments()
+        .chain(root.get_arguments())
+        .find(|argument| {
+            argument.get_long() == Some(name)
+                || argument
+                    .get_all_aliases()
+                    .is_some_and(|aliases| aliases.contains(&name))
+        })
+    else {
+        return false;
+    };
+    if let Some(long) = token.strip_prefix("--") {
+        return argument.get_long() == Some(long)
+            || argument
+                .get_all_aliases()
+                .is_some_and(|aliases| aliases.contains(&long));
+    }
+    token == format!("-{}", argument.get_short().unwrap_or('\0'))
+}
+
 enum Spelling {
     Keep,
     Replace(String),
@@ -212,7 +249,7 @@ enum Spelling {
 }
 
 const RENAMED: &[(&str, &str, &str)] = &[
-    ("stats", "--watch", "--follow"),
+    ("stats", "--watch", "--wait"),
     ("read", "--text", "--query"),
     ("link", "--no-browser", "--no-open"),
 ];
@@ -239,18 +276,13 @@ fn legacy_spelling(text: &str, notices: &mut Vec<(String, String)>) -> Spelling 
         return Spelling::Keep;
     }
     match value {
-        "true" => {
-            notices.push((format!("--{name}=true"), format!("--{name}")));
-            Spelling::Replace(format!("--{name}"))
-        }
-        "false" => {
-            notices.push((format!("--{name}=false"), format!("no --{name}")));
-            Spelling::Drop
-        }
+        "true" => Spelling::Replace(format!("--{name}")),
+        "false" => Spelling::Drop,
         _ => Spelling::Keep,
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn prepare(raw: Vec<OsString>) -> Prepared {
     let mut prepared = Prepared::default();
     let mut iterator = raw.into_iter();
@@ -324,6 +356,30 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 .map_or(long, |(name, _)| name)
                 .to_owned()
         });
+        if let Some(long) = text.strip_prefix("--") {
+            if let Some((flag_name, value)) = long.split_once('=')
+                && matches!(value, "true" | "false")
+                && flag(&leaf, flag_name)
+            {
+                if value == "true" {
+                    output.push(format!("--{flag_name}").into());
+                } else {
+                    output.retain(|kept: &OsString| {
+                        !same_flag(&leaf, &kept.to_string_lossy(), flag_name)
+                    });
+                }
+                continue;
+            }
+            if let Some(negated) = long.strip_prefix("no-")
+                && !long.contains('=')
+                && !declared(&leaf, long)
+                && flag(&leaf, negated)
+            {
+                output
+                    .retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), negated));
+                continue;
+            }
+        }
         match name {
             Some(name)
                 if tolerant
@@ -334,7 +390,7 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 prepared.notices.push((
                     format!("ignored:--{name}"),
                     format!(
-                        "--{name} is ignored by {} and will be refused in the next release.",
+                        "--{name} is ignored by {} and will be refused in the next major version.",
                         shown.trim_end()
                     ),
                 ));
@@ -377,10 +433,19 @@ mod tests {
     }
 
     #[test]
-    fn boolean_values_become_presence_options_and_warn() {
+    fn boolean_values_and_negations_are_accepted_quietly() {
         let (arguments, notices) = run(&["bridge", "pair", "--iphone=true", "--via-remote=false"]);
         assert_eq!(arguments, ["bridge", "pair", "--iphone"]);
-        assert_eq!(notices, ["--iphone=true", "--via-remote=false"]);
+        assert!(notices.is_empty(), "{notices:?}");
+        let (arguments, notices) = run(&["bridge", "status", "--json=true"]);
+        assert_eq!(arguments, ["bridge", "status", "--json"]);
+        assert!(notices.is_empty(), "{notices:?}");
+        let (arguments, _) = run(&["bridge", "--json", "stats", "--no-json", "--all=false"]);
+        assert_eq!(arguments, ["bridge", "stats"]);
+        let (arguments, _) = run(&["bridge", "-y", "agents", "revoke", "x", "--yes=false"]);
+        assert_eq!(arguments, ["bridge", "agents", "revoke", "x"]);
+        let (arguments, _) = run(&["bridge", "link", "claude", "--no-open"]);
+        assert_eq!(arguments, ["bridge", "link", "claude", "--no-open"]);
     }
 
     #[test]
@@ -475,7 +540,7 @@ mod tests {
                     .to_vec()
             )
             .path,
-            ["agents"]
+            ["agents", "list"]
         );
     }
 }

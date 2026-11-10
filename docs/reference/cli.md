@@ -55,7 +55,7 @@ Global options:
   -y, --yes          Confirm destructive changes without asking
 
 Examples:
-  Start Apple Bridge and connect Claude Code
+  Start Apple Bridge on this Mac
     bridge up
 
   Then connect your agent
@@ -131,9 +131,10 @@ Arguments:
   <CLIENT>  Which agent to disconnect (accepted: claude, codex, other)
 
 Options:
-  --name <NAME>    Name shown in the agent (default: apple-bridge)
-  --scope <SCOPE>  Claude Code only: where the registration is saved (accepted: user, project,
-                   local) (default: user)
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --scope <SCOPE>       Claude Code only: where the registration is saved (accepted: user, project,
+                        local) (default: user)
+  --timeout <DURATION>  Stop waiting for the agent's commands after this long (default: 1m)
 
 Global options: see bridge --help
 
@@ -183,7 +184,8 @@ Examples:
 Notes:
   Every step is optional, and permissions you've already allowed are kept. Enter at a prompt
   continues; s skips; Ctrl+C or end of input stops before the next step.
-  Without a terminal, pass --only with the permissions to request.
+  Without a terminal, pass --only with the permissions to request. Without it, the list with each
+  status is printed and the command exits 2.
 ```
 
 ## bridge permissions status
@@ -197,6 +199,9 @@ Global options: see bridge --help
 Examples:
   Check which permissions are allowed
     bridge permissions status
+
+Notes:
+  With --json, each permission maps to allowed, needs permission or unknown.
 ```
 
 ## bridge permissions request
@@ -231,11 +236,12 @@ Show how much each source has synced, as counts only
 
 Options:
   -a, --all             Include sources with nothing synced
-  -f, --follow          Keep updating until every source has finished syncing
-  --settle <DURATION>   A source counts as finished after this long without new records (default:
-                        30s)
-  --timeout <DURATION>  With --follow: stop watching after this long, such as 30s or 5m (default: no
-                        limit on a terminal, 5m otherwise)
+  -f, --follow          Keep showing sync events until you stop it or --timeout passes
+  --settle <DURATION>   A source counts as finished after this long without new records; 0 means at
+                        once (default: 30s)
+  --timeout <DURATION>  With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks
+                        once (default for --wait: no limit on a terminal, 5m otherwise)
+  -w, --wait            Show sync events until every source has finished syncing, then exit
 
 Global options: see bridge --help
 
@@ -243,15 +249,19 @@ Examples:
   See what has synced
     bridge stats
 
-  Follow the first sync for up to 5 minutes
+  Wait until every source has finished syncing
+    bridge stats --wait
+
+  Follow sync events for 5 minutes
     bridge stats --follow --timeout 5m
 
   Stream sync events as JSON lines
     bridge stats --follow --json
 
 Notes:
-  Counts only, never content. With --follow, reaching --timeout exits 0 because watching was the
-  task.
+  Counts only, never content. --wait exits once every source has finished. --follow keeps going
+  until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0
+  because watching was the task.
 ```
 
 ## bridge down
@@ -285,10 +295,12 @@ Arguments:
 Options:
   -a, --all             Fetch every page, up to 10,000 items
   --chat <CHAT>         Messages only: read this chat
-  --days <NUMBER>       Calendar only: how many days ahead (default: 7)
-  -n, --limit <NUMBER>  How many items to show, 1 to 200 (default: 10)
+  --days <NUMBER>       Calendar only: how many days ahead [default: 7]
+  -n, --limit <NUMBER>  How many items to show in total, 1 to 200 [default: 10]
   --next <CURSOR>       Continue from a previous page
   -q, --query <TEXT>    Messages only: find messages containing this text
+  --timeout <DURATION>  Stop fetching pages after this long; what was fetched is reported (default:
+                        2m)
 
 Global options: see bridge --help
 
@@ -303,25 +315,31 @@ Examples:
     bridge read mail --next <CURSOR>
 
 Notes:
-  Shows newest first. --limit is the total to show (default 10, cap 200); higher values are clamped
-  with a warning. Photos is queried live; everything else is read from what has synced, with its
-  freshness on stderr.
+  Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is
+  fetched. Photos is queried live; everything else is read from what has synced, with its freshness
+  on stderr.
+  --next continues with the same filters, window and order. Options you leave out come from the
+  cursor; ones that differ are refused.
+  Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields
+  picks fields inside each record's data.
   Uses a temporary read-only credential that's revoked when the read ends.
 ```
 
 ## bridge search
 
 ```text
-bridge search <TEXT> [options]
+bridge search [TEXT] [options]
 Search synced data
 
 Arguments:
-  <TEXT>  Text to find
+  <TEXT>  Text to find; optional with --next
 
 Options:
   -a, --all             Fetch every page, up to 10,000 results
-  -n, --limit <NUMBER>  How many results to show, 1 to 200 (default: 10)
+  -n, --limit <NUMBER>  How many results to show in total, 1 to 200 [default: 10]
   --next <CURSOR>       Continue from a previous page
+  --timeout <DURATION>  Stop fetching pages after this long; what was fetched is reported (default:
+                        2m)
 
 Global options: see bridge --help
 
@@ -334,7 +352,8 @@ Examples:
 
 Notes:
   --limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000
-  results.
+  results. --next continues the same search; TEXT can be left out.
+  Piped, rows are tab-separated with a header line, even when nothing matches.
 ```
 
 ## bridge call
@@ -368,8 +387,9 @@ Examples:
 
 Notes:
   Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.
-  A Photos write that loses its connection is reported with its query ID; inspect it before trying
-  again.
+  A write whose result can't be confirmed is reported as unknown_outcome with its operation ID;
+  inspect it before trying again. Writes are never retried.
+  The result is the operation's own output; see its output schema in bridge call --list --json.
 ```
 
 ## bridge skills
@@ -459,11 +479,12 @@ bridge agents create [options]
 Create an agent and print its token once
 
 Options:
-  --level <LEVEL>   full (acts at once), approve (asks you before each change) or read (default:
-                    full)
-  --name <NAME>     Agent name, 1 to 120 bytes
-  --scope <ACCESS>  Access grants, comma-separated, such as messages:read,contacts:read (default:
-                    reminders:read)
+  --expires-in <DURATION>  Stop the token working after this long, such as 1h, 7d or 90d (default:
+                           never)
+  --level <LEVEL>          What the agent may do (accepted: full, approve, read) (default: full)
+  --name <NAME>            Agent name, 1 to 120 bytes
+  --scope <ACCESS>         Access grants, comma-separated, such as messages:read,contacts:read
+                           (default: reminders:read)
 
 Global options: see bridge --help
 
@@ -504,7 +525,7 @@ Arguments:
   <AGENT>  Agent ID
 
 Options:
-  --level <LEVEL>   full or approve
+  --level <LEVEL>   New level (accepted: full, approve)
   --scope <ACCESS>  Replace its access grants, comma-separated
 
 Global options: see bridge --help
@@ -551,7 +572,7 @@ Deprecated: use bridge agents update <AGENT> --level <LEVEL>.
 
 Arguments:
   <AGENT>  Agent ID
-  <LEVEL>  full or approve
+  <LEVEL>  New level (accepted: full, approve)
 
 Global options: see bridge --help
 ```
@@ -577,8 +598,10 @@ bridge tokens create [options]
 Create a token and print it once
 
 Options:
-  --remote          Allow use through remote access
-  --scope <ACCESS>  Access grants, comma-separated (default: reminders:read,system:read)
+  --expires-in <DURATION>  Stop the token working after this long, such as 1h, 7d or 90d (default:
+                           never)
+  --remote                 Allow use through remote access
+  --scope <ACCESS>         Access grants, comma-separated (default: reminders:read,system:read)
 
 Global options: see bridge --help
 
@@ -668,8 +691,8 @@ bridge connectors allow [options]
 Allow a waiting app after checking its code
 
 Options:
-  --code <CODE>        Four-digit code shown on the app's page
-  --request <REQUEST>  Request ID from bridge connectors list
+  --code <CODE>        Four-digit code shown on the app's page (required)
+  --request <REQUEST>  Request ID from bridge connectors list (required)
 
 Global options: see bridge --help
 
@@ -688,8 +711,8 @@ bridge connectors deny [options]
 Deny a waiting app
 
 Options:
-  --code <CODE>        Four-digit code shown on the app's page
-  --request <REQUEST>  Request ID from bridge connectors list
+  --code <CODE>        Four-digit code shown on the app's page (required)
+  --request <REQUEST>  Request ID from bridge connectors list (required)
 
 Global options: see bridge --help
 
@@ -728,8 +751,8 @@ bridge web enroll [options]
 Print a link and QR code to add a passkey
 
 Options:
-  --host <URL>  Page address: https://HOST, or http://localhost:PORT (default:
-                http://localhost:7780)
+  --host <URL>  Page address: https://HOST, or http://localhost:PORT (default: this Mac's gateway
+                address)
   --public      Use the remote access address
 
 Global options: see bridge --help
@@ -836,10 +859,11 @@ Options:
   --domain <DOMAIN>     Custom domain on the relay route
   --name <NAME>         Name for this Mac
   --no-open             Print sign-in links instead of opening a browser
+  --open                Open sign-in links in the browser even without a terminal, unless over SSH
   --private             Use the private route; same as --via private
   --relay-url <URL>     Your own relay's address
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route: relay, private, tailscale-app or both (default: relay)
+  --via <ROUTE>         Route (default: relay) (accepted: relay, private, tailscale-app, both)
 
 Global options: see bridge --help
 
@@ -865,7 +889,8 @@ Options:
   --name <NAME>         Name for this Mac
   --private             Turn off the private route; same as --via private
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay)
+  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, private, tailscale-app,
+                        both)
 
 Global options: see bridge --help
 
@@ -951,10 +976,11 @@ Options:
   --domain <DOMAIN>     Custom domain on the relay route
   --name <NAME>         Name for this Mac
   --no-open             Print sign-in links instead of opening a browser
+  --open                Open sign-in links in the browser even without a terminal, unless over SSH
   --private             Use the private route; same as --via private
   --relay-url <URL>     Your own relay's address
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route: relay, private, tailscale-app or both (default: relay)
+  --via <ROUTE>         Route (default: relay) (accepted: relay, private, tailscale-app, both)
 
 Global options: see bridge --help
 ```
@@ -970,7 +996,8 @@ Options:
   --name <NAME>         Name for this Mac
   --private             Turn off the private route; same as --via private
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay)
+  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, private, tailscale-app,
+                        both)
 
 Global options: see bridge --help
 ```
@@ -1054,6 +1081,9 @@ Examples:
 bridge doctor [options]
 Check this home's data, files and credentials
 
+Options:
+  --check  Exit 1 with an unhealthy_home error when the report finds problems
+
 Global options: see bridge --help
 
 Examples:
@@ -1064,7 +1094,8 @@ Examples:
     bridge doctor --json
 
 Notes:
-  Exits 1 when a check fails.
+  A finished report exits 0, even when a check fails. Pass --check to exit 1 with unhealthy_home
+  instead.
 ```
 
 ## bridge backup
@@ -1247,7 +1278,8 @@ Options:
   --peer-addr <ADDRESS>       Replica feed address
   --retention-age <DURATION>  Journal age to keep (default: 0)
   --retention-rows <NUMBER>   Journal rows to keep (default: 0)
-  --role <ROLE>               gateway or replica (default: gateway)
+  --role <ROLE>               What this process runs as (accepted: gateway, replica) (default:
+                              gateway)
   --socket <PATH>             Helper socket
 
 Global options: see bridge --help

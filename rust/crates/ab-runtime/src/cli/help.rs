@@ -92,6 +92,7 @@ pub const LEAVES: &[Leaf] = &[
             ("seconds", "number", false),
             ("restart_needed", "boolean", false),
             ("outcome", "string", false),
+            ("next", "array", false),
         ],
     },
     Leaf {
@@ -121,7 +122,11 @@ pub const LEAVES: &[Leaf] = &[
         examples: &[
             ("See what has synced", "bridge stats"),
             (
-                "Follow the first sync for up to 5 minutes",
+                "Wait until every source has finished syncing",
+                "bridge stats --wait",
+            ),
+            (
+                "Follow sync events for 5 minutes",
                 "bridge stats --follow --timeout 5m",
             ),
             (
@@ -130,7 +135,7 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "Counts only, never content. With --follow, reaching --timeout exits 0 because watching was the task.",
+            "Counts only, never content. --wait exits once every source has finished. --follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
         ],
         schema: &[("sources", "array", false), ("total", "number", false)],
     },
@@ -154,9 +159,13 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
-            "Without a terminal, pass --only with the permissions to request.",
+            "Without a terminal, pass --only with the permissions to request. Without it, the list with each status is printed and the command exits 2.",
         ],
-        schema: &[],
+        schema: &[
+            ("permissions", "object", false),
+            ("requested", "array", false),
+            ("skipped", "array", false),
+        ],
     },
     Leaf {
         path: "permissions status",
@@ -164,8 +173,18 @@ pub const LEAVES: &[Leaf] = &[
             "Check which permissions are allowed",
             "bridge permissions status",
         )],
-        notes: &[],
-        schema: &[],
+        notes: &["With --json, each permission maps to allowed, needs permission or unknown."],
+        schema: &[
+            ("full_disk_access", "string", false),
+            ("contacts", "string", false),
+            ("calendar", "string", false),
+            ("reminders", "string", false),
+            ("photos", "string", false),
+            ("screen_recording", "string", false),
+            ("camera", "string", false),
+            ("microphone", "string", false),
+            ("location", "string", false),
+        ],
     },
     Leaf {
         path: "permissions request",
@@ -176,7 +195,10 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording, speech_recognition, focus, bluetooth, notifications, automation_mail, automation_safari, automation_shortcuts_events.",
         ],
-        schema: &[],
+        schema: &[
+            ("permission", "string", false),
+            ("outcome", "string", false),
+        ],
     },
     Leaf {
         path: "read",
@@ -189,10 +211,18 @@ pub const LEAVES: &[Leaf] = &[
             ("Read the next page", "bridge read mail --next <CURSOR>"),
         ],
         notes: &[
-            "Shows newest first. --limit is the total to show (default 10, cap 200); higher values are clamped with a warning. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+            "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+            "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
+            "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
             "Uses a temporary read-only credential that's revoked when the read ends.",
         ],
-        schema: &[],
+        schema: &[
+            ("next_cursor", "string", false),
+            ("chats", "array", false),
+            ("items", "array", false),
+            ("records", "array", false),
+            ("result_json", "object", false),
+        ],
     },
     Leaf {
         path: "search",
@@ -204,9 +234,13 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results.",
+            "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
+            "Piped, rows are tab-separated with a header line, even when nothing matches.",
         ],
-        schema: &[],
+        schema: &[
+            ("records", "array", false),
+            ("next_cursor", "string", false),
+        ],
     },
     Leaf {
         path: "call",
@@ -220,7 +254,8 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
-            "A Photos write that loses its connection is reported with its query ID; inspect it before trying again.",
+            "A write whose result can't be confirmed is reported as unknown_outcome with its operation ID; inspect it before trying again. Writes are never retried.",
+            "The result is the operation's own output; see its output schema in bridge call --list --json.",
         ],
         schema: &[],
     },
@@ -532,11 +567,26 @@ pub const LEAVES: &[Leaf] = &[
             ("Check this home", "bridge doctor"),
             ("Check it from a script", "bridge doctor --json"),
         ],
-        notes: &["Exits 1 when a check fails."],
+        notes: &[
+            "A finished report exits 0, even when a check fails. Pass --check to exit 1 with unhealthy_home instead.",
+        ],
         schema: &[
             ("ok", "boolean", false),
+            ("applied", "number", false),
             ("checks", "object", false),
+            ("clock_skew", "string", false),
             ("credentials", "object", false),
+            ("cursor", "object", false),
+            ("disk_encryption", "string", false),
+            ("document_checks", "object", false),
+            ("exactly_once", "boolean", false),
+            ("floor", "number", false),
+            ("private_modes", "boolean", false),
+            ("records", "object", false),
+            ("schema", "string", false),
+            ("shape", "object", false),
+            ("sqlite", "string", false),
+            ("versions", "object", false),
             ("warnings", "array", false),
         ],
     },
@@ -802,6 +852,7 @@ fn rows(lines: &mut Vec<String>, entries: &[(String, String)], width: usize) {
         .unwrap_or(0)
         + 2;
     for (syntax, text) in entries {
+        let start = lines.len();
         if column + 2 + 20 > width {
             lines.push(format!("  {syntax}"));
             lines.extend(ui::wrap(text, width, "      ", "      "));
@@ -819,6 +870,11 @@ fn rows(lines: &mut Vec<String>, entries: &[(String, String)], width: usize) {
                         }
                     }),
             );
+        }
+        if let Some(line) = lines.get_mut(start)
+            && let Some(after) = line.strip_prefix(&format!("  {syntax}"))
+        {
+            *line = format!("  {}{after}", ui::bold(syntax));
         }
     }
 }
@@ -861,7 +917,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     if root {
         for (title, names) in GROUPS {
             lines.push(String::new());
-            lines.push(format!("{title}:"));
+            lines.push(ui::bold(&format!("{title}:")));
             let entries: Vec<(String, String)> = names
                 .iter()
                 .filter_map(|name| children.iter().find(|child| child.get_name() == *name))
@@ -871,7 +927,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         }
     } else if !children.is_empty() {
         lines.push(String::new());
-        lines.push("Commands:".to_owned());
+        lines.push(ui::bold("Commands:"));
         let entries: Vec<(String, String)> = children
             .iter()
             .map(|child| (child.get_name().to_owned(), summary(child)))
@@ -891,7 +947,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         .collect();
     if !arguments.is_empty() {
         lines.push(String::new());
-        lines.push("Arguments:".to_owned());
+        lines.push(ui::bold("Arguments:"));
         rows(&mut lines, &arguments, width);
     }
     let options: Vec<(String, String)> = local_options(&command, false)
@@ -900,12 +956,12 @@ pub fn render_with(path: &[String], width: usize) -> String {
         .collect();
     if !options.is_empty() && !root {
         lines.push(String::new());
-        lines.push("Options:".to_owned());
+        lines.push(ui::bold("Options:"));
         rows(&mut lines, &options, width);
     }
     lines.push(String::new());
     if root {
-        lines.push("Global options:".to_owned());
+        lines.push(ui::bold("Global options:"));
         let globals: Vec<(String, String)> = local_options(&command, true)
             .into_iter()
             .map(|argument| (syntax(argument), description(argument)))
@@ -917,7 +973,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     let leaf = leaf(&key);
     let examples: &[(&str, &str)] = if root {
         &[
-            ("Start Apple Bridge and connect Claude Code", "bridge up"),
+            ("Start Apple Bridge on this Mac", "bridge up"),
             ("Then connect your agent", "bridge link claude"),
         ]
     } else {
@@ -925,7 +981,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     };
     if !examples.is_empty() {
         lines.push(String::new());
-        lines.push("Examples:".to_owned());
+        lines.push(ui::bold("Examples:"));
         for (index, (text, example)) in examples.iter().enumerate() {
             if index > 0 {
                 lines.push(String::new());
@@ -938,7 +994,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         && !leaf.notes.is_empty()
     {
         lines.push(String::new());
-        lines.push("Notes:".to_owned());
+        lines.push(ui::bold("Notes:"));
         for note in leaf.notes {
             lines.extend(ui::wrap(note, width, "  ", "  "));
         }
@@ -999,11 +1055,28 @@ pub fn document(path: &[String]) -> Value {
         "options": local_options(&command, path.is_empty()).into_iter().map(option_json).collect::<Vec<_>>(),
         "examples": leaf.map(|leaf| leaf.examples.iter().map(|(summary, command)| json!({"summary": summary, "command": command})).collect::<Vec<_>>()).unwrap_or_default(),
         "notes": leaf.map(|leaf| leaf.notes.to_vec()).unwrap_or_default(),
-        "result_schema": leaf.filter(|leaf| !leaf.schema.is_empty()).map(|leaf| json!({
-            "fields": leaf.schema.iter().map(|(name, kind, secret)| json!({"name": name, "type": kind, "secret": secret})).collect::<Vec<_>>()
-        })),
+        "result_schema": result_schema(&key, leaf),
         "learn_more": learn_more(path),
     })
+}
+
+fn result_schema(key: &str, leaf: Option<&Leaf>) -> Value {
+    if key == "call" {
+        return json!({"from": "operation", "see": "bridge call --list --json", "field": "output"});
+    }
+    let Some(leaf) = leaf.filter(|leaf| !leaf.schema.is_empty()) else {
+        return Value::Null;
+    };
+    let mut schema = json!({
+        "fields": leaf.schema.iter().map(|(name, kind, secret)| json!({"name": name, "type": kind, "secret": secret})).collect::<Vec<_>>()
+    });
+    if key == "read" {
+        schema["varies_by"] = json!("KIND");
+        schema["note"] = json!(
+            "Each kind returns the fields its operation returns, plus next_cursor, which is null on the last page."
+        );
+    }
+    schema
 }
 
 pub fn every_path() -> Vec<Vec<String>> {
@@ -1144,6 +1217,7 @@ pub fn option_names(path: &[String]) -> Vec<String> {
 
 pub fn completion(shell: super::tree::Shell) -> String {
     let mut table = Vec::new();
+    let mut valued: Vec<(String, String, String)> = Vec::new();
     for path in every_path() {
         if find(&path).is_some_and(|command| command.is_hide_set()) {
             continue;
@@ -1156,6 +1230,16 @@ pub fn completion(shell: super::tree::Shell) -> String {
             }
         }
         table.push((path.join(" "), words.join(" ")));
+        if let Some(command) = find(&path) {
+            for argument in local_options(&command, path.is_empty()) {
+                let choices = possible(argument);
+                if let Some(long) = argument.get_long()
+                    && !choices.is_empty()
+                {
+                    valued.push((path.join(" "), long.to_owned(), choices.join(" ")));
+                }
+            }
+        }
     }
     match shell {
         super::tree::Shell::Bash | super::tree::Shell::Zsh => {
@@ -1166,13 +1250,20 @@ pub fn completion(shell: super::tree::Shell) -> String {
                     &format!("    \"{path}\") words=\"{words}\" ;;\n"),
                 );
             }
+            let mut value_cases = String::new();
+            for (path, long, values) in &valued {
+                push(
+                    &mut value_cases,
+                    &format!("    \"{path}|--{long}\") words=\"{values}\" ;;\n"),
+                );
+            }
             let prelude = if shell == super::tree::Shell::Zsh {
                 "#compdef bridge\nautoload -U +X bashcompinit && bashcompinit\n"
             } else {
                 ""
             };
             format!(
-                "{prelude}_bridge() {{\n  local current=\"${{COMP_WORDS[COMP_CWORD]}}\" path=\"\" words=\"\" index candidate\n  for ((index = 1; index < COMP_CWORD; index++)); do\n    candidate=\"${{COMP_WORDS[index]}}\"\n    case \"$candidate\" in -*) continue ;; esac\n    case \"$(_bridge_words \"$path\")\" in *\" $candidate \"*) path=\"${{path:+$path }}$candidate\" ;; esac\n  done\n  words=\"$(_bridge_words \"$path\")\"\n  COMPREPLY=($(compgen -W \"$words\" -- \"$current\"))\n}}\n_bridge_words() {{\n  local words=\"\"\n  case \"$1\" in\n{cases}  esac\n  printf ' %s ' \"$words\"\n}}\ncomplete -F _bridge bridge\n"
+                "{prelude}_bridge() {{\n  local current=\"${{COMP_WORDS[COMP_CWORD]}}\" path=\"\" words=\"\" index candidate\n  for ((index = 1; index < COMP_CWORD; index++)); do\n    candidate=\"${{COMP_WORDS[index]}}\"\n    case \"$candidate\" in -*) continue ;; esac\n    case \"$(_bridge_words \"$path\")\" in *\" $candidate \"*) path=\"${{path:+$path }}$candidate\" ;; esac\n  done\n  words=\"$(_bridge_values \"$path|${{COMP_WORDS[COMP_CWORD-1]}}\")\"\n  case \"$words\" in *[!\\ ]*) ;; *) words=\"$(_bridge_words \"$path\")\" ;; esac\n  COMPREPLY=($(compgen -W \"$words\" -- \"$current\"))\n}}\n_bridge_values() {{\n  local words=\"\"\n  case \"$1\" in\n{value_cases}  esac\n  printf ' %s ' \"$words\"\n}}\n_bridge_words() {{\n  local words=\"\"\n  case \"$1\" in\n{cases}  esac\n  printf ' %s ' \"$words\"\n}}\ncomplete -F _bridge bridge\n"
             )
         }
         super::tree::Shell::Fish => {
@@ -1199,6 +1290,20 @@ pub fn completion(shell: super::tree::Shell) -> String {
                         );
                     }
                 }
+            }
+            for (path, long, values) in &valued {
+                let condition = if path.is_empty() {
+                    "true".to_owned()
+                } else {
+                    format!(
+                        "__fish_seen_subcommand_from {}",
+                        path.split(' ').next_back().unwrap_or_default()
+                    )
+                };
+                push(
+                    &mut script,
+                    &format!("complete -c bridge -n '{condition}' -l {long} -xa '{values}'\n"),
+                );
             }
             script
         }

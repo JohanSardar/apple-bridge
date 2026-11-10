@@ -49,6 +49,7 @@ pub struct Modes {
     stderr_tty: bool,
     dumb: bool,
     color: bool,
+    stdout_color: bool,
     width: usize,
 }
 
@@ -68,13 +69,13 @@ impl Modes {
         let dumb = std::env::var("TERM").is_ok_and(|term| term == "dumb");
         let no_color_env = std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty());
         let forced = std::env::var("FORCE_COLOR").ok();
-        let color = if requested.no_color || no_color_env {
-            false
-        } else if let Some(force) = forced.as_deref().filter(|force| !force.is_empty()) {
-            force != "0"
-        } else {
-            stderr_tty && !dumb
-        };
+        let refused = requested.no_color || no_color_env;
+        let forced = forced
+            .as_deref()
+            .filter(|force| !force.is_empty())
+            .map(|force| force != "0");
+        let color = !refused && forced.unwrap_or(stderr_tty && !dumb);
+        let stdout_color = !refused && forced.unwrap_or(stdout_tty && !dumb);
         let width = std::env::var("COLUMNS")
             .ok()
             .and_then(|columns| columns.parse::<usize>().ok())
@@ -99,6 +100,7 @@ impl Modes {
             stderr_tty,
             dumb,
             color,
+            stdout_color,
             width,
         }
     }
@@ -118,7 +120,6 @@ impl Modes {
             || STDIN_PAYLOAD.load(Ordering::Relaxed)
             || !self.stdin_tty
             || !self.stderr_tty
-            || self.dumb
         {
             return false;
         }
@@ -151,6 +152,10 @@ impl Modes {
 
     pub fn color(&self) -> bool {
         self.color
+    }
+
+    pub fn stdout_styled(&self) -> bool {
+        self.stdout_color && self.stdout_tty && !self.dumb
     }
 
     pub fn width(&self) -> usize {

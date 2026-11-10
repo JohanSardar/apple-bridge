@@ -52,52 +52,60 @@ pub fn parse(arguments: impl IntoIterator<Item = OsString>) -> Result<Cli, clap:
     Cli::try_parse_from(argv::prepare(arguments.into_iter().collect()).arguments)
 }
 
-fn requested(arguments: &[OsString]) -> Requested {
-    let mut requested = Requested::default();
-    let tokens: Vec<String> = arguments
-        .iter()
-        .skip(1)
-        .map(|argument| argument.to_string_lossy().into_owned())
-        .take_while(|token| token != "--")
-        .collect();
-    let mut index = 0;
-    while index < tokens.len() {
-        let token = &tokens[index];
-        match token.as_str() {
-            "--json" => requested.json = true,
-            "-y" | "--yes" => requested.yes = true,
-            "--no-color" => requested.no_color = true,
-            "-d" | "--debug" => requested.debug = true,
-            "--non-interactive" | "--non-interactive=true" => {
-                requested.non_interactive = Some(true);
-            }
-            "--non-interactive=false" => requested.non_interactive = Some(false),
-            "--home" => {
-                requested.explicit_home = tokens.get(index + 1).map(PathBuf::from);
-                index += 1;
-            }
-            "--fields" => {
-                requested.fields = tokens.get(index + 1).map(|fields| split_fields(fields));
-                index += 1;
-            }
-            other => {
-                if let Some(home) = other.strip_prefix("--home=") {
-                    requested.explicit_home = Some(PathBuf::from(home));
-                } else if let Some(fields) = other.strip_prefix("--fields=") {
-                    requested.fields = Some(split_fields(fields));
-                } else if other.starts_with('-')
-                    && !other.starts_with("--")
-                    && other.len() > 2
-                    && other[1..].chars().all(|c| c.is_ascii_alphabetic())
-                {
-                    requested.yes |= other.contains('y');
-                    requested.debug |= other.contains('d');
-                }
-            }
-        }
-        index += 1;
+fn requested(matches: &clap::ArgMatches) -> Requested {
+    use clap::{FromArgMatches, parser::ValueSource};
+    let globals = tree::Globals::from_arg_matches(deepest(matches)).unwrap_or(tree::Globals {
+        home: None,
+        json: false,
+        fields: None,
+        non_interactive: None,
+        yes: false,
+        no_color: false,
+        debug: false,
+        version: false,
+        help: false,
+    });
+    let explicit = deepest(matches)
+        .value_source("home")
+        .is_some_and(|source| source == ValueSource::CommandLine);
+    Requested {
+        json: globals.json,
+        non_interactive: globals.non_interactive,
+        yes: globals.yes,
+        no_color: globals.no_color,
+        debug: globals.debug,
+        explicit_home: globals.home.filter(|_| explicit),
+        fields: globals.fields.as_deref().map(split_fields),
     }
-    requested
+}
+
+fn deepest(matches: &clap::ArgMatches) -> &clap::ArgMatches {
+    let mut current = matches;
+    while let Some((_, child)) = current.subcommand() {
+        current = child;
+    }
+    current
+}
+
+fn empty_home_variable() -> bool {
+    std::env::var_os("APPLE_BRIDGE_HOME").is_some_and(|value| value.is_empty())
+}
+
+fn cli_command() -> clap::Command {
+    use clap::CommandFactory;
+    let command = Cli::command();
+    if empty_home_variable() {
+        command.mut_arg("home", |argument| argument.env(None::<&str>))
+    } else {
+        command
+    }
+}
+
+fn lenient_matches(arguments: &[OsString]) -> clap::ArgMatches {
+    cli_command()
+        .ignore_errors(true)
+        .try_get_matches_from(arguments)
+        .unwrap_or_default()
 }
 
 fn split_fields(fields: &str) -> Vec<String> {
@@ -233,7 +241,10 @@ fn print_help(path: &[String]) -> ExitCode {
 
 fn finish(result: Outcome) -> ExitCode {
     match result {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => {
+            ui::report_unembedded_warnings();
+            ExitCode::SUCCESS
+        }
         Err(failure) => {
             ui::render_failure(&failure);
             ExitCode::from(failure.exit_code())
@@ -267,10 +278,16 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
 }
 
 pub async fn main() -> ExitCode {
+    use clap::FromArgMatches;
     let raw: Vec<OsString> = std::env::args_os().collect();
     let prepared = argv::prepare(raw);
     access::typed_as(&prepared.typed);
-    Modes::resolve(requested(&prepared.arguments)).install();
+    let parsed = cli_command().try_get_matches_from(&prepared.arguments);
+    let matches = match &parsed {
+        Ok(matches) => matches.clone(),
+        Err(_) => lenient_matches(&prepared.arguments),
+    };
+    Modes::resolve(requested(&matches)).install();
     for (old, replacement) in &prepared.notices {
         if old.starts_with("ignored:") {
             ui::warn("deprecated", replacement);
@@ -289,7 +306,7 @@ pub async fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
-    let cli = match Cli::try_parse_from(&prepared.arguments) {
+    let cli = match parsed.and_then(|matches| Cli::from_arg_matches(&matches)) {
         Ok(cli) => cli,
         Err(error) => return finish(Err(parse_failure(&error, &prepared.path))),
     };
@@ -302,6 +319,17 @@ pub async fn main() -> ExitCode {
     }
     if let Some(replacement) = help::deprecated(&prepared.path.join(" ")) {
         ui::deprecated(&shown_path(&prepared.path), replacement);
+    }
+    if empty_home_variable() && cli.globals.home.is_none() {
+        return finish(Err(Failure::new(
+            Reason::InvalidHome,
+            "Can't use an empty APPLE_BRIDGE_HOME. It must name a folder.",
+        )
+        .sentence("Set it to a folder, or unset it to use the default.")
+        .then(
+            "Or name the folder for this run",
+            ["bridge", "status", "--home", "<DIR>"],
+        )));
     }
     let home = match resolve_home(cli.globals.home) {
         Ok(home) => home,
@@ -318,6 +346,9 @@ fn check_fields(path: &[String]) -> Outcome {
         return Ok(());
     };
     let key = path.join(" ");
+    if matches!(key.as_str(), "read" | "search") {
+        return Ok(());
+    }
     let schema = help::leaf(&key).map(|leaf| leaf.schema).unwrap_or_default();
     if schema.is_empty() {
         return Err(Failure::usage(format!(
@@ -371,13 +402,19 @@ async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     }
     children::stop_all();
     let note = ui::cancel_note();
+    let with_step = |failure: Failure| match ui::cancel_step() {
+        Some(step) => failure.step(step),
+        None => failure,
+    };
     if Modes::get().json {
-        let failure = Failure::canceled(note.unwrap_or_else(|| "Canceled.".to_owned()));
+        let failure = with_step(Failure::canceled(
+            note.unwrap_or_else(|| "Canceled.".to_owned()),
+        ));
         ui::render_failure(&failure.data("signal", code - 128));
         std::process::exit(code);
     }
     if let Some(note) = note {
-        ui::render_failure(&Failure::canceled(format!("\n{note}")));
+        ui::render_failure(&with_step(Failure::canceled(format!("\n{note}"))));
     }
     std::process::exit(code);
 }
@@ -477,9 +514,11 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             None => Ok(()),
         },
         Command::Tokens(group) => match group.action {
-            Some(TokenAction::Create { scope, remote }) => {
-                access::tokens_create(home, &scope, remote)
-            }
+            Some(TokenAction::Create {
+                scope,
+                remote,
+                expires_in,
+            }) => access::tokens_create(home, &scope, remote, expires_in.as_deref()),
             Some(TokenAction::Revoke(args)) => {
                 access::revoke(home, &args.id, access::Selector::Any)
             }
@@ -501,7 +540,9 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             None => Ok(()),
         },
         Command::Web(group) => match group.action {
-            Some(WebAction::Enroll { host, public }) => access::web_enroll(home, &host, public),
+            Some(WebAction::Enroll { host, public }) => {
+                access::web_enroll(home, host.as_deref(), public)
+            }
             Some(WebAction::Sessions(sessions)) => match sessions.action {
                 Some(SessionsAction::List) => access::sessions_list(home),
                 Some(SessionsAction::Revoke { .. }) => access::sessions_revoke(home),
@@ -512,11 +553,17 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             None => Ok(()),
         },
         Command::Remote(group) => match group.action {
-            Some(RemoteAction::Enable(args) | RemoteAction::On(args)) => {
-                commands::remote_enable(home, &args).await
+            Some(RemoteAction::Enable(args)) => {
+                commands::remote_enable(home, &args, commands::MODERN).await
             }
-            Some(RemoteAction::Disable(args) | RemoteAction::Off(args)) => {
-                commands::remote_disable(home, &args).await
+            Some(RemoteAction::On(args)) => {
+                commands::remote_enable(home, &args, commands::Voice::Legacy).await
+            }
+            Some(RemoteAction::Disable(args)) => {
+                commands::remote_disable(home, &args, commands::MODERN).await
+            }
+            Some(RemoteAction::Off(args)) => {
+                commands::remote_disable(home, &args, commands::Voice::Legacy).await
             }
             Some(RemoteAction::Status(args)) => commands::remote_status(home, &args),
             Some(RemoteAction::Key(args)) => commands::remote_key(home, &args),
@@ -536,7 +583,7 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
         Command::Connect(args) => commands::connect(&args).await,
         Command::Start(args) => commands::start(home, args).await,
         Command::Status => commands::status(home),
-        Command::Doctor => commands::doctor(home),
+        Command::Doctor(args) => commands::doctor(home, &args),
         Command::Backup(args) => commands::backup(home, &args),
         Command::Restore(args) => commands::restore(home, args),
         Command::InstallCredentials => commands::install_credentials(home),
@@ -599,7 +646,8 @@ fn help_command(args: &tree::HelpArgs) -> Outcome {
                 "commands": matches.iter().map(|(path, summary)| serde_json::json!({"path": path, "summary": summary})).collect::<Vec<_>>()
             }));
         } else if matches.is_empty() {
-            ui::note(&format!("No commands match \"{}\".", ui::clean(&query)));
+            ui::outln(&format!("No commands match \"{}\".", ui::clean(&query)));
+            ui::next_steps(&[Step::new("See every command", ["bridge", "help", "--all"])]);
         } else {
             let rows: Vec<Vec<String>> = matches
                 .into_iter()

@@ -242,11 +242,14 @@ fn unknown_options_are_refused_the_same_wherever_globals_sit() -> Check {
     ];
     for form in forms {
         let output = bridge().args(form).output()?;
-        let error = text(&output.stderr);
+        let error = text(&output.stderr)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
         for option in ["--force", "--name", "--via"] {
             assert!(
                 error.contains(&format!(
-                    "{option} is ignored by bridge status and will be refused in the next release."
+                    "{option} is ignored by bridge status and will be refused in the next major version."
                 )),
                 "{error}"
             );
@@ -276,10 +279,7 @@ fn nothing_after_the_separator_is_rewritten_and_old_spellings_warn() -> Check {
     let output = run(home.path(), &["web", "enroll", "--public=false", "--json"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let enrolled: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(
-        enrolled["warnings"][0]["message"],
-        "--public=false is deprecated. Use no --public."
-    );
+    assert!(enrolled.get("warnings").is_none(), "{enrolled}");
     assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(())
 }
@@ -451,7 +451,7 @@ fn restore_needs_consent_and_reports_what_it_kept() -> Check {
     let output = run(target.path(), &["restore", backup_text])?;
     assert_eq!(output.status.code(), Some(2));
     let error = text(&output.stderr);
-    for shown in ["Home:", "Backup:", "Replaces:", "ledger", "--yes"] {
+    for shown in ["Home ", "Backup ", "Replaces ", "Ledger check", "--yes"] {
         assert!(error.contains(shown), "{shown}: {error}");
     }
     assert_eq!(std::fs::read(target.path().join("state.db"))?, before);
@@ -470,7 +470,7 @@ fn restore_needs_consent_and_reports_what_it_kept() -> Check {
     let fresh = parent.path().join("new");
     let output = run(&fresh, &["restore", backup_text, "--yes"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stderr).contains("bridge status fails until you start it"));
+    assert!(text(&output.stderr).contains("status checks fail until you start it"));
     let status = run(&fresh, &["status"])?;
     assert_eq!(status.status.code(), Some(1));
     assert!(text(&status.stderr).contains("after restoring into a new home"));
@@ -509,7 +509,8 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
     assert!(output.status.success(), "{}", text(&output.stderr));
     let receipt = text(&output.stderr);
     assert!(receipt.contains("deprecated"), "{receipt}");
-    assert!(receipt.contains(&format!("Revoked {id}")), "{receipt}");
+    assert!(receipt.contains("Revoked "), "{receipt}");
+    assert!(receipt.contains(&id), "{receipt}");
     assert!(receipt.contains("reminders:read"), "{receipt}");
 
     let output = run(home.path(), &["tokens", "revoke", &id, "--yes"])?;
@@ -750,6 +751,9 @@ fn signals_stop_waiting_with_their_codes() -> Check {
     }
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success());
+    assert!(text(&output.stderr).contains("Stopped following after"));
+    let output = run(home.path(), &["stats", "--wait", "--timeout", "1s"])?;
+    assert!(output.status.success());
     assert!(text(&output.stdout).contains("Stopped watching"));
     Ok(())
 }
@@ -826,7 +830,10 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
         assert_eq!(text(&started.stdout), format!("http://{api}/mcp\n"));
         let summary = text(&started.stderr);
         assert!(summary.contains("is on"), "{summary}");
-        assert!(summary.contains("no Helper app found"), "{summary}");
+        assert!(
+            summary.contains("Warning: No Helper app was found"),
+            "{summary}"
+        );
         let wrong = run(home.path(), &["up", "--api-addr", "not-an-address"])?;
         assert_eq!(wrong.status.code(), Some(2));
         let json = run(home.path(), &["up", "--json"])?;
@@ -840,6 +847,8 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
             "remote",
             "seconds",
             "restart_needed",
+            "outcome",
+            "next",
         ] {
             assert!(answer.get(key).is_some(), "{key}");
         }
@@ -849,7 +858,13 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
     outcome?;
     assert!(stopped.status.success());
     assert_eq!(stopped.stdout, [] as [u8; 0]);
-    assert!(text(&stopped.stderr).contains("stopped"));
+    let stopped_text = text(&stopped.stderr);
+    assert!(
+        stopped_text
+            .lines()
+            .any(|line| line.trim_start().starts_with("Stopped") && line.ends_with("Apple Bridge")),
+        "{stopped_text}"
+    );
     Ok(())
 }
 

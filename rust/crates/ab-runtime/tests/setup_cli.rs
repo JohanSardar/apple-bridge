@@ -200,7 +200,8 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     assert!(summary.contains("was already on"), "{summary}");
     assert!(summary.contains(&format!("http://{api}/mcp")), "{summary}");
     assert!(summary.contains("bridge link claude"), "{summary}");
-    assert!(!summary.contains("Warning:"), "{summary}");
+    assert!(!summary.contains("differs from"), "{summary}");
+    assert!(!summary.contains("predates update detection"), "{summary}");
     let marker = home.join("run/gateway-build.json");
     let original = std::fs::read(&marker)?;
     let mut stale: serde_json::Value = serde_json::from_slice(&original)?;
@@ -210,7 +211,18 @@ fn up_starts_with_no_input_and_down_stops_it() -> Check {
     let updated = run(&home, &["up"])?;
     let warning = text(&updated.stderr);
     assert!(warning.contains("older-fixture"), "{warning}");
-    assert!(warning.contains("bridge down, then bridge up"), "{warning}");
+    assert!(
+        warning
+            .lines()
+            .any(|line| line.starts_with("    bridge down")),
+        "{warning}"
+    );
+    assert!(
+        warning
+            .lines()
+            .any(|line| line.starts_with("    bridge up")),
+        "{warning}"
+    );
     let updated = run(&home, &["up", "--json"])?;
     let updated: serde_json::Value = serde_json::from_slice(&updated.stdout)?;
     assert_eq!(updated["restart_needed"], true);
@@ -292,7 +304,7 @@ fn first_up_in_a_terminal_returns_with_next_steps_last() -> Check {
     let output = Command::new("python3")
         .args([
             "-c",
-            "import os,pty,select,subprocess,sys; master,slave=pty.openpty(); result=subprocess.run(sys.argv[1:],stdin=slave,stdout=slave,stderr=slave,timeout=10); data=b''\nwhile select.select([master],[],[],0.1)[0]:\n chunk=os.read(master,65536)\n if not chunk: break\n data+=chunk\nos.close(slave); sys.stdout.buffer.write(data); sys.exit(result.returncode)",
+            "import os,pty,select,subprocess,sys,time; master,slave=pty.openpty(); child=subprocess.Popen(sys.argv[1:],stdin=slave,stdout=slave,stderr=slave); os.close(slave); data=b''; end=time.time()+10\nwhile time.time()<end:\n ready=select.select([master],[],[],0.1)[0]\n if ready:\n  try: chunk=os.read(master,65536)\n  except OSError: break\n  if not chunk: break\n  data+=chunk\n elif child.poll() is not None: break\nsys.stdout.buffer.write(data); sys.exit(child.wait(timeout=1))",
             env!("CARGO_BIN_EXE_bridge"),
             "up",
             "--home",
@@ -310,7 +322,7 @@ fn first_up_in_a_terminal_returns_with_next_steps_last() -> Check {
     let summary = text(&output.stdout);
     assert!(summary.contains("Follow the first sync:"), "{summary}");
     let last = summary.trim_end().lines().last().unwrap_or_default();
-    assert!(last.contains("bridge stats --follow"), "{summary}");
+    assert!(last.contains("bridge stats --wait"), "{summary}");
     assert!(!summary.contains("Ctrl-C stops watching"), "{summary}");
     ab_runtime::cli::parse(["bridge", "up", "--no-watch"].map(std::ffi::OsString::from))?;
     Ok(())
@@ -601,7 +613,7 @@ fn stats_watch_stops_at_its_time_limit_on_an_empty_home() -> Check {
     let output = run(home.path(), &["stats", "--watch", "--timeout", "1"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(text(&output.stdout).contains("Still syncing"));
-    assert!(text(&output.stderr).contains("--watch is deprecated. Use --follow."));
+    assert!(text(&output.stderr).contains("--watch is deprecated. Use --wait."));
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(!text(&output.stderr).contains("deprecated"));
@@ -654,7 +666,7 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     }
     let human = run(home.path(), &["read", "contacts"])?;
     assert!(human.status.success());
-    assert_eq!(human.stdout, [] as [u8; 0]);
+    assert_eq!(text(&human.stdout), "When\tTitle\tID\n");
     assert!(text(&human.stderr).contains("No contacts. Contacts synced and has none."));
     let never = run(home.path(), &["read", "notes"])?;
     assert_eq!(never.status.code(), Some(1));
@@ -858,11 +870,12 @@ fn permission_guide_uses_only_the_fixture_and_walks_the_steps() -> Check {
 
     let no_terminal = run(&home, &["permissions", "guide", "--fixture", &fixture_arg])?;
     assert_eq!(no_terminal.status.code(), Some(2));
-    assert_eq!(no_terminal.stdout, [] as [u8; 0]);
+    assert!(text(&no_terminal.stdout).starts_with("Permission\tStatus\tUsed for\n"));
+    assert!(text(&no_terminal.stdout).contains("Calendar\tallowed"));
     assert!(
         text(&no_terminal.stderr).contains("Can't walk through permissions without a terminal.")
     );
-    assert!(text(&no_terminal.stderr).contains("bridge permissions status"));
+    assert!(text(&no_terminal.stderr).contains("bridge permissions guide --only"));
     let in_ci = bridge()
         .env("CI", "1")
         .args(["permissions", "guide", "--fixture", &fixture_arg, "--home"])

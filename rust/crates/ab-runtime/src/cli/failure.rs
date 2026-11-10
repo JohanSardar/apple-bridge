@@ -62,6 +62,8 @@ reasons! {
     NotOwned => "not_owned", Conflict;
     LedgerMissing => "ledger_missing", Conflict;
     NetworkError => "network_error", Network;
+    RateLimited => "rate_limited", Network;
+    PaginationStalled => "pagination_stalled", Platform;
     ApiError => "api_error", Platform;
     SpawnFailed => "spawn_failed", Platform;
     MissingCommand => "missing_command", Platform;
@@ -283,7 +285,7 @@ impl Failure {
                 ),
             );
         }
-        if !self.rows.is_empty() {
+        if !self.rows.is_empty() && !data.contains_key("effects") {
             for (label, value) in &self.rows {
                 let key = label.to_lowercase().replace(' ', "_");
                 data.entry(key).or_insert_with(|| json!(value));

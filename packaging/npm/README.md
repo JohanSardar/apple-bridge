@@ -8,7 +8,7 @@ This package installs the `bridge` command and the signed Apple Bridge app that 
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
-bridge stats --follow       # counts per source, as each one finishes
+bridge stats --wait         # counts per source, as each one finishes
 ```
 
 ## Optional capture and location permissions

@@ -28,7 +28,7 @@ Your data stays in `~/Library/Application Support/AppleBridge`, including a copy
 bridge up                   # start Apple Bridge. It asks nothing
 bridge link claude          # connect Claude Code. Or: bridge link codex
 bridge permissions guide    # allow the Mac permissions you want
-bridge stats --follow       # counts per source, as each one finishes
+bridge stats --wait         # counts per source, as each one finishes
 ```
 
 Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
@@ -46,7 +46,7 @@ Level 1 never starts the relay. Level 2 only starts when you run `bridge remote 
 
 ## Start and stop
 
-`bridge up` starts the gateway in the background and returns as soon as it is ready, with the address, current counts and next steps last. When its output goes to a pipe, stdout carries only the MCP address and the rest goes to stderr. It never waits for the first sync; use `bridge stats --follow` to follow that separately. The older `--no-watch` flag is accepted as a no-op. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
+`bridge up` starts the gateway in the background and returns as soon as it is ready, with the address, current counts and next steps last. When its output goes to a pipe, stdout carries only the MCP address and the rest goes to stderr. It never waits for the first sync; use `bridge stats --wait` to follow that separately. The older `--no-watch` flag is accepted as a no-op. If it is already running, it says so. `bridge down` stops a gateway that `bridge up` started. It leaves any other gateway alone.
 
 Useful options: `--home DIR` picks another data folder, `--api-addr 127.0.0.1:PORT` picks another port, and `--json` prints a result for scripts.
 
@@ -116,7 +116,7 @@ $ bridge stats
 354,321 items in total. Counts only, no content.
 ```
 
-`bridge stats --follow` prints each source as it starts and finishes, with running counts in between, then stops when all are done. A source counts as finished after 30 seconds without new records (`--settle`), so a source that pauses for longer can be reported early and picks up again in `bridge stats`. Apple Bridge does not know the total in advance, so progress is a count, not a percentage. `--json` prints one line per event, and `--timeout DURATION`, such as `30s` or `5m` (a bare number means seconds), stops watching early. Without a terminal, watching stops after five minutes unless you set `--timeout`. Progress goes to stderr; finished sources and the final line go to stdout. `--watch` is the old spelling and still works.
+`bridge stats --wait` prints each source as it starts and finishes, with running counts in between, then stops when all are done. A source counts as finished after 30 seconds without new records (`--settle`), so a source that pauses for longer can be reported early and picks up again in `bridge stats`. Apple Bridge does not know the total in advance, so progress is a count, not a percentage. `--json` prints one line per event, and `--timeout DURATION`, such as `30s` or `5m` (a bare number means seconds), stops watching early. Without a terminal, watching stops after five minutes unless you set `--timeout`. Progress goes to stderr; finished sources and the final line go to stdout. `--watch` is the old spelling and still works. `bridge stats --follow` keeps watching after everything finishes, until you stop it or `--timeout` passes; in CI or under an agent it needs `--timeout`.
 
 ## Read from the terminal
 
@@ -174,7 +174,7 @@ A real first sync has not been timed: it needs the Helper reading a Mac's real A
 | Real data: a fresh replica home syncing from a clone of a test copy, over the local network path | 195,243 real records, 944 MB stored | 59.5 s |
 | Capture: synthetic messages through the real capture path into a fresh home | 195,243 synthetic records, 576 MB stored | 44.5 s |
 
-Neither includes the time to read Apple's own stores, or attachments. So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --follow` shows the real progress. A replica's snapshot appears all at once, so its count stays at zero until the snapshot is complete.
+Neither includes the time to read Apple's own stores, or attachments. So expect minutes, not hours, for a Mac of this size, and treat that as an estimate until a real run confirms it. `bridge stats --wait` shows the real progress. A replica's snapshot appears all at once, so its count stays at zero until the snapshot is complete.
 
 ## What has been proven
 
@@ -192,7 +192,7 @@ Times are cumulative from the start of `bridge up`, from one run each. On the te
 
 Limits of this proof:
 
-- A script played the browser, using the same requests as the sign-in page, and allowed the request with `bridge connector allow`. So a person's time to read and approve is not included, and the Apple Bridge approval window was not exercised.
+- A script played the browser, using the same requests as the sign-in page, and allowed the request with `bridge connectors allow`. So a person's time to read and approve is not included, and the Apple Bridge approval window was not exercised.
 - The data home was a clone of `state.db` and `ledger.db` from a frozen test copy, with no Helper running. Live data was not used.
 - Claude Code ran under a throwaway `HOME`, with only the login Keychain linked in, so its real configuration was not written. A person's first run also passes Claude Code's own onboarding.
 - Codex: `bridge link codex` completed real sign-in in about 2 s under a throwaway `CODEX_HOME`, and `codex mcp list` showed it signed in. No real read was made through Codex.

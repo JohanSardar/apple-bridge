@@ -344,6 +344,11 @@
             "name": "outcome",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "array"
           }
         ]
       },
@@ -531,6 +536,19 @@
             "project",
             "local"
           ]
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Stop waiting for the agent's commands after this long (default: 1m)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
         }
       ],
       "path": "bridge unlink",
@@ -587,7 +605,7 @@
       "lifecycle": "stable",
       "notes": [
         "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
-        "Without a terminal, pass --only with the permissions to request."
+        "Without a terminal, pass --only with the permissions to request. Without it, the list with each status is printed and the command exits 2."
       ],
       "options": [
         {
@@ -618,7 +636,25 @@
         }
       ],
       "path": "bridge permissions guide",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "permissions",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "requested",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "skipped",
+            "secret": false,
+            "type": "array"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Walk through the Mac permissions Apple Bridge reads with",
       "usage": "bridge permissions guide [options]"
@@ -636,10 +672,60 @@
       "hidden": false,
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-permissions-status",
       "lifecycle": "stable",
-      "notes": [],
+      "notes": [
+        "With --json, each permission maps to allowed, needs permission or unknown."
+      ],
       "options": [],
       "path": "bridge permissions status",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "full_disk_access",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "contacts",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "calendar",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "reminders",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "photos",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "screen_recording",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "camera",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "microphone",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "location",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Show which permissions are allowed; never asks macOS",
       "usage": "bridge permissions status [options]"
@@ -683,7 +769,20 @@
         }
       ],
       "path": "bridge permissions request",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "permission",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Ask macOS for one permission through the Helper",
       "usage": "bridge permissions request <PERMISSION> [options]"
@@ -698,8 +797,12 @@
           "summary": "See what has synced"
         },
         {
+          "command": "bridge stats --wait",
+          "summary": "Wait until every source has finished syncing"
+        },
+        {
           "command": "bridge stats --follow --timeout 5m",
-          "summary": "Follow the first sync for up to 5 minutes"
+          "summary": "Follow sync events for 5 minutes"
         },
         {
           "command": "bridge stats --follow --json",
@@ -710,7 +813,7 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-stats",
       "lifecycle": "stable",
       "notes": [
-        "Counts only, never content. With --follow, reaching --timeout exits 0 because watching was the task."
+        "Counts only, never content. --wait exits once every source has finished. --follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task."
       ],
       "options": [
         {
@@ -727,16 +830,14 @@
           "values": []
         },
         {
-          "aliases": [
-            "--watch"
-          ],
+          "aliases": [],
           "default": "false",
           "global": false,
           "name": "--follow",
           "repeatable": false,
           "required": false,
           "short": "-f",
-          "summary": "Keep updating until every source has finished syncing",
+          "summary": "Keep showing sync events until you stop it or --timeout passes",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -749,7 +850,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "A source counts as finished after this long without new records",
+          "summary": "A source counts as finished after this long without new records; 0 means at once",
           "type": "string",
           "value_hint": "<DURATION>",
           "values": []
@@ -762,9 +863,22 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "With --follow: stop watching after this long, such as 30s or 5m (default: no limit on a terminal, 5m otherwise)",
+          "summary": "With --follow or --wait: stop after this long, such as 30s or 5m; 0 checks once (default for --wait: no limit on a terminal, 5m otherwise)",
           "type": "string",
           "value_hint": "<DURATION>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--wait",
+          "repeatable": false,
+          "required": false,
+          "short": "-w",
+          "summary": "Show sync events until every source has finished syncing, then exit",
+          "type": "boolean",
+          "value_hint": null,
           "values": []
         }
       ],
@@ -850,7 +964,9 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-read",
       "lifecycle": "stable",
       "notes": [
-        "Shows newest first. --limit is the total to show (default 10, cap 200); higher values are clamped with a warning. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+        "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live; everything else is read from what has synced, with its freshness on stderr.",
+        "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
+        "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
         "Uses a temporary read-only credential that's revoked when the read ends."
       ],
       "options": [
@@ -882,26 +998,26 @@
         },
         {
           "aliases": [],
-          "default": "7",
+          "default": null,
           "global": false,
           "name": "--days",
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Calendar only: how many days ahead",
+          "summary": "Calendar only: how many days ahead [default: 7]",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
         },
         {
           "aliases": [],
-          "default": "10",
+          "default": null,
           "global": false,
           "name": "--limit",
           "repeatable": false,
           "required": false,
           "short": "-n",
-          "summary": "How many items to show, 1 to 200",
+          "summary": "How many items to show in total, 1 to 200 [default: 10]",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
@@ -933,10 +1049,53 @@
           "type": "string",
           "value_hint": "<TEXT>",
           "values": []
+        },
+        {
+          "aliases": [],
+          "default": "2m",
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Stop fetching pages after this long; what was fetched is reported",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
         }
       ],
       "path": "bridge read",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "next_cursor",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "chats",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "items",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "records",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "result_json",
+            "secret": false,
+            "type": "object"
+          }
+        ],
+        "note": "Each kind returns the fields its operation returns, plus next_cursor, which is null on the last page.",
+        "varies_by": "KIND"
+      },
       "subcommands": [],
       "summary": "Read synced data in the terminal",
       "usage": "bridge read <KIND> [options]"
@@ -946,8 +1105,8 @@
       "arguments": [
         {
           "name": "TEXT",
-          "required": true,
-          "summary": "Text to find",
+          "required": false,
+          "summary": "Text to find; optional with --next",
           "values": []
         }
       ],
@@ -966,7 +1125,8 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-search",
       "lifecycle": "stable",
       "notes": [
-        "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results."
+        "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
+        "Piped, rows are tab-separated with a header line, even when nothing matches."
       ],
       "options": [
         {
@@ -984,13 +1144,13 @@
         },
         {
           "aliases": [],
-          "default": "10",
+          "default": null,
           "global": false,
           "name": "--limit",
           "repeatable": false,
           "required": false,
           "short": "-n",
-          "summary": "How many results to show, 1 to 200",
+          "summary": "How many results to show in total, 1 to 200 [default: 10]",
           "type": "string",
           "value_hint": "<NUMBER>",
           "values": []
@@ -1007,13 +1167,39 @@
           "type": "string",
           "value_hint": "<CURSOR>",
           "values": []
+        },
+        {
+          "aliases": [],
+          "default": "2m",
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Stop fetching pages after this long; what was fetched is reported",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
         }
       ],
       "path": "bridge search",
-      "result_schema": null,
+      "result_schema": {
+        "fields": [
+          {
+            "name": "records",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "next_cursor",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
       "subcommands": [],
       "summary": "Search synced data",
-      "usage": "bridge search <TEXT> [options]"
+      "usage": "bridge search [TEXT] [options]"
     },
     {
       "aliases": [],
@@ -1045,7 +1231,8 @@
       "lifecycle": "stable",
       "notes": [
         "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
-        "A Photos write that loses its connection is reported with its query ID; inspect it before trying again."
+        "A write whose result can't be confirmed is reported as unknown_outcome with its operation ID; inspect it before trying again. Writes are never retried.",
+        "The result is the operation's own output; see its output schema in bridge call --list --json."
       ],
       "options": [
         {
@@ -1115,7 +1302,11 @@
         }
       ],
       "path": "bridge call",
-      "result_schema": null,
+      "result_schema": {
+        "field": "output",
+        "from": "operation",
+        "see": "bridge call --list --json"
+      },
       "subcommands": [],
       "summary": "Call a read operation and print its raw JSON",
       "usage": "bridge call [OPERATION] [options]"
@@ -1146,7 +1337,9 @@
       "usage": "bridge skills <command> [options]"
     },
     {
-      "aliases": [],
+      "aliases": [
+        "ls"
+      ],
       "arguments": [],
       "deprecated": null,
       "examples": [
@@ -1249,7 +1442,9 @@
       "usage": "bridge agents <command> [options]"
     },
     {
-      "aliases": [],
+      "aliases": [
+        "ls"
+      ],
       "arguments": [],
       "deprecated": null,
       "examples": [
@@ -1336,16 +1531,33 @@
       "options": [
         {
           "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--expires-in",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Stop the token working after this long, such as 1h, 7d or 90d (default: never)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        },
+        {
+          "aliases": [],
           "default": "full",
           "global": false,
           "name": "--level",
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "full (acts at once), approve (asks you before each change) or read",
+          "summary": "What the agent may do",
           "type": "string",
           "value_hint": "<LEVEL>",
-          "values": []
+          "values": [
+            "full",
+            "approve",
+            "read"
+          ]
         },
         {
           "aliases": [],
@@ -1500,10 +1712,13 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "full or approve",
+          "summary": "New level",
           "type": "string",
           "value_hint": "<LEVEL>",
-          "values": []
+          "values": [
+            "full",
+            "approve"
+          ]
         },
         {
           "aliases": [],
@@ -1597,8 +1812,11 @@
         {
           "name": "LEVEL",
           "required": true,
-          "summary": "full or approve",
-          "values": []
+          "summary": "New level",
+          "values": [
+            "full",
+            "approve"
+          ]
         }
       ],
       "deprecated": "bridge agents update <AGENT> --level <LEVEL>",
@@ -1704,6 +1922,19 @@
         "The token prints once, alone on stdout."
       ],
       "options": [
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--expires-in",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Stop the token working after this long, such as 1h, 7d or 90d (default: never)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        },
         {
           "aliases": [],
           "default": "false",
@@ -1887,7 +2118,9 @@
       "usage": "bridge connectors <command> [options]"
     },
     {
-      "aliases": [],
+      "aliases": [
+        "ls"
+      ],
       "arguments": [],
       "deprecated": null,
       "examples": [
@@ -1930,9 +2163,9 @@
           "global": false,
           "name": "--code",
           "repeatable": false,
-          "required": true,
+          "required": false,
           "short": null,
-          "summary": "Four-digit code shown on the app's page",
+          "summary": "Four-digit code shown on the app's page (required)",
           "type": "string",
           "value_hint": "<CODE>",
           "values": []
@@ -1943,9 +2176,9 @@
           "global": false,
           "name": "--request",
           "repeatable": false,
-          "required": true,
+          "required": false,
           "short": null,
-          "summary": "Request ID from bridge connectors list",
+          "summary": "Request ID from bridge connectors list (required)",
           "type": "string",
           "value_hint": "<REQUEST>",
           "values": []
@@ -1991,9 +2224,9 @@
           "global": false,
           "name": "--code",
           "repeatable": false,
-          "required": true,
+          "required": false,
           "short": null,
-          "summary": "Four-digit code shown on the app's page",
+          "summary": "Four-digit code shown on the app's page (required)",
           "type": "string",
           "value_hint": "<CODE>",
           "values": []
@@ -2004,9 +2237,9 @@
           "global": false,
           "name": "--request",
           "repeatable": false,
-          "required": true,
+          "required": false,
           "short": null,
-          "summary": "Request ID from bridge connectors list",
+          "summary": "Request ID from bridge connectors list (required)",
           "type": "string",
           "value_hint": "<REQUEST>",
           "values": []
@@ -2095,13 +2328,13 @@
       "options": [
         {
           "aliases": [],
-          "default": "http://localhost:7780",
+          "default": null,
           "global": false,
           "name": "--host",
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Page address: https://HOST, or http://localhost:PORT",
+          "summary": "Page address: https://HOST, or http://localhost:PORT (default: this Mac's gateway address)",
           "type": "string",
           "value_hint": "<URL>",
           "values": []
@@ -2160,7 +2393,9 @@
       "usage": "bridge web sessions <command> [options]"
     },
     {
-      "aliases": [],
+      "aliases": [
+        "ls"
+      ],
       "arguments": [],
       "deprecated": null,
       "examples": [
@@ -2363,6 +2598,19 @@
           "aliases": [],
           "default": "false",
           "global": false,
+          "name": "--open",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Open sign-in links in the browser even without a terminal, unless over SSH",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
           "name": "--private",
           "repeatable": false,
           "required": false,
@@ -2406,10 +2654,15 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Route: relay, private, tailscale-app or both (default: relay)",
+          "summary": "Route (default: relay)",
           "type": "string",
           "value_hint": "<ROUTE>",
-          "values": []
+          "values": [
+            "relay",
+            "private",
+            "tailscale-app",
+            "both"
+          ]
         }
       ],
       "path": "bridge remote enable",
@@ -2483,7 +2736,12 @@
           "summary": "Route to turn off (default: relay)",
           "type": "string",
           "value_hint": "<ROUTE>",
-          "values": []
+          "values": [
+            "relay",
+            "private",
+            "tailscale-app",
+            "both"
+          ]
         }
       ],
       "path": "bridge remote disable",
@@ -2713,6 +2971,19 @@
           "aliases": [],
           "default": "false",
           "global": false,
+          "name": "--open",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Open sign-in links in the browser even without a terminal, unless over SSH",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
           "name": "--private",
           "repeatable": false,
           "required": false,
@@ -2756,10 +3027,15 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Route: relay, private, tailscale-app or both (default: relay)",
+          "summary": "Route (default: relay)",
           "type": "string",
           "value_hint": "<ROUTE>",
-          "values": []
+          "values": [
+            "relay",
+            "private",
+            "tailscale-app",
+            "both"
+          ]
         }
       ],
       "path": "bridge remote on",
@@ -2828,7 +3104,12 @@
           "summary": "Route to turn off (default: relay)",
           "type": "string",
           "value_hint": "<ROUTE>",
-          "values": []
+          "values": [
+            "relay",
+            "private",
+            "tailscale-app",
+            "both"
+          ]
         }
       ],
       "path": "bridge remote off",
@@ -3060,9 +3341,23 @@
       "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-doctor",
       "lifecycle": "stable",
       "notes": [
-        "Exits 1 when a check fails."
+        "A finished report exits 0, even when a check fails. Pass --check to exit 1 with unhealthy_home instead."
       ],
-      "options": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--check",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Exit 1 with an unhealthy_home error when the report finds problems",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
       "path": "bridge doctor",
       "result_schema": {
         "fields": [
@@ -3072,12 +3367,77 @@
             "type": "boolean"
           },
           {
+            "name": "applied",
+            "secret": false,
+            "type": "number"
+          },
+          {
             "name": "checks",
             "secret": false,
             "type": "object"
           },
           {
+            "name": "clock_skew",
+            "secret": false,
+            "type": "string"
+          },
+          {
             "name": "credentials",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "cursor",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "disk_encryption",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "document_checks",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "exactly_once",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "floor",
+            "secret": false,
+            "type": "number"
+          },
+          {
+            "name": "private_modes",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "records",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "schema",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "shape",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "sqlite",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "versions",
             "secret": false,
             "type": "object"
           },
@@ -3614,10 +3974,13 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "gateway or replica",
+          "summary": "What this process runs as",
           "type": "string",
           "value_hint": "<ROLE>",
-          "values": []
+          "values": [
+            "gateway",
+            "replica"
+          ]
         },
         {
           "aliases": [],
