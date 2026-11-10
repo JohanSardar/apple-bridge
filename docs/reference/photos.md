@@ -17,6 +17,8 @@ For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --args
 | `photos.search` | Half-open RFC3339 `start`/`end`, `type`, `album_id`, `favorite`, explicit `include_hidden`, optional `near: {lat,lon}` and `radius_m`; `cursor` and `limit` (1–200). |
 | `photos.get` | `asset_id`; current dimensions, duration, dates, favorite/hidden flags, coordinates if present, burst identity, and the complete public resource inventory. |
 | `photos.albums` | `smart` selects smart versus user albums. Page with `offset`/`limit`. Each album reports editing capabilities. |
+| `photos.preview` | `asset_id`, optional `max_px` (64–1536, default 512), `network_access` (default false), `include_hidden` (default false). Renders one JPEG preview through PhotoKit, at most 600 KiB. Video assets give a still frame. |
+| `photos.contact_sheet` | Unique `asset_ids` (1–30), optional `columns` (1–8), `cell_px` (96–384, default 256), `network_access`, `include_hidden`. Renders one JPEG grid with a number in each cell; `cells` maps each number to its asset ID. |
 | `photos.fetch` | Start with `asset_id`, optional `resource_index`, `resource_key`, `network_access` (default false), `max_bytes` (default 8 GiB, at most 64 GiB). Without an index, select the first original photo/video/audio resource by public type. Poll/read with only `transfer_id`, `offset`, `length`. |
 | `photos.release` | `transfer_id`; cancel and delete the temporary resource. |
 | `photos.favorite` | `asset_id`, explicit boolean `favorite`; set and read back. |
@@ -30,6 +32,14 @@ Search bounds the PhotoKit fetch itself: `limit + 1` candidates without a coordi
 Cursors reference memory-only Helper checkpoints. They expire after ten minutes, a Helper restart, permission loss, or capacity eviction; restart enumeration on `expired`. Up to 128 checkpoints and 131,072 native object references are retained across searches. A single equal-date group beyond that capacity fails explicitly with `unavailable`. Checkpoints never enter Bridge's data folder or replication.
 
 Place search uses explicit coordinates, not Photos' inferred place names. Use the existing geocoding operation to turn an address into coordinates. Types include image, video, audio, Live Photo, screenshot, panorama, HDR, depth, slow motion and time lapse. Unknown media subtype bits remain visible in details.
+
+## Looking at photos
+
+Public PhotoKit has no search by what a photo shows, so an agent finds a photo by looking. Narrow the library with `photos.search` first (dates, type, album, favorite, place). Pass up to 30 of the resulting IDs to `photos.contact_sheet` and look at the numbered grid, then open a match larger with `photos.preview`. About 20 thumbnails per sheet keeps each one recognisable.
+
+Over MCP both operations return the picture as an `image` content item that the agent can view, after a text item with the metadata. The text and `structuredContent` replace `image_base64` with a note, so the image is not sent twice. REST and `bridge call` return `image_base64` and `mime_type` under `result_json`.
+
+Pixels leave the Mac only in the response to the call that names those photos. Nothing renders in advance, nothing is cached, and nothing enters Bridge's data folder, blobs, ledger or replication. A hidden asset is refused unless the call sets `include_hidden: true`. Without `network_access`, a photo stored only in iCloud fails as `unavailable` in a preview and shows as a grey cell with `rendered: false` on a sheet. Whatever an agent views is sent to that agent's provider, the same as text it reads.
 
 ## Originals, Live Photos and iCloud
 
@@ -65,9 +75,10 @@ Based on Apple's public [Photos framework](https://developer.apple.com/documenta
 - Favorite changes and regular album create/rename/membership/delete are included. PhotoKit edit capabilities are checked before changes. Smart/shared/synchronized albums are not mutated.
 - No private Photos database access, private people-name index, face recognition, inferred semantic search or undocumented cloud state. Public PhotoKit does not expose the Photos app's full people/search index.
 - No asset deletion, permanent deletion, imports, original-content editing, hiding assets, or date/location rewrites. These change the library's underlying content or visibility, rather than the requested organizational surface. Existing assets remain untouched by album deletion.
+- Previews and contact sheets render through `PHImageManager` on request, one call at a time.
 - No persistent change observer/token, metadata mirror, thumbnail cache, prefetch/caching manager or background upload extension. They conflict with an on-demand, no-copy source or add no necessary capability to these operations.
 - Legacy persisted `photos.*` collections remain on disk but are never decoded, served or exported by this live source. Photos permission/readiness and hash-only approval records remain valid. Malformed known readiness records still fail closed.
-- Folder editing, custom album ordering, content-editing extensions, rendered previews and cross-device cloud-ID conversion are not exposed in this implementation. This is a bounded first implementation, not full PhotoKit API coverage.
+- Folder editing, custom album ordering, content-editing extensions and cross-device cloud-ID conversion are not exposed in this implementation. This is a bounded first implementation, not full PhotoKit API coverage.
 
 ## Qualification
 

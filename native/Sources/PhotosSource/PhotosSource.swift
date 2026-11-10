@@ -6,7 +6,7 @@ import SourceSupport
 
 public actor PhotosSource: Source {
     public nonisolated let name = "photos"
-    public static let operations = ["photos.search", "photos.get", "photos.albums", "photos.fetch", "photos.release", "photos.favorite", "photos.album_create", "photos.album_rename", "photos.album_add", "photos.album_remove", "photos.album_delete"]
+    public static let operations = ["photos.search", "photos.get", "photos.albums", "photos.preview", "photos.contact_sheet", "photos.fetch", "photos.release", "photos.favorite", "photos.album_create", "photos.album_rename", "photos.album_add", "photos.album_remove", "photos.album_delete"]
     private let transfers: PhotoTransfers
     private var searches: [String: PhotoSearchContinuation] = [:]
     private var searchExpiryTask: Task<Void, Never>?
@@ -43,6 +43,8 @@ public actor PhotosSource: Source {
             try fields(args, ["asset_id"])
             return try details(asset(try string(args, "asset_id")))
         case "photos.albums": return try albums(args)
+        case "photos.preview": return try await photoPreview(args)
+        case "photos.contact_sheet": return try await photoContactSheet(args)
         default: return try await change(operation, args: args)
         }
     }

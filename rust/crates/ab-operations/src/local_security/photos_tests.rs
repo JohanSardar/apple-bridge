@@ -376,6 +376,71 @@ async fn photos_reads_are_transient_and_transfer_identity_cannot_be_spoofed() {
 }
 
 #[tokio::test]
+async fn photo_views_are_bounded_before_native() {
+    let f = fixture();
+    let p = principal("agent:photos", "agent", "read", &["photos:read"]);
+    for (operation, args) in [
+        ("photos.preview", json!({})),
+        (
+            "photos.preview",
+            json!({"asset_id":"synthetic","max_px":1537}),
+        ),
+        (
+            "photos.preview",
+            json!({"asset_id":"synthetic","max_px":63}),
+        ),
+        (
+            "photos.preview",
+            json!({"asset_id":"synthetic","resource_index":0}),
+        ),
+        ("photos.contact_sheet", json!({"asset_ids":[]})),
+        (
+            "photos.contact_sheet",
+            json!({"asset_ids":["synthetic","synthetic"]}),
+        ),
+        (
+            "photos.contact_sheet",
+            json!({"asset_ids":(0..31).map(|i| format!("synthetic-{i}")).collect::<Vec<_>>()}),
+        ),
+        (
+            "photos.contact_sheet",
+            json!({"asset_ids":["synthetic"],"columns":9}),
+        ),
+        (
+            "photos.contact_sheet",
+            json!({"asset_ids":["synthetic"],"cell_px":385}),
+        ),
+    ] {
+        assert_eq!(
+            f.gateway
+                .query(&p, query(operation, &args))
+                .await
+                .expect_err("invalid")
+                .code,
+            Code::Invalid
+        );
+    }
+    assert_eq!(queries_reaching_native(&f), 0);
+    for (operation, args) in [
+        (
+            "photos.preview",
+            json!({"asset_id":"synthetic-asset","max_px":1536,"network_access":true,"include_hidden":true}),
+        ),
+        (
+            "photos.contact_sheet",
+            json!({"asset_ids":(0..30).map(|i| format!("synthetic-{i}")).collect::<Vec<_>>(),"columns":8,"cell_px":384}),
+        ),
+    ] {
+        f.gateway
+            .query(&p, query(operation, &args))
+            .await
+            .expect("bounded view reaches native");
+    }
+    assert_eq!(queries_reaching_native(&f), 2);
+    assert!(f.gateway.state.commands().expect("ledger").is_empty());
+}
+
+#[tokio::test]
 async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
     let f = fixture();
     let review = OwnerReview {

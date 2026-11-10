@@ -45119,6 +45119,245 @@
   },
   {
     "capability": "",
+    "description": "Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.",
+    "examples": null,
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "additionalProperties": false,
+          "properties": {
+            "asset_id": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "include_hidden": {
+              "type": "boolean"
+            },
+            "max_px": {
+              "maximum": 1536,
+              "minimum": 64,
+              "type": "integer"
+            },
+            "network_access": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "asset_id"
+          ],
+          "type": "object"
+        },
+        "deadline_ms": {
+          "maximum": 60000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "maxLength": 128,
+          "pattern": "^qry_[A-Za-z0-9._:-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "args"
+      ],
+      "type": "object"
+    },
+    "kind": "query",
+    "name": "photos.preview",
+    "output": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "blobs": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "digest": {
+                    "type": "string"
+                  },
+                  "handle": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "digest",
+                  "size"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "result_json": {}
+          },
+          "required": [
+            "id",
+            "result_json",
+            "blobs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "awaiting_approval"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "state"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "read_model": false,
+    "scope": "photos:read",
+    "source": "photos",
+    "version": 1
+  },
+  {
+    "capability": "",
+    "description": "Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Pixels leave the Mac only for the photos named in this call.",
+    "examples": null,
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "additionalProperties": false,
+          "properties": {
+            "asset_ids": {
+              "items": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 30,
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "cell_px": {
+              "maximum": 384,
+              "minimum": 96,
+              "type": "integer"
+            },
+            "columns": {
+              "maximum": 8,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "include_hidden": {
+              "type": "boolean"
+            },
+            "network_access": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "asset_ids"
+          ],
+          "type": "object"
+        },
+        "deadline_ms": {
+          "maximum": 60000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "id": {
+          "maxLength": 128,
+          "pattern": "^qry_[A-Za-z0-9._:-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "args"
+      ],
+      "type": "object"
+    },
+    "kind": "query",
+    "name": "photos.contact_sheet",
+    "output": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "blobs": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "digest": {
+                    "type": "string"
+                  },
+                  "handle": {
+                    "type": "string"
+                  },
+                  "size": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "digest",
+                  "size"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "id": {
+              "type": "string"
+            },
+            "result_json": {}
+          },
+          "required": [
+            "id",
+            "result_json",
+            "blobs"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "awaiting_approval"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "state"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "read_model": false,
+    "scope": "photos:read",
+    "source": "photos",
+    "version": 1
+  },
+  {
+    "capability": "",
     "description": "Start a temporary original-resource transfer with asset_id, optional resource_index, resource_key from photos.get to detect changed metadata, and network_access (default false, allows iCloud downloads). Poll/read with transfer_id/offset/length only. Returns downloading or ready with SHA-256, size and base64 bytes. Read at most 512 KiB per call. Default cap 8 GiB, configurable up to 64 GiB, subject to disk space. Four transfers; poll within 120 seconds to retain one, with a 24-hour hard lifetime. Release explicitly. Never put photo bytes into Bridge blobs or replication.",
     "examples": null,
     "input": {

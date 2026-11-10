@@ -6,7 +6,7 @@ This lists the catalog only: whether an operation is usable depends on its sourc
 
 `bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.
 
-158 operations.
+160 operations.
 
 ## audio
 
@@ -2233,6 +2233,32 @@ Live asset details, location and all public PhotoKit resources, including video,
 ### photos.albums
 
 Page through user albums or smart albums, with PhotoKit editing capabilities. No album index is stored.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.preview
+
+Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.contact_sheet
+
+Scan many photos at once. Renders up to 30 asset_ids from photos.search into one JPEG grid of numbered thumbnails (columns 1-8, default up to 5; cell_px 96-384, default 256) and returns it as an image the agent can view. cells maps each number to its asset_id; open a match larger with photos.preview. Hidden assets need include_hidden; network_access (default false) allows iCloud downloads. Pixels leave the Mac only for the photos named in this call.
 
 - Kind: `query`
 - Scope: `photos:read`
