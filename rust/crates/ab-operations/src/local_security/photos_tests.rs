@@ -157,9 +157,20 @@ async fn an_ask_first_photos_write_waits_for_approval_and_never_persists_library
                 f.gateway.query(&p, request.clone()),
                 f.gateway.query(&p, request.clone())
             );
-            assert_ne!(first.is_ok(), duplicate.is_ok());
+            let replays = [first, duplicate]
+                .into_iter()
+                .map(|answer| {
+                    serde_json::from_str::<Value>(answer.expect("ran or replayed").get())
+                        .expect("JSON")["replayed"]
+                        == true
+                })
+                .filter(|replayed| *replayed)
+                .count();
+            assert_eq!(replays, 1);
             assert_eq!(queries_reaching_native(&f), 1);
-            assert!(f.gateway.query(&p, request).await.is_err());
+            let again = f.gateway.query(&p, request).await.expect("replayed");
+            assert!(again.get().contains("\"replayed\":true"));
+            assert_eq!(queries_reaching_native(&f), 1);
             let rows = f.gateway.state.commands().expect("ledger");
             assert_eq!(rows[0].state, ab_trust::domain::CommandState::Observed);
             assert!(
@@ -182,8 +193,17 @@ async fn a_full_agent_photos_write_runs_at_once_and_only_once() {
         assert_ne!(state_of(&answer), "awaiting_approval", "{operation}");
         assert_eq!(queries_reaching_native(&f), 1, "{operation}");
         assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
-        assert!(f.gateway.query(&p, request).await.is_err(), "{operation}");
+        let replay = f
+            .gateway
+            .query(&p, request.clone())
+            .await
+            .expect("replayed");
+        let replay: Value = serde_json::from_str(replay.get()).expect("JSON");
+        let first: Value = serde_json::from_str(answer.get()).expect("JSON");
+        assert_eq!(replay["replayed"], true, "{operation}");
+        assert_eq!(replay["result_json"], first["result_json"], "{operation}");
         assert_eq!(queries_reaching_native(&f), 1, "{operation}");
+
         let rows = f.gateway.state.commands().expect("ledger");
         assert_eq!(rows[0].state, ab_trust::domain::CommandState::Observed);
         let stored = serde_json::to_string(&rows).expect("JSON");
@@ -606,6 +626,10 @@ async fn delegated_ask_first_photos_write_uses_the_same_owner_gate() {
         .invoke(&p, "photos.favorite", input)
         .await
         .expect("once");
-    assert!(service.invoke(&p, "photos.favorite", input).await.is_err());
+    let replay = service
+        .invoke(&p, "photos.favorite", input)
+        .await
+        .expect("replayed");
+    assert!(replay.get().contains("\"replayed\":true"));
     assert_eq!(queries_reaching_native(&f), 1);
 }

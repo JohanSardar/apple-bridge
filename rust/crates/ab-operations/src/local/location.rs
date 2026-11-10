@@ -4,6 +4,7 @@ use super::{
 };
 
 impl LocalGateway {
+    #[allow(clippy::too_many_lines)]
     pub(super) async fn location_approval(
         &self,
         principal: &Principal,
@@ -41,6 +42,9 @@ impl LocalGateway {
                 {
                     return Err(Code::IdReused.into());
                 }
+                if photos && record.state == State::Observed {
+                    return Ok(Some(self.replayed(&query.id)?));
+                }
                 let record = self.expire(record)?;
                 if record.admission_era != self.state.admission_era()?
                     || timestamp(&record.expires_at)? <= self.clock.now()
@@ -60,6 +64,9 @@ impl LocalGateway {
                         let record = self.transition(record, State::Prepared, None, None, None)?;
                         self.transition(record, State::Dispatched, None, None, None)?;
                         return Ok(None);
+                    }
+                    State::Prepared | State::Dispatched | State::Indeterminate if photos => {
+                        return Err(Code::Indeterminate.into());
                     }
                     _ => return Err(Code::Forbidden.into()),
                 }
@@ -112,11 +119,15 @@ impl LocalGateway {
         principal: &Principal,
         id: &str,
         operation: &str,
-        succeeded: bool,
+        result: Option<&RawValue>,
     ) -> Result<(), Error> {
         let photos = super::photos::mutation(operation);
+        let succeeded = result.is_some();
         if photos || operation == "location.current" && principal.is_agent() {
             let record = self.state.command(id)?;
+            if photos && let Some(result) = result {
+                let _ = self.photos_results.remember(id, result);
+            }
             let evidence = raw(
                 &json!({"approval_consumed":true,"query_succeeded":succeeded,"request_hash":record.request_hash}),
             )?;
@@ -135,5 +146,19 @@ impl LocalGateway {
             )?;
         }
         Ok(())
+    }
+}
+
+impl LocalGateway {
+    fn replayed(&self, id: &str) -> Result<Box<RawValue>, Error> {
+        let mut result = self
+            .photos_results
+            .get(id)
+            .ok()
+            .and_then(|kept| serde_json::from_str::<serde_json::Value>(kept.get()).ok())
+            .filter(serde_json::Value::is_object)
+            .unwrap_or_else(|| json!({"id": id, "state": "observed", "result_json": null, "result_kept": false}));
+        result["replayed"] = json!(true);
+        raw(&result)
     }
 }

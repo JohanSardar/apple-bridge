@@ -106,7 +106,7 @@ impl LocalGateway {
                 &mut audit.stats,
             )
             .await;
-        self.finish_location(&principal, &id, &operation, result.is_ok())?;
+        self.finish_location(&principal, &id, &operation, result.as_deref().ok())?;
         let recorded = audit.finish();
         if super::photos::mutation(&operation) && result.is_err() {
             recorded?;
