@@ -789,3 +789,27 @@ fn a_title_is_bound_to_its_request_id() {
     assert_eq!(crate::mcp_compose::selector("agent:other", "req-1"), None);
     assert_eq!(crate::mcp_compose::selector("agent:bind", "req-2"), None);
 }
+
+#[tokio::test]
+async fn title_changes_with_one_request_id_take_turns() {
+    let first = crate::mcp_compose::request_turn("agent:turns", "req-1").await;
+    let other = tokio::time::timeout(
+        std::time::Duration::from_millis(50),
+        crate::mcp_compose::request_turn("agent:turns", "req-2"),
+    )
+    .await;
+    assert!(other.is_ok());
+    let waiting = tokio::time::timeout(
+        std::time::Duration::from_millis(50),
+        crate::mcp_compose::request_turn("agent:turns", "req-1"),
+    )
+    .await;
+    assert!(waiting.is_err());
+    drop(first);
+    let next = tokio::time::timeout(
+        std::time::Duration::from_millis(50),
+        crate::mcp_compose::request_turn("agent:turns", "req-1"),
+    )
+    .await;
+    assert!(next.is_ok());
+}

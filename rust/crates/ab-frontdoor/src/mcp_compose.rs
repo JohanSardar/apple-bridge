@@ -42,6 +42,31 @@ pub(crate) fn bind_selector(principal: &str, request_id: &str, title: &str) {
     );
 }
 
+type Turns = Mutex<HashMap<(String, String), std::sync::Weak<tokio::sync::Mutex<()>>>>;
+
+pub(crate) async fn request_turn(
+    principal: &str,
+    request_id: &str,
+) -> tokio::sync::OwnedMutexGuard<()> {
+    static TURNS: OnceLock<Turns> = OnceLock::new();
+    let lock = {
+        let mut turns = TURNS
+            .get_or_init(Turns::default)
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        turns.retain(|_, turn| turn.strong_count() > 0);
+        let key = (principal.to_owned(), request_id.to_owned());
+        if let Some(lock) = turns.get(&key).and_then(std::sync::Weak::upgrade) {
+            lock
+        } else {
+            let lock = std::sync::Arc::new(tokio::sync::Mutex::new(()));
+            turns.insert(key, std::sync::Arc::downgrade(&lock));
+            lock
+        }
+    };
+    lock.lock_owned().await
+}
+
 pub(crate) fn selector(principal: &str, request_id: &str) -> Option<String> {
     let map = selectors().lock().ok()?;
     map.get(&(principal.to_owned(), request_id.to_owned()))

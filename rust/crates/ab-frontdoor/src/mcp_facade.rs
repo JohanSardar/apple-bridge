@@ -697,6 +697,11 @@ impl Call<'_> {
             self.require(&operation.scope, &operation.name)?;
         }
         let id = request_id(input)?;
+        let _turn = if BY_TITLE.contains(&operation.name.as_str()) {
+            Some(crate::mcp_compose::request_turn(&self.principal.id, &id).await)
+        } else {
+            None
+        };
         let mut selected = None;
         if BY_TITLE.contains(&operation.name.as_str())
             && !self.bound_target(operation, &id, &mut arguments).await?
@@ -725,7 +730,12 @@ impl Call<'_> {
         let outcome = self
             .run_change(operation, arguments, &id, flag(input, "verbose"))
             .await;
-        if let Some((title, target)) = selected {
+        if let Some((title, target)) = selected
+            && outcome
+                .as_ref()
+                .err()
+                .is_none_or(|problem| problem.code != "id_reused")
+        {
             self.bind_if_admitted(operation, &id, &title, &target).await;
         }
         outcome
