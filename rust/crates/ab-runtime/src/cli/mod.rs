@@ -269,6 +269,7 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
 pub async fn main() -> ExitCode {
     let raw: Vec<OsString> = std::env::args_os().collect();
     let prepared = argv::prepare(raw);
+    access::typed_as(&prepared.typed);
     Modes::resolve(requested(&prepared.arguments)).install();
     for (old, replacement) in &prepared.notices {
         if old.starts_with("ignored:") {

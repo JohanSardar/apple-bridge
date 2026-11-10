@@ -101,7 +101,7 @@ fn remote_flags_validate_like_go() -> Check {
             &["remote", "on", "--private", "--domain", "example.com"][..],
             2,
         ),
-        (&["remote", "on", "--snippets"][..], 1),
+        (&["remote", "on", "--snippets"][..], 2),
         (&["remote", "status", "--snippets"][..], 1),
         (
             &[

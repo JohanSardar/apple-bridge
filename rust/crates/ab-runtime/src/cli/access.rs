@@ -9,6 +9,14 @@ use crate::product_cli;
 use ab_trust::{AgentLevel, Authority, Grant, Principal};
 use serde_json::{Value, json};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static LEGACY_REVOKE: AtomicBool = AtomicBool::new(false);
+
+pub fn typed_as(words: &[String]) {
+    let legacy = matches!(words.first().map(String::as_str), Some("agent" | "revoke"));
+    LEGACY_REVOKE.store(legacy, Ordering::Relaxed);
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Selector {
@@ -320,10 +328,10 @@ pub fn agents_inspect(home: &Path, id: &str) -> Outcome {
 pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
     let name = args.name.trim();
     let mut problems = Vec::new();
-    if name.is_empty() || name.chars().count() > 120 {
+    if name.is_empty() || name.len() > 120 {
         problems.push(Failure::new(
             Reason::InvalidValue,
-            "Can't use that --name. Names are 1 to 120 characters.",
+            "Can't use that --name. Names are 1 to 120 bytes; accented letters and emoji take 2 to 4 each.",
         ));
     }
     let level = if args.level.is_empty() {
@@ -566,7 +574,7 @@ pub fn revoke(home: &Path, id: &str, selector: Selector) -> Outcome {
         "Anything using its token stops working at once. This cannot be undone.".to_owned(),
     ];
     let modes = Modes::get();
-    if !modes.yes && !modes.interactive() && !modes.json {
+    if !modes.yes && !modes.interactive() && !modes.json && LEGACY_REVOKE.load(Ordering::Relaxed) {
         ui::warn(
             "deprecated",
             "Revoking without --yes outside a terminal is deprecated. Pass --yes; the next release will refuse.",

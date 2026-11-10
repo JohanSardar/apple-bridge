@@ -847,3 +847,222 @@ fn piped_up_prints_only_the_address_and_down_stays_quiet_on_stdout() -> Check {
     assert!(text(&stopped.stderr).contains("stopped"));
     Ok(())
 }
+
+#[test]
+fn yes_never_stands_in_for_force_on_backup() -> Check {
+    let home = short_home()?;
+    seeded_home(home.path())?;
+    let destination = home.path().join("existing.db");
+    std::fs::write(&destination, b"keep me")?;
+    let path = destination.to_str().ok_or("path")?;
+    let output = run(home.path(), &["backup", path, "--yes", "--json"])?;
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(error_document(&output)?["reason"], "destination_exists");
+    assert_eq!(std::fs::read(&destination)?, b"keep me");
+    let output = run(home.path(), &["backup", path, "--yes"])?;
+    assert!(text(&output.stderr).contains("only --force does"));
+    assert_eq!(std::fs::read(&destination)?, b"keep me");
+    Ok(())
+}
+
+#[test]
+fn only_the_old_revoke_spellings_skip_consent_for_one_release() -> Check {
+    let home = short_home()?;
+    let mut ids = Vec::new();
+    for name in ["one", "two"] {
+        let output = run(home.path(), &["agents", "create", "--name", name, "--json"])?;
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        let created: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        ids.push(created["agent"]["id"].as_str().ok_or("id")?.to_owned());
+    }
+    for words in [["tokens", "revoke"], ["agents", "revoke"]] {
+        let output = run(home.path(), &[words[0], words[1], &ids[0]])?;
+        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        assert!(text(&output.stderr).contains("--yes"));
+    }
+    let output = run(
+        home.path(),
+        &["tokens", "revoke", &ids[0], "--yes", "--json"],
+    )?;
+    let receipt: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(receipt["outcome"], "revoked", "{receipt}");
+    let output = run(home.path(), &["revoke", &ids[1]])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(text(&output.stderr).contains("deprecated"));
+    let third = run(
+        home.path(),
+        &["agents", "create", "--name", "three", "--json"],
+    )?;
+    let created: serde_json::Value = serde_json::from_slice(&third.stdout)?;
+    let id = created["agent"]["id"].as_str().ok_or("id")?;
+    let output = run(home.path(), &["agent", "revoke", id])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(text(&output.stderr).contains("deprecated"));
+    Ok(())
+}
+
+#[test]
+fn flags_old_commands_refused_are_still_refused() -> Check {
+    let home = short_home()?;
+    let output = run(
+        home.path(),
+        &[
+            "remote",
+            "on",
+            "--snippets",
+            "--timeout",
+            "1ms",
+            "--no-open",
+        ],
+    )?;
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    assert!(!home.path().join("remote").exists());
+    Ok(())
+}
+
+#[test]
+fn malformed_addresses_and_long_names_create_nothing() -> Check {
+    for words in [
+        &["start", "--peer-addr", "::::1", "--api-addr", "127.0.0.1:0"][..],
+        &[
+            "start",
+            "--peer-addr",
+            "no such host.invalid:1",
+            "--api-addr",
+            "127.0.0.1:0",
+        ][..],
+        &[
+            "start",
+            "--peer-addr",
+            "nowhere.invalid:7781",
+            "--api-addr",
+            "127.0.0.1:0",
+        ][..],
+        &["pair", "--peer-addr", "::::1"][..],
+    ] {
+        let home = short_home()?;
+        let output = run(home.path(), words)?;
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{words:?}: {}",
+            text(&output.stderr)
+        );
+        assert_eq!(std::fs::read_dir(home.path())?.count(), 0, "{words:?}");
+    }
+    let home = short_home()?;
+    let long = "é".repeat(100);
+    let output = run(
+        home.path(),
+        &["agents", "create", "--name", &long, "--json"],
+    )?;
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    assert_eq!(error_document(&output)?["reason"], "invalid_value");
+    assert_eq!(std::fs::read_dir(home.path())?.count(), 0);
+    Ok(())
+}
+
+fn fake_gateway(
+    home: &Path,
+) -> Result<
+    (
+        std::fs::File,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use std::io::Write;
+    use std::sync::atomic::Ordering;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    let address = listener.local_addr()?.to_string();
+    let posts = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counter = posts.clone();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut request = Vec::new();
+            let mut buffer = [0_u8; 4096];
+            while let Ok(read) = stream.read(&mut buffer) {
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&buffer[..read]);
+                if request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let head = String::from_utf8_lossy(&request).into_owned();
+            let respond = |stream: &mut std::net::TcpStream, status: &str, body: &str| {
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+            };
+            if head.starts_with("GET /v1/health") {
+                respond(&mut stream, "200 OK", "{}");
+            } else if head.starts_with("POST /v1/op/photos.fetch") {
+                counter.fetch_add(1, Ordering::SeqCst);
+            } else {
+                let authorization = head
+                    .lines()
+                    .find(|line| line.to_ascii_lowercase().starts_with("authorization:"))
+                    .map(|line| line[14..].trim().to_owned())
+                    .unwrap_or_default();
+                let body = serde_json::json!({"error": {"code": "unauthorized", "message": format!("rejected {authorization}")}}).to_string();
+                respond(&mut stream, "401 Unauthorized", &body);
+            }
+        }
+    });
+    std::fs::write(
+        home.join("runtime.json"),
+        serde_json::json!({"role": "gateway", "home": home, "peer_address": "127.0.0.1:1", "api_address": address, "socket": ""}).to_string(),
+    )?;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(home.join("lock"))?;
+    lock.try_lock()?;
+    Ok((lock, posts))
+}
+
+#[test]
+fn transfers_are_sent_once_and_reflected_tokens_are_hidden() -> Check {
+    let home = short_home()?;
+    let (_lock, posts) = fake_gateway(home.path())?;
+    let output = bridge()
+        .env("REVIEW_TOKEN", "aba-REVIEW-SECRET")
+        .args([
+            "call",
+            "photos.fetch",
+            "--data",
+            r#"{"args":{"asset_id":"fixture"}}"#,
+            "--token-env",
+            "REVIEW_TOKEN",
+            "--json",
+            "--home",
+        ])
+        .arg(home.path())
+        .output()?;
+    assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
+    assert_eq!(error_document(&output)?["reason"], "unknown_outcome");
+    assert_eq!(posts.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let output = bridge()
+        .env("REVIEW_TOKEN", "aba-REVIEW-SECRET")
+        .args([
+            "call",
+            "sources.status",
+            "--token-env",
+            "REVIEW_TOKEN",
+            "--json",
+            "--home",
+        ])
+        .arg(home.path())
+        .output()?;
+    let stderr = text(&output.stderr);
+    assert!(!stderr.contains("REVIEW-SECRET"), "{stderr}");
+    assert!(stderr.contains("[redacted]"), "{stderr}");
+    Ok(())
+}

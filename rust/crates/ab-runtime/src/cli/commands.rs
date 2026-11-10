@@ -61,15 +61,23 @@ pub fn friendly(duration: Duration) -> String {
 }
 
 pub fn address(option: &str, text: &str) -> Outcome<String> {
-    let valid = text.rsplit_once(':').is_some_and(|(host, port)| {
-        !host.is_empty()
-            && port.parse::<u16>().is_ok()
-            && host
-                .trim_start_matches('[')
-                .trim_end_matches(']')
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || ".-:".contains(c))
-    });
+    let hostname = |host: &str| {
+        host.len() <= 253
+            && host.split('.').all(|label| {
+                !label.is_empty()
+                    && label.len() <= 63
+                    && !label.starts_with('-')
+                    && !label.ends_with('-')
+                    && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+            })
+    };
+    let valid = text.parse::<std::net::SocketAddr>().is_ok()
+        || text.rsplit_once(':').is_some_and(|(host, port)| {
+            port.parse::<u16>().is_ok()
+                && host.parse::<std::net::IpAddr>().is_err()
+                && !host.chars().all(|c| c.is_ascii_digit() || c == '.')
+                && hostname(host)
+        });
     if valid {
         Ok(text.to_owned())
     } else {
@@ -387,14 +395,28 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
     }
     let existed = destination.exists();
     if existed && !args.force {
-        let mut words = vec![
-            "bridge".to_owned(),
-            "backup".to_owned(),
-            destination.to_string_lossy().into_owned(),
-            "--force".to_owned(),
-        ];
-        if Modes::get().interactive() || Modes::get().yes {
-            words.pop();
+        let refused = || {
+            Failure::new(
+                Reason::DestinationExists,
+                format!(
+                    "Can't back up to {}. The file exists.",
+                    destination.display()
+                ),
+            )
+            .needs_action()
+            .sentence("--yes doesn't replace files; only --force does.")
+            .then(
+                "Replace it, after checking you don't need it",
+                [
+                    "bridge".to_owned(),
+                    "backup".to_owned(),
+                    destination.to_string_lossy().into_owned(),
+                    "--force".to_owned(),
+                ],
+            )
+        };
+        if Modes::get().yes || !Modes::get().interactive() {
+            return Err(refused());
         }
         ui::confirm(
             &[format!(
@@ -404,32 +426,17 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
                 modified(destination)
             )],
             &format!("Replace {}?", destination.display()),
-            &Step::new("Replace it", words),
+            &Step::new(
+                "Replace it",
+                [
+                    "bridge".to_owned(),
+                    "backup".to_owned(),
+                    destination.to_string_lossy().into_owned(),
+                    "--force".to_owned(),
+                ],
+            ),
             "The existing file was kept.",
-        )
-        .map_err(|failure| {
-            if failure.reason == Reason::ConfirmationRequired {
-                Failure::new(
-                    Reason::DestinationExists,
-                    format!(
-                        "Can't back up to {}. The file exists.",
-                        destination.display()
-                    ),
-                )
-                .needs_action()
-                .then(
-                    "Replace it, after checking you don't need it",
-                    [
-                        "bridge".to_owned(),
-                        "backup".to_owned(),
-                        destination.to_string_lossy().into_owned(),
-                        "--force".to_owned(),
-                    ],
-                )
-            } else {
-                failure
-            }
-        })?;
+        )?;
     }
     let name = destination
         .file_name()
@@ -1181,6 +1188,17 @@ pub async fn start(home: &Path, args: StartArgs) -> Outcome {
     for (option, value) in [("--peer-addr", &args.peer_addr), ("--listen", &args.listen)] {
         if !value.is_empty() {
             address(option, value)?;
+            let resolves = std::net::ToSocketAddrs::to_socket_addrs(value.as_str())
+                .is_ok_and(|mut found| found.next().is_some());
+            if !resolves {
+                return Err(Failure::new(
+                    Reason::InvalidValue,
+                    format!(
+                        "Can't use {option} {}. That host doesn't resolve on this Mac.",
+                        ui::clean(value)
+                    ),
+                ));
+            }
         }
     }
     super::check_socket_length(home)?;

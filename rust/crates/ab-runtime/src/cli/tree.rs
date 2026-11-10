@@ -675,7 +675,7 @@ pub struct AgentLevelArgs {
 
 #[derive(Debug, Args)]
 pub struct AgentCreateArgs {
-    #[arg(long, value_name = "NAME", help = "Agent name, 1 to 120 characters")]
+    #[arg(long, value_name = "NAME", help = "Agent name, 1 to 120 bytes")]
     pub name: String,
     #[arg(
         long,

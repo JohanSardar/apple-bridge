@@ -461,7 +461,7 @@ Create an agent and print its token once
 Options:
   --level <LEVEL>   full (acts at once), approve (asks you before each change) or read (default:
                     full)
-  --name <NAME>     Agent name, 1 to 120 characters
+  --name <NAME>     Agent name, 1 to 120 bytes
   --scope <ACCESS>  Access grants, comma-separated, such as messages:read,contacts:read (default:
                     reminders:read)
 

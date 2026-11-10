@@ -1355,7 +1355,7 @@
           "repeatable": false,
           "required": true,
           "short": null,
-          "summary": "Agent name, 1 to 120 characters",
+          "summary": "Agent name, 1 to 120 bytes",
           "type": "string",
           "value_hint": "<NAME>",
           "values": []

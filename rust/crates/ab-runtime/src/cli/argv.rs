@@ -68,6 +68,7 @@ const LEGACY_VALUES: &[&str] = &[
 ];
 
 const CONSEQUENTIAL: &[&str] = &[
+    "snippets",
     "force",
     "accept-ledger-loss",
     "remote",
@@ -117,6 +118,7 @@ const GLOBAL_VALUES: &[&str] = &["home", "fields"];
 pub struct Prepared {
     pub arguments: Vec<OsString>,
     pub path: Vec<String>,
+    pub typed: Vec<String>,
     pub help: bool,
     pub version: bool,
     pub notices: Vec<(String, String)>,
@@ -127,8 +129,14 @@ fn known(flag: &str) -> bool {
 }
 
 pub fn resolve_path(tokens: &[String]) -> (Vec<String>, clap::Command) {
+    let (path, _, command) = resolve(tokens);
+    (path, command)
+}
+
+fn resolve(tokens: &[String]) -> (Vec<String>, Vec<String>, clap::Command) {
     let mut command = Cli::command();
     let mut path = Vec::new();
+    let mut typed = Vec::new();
     let mut skip = false;
     for token in tokens {
         if skip {
@@ -158,9 +166,10 @@ pub fn resolve_path(tokens: &[String]) -> (Vec<String>, clap::Command) {
             break;
         };
         path.push(child.get_name().to_owned());
+        typed.push(token.clone());
         command = child;
     }
-    (path, command)
+    (path, typed, command)
 }
 
 fn takes_value(command: &clap::Command, name: &str) -> bool {
@@ -281,8 +290,9 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
     prepared.version = before
         .iter()
         .any(|token| matches!(token.as_str(), "-v" | "-V" | "--version"));
-    let (path, leaf) = resolve_path(&tokens);
+    let (path, typed, leaf) = resolve(&tokens);
     prepared.path.clone_from(&path);
+    prepared.typed = typed;
     for (command, old, new) in RENAMED {
         if path.first().is_some_and(|first| first == command)
             && before

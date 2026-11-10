@@ -117,12 +117,12 @@ impl Session {
                     .then("Check that it's running", ["bridge", "up"]),
                 );
             }
-            Err(error) => return Sent::Unknown(ui::clean(&error.to_string())),
+            Err(error) => return Sent::Unknown(self.redact(&error.to_string())),
         };
         let status = response.status();
         let bytes = match response.bytes().await {
             Ok(bytes) => bytes,
-            Err(error) => return Sent::Unknown(ui::clean(&error.to_string())),
+            Err(error) => return Sent::Unknown(self.redact(&error.to_string())),
         };
         let Ok(body) = serde_json::from_slice::<Value>(&bytes) else {
             return Sent::Refused(Failure::new(
@@ -133,8 +133,12 @@ impl Session {
         if status.is_success() {
             Sent::Answer(body)
         } else {
-            Sent::Refused(problem(&body, operation))
+            Sent::Refused(problem(&body, operation, &self.token))
         }
+    }
+
+    fn redact(&self, text: &str) -> String {
+        ui::clean(&hide(text, &self.token))
     }
 
     async fn read(&self, operation: &str, arguments: &Value) -> Outcome<Value> {
@@ -183,12 +187,20 @@ fn tracing_detail(detail: &str) {
     }
 }
 
-fn problem(body: &Value, operation: &str) -> Failure {
+fn hide(text: &str, secret: &str) -> String {
+    if secret.is_empty() {
+        text.to_owned()
+    } else {
+        text.replace(secret, "[redacted]")
+    }
+}
+
+fn problem(body: &Value, operation: &str, secret: &str) -> Failure {
     let code = body["error"]["code"].as_str().unwrap_or("unknown");
     let message = body["error"]["message"]
         .as_str()
         .unwrap_or("request failed");
-    let remote = format!("{message} ({code})");
+    let remote = hide(&format!("{message} ({code})"), secret);
     match code {
         "unavailable" => Failure::new(
             Reason::SourceUnavailable,
@@ -1009,8 +1021,16 @@ fn uncertain(operation: &str, arguments: &Value, detail: String, token_env: &str
         inspect.push("photos.albums".to_owned());
     }
     inspect.extend(["--token-env".to_owned(), token_env.to_owned()]);
-    Failure::new(Reason::UnknownOutcome, format!("Can't confirm whether {operation} finished. The connection closed after the request was sent."))
-        .row("Operation ID", id)
+    let mut failure = Failure::new(
+        Reason::UnknownOutcome,
+        format!(
+            "Can't confirm whether {operation} finished. The connection closed after the request was sent."
+        ),
+    );
+    if !id.is_empty() {
+        failure = failure.row("Operation ID", id);
+    }
+    failure
         .row("Confirmed", "the request was sent; no answer came back")
         .row("Detail", detail)
         .sentence("It wasn't retried. Don't send it with a new ID; that could apply it twice. Check its result first; if it didn't apply, send the identical request with the same ID.")
@@ -1054,6 +1074,7 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
                 .then("List operations", ["bridge", "call", "--list"])
         })?;
     let photos_write = descriptor.scope == "photos:write";
+    let once = photos_write || matches!(operation.as_str(), "photos.fetch" | "photos.release");
     if descriptor.kind == OperationKind::Command
         || descriptor.scope.ends_with(":write") && !(photos_write && args.write)
     {
@@ -1116,7 +1137,7 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
                 )
             })?;
         let session = Session::with_token(home, token).await?;
-        if photos_write {
+        if once {
             match session.send(operation, &arguments).await {
                 Sent::Answer(answer) => answer,
                 Sent::Refused(failure) => return Err(failure),
