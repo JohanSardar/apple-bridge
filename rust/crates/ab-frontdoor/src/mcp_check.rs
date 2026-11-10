@@ -702,7 +702,7 @@ pub(crate) fn infer_collection(operation: &AgentOperation, arguments: &mut Map<S
     else {
         return;
     };
-    if let Some(collection) = ab_domain::Collection::ALL
+    if let Some(collection) = ab_trust::domain::Collection::ALL
         .iter()
         .find(|collection| collection.prefix() == prefix)
         .and_then(|collection| serde_json::to_value(collection).ok())
