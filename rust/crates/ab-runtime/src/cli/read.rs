@@ -168,6 +168,11 @@ impl Session {
             return Sent::Refused(rate_limited(operation, wait), Retry::After(wait));
         }
         let Ok(body) = serde_json::from_slice::<Value>(&bytes) else {
+            if status.is_success() {
+                return Sent::Unknown(format!(
+                    "Apple Bridge answered {status}, but the answer wasn't JSON."
+                ));
+            }
             let retry = if status.is_server_error() {
                 Retry::After(wait)
             } else {
@@ -883,6 +888,40 @@ struct Budget {
     limit: Duration,
 }
 
+impl Budget {
+    fn remaining(&self) -> Option<Duration> {
+        self.limit
+            .checked_sub(self.started.elapsed())
+            .filter(|left| !left.is_zero())
+    }
+
+    fn passed(&self) -> Failure {
+        Failure::new(
+            Reason::Timeout,
+            format!(
+                "Stopped reading after {}. --timeout passed before the last page.",
+                super::commands::friendly(self.limit)
+            ),
+        )
+        .sentence("Nothing was printed. Continue from the last page, or pass a longer --timeout.")
+    }
+
+    async fn read(
+        &self,
+        session: &Session,
+        operation: &str,
+        arguments: &Value,
+        subject: Option<&str>,
+    ) -> Outcome<Value> {
+        let Some(left) = self.remaining() else {
+            return Err(self.passed());
+        };
+        tokio::time::timeout(left, session.read(operation, arguments, subject))
+            .await
+            .unwrap_or_else(|_| Err(self.passed()))
+    }
+}
+
 struct Gathered {
     answer: Value,
     skip: usize,
@@ -1013,8 +1052,8 @@ async fn gather_pages(
         if arguments.get("limit").is_some() {
             arguments["limit"] = json!((wanted - progress.rows).clamp(1, LIMIT_CAP));
         }
-        let page = match session
-            .read(plan.operation, &arguments, plan.subject.as_deref())
+        let page = match budget
+            .read(session, plan.operation, &arguments, plan.subject.as_deref())
             .await
         {
             Ok(page) => page,
@@ -1059,19 +1098,8 @@ async fn gather_pages(
             );
             break;
         }
-        if budget.started.elapsed() >= budget.limit {
-            return Err(progress.annotate(
-                Failure::new(
-                    Reason::Timeout,
-                    format!(
-                        "Stopped reading after {}. --timeout passed before the last page.",
-                        super::commands::friendly(budget.limit)
-                    ),
-                )
-                .sentence(
-                    "Nothing was printed. Continue from the last page, or pass a longer --timeout.",
-                ),
-            ));
+        if budget.remaining().is_none() {
+            return Err(progress.annotate(budget.passed()));
         }
         after = Some(token);
     }
@@ -1102,8 +1130,13 @@ async fn gather(
     if let Some(pager) = pager(plan.operation) {
         return gather_pages(session, plan, pager, wanted, start, budget, limit, home).await;
     }
-    let answer = session
-        .read(plan.operation, &plan.arguments, plan.subject.as_deref())
+    let answer = budget
+        .read(
+            session,
+            plan.operation,
+            &plan.arguments,
+            plan.subject.as_deref(),
+        )
         .await?;
     let mut records = Vec::new();
     collect(&answer, plan.collections, &mut records);

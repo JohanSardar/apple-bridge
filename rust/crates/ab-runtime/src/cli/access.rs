@@ -15,8 +15,10 @@ static LEGACY_REVOKE: AtomicBool = AtomicBool::new(false);
 
 pub fn typed_as(words: &[String]) {
     let first = words.first().map(String::as_str);
-    let legacy = matches!(first, Some("agent" | "revoke" | "scope"))
-        || (first == Some("web") && words.get(1).is_some_and(|second| second == "lock"));
+    let second = words.get(1).map(String::as_str);
+    let legacy = matches!(first, Some("revoke" | "scope"))
+        || (first == Some("agent") && second == Some("revoke"))
+        || (first == Some("web") && second == Some("lock"));
     LEGACY_REVOKE.store(legacy, Ordering::Relaxed);
 }
 

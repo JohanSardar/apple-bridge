@@ -85,6 +85,7 @@ fn record(collection: &str, id: &str) -> Value {
     json!({"collection": collection, "id": id, "data": {"title": format!("item {id}"), "date": "2026-11-01T00:00:00Z"}})
 }
 
+#[allow(clippy::too_many_lines)]
 fn scripted_gateway(
     home: &Path,
     handler: impl Fn(&str, &Value) -> Reply + Send + Sync + 'static,
@@ -170,7 +171,11 @@ fn scripted_gateway(
                 if status == 0 {
                     return;
                 }
-                respond(&mut stream, status, &headers, &reply.to_string());
+                let body = match &reply {
+                    Value::String(raw) if raw.starts_with("raw:") => raw[4..].to_owned(),
+                    other => other.to_string(),
+                };
+                respond(&mut stream, status, &headers, &body);
             });
         }
     });
@@ -1174,5 +1179,96 @@ fn fields_pick_record_data_in_reads() -> Check {
     )?;
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(error_document(&output)?["reason"], "invalid_value");
+    Ok(())
+}
+
+#[test]
+fn the_singular_agent_spelling_still_needs_consent_to_widen() -> Check {
+    let home = short_home()?;
+    let output = run(
+        home.path(),
+        &[
+            "agents", "create", "--name", "bot", "--level", "approve", "--json",
+        ],
+    )?;
+    let created: Value = serde_json::from_slice(&output.stdout)?;
+    let id = created["agent"]["id"].as_str().ok_or("id")?.to_owned();
+    let output = run(
+        home.path(),
+        &["agent", "update", &id, "--level", "full", "--json"],
+    )?;
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stdout));
+    assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+    let output = run(home.path(), &["agent", "level", &id, "full", "--json"])?;
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stdout));
+    Ok(())
+}
+
+#[test]
+fn a_client_whose_children_keep_its_output_open_still_meets_the_deadline() -> Check {
+    let bin = short_home()?;
+    fake_program(bin.path(), "claude", "sleep 20 &\nexit 0")?;
+    let home = short_home()?;
+    let began = Instant::now();
+    let output = bridge()
+        .env("PATH", with_path(bin.path()))
+        .args(["unlink", "claude", "--timeout", "1s", "--json", "--home"])
+        .arg(home.path())
+        .output()?;
+    assert!(
+        began.elapsed() < Duration::from_secs(4),
+        "{:?}",
+        began.elapsed()
+    );
+    assert!(output.status.code().is_some(), "{}", text(&output.stderr));
+    Ok(())
+}
+
+#[test]
+fn the_read_timeout_bounds_a_slow_page() -> Check {
+    let home = short_home()?;
+    seeded_home(home.path())?;
+    let (_lock, _log) = scripted_gateway(home.path(), |_, _| {
+        std::thread::sleep(Duration::from_secs(3));
+        ok(json!({"records": [], "cursor": null, "next": null}))
+    })?;
+    let began = Instant::now();
+    let output = run(
+        home.path(),
+        &["search", "item", "--timeout", "300ms", "--json"],
+    )?;
+    assert!(
+        began.elapsed() < Duration::from_secs(2),
+        "{:?}",
+        began.elapsed()
+    );
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(error_document(&output)?["reason"], "timeout");
+    Ok(())
+}
+
+#[test]
+fn an_unreadable_answer_to_a_write_is_unknown_outcome() -> Check {
+    let home = short_home()?;
+    seeded_home(home.path())?;
+    let (_lock, log) =
+        scripted_gateway(home.path(), |_, _| (200, Vec::new(), json!("raw:broken")))?;
+    let output = bridge()
+        .env("REVIEW_TOKEN", "aba-REVIEW")
+        .args([
+            "call",
+            "photos.fetch",
+            "--data",
+            r#"{"args":{"asset_id":"fixture"}}"#,
+            "--token-env",
+            "REVIEW_TOKEN",
+            "--json",
+            "--home",
+        ])
+        .arg(home.path())
+        .output()?;
+    assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
+    assert_eq!(error_document(&output)?["reason"], "unknown_outcome");
+    assert_eq!(requests(&log, "photos.fetch").len(), 1);
     Ok(())
 }

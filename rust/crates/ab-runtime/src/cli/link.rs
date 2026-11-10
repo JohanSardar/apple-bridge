@@ -138,6 +138,7 @@ struct Phase<'a> {
 
 fn spawn(plan: &Plan, arguments: &[String], quiet: bool) -> Outcome<std::process::Child> {
     let mut command = Command::new(plan.program);
+    std::os::unix::process::CommandExt::process_group(&mut command, 0);
     command.args(arguments).stdin(Stdio::null());
     if quiet {
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -157,13 +158,41 @@ fn spawn(plan: &Plan, arguments: &[String], quiet: bool) -> Outcome<std::process
     })
 }
 
-fn drain(source: Option<impl std::io::Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
+fn drain(
+    source: Option<impl std::io::Read + Send + 'static>,
+) -> std::sync::mpsc::Receiver<Vec<u8>> {
+    let (sender, receiver) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let mut bytes = Vec::new();
         if let Some(mut source) = source {
             let _ = source.read_to_end(&mut bytes);
         }
-        bytes
+        let _ = sender.send(bytes);
+    });
+    receiver
+}
+
+fn stop_group(leader: u32) {
+    let _ = Command::new("/bin/kill")
+        .args(["-KILL", "--", &format!("-{leader}")])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+fn collect_output(
+    receiver: &std::sync::mpsc::Receiver<Vec<u8>>,
+    until: Instant,
+    leader: u32,
+) -> Vec<u8> {
+    let grace = until
+        .saturating_duration_since(Instant::now())
+        .min(Duration::from_millis(500));
+    receiver.recv_timeout(grace).unwrap_or_else(|_| {
+        stop_group(leader);
+        receiver
+            .recv_timeout(Duration::from_millis(200))
+            .unwrap_or_default()
     })
 }
 
@@ -211,6 +240,7 @@ fn run_bounded(
     let stdout = drain(child.stdout.take());
     let stderr = drain(child.stderr.take());
     let mut child = children::Owned::new(child);
+    let leader = child.0.id();
     let began = Instant::now();
     let until = deadline.within(PHASE_BUDGET);
     let mut announced = false;
@@ -220,6 +250,7 @@ fn run_bounded(
         }
         if Instant::now() >= until {
             child.stop();
+            stop_group(leader);
             return Err(stopped(plan, arguments, phase, deadline));
         }
         if !announced && began.elapsed() >= SLOW_AFTER {
@@ -228,8 +259,10 @@ fn run_bounded(
         }
         std::thread::sleep(Duration::from_millis(20));
     };
-    let mut text = String::from_utf8_lossy(&stdout.join().unwrap_or_default()).into_owned();
-    text.push_str(&String::from_utf8_lossy(&stderr.join().unwrap_or_default()));
+    let mut text = String::from_utf8_lossy(&collect_output(&stdout, until, leader)).into_owned();
+    text.push_str(&String::from_utf8_lossy(&collect_output(
+        &stderr, until, leader,
+    )));
     Ok((status.success(), text))
 }
 
