@@ -282,7 +282,7 @@ fn level(text: &str, switchable: bool) -> Outcome<AgentLevel> {
             Reason::InvalidValue,
             format!(
                 "Can't use --level {}. Accepted: {}.",
-                ui::clean(text),
+                ui::clean_input(text),
                 if switchable {
                     "full, approve"
                 } else {

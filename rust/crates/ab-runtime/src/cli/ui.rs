@@ -79,35 +79,72 @@ pub fn clean_block(text: &str) -> String {
     strip(text, true)
 }
 
-pub fn redact_url(text: &str) -> String {
-    let Some((scheme, rest)) = text.split_once("://") else {
-        return text.to_owned();
-    };
-    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+fn url_parts(text: &str) -> Option<(&str, &str, &str, &str)> {
+    let (scheme, after) = text.split_once(':')?;
+    let mut characters = scheme.chars();
+    if !characters
+        .next()
+        .is_some_and(|first| first.is_ascii_alphabetic())
+        || !characters.all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
+    {
+        return None;
+    }
+    let rest = after.trim_start_matches(['/', '\\']);
+    let slashes = &after[..after.len() - rest.len()];
+    let end = rest.find(['/', '\\', '?', '#']).unwrap_or(rest.len());
     let (authority, tail) = rest.split_at(end);
-    let authority = match authority.rsplit_once('@') {
+    if slashes.is_empty() && !authority.contains('@') {
+        return None;
+    }
+    Some((scheme, slashes, authority, tail))
+}
+
+fn without_userinfo(authority: &str) -> String {
+    match authority.rsplit_once('@') {
         Some((_, host)) => format!("***@{host}"),
         None => authority.to_owned(),
+    }
+}
+
+pub fn redact_url(text: &str) -> String {
+    let Some((scheme, slashes, authority, tail)) = url_parts(text) else {
+        return text.to_owned();
     };
     let tail = match tail.find(['?', '#']) {
         Some(at) => format!("{}{}…", &tail[..at], &tail[at..=at]),
         None => tail.to_owned(),
     };
-    format!("{scheme}://{authority}{tail}")
+    format!("{scheme}:{slashes}{}{tail}", without_userinfo(authority))
+}
+
+fn each_word(text: &str, change: impl Fn(&str) -> String) -> String {
+    let mut out = String::with_capacity(text.len());
+    for piece in text.split_inclusive(char::is_whitespace) {
+        let word = piece.trim_end_matches(char::is_whitespace);
+        let start = word
+            .find(|c: char| c.is_ascii_alphabetic())
+            .unwrap_or(word.len());
+        out.push_str(&word[..start]);
+        out.push_str(&change(&word[start..]));
+        out.push_str(&piece[word.len()..]);
+    }
+    out
 }
 
 pub fn redact_urls(text: &str) -> String {
-    text.split(' ')
-        .map(|word| {
-            if word.contains("://") {
-                let start = word.find(|c: char| c.is_ascii_alphabetic()).unwrap_or(0);
-                format!("{}{}", &word[..start], redact_url(&word[start..]))
-            } else {
-                word.to_owned()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+    each_word(text, redact_url)
+}
+
+pub fn strip_userinfo(text: &str) -> String {
+    if !text.contains('@') {
+        return text.to_owned();
+    }
+    each_word(text, |word| match url_parts(word) {
+        Some((scheme, slashes, authority, tail)) if authority.contains('@') => {
+            format!("{scheme}:{slashes}{}{tail}", without_userinfo(authority))
+        }
+        _ => word.to_owned(),
+    })
 }
 
 pub fn clean_input(text: &str) -> String {
@@ -400,6 +437,7 @@ fn warning_line(reason: &str, message: &str) {
 }
 
 pub fn warn(reason: &str, text: &str) {
+    let text = &strip_userinfo(text);
     if let Ok(mut warnings) = WARNINGS.lock() {
         warnings.push((reason.to_owned(), text.to_owned()));
     }

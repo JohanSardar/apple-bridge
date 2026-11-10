@@ -1061,3 +1061,54 @@ fn a_terminal_shows_permissions_as_one_table_and_colored_headings() -> Check {
     );
     Ok(())
 }
+
+#[test]
+fn a_later_false_cancels_a_grouped_short_yes() -> Check {
+    let home = short_home()?;
+    let id = created_agent(home.path(), "bot")?;
+    for cancel in ["--yes=false", "--no-yes"] {
+        let output = bridge()
+            .args(["-yd", "agents", "revoke", &id, cancel, "--json", "--home"])
+            .arg(home.path())
+            .output()?;
+        assert_eq!(output.status.code(), Some(2), "{cancel}");
+        assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+    }
+    let listed = json_out(&run(home.path(), &["agents", "list", "--json"])?)?;
+    assert!(listed["agents"][0]["revoked_at"].is_null(), "{listed}");
+    let output = bridge()
+        .args(["-yd", "agents", "revoke", &id, "--json", "--home"])
+        .arg(home.path())
+        .output()?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    Ok(())
+}
+
+#[test]
+fn credentials_in_any_url_spelling_never_reach_the_output() -> Check {
+    let home = short_home()?;
+    let id = created_agent(home.path(), "bot")?;
+    for url in [
+        "https:me:hunter2@c.example.test",
+        "https:/me:hunter2@c.example.test",
+        "https://me:hunter2@c.example.test",
+    ] {
+        for arguments in [
+            vec!["remote", "enable", "--relay-url", url, "--json", "--debug"],
+            vec!["remote", "--relay-url", url, "key"],
+            vec!["agents", "update", &id, "--level", url, "--json"],
+            vec!["agents", "update", &id, "--level", url],
+        ] {
+            let output = run(home.path(), &arguments)?;
+            assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+            let shown = format!("{}{}", text(&output.stdout), text(&output.stderr));
+            assert!(!shown.contains("hunter2"), "{arguments:?}: {shown}");
+            assert!(
+                shown.contains("***@c.example.test"),
+                "{arguments:?}: {shown}"
+            );
+        }
+    }
+    assert!(!home.path().join("remote/config.json").exists());
+    Ok(())
+}

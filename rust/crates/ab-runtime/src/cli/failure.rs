@@ -91,7 +91,10 @@ impl Step {
     ) -> Self {
         Self {
             benefit: benefit.into(),
-            argv: argv.into_iter().map(Into::into).collect(),
+            argv: argv
+                .into_iter()
+                .map(|argument| super::ui::strip_userinfo(&argument.into()))
+                .collect(),
             when: None,
         }
     }
@@ -170,7 +173,7 @@ impl Failure {
     pub fn new(reason: Reason, headline: impl Into<String>) -> Self {
         Self(Box::new(Details {
             reason,
-            headline: headline.into(),
+            headline: super::ui::strip_userinfo(&headline.into()),
             rows: Vec::new(),
             remote: None,
             issues: Vec::new(),
@@ -192,7 +195,8 @@ impl Failure {
 
     #[must_use]
     pub fn row(mut self, label: impl Into<String>, value: impl Into<String>) -> Self {
-        self.rows.push((label.into(), value.into()));
+        self.rows
+            .push((label.into(), super::ui::strip_userinfo(&value.into())));
         self
     }
 
@@ -204,7 +208,7 @@ impl Failure {
 
     #[must_use]
     pub fn issue(mut self, issue: impl Into<String>) -> Self {
-        self.issues.push(issue.into());
+        self.issues.push(super::ui::strip_userinfo(&issue.into()));
         self
     }
 
@@ -225,7 +229,7 @@ impl Failure {
 
     #[must_use]
     pub fn sentence(mut self, sentence: impl Into<String>) -> Self {
-        self.sentence = Some(sentence.into());
+        self.sentence = Some(super::ui::strip_userinfo(&sentence.into()));
         self
     }
 

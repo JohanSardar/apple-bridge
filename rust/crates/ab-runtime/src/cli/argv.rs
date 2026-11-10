@@ -310,6 +310,48 @@ fn same_flag(command: &clap::Command, token: &str, name: &str) -> bool {
     token == format!("-{}", argument.get_short().unwrap_or('\0'))
 }
 
+fn short_of(command: &clap::Command, name: &str) -> Option<char> {
+    let root = Cli::command();
+    command
+        .get_arguments()
+        .chain(root.get_arguments())
+        .find(|argument| argument.get_long() == Some(name))
+        .and_then(clap::Arg::get_short)
+}
+
+fn forget_flag(output: &mut Vec<OsString>, command: &clap::Command, name: &str) {
+    let plain = format!("--{name}");
+    output.retain(|kept: &OsString| {
+        let kept = kept.to_string_lossy();
+        kept != plain && !same_flag(command, &kept, name)
+    });
+    let Some(short) = short_of(command, name) else {
+        return;
+    };
+    let mut kept = Vec::with_capacity(output.len());
+    for token in output.drain(..) {
+        let text = token.to_string_lossy().into_owned();
+        let grouped = text
+            .strip_prefix('-')
+            .filter(|letters| !letters.starts_with('-') && letters.chars().count() > 1)
+            .filter(|letters| {
+                letters
+                    .chars()
+                    .all(|letter| short_flag(command, &format!("-{letter}")).is_some())
+            });
+        match grouped {
+            Some(letters) if letters.contains(short) => {
+                let rest: String = letters.chars().filter(|letter| *letter != short).collect();
+                if !rest.is_empty() {
+                    kept.push(format!("-{rest}").into());
+                }
+            }
+            _ => kept.push(token),
+        }
+    }
+    *output = kept;
+}
+
 fn short_flag(command: &clap::Command, token: &str) -> Option<String> {
     let short = token.strip_prefix('-')?.chars().next()?;
     let root = Cli::command();
@@ -419,10 +461,7 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 && (flag(&leaf, flag_name) || LEGACY_BOOLEANS.contains(&flag_name))
             {
                 let plain = format!("--{flag_name}");
-                output.retain(|kept: &OsString| {
-                    let kept = kept.to_string_lossy();
-                    kept != plain && !same_flag(&leaf, &kept, flag_name)
-                });
+                forget_flag(&mut output, &leaf, flag_name);
                 if value == "false" {
                     continue;
                 }
@@ -433,8 +472,7 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
                 && !declared(&leaf, &long)
                 && flag(&leaf, negated)
             {
-                output
-                    .retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), negated));
+                forget_flag(&mut output, &leaf, negated);
                 continue;
             } else if !long.contains('=') && flag(&leaf, &long) {
                 output.retain(|kept: &OsString| !same_flag(&leaf, &kept.to_string_lossy(), &long));
