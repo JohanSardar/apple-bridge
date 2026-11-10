@@ -102,9 +102,7 @@ impl ServerHandler for Handler {
                 principal,
                 &request.name,
                 outcome.operation.as_deref(),
-                outcome
-                    .is_error
-                    .then(|| outcome.value["error"]["code"].as_str().unwrap_or("error")),
+                outcome.class().as_deref(),
             );
             return self.compact_result(&outcome);
         }

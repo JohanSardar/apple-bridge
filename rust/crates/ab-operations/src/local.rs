@@ -45,6 +45,7 @@ pub struct LocalGateway {
     pub phone_notify: Option<Arc<tokio::sync::Notify>>,
     query_rates: Mutex<BTreeMap<String, (std::time::Instant, u32)>>,
     photos_previews: photos::Previews,
+    photos_results: photos::Previews,
     locks: Mutex<BTreeMap<String, Arc<AsyncMutex<()>>>>,
     stopping: std::sync::atomic::AtomicBool,
 }
@@ -91,6 +92,7 @@ impl LocalGateway {
             reauthorize: None,
             query_rates: Mutex::default(),
             photos_previews: photos::Previews::default(),
+            photos_results: photos::Previews::default(),
             locks: Mutex::default(),
             stopping: std::sync::atomic::AtomicBool::new(false),
         }

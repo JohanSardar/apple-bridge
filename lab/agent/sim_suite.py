@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 import pathlib
@@ -10,6 +11,7 @@ import sys
 import tempfile
 import time
 import tomllib
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -67,7 +69,7 @@ def notes(grader):
     return found.get('records', [])
 
 
-def tasks(tag):
+def tasks(tag, sim_socket=None):
     def reminder_created(grader, answer):
         match = [r for r in reminders(grader) if r['data'].get('title', '').startswith(f'{tag} oat milk')]
         return bool(match) and match[0]['data'].get('due', '').startswith('2026-11-12'), {'found': len(match)}
@@ -96,7 +98,8 @@ def tasks(tag):
 
     def not_sent_to_ambiguous(grader, answer):
         sent = messages_with(grader, f'{tag} are you free')
-        named = 'Kovac' in answer and 'Novak' in answer
+        plain = unicodedata.normalize('NFKD', answer).encode('ascii', 'ignore').decode()
+        named = 'Kovac' in plain and 'Novak' in plain
         return not sent and named, {'sent': len(sent), 'named_both': named}
 
     def note_created(grader, answer):
@@ -110,6 +113,66 @@ def tasks(tag):
     def message_answer(grader, answer):
         return 'unicode' in answer.lower(), {}
 
+    def notes_read_answer(grader, answer):
+        text = answer.lower()
+        return 'ferry' in text and 'dentist' in text, {}
+
+    def note_reply_created(grader, answer):
+        match = [n for n in notes(grader) if n['data'].get('title') == f'{tag} train reply']
+        text = match[0]['data'].get('plain_text', '') if match else ''
+        return bool(match) and 'booked' in text.lower(), {'found': len(match)}
+
+    def screen_time_answer(grader, answer):
+        yesterday = (datetime.datetime.now().astimezone() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        found = grader.call('apple_read', {'operation': 'usage.summary', 'arguments': {'date': yesterday, 'device': 'iphone'}})
+        device = (found.get('devices') or [{}])[0]
+        seconds = device.get('total_seconds', -1)
+        top = (device.get('top_apps') or [{}])[0].get('app', '?')
+        hours, minutes = seconds // 3600, seconds % 3600 // 60
+        text = answer.lower().replace(' ', '')
+        forms = [f'{hours}h{minutes}', f'{hours}hours{minutes}', f'{hours}hour{minutes}', f'{seconds // 60}min', f'{hours}:{minutes:02d}']
+        named = top.lower() in answer.lower()
+        total = any(form in text for form in forms)
+        return named and total, {'top_named': named, 'total_given': total}
+
+    def event_added(grader, answer):
+        tomorrow = (datetime.datetime.now().astimezone() + datetime.timedelta(days=1)).date()
+        start = datetime.datetime.combine(tomorrow, datetime.time(0, 0)).astimezone()
+        found = grader.call('calendar_events', {'date': tomorrow.isoformat(), 'calendar': 'Family'})
+        match = [e for e in found.get('events', []) if e['data'].get('title') == f'{tag} lunch with Marko']
+        local = match[0]['data'].get('start_local', '') if match else ''
+        return bool(match) and local[11:16] == '12:30' and local.startswith(start.strftime('%Y-%m-%d')), {'found': len(match), 'start_local': local}
+
+    def group_answer(grader, answer):
+        return '9' in answer and 'snack' in answer.lower(), {}
+
+    def search_count_answer(grader, answer):
+        return '12' in answer, {}
+
+    def photo_answer(grader, answer):
+        return 'photo-fixture' in answer, {}
+
+    def setup_partial(grader):
+        if sim_socket:
+            body = json.dumps({'name': 'part-delivery-failed', 'ms': 0}).encode()
+            subprocess.run(['curl', '-s', '--max-time', '30', '--unix-socket', sim_socket, '-H', 'Content-Type: application/json', '--data-binary', '@-', 'http://sim/fault'], input=body, capture_output=True, check=True)
+
+    def partial_reported(grader, answer):
+        sent = [m for m in messages_with(grader, f'{tag} files attached') if m['data'].get('is_from_me')]
+        told = any(word in answer.lower() for word in ('fail', 'not deliver', "didn't", 'did not', 'partial'))
+        return len(sent) == 1 and told, {'text_sent': len(sent), 'told_owner': told}
+
+    scenes = [
+        {'id': 'notes-read-phone', 'prompt': 'I wrote a note on my phone on the train. What does it say I should do?', 'grade': notes_read_answer},
+        {'id': 'notes-write-back', 'prompt': f'Write a note back titled "{tag} train reply" that says the ferry is booked.', 'grade': note_reply_created},
+        {'id': 'screen-time', 'prompt': 'Looking at Screen Time across my devices: how much time did I spend on my iPhone yesterday, and which app did I use most there? Give the total in hours and minutes.', 'grade': screen_time_answer},
+        {'id': 'calendar-add', 'prompt': f'Add "{tag} lunch with Marko" to my Family calendar tomorrow from 12:30 to 13:30.', 'grade': event_added},
+        {'id': 'messages-group', 'prompt': 'What did Ana Novak say about the ferry? Answer in one sentence.', 'grade': group_answer},
+        {'id': 'search-complete', 'prompt': 'How many calendar events mention searchcapnoise? Answer with the number.', 'grade': search_count_answer},
+        {'id': 'photo-find', 'prompt': 'Find the photo I took on 2 January 2020 and look at it. Tell me its ID.', 'grade': photo_answer},
+    ]
+    if sim_socket:
+        scenes.append({'id': 'partial-send', 'setup': setup_partial, 'prompt': f'Text Ana Novak "{tag} files attached" with two small text files attached, a.txt and b.txt, each containing the word hello. Tell me exactly what happened.', 'grade': partial_reported})
     return [
         {'id': 'reminder-add', 'prompt': f'Remind me to buy oat milk on 2026-11-12 in my Bridge Test reminders list. Start the title with "{tag} oat milk".', 'grade': reminder_created},
         {'id': 'reminder-complete', 'setup': setup_complete, 'prompt': f'Mark my reminder "{tag} call the plumber" as done.', 'grade': reminder_completed},
@@ -119,7 +182,7 @@ def tasks(tag):
         {'id': 'messages-send', 'prompt': f'Text Ana Novak: "{tag} running late".', 'grade': message_sent},
         {'id': 'messages-ambiguous', 'prompt': f'Text Ana "{tag} are you free". If it is unclear who I mean, do not send anything and tell me the options.', 'grade': not_sent_to_ambiguous},
         {'id': 'notes-create', 'prompt': f'Create a note titled "{tag} packing" with the text "passport, charger".', 'grade': note_created},
-    ]
+    ] + scenes
 
 
 def toml_value(value):
@@ -156,7 +219,7 @@ def run_codex(task, url, token, directory, model):
     started = time.monotonic()
     code = run(command, task['prompt'], transcript, environment)
     elapsed = time.monotonic() - started
-    calls, tools, forbidden = [], set(), 0
+    calls, tools, forbidden, errors = [], set(), 0, 0
     for line in transcript.read_text().splitlines():
         try:
             event = json.loads(line)
@@ -167,11 +230,13 @@ def run_codex(task, url, token, directory, model):
             continue
         if item.get('type') == 'mcp_tool_call' and item.get('server') == 'apple_bridge':
             calls.append(item.get('tool'))
+            if item.get('error') or (item.get('result') or {}).get('is_error') or (item.get('result') or {}).get('isError'):
+                errors += 1
         elif item.get('type') not in ('agent_message', 'reasoning', 'todo_list'):
             forbidden += 1
     answer = (home / 'answer').read_text() if (home / 'answer').exists() else ''
     shutil.rmtree(home, ignore_errors=True)
-    return {'exit_code': code, 'calls': calls, 'forbidden_calls': forbidden, 'answer': answer, 'seconds': round(elapsed, 1)}
+    return {'exit_code': code, 'calls': calls, 'forbidden_calls': forbidden, 'tool_errors': errors, 'answer': answer, 'seconds': round(elapsed, 1)}
 
 
 def run_claude(task, url, token, directory, model):
@@ -185,7 +250,7 @@ def run_claude(task, url, token, directory, model):
     started = time.monotonic()
     code = run(command, task['prompt'], transcript, dict(os.environ))
     elapsed = time.monotonic() - started
-    calls, forbidden, answer = [], 0, ''
+    calls, forbidden, errors, answer = [], 0, 0, ''
     for line in transcript.read_text().splitlines():
         try:
             event = json.loads(line)
@@ -199,9 +264,13 @@ def run_claude(task, url, token, directory, model):
                         calls.append(name.removeprefix('mcp__apple_bridge__'))
                     elif name != 'ToolSearch':
                         forbidden += 1
+        if event.get('type') == 'user':
+            for block in event.get('message', {}).get('content', []):
+                if isinstance(block, dict) and block.get('type') == 'tool_result' and block.get('is_error'):
+                    errors += 1
         if event.get('type') == 'result':
             answer = event.get('result') or ''
-    return {'exit_code': code, 'calls': calls, 'forbidden_calls': forbidden, 'answer': answer, 'seconds': round(elapsed, 1)}
+    return {'exit_code': code, 'calls': calls, 'forbidden_calls': forbidden, 'tool_errors': errors, 'answer': answer, 'seconds': round(elapsed, 1)}
 
 
 def run(command, prompt, transcript, environment):
@@ -224,6 +293,7 @@ def main():
     parser.add_argument('--model', default='')
     parser.add_argument('--out', required=True)
     parser.add_argument('--only', default='')
+    parser.add_argument('--sim-socket', default='', help='SimApple control socket; enables the partial-send task')
     options = parser.parse_args()
     out = pathlib.Path(options.out)
     out.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -233,7 +303,7 @@ def main():
     tag = f'[ab-test {secrets.token_hex(3)}]'
     runner = run_codex if options.agent == 'codex' else run_claude
     results = []
-    for task in tasks(tag):
+    for task in tasks(tag, options.sim_socket or None):
         if options.only and task['id'] not in options.only.split(','):
             continue
         if task.get('setup'):
@@ -241,13 +311,15 @@ def main():
         outcome = runner(task, options.url, token, private, options.model)
         passed, facts = task['grade'](grader, outcome['answer'])
         passed = passed and outcome['forbidden_calls'] == 0
-        results.append({'task': task['id'], 'passed': passed, 'mcp_calls': len(outcome['calls']), 'tools': outcome['calls'], 'seconds': outcome['seconds'], 'exit_code': outcome['exit_code'], 'forbidden_calls': outcome['forbidden_calls'], 'facts': facts})
+        results.append({'task': task['id'], 'passed': passed, 'first_try': passed and outcome['tool_errors'] == 0, 'recovered': passed and outcome['tool_errors'] > 0, 'mcp_calls': len(outcome['calls']), 'tool_errors': outcome['tool_errors'], 'tools': outcome['calls'], 'seconds': outcome['seconds'], 'exit_code': outcome['exit_code'], 'forbidden_calls': outcome['forbidden_calls'], 'facts': facts})
         print(json.dumps(results[-1]), flush=True)
     summary = {
         'agent': options.agent,
         'model': options.model or 'default',
         'tools_list_bytes': grader.tools_list_bytes(),
         'passed': sum(r['passed'] for r in results),
+        'first_try': sum(r['first_try'] for r in results),
+        'tool_errors': sum(r['tool_errors'] for r in results),
         'total': len(results),
         'mcp_calls': sum(r['mcp_calls'] for r in results),
         'seconds': round(sum(r['seconds'] for r in results), 1),

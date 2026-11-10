@@ -26,6 +26,11 @@ fn handles(fields: &Value) -> Vec<String> {
         .filter(|s| !s.is_empty())
         .collect()
 }
+fn words_match(folded_name: &str, query: &str) -> bool {
+    let words = fold(query);
+    let mut words = words.split_whitespace().peekable();
+    words.peek().is_some() && words.all(|word| folded_name.contains(word))
+}
 pub(crate) fn lookup(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
     let raw = s(query, "q");
     let needle = raw.trim();
@@ -60,19 +65,21 @@ pub(crate) fn lookup(db: &Connection, visibility: &Visibility, query: &Value) ->
                 "organization",
             ]
             .iter()
-            .map(|key| s(&fields, key))
+            .map(|key| s(&fields, key).trim())
+            .filter(|part| !part.is_empty())
             .collect::<Vec<_>>()
             .join(" ")
             .to_lowercase();
+            let folded = fold(&name);
             let mut matches = s(query, "name").is_empty() && s(query, "handle").is_empty();
             if !s(query, "name").is_empty() {
-                matches = name.contains(&s(query, "name").to_lowercase());
+                matches = words_match(&folded, s(query, "name"));
             }
             if !s(query, "handle").is_empty() {
                 matches = handles(&fields).contains(&normalize(s(query, "handle")));
             }
             if !needle.is_empty() {
-                let mut found = name.trim().contains(&needle.to_lowercase());
+                let mut found = words_match(&folded, needle);
                 for key in ["phones", "emails"] {
                     for entry in fields[key].as_array().into_iter().flatten() {
                         let value = s(entry, "value");
@@ -86,7 +93,7 @@ pub(crate) fn lookup(db: &Connection, visibility: &Visibility, query: &Value) ->
                 matches &= found;
             }
             if matches {
-                selected.push((name.trim().to_owned(), record));
+                selected.push((name, record));
             }
         }
     }
@@ -377,13 +384,9 @@ pub(crate) fn health(db: &Connection, visibility: &Visibility, query: &Value) ->
 }
 #[allow(clippy::too_many_lines)]
 pub(crate) fn calendar(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
-    let start = s(query, "start")
-        .parse::<jiff::Timestamp>()
-        .map_err(|_| ErrorCode::Invalid)?;
-    let end = s(query, "end")
-        .parse::<jiff::Timestamp>()
-        .map_err(|_| ErrorCode::Invalid)?;
     let zone = zone(query)?;
+    let start = instant(s(query, "start"), &zone).ok_or(ErrorCode::Invalid)?;
+    let end = instant(s(query, "end"), &zone).ok_or(ErrorCode::Invalid)?;
     if end <= start
         || end.as_second() - start.as_second() > 1464 * 24 * 3600
         || query["calendars"].as_array().is_some_and(|a| a.len() > 256)

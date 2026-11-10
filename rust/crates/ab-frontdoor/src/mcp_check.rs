@@ -154,6 +154,23 @@ pub(crate) fn arguments(
     }
     let schema = &operation.arguments;
     check_object(&Value::Object(fields.clone()), schema, "", operation, tool)?;
+    if operation.version == ab_catalog::VersionRule::Required
+        && fields.contains_key("id")
+        && !fields.contains_key("expected_version")
+    {
+        return Err(Problem::new(
+            "invalid",
+            format!("{} has a problem with expected_version", operation.name),
+        )
+        .operation(&operation.name)
+        .field("expected_version")
+        .problem("expected_version is required with id")
+        .example(example_call(tool, operation))
+        .hint(format!(
+            "Read the record first ({}) and pass its version field as expected_version.",
+            lookup_hint(operation)
+        )));
+    }
     Ok(fields)
 }
 
@@ -329,7 +346,9 @@ fn check_value(
         {
             return Err(fail(format!("{path} must start with {}", &pattern[1..])));
         }
-        check_date(text, path, description).map_err(fail)?;
+        if operation.domain != TOOL_DOMAIN {
+            check_date(text, path, description).map_err(fail)?;
+        }
         if path.ends_with("time_zone")
             && !text.is_empty()
             && text != "Local"
@@ -435,9 +454,7 @@ pub(crate) fn from_error(
         Code::Deadline => problem
             .problem("the Mac did not answer in time")
             .hint("Retry a read. For a change, check apple_command_status before trying again."),
-        Code::Expired => problem
-            .problem("the request or credential expired")
-            .hint("For a change, send it again with a new request_id. If every call fails, the owner must reconnect this app."),
+        Code::Expired => expired_problem(problem, operation),
         Code::TooLarge => problem
             .problem("the input is too large")
             .hint("Send a smaller file or split the work."),
@@ -482,7 +499,7 @@ fn access_problem(
 
 fn invalid_problem(problem: Problem, operation: Option<&AgentOperation>) -> Problem {
     let Some(operation) = operation else {
-        return problem.problem("the Mac rejected these arguments");
+        return problem.problem("Apple Bridge rejected these arguments");
     };
     let name = &operation.name;
     let rules = if operation.detail.is_empty() {
@@ -490,8 +507,13 @@ fn invalid_problem(problem: Problem, operation: Option<&AgentOperation>) -> Prob
     } else {
         format!(" {}", operation.detail)
     };
+    let who = if operation.kind == ab_catalog::OperationKind::Query {
+        "the Mac"
+    } else {
+        "Apple Bridge"
+    };
     problem
-        .problem(format!("the Mac rejected these arguments for {name}"))
+        .problem(format!("{who} rejected these arguments for {name}"))
         .example(example_call(tool_for(operation), operation))
         .hint(format!(
             "Compare with the example and the rules in apple_describe with operation {name}.{rules}"
@@ -511,5 +533,219 @@ fn conflict_problem(mut problem: Problem, error: &Error) -> Problem {
             "Check current. If your change still applies, retry with expected_version={version}."
         )),
         None => problem.hint("Read the record again and retry with its current version."),
+    }
+}
+
+fn expired_problem(problem: Problem, operation: Option<&AgentOperation>) -> Problem {
+    match operation {
+        Some(o) if o.name == "photos.release" => problem
+            .problem("that photo query already expired")
+            .hint("Nothing is left to release; there is nothing to retry."),
+        Some(o) if !o.changes || o.read_only() => problem
+            .problem("the earlier result this read refers to expired")
+            .hint("Run the read that produced it again, then use its new IDs. If every call fails, the owner must reconnect this app."),
+        _ => problem
+            .problem("the request or credential expired")
+            .hint("This change did not run. Send it again with a new request_id. If every call fails, the owner must reconnect this app."),
+    }
+}
+
+const TOOL_DOMAIN: &str = "listed tool";
+
+pub(crate) fn check_tool(
+    tool: &str,
+    schema: &Value,
+    example: &Value,
+    input: &Map<String, Value>,
+) -> Result<(), Problem> {
+    let mut schema = schema.clone();
+    schema["additionalProperties"] = json!(false);
+    let schema = &schema;
+    let operation = AgentOperation {
+        name: tool.into(),
+        domain: TOOL_DOMAIN.into(),
+        kind: ab_catalog::OperationKind::Read,
+        changes: false,
+        scope: String::new(),
+        summary: String::new(),
+        detail: String::new(),
+        returns: String::new(),
+        arguments: schema.clone(),
+        example: example.clone(),
+        version: ab_catalog::VersionRule::None,
+        unavailable: None,
+        annotations: Value::Null,
+    };
+    check_object(&Value::Object(input.clone()), schema, "", &operation, tool).map_err(
+        |mut problem| {
+            problem.operation = None;
+            problem.message =
+                problem
+                    .message
+                    .replacen(&format!("{tool} has"), &format!("{tool} call has"), 1);
+            if matches!(tool, "apple_read" | "apple_change")
+                && problem
+                    .issue
+                    .as_deref()
+                    .is_some_and(|i| i.contains("is not an argument"))
+            {
+                problem.hint = Some("Put the operation's own arguments inside arguments.".into());
+            } else if let Some(hint) = problem.hint.as_mut() {
+                *hint = hint.replace(
+                    &format!("apple_describe with operation {tool} shows every argument."),
+                    "The tool's input schema lists every argument.",
+                );
+            }
+            problem
+        },
+    )
+}
+
+pub(crate) fn refused(principal: &Principal, what: &str, scope: &str, read_only: bool) -> Problem {
+    let agent = crate::mcp_registry::agent_id(principal);
+    if read_only {
+        return Problem::new("unauthorized", format!("{what} changes data and this agent is read-only"))
+            .problem("this agent is read-only")
+            .hint(format!("Tell the owner. The Mac's owner can allow changes by running: bridge agents update {agent} --level full"));
+    }
+    let mut grants = principal.grants.clone();
+    grants.push(scope.to_owned());
+    Problem::new("unauthorized", format!("this agent lacks a scope needed for {what}"))
+        .problem(format!("this agent does not have the {scope} scope"))
+        .expected(json!({ "scope": scope }))
+        .hint(format!(
+            "Do not retry. Tell the owner; they can grant it by running: bridge agents update {agent} --scope {}",
+            grants.join(",")
+        ))
+}
+
+const LISTINGS: &[(&str, &str)] = &[
+    ("cht", "messages_read with no arguments lists chats"),
+    ("msg", "messages_read"),
+    ("att", "messages_read, from a message's attachments"),
+    ("con", "contacts_find"),
+    ("evt", "calendar_events"),
+    ("cal", "apple_read calendar.calendars"),
+    ("rem", "apple_read reminders.items"),
+    ("lst", "apple_read reminders.lists"),
+    ("not", "apple_read notes.list or apple_search"),
+    ("fld", "apple_read notes.list"),
+    ("qry", "the read that returned it"),
+    ("dev", "apple_read usage.summary"),
+];
+
+pub(crate) fn not_found_hint(problem: Problem, input: &Value) -> Problem {
+    let id = [
+        "id",
+        "chat_id",
+        "calendar_id",
+        "list_id",
+        "folder_id",
+        "record_id",
+        "query_id",
+    ]
+    .iter()
+    .find_map(|key| {
+        input
+            .get(*key)
+            .or_else(|| input["args"].get(*key))
+            .and_then(Value::as_str)
+    });
+    let Some(id) = id else {
+        return problem;
+    };
+    let prefix = id.split('_').next().unwrap_or_default();
+    match LISTINGS.iter().find(|(p, _)| *p == prefix) {
+        Some((_, listing)) => problem.hint(format!(
+            "{id} is not visible. Get a current ID from {listing}; never make IDs up."
+        )),
+        None => problem,
+    }
+}
+
+fn zone() -> jiff::tz::TimeZone {
+    jiff::tz::TimeZone::get(&mac_zone()).unwrap_or(jiff::tz::TimeZone::UTC)
+}
+
+fn stamp(zoned: &jiff::Zoned) -> String {
+    zoned.strftime("%Y-%m-%dT%H:%M:%S%:z").to_string()
+}
+
+pub(crate) fn local_time(text: &str) -> Option<String> {
+    if text.len() <= 10 || text.parse::<jiff::Timestamp>().is_ok() {
+        return None;
+    }
+    let civil: jiff::civil::DateTime = text.trim_end_matches('Z').parse().ok()?;
+    civil.to_zoned(zone()).ok().map(|z| stamp(&z))
+}
+
+pub(crate) fn day_start(text: &str, next: bool) -> Option<String> {
+    if text.len() != 10 {
+        return None;
+    }
+    let mut date: jiff::civil::Date = text.parse().ok()?;
+    if next {
+        date = date.tomorrow().ok()?;
+    }
+    date.to_zoned(zone()).ok().map(|z| stamp(&z))
+}
+
+pub(crate) fn infer_collection(operation: &AgentOperation, arguments: &mut Map<String, Value>) {
+    if operation.name != "records.get" || arguments.contains_key("collection") {
+        return;
+    }
+    if let Some(collection) = arguments
+        .get("id")
+        .and_then(Value::as_str)
+        .and_then(crate::mcp_facade::collection_of)
+    {
+        arguments.insert("collection".to_owned(), json!(collection));
+    }
+}
+
+pub(crate) fn local_dates(operation: &AgentOperation, arguments: &mut Map<String, Value>) {
+    let properties = operation.arguments["properties"]
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
+    let keys: Vec<String> = arguments.keys().cloned().collect();
+    for key in keys {
+        let (target, local) = match key.strip_suffix("_local") {
+            Some(base) if properties.contains_key(base) && !properties.contains_key(&key) => {
+                (base.to_owned(), true)
+            }
+            _ => (key.clone(), false),
+        };
+        let description = properties
+            .get(&target)
+            .and_then(|p| p["description"].as_str())
+            .unwrap_or_default();
+        if !description.contains("RFC 3339") {
+            continue;
+        }
+        let Some(text) = arguments
+            .get(&key)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+        else {
+            continue;
+        };
+        let date_allowed = description.contains("YYYY-MM-DD")
+            && operation.kind != ab_catalog::OperationKind::Query;
+        let converted = local_time(&text).or_else(|| {
+            if date_allowed {
+                None
+            } else {
+                day_start(&text, false)
+            }
+        });
+        if local {
+            arguments.remove(&key);
+            arguments
+                .entry(target)
+                .or_insert_with(|| json!(converted.unwrap_or(text)));
+        } else if let Some(converted) = converted {
+            arguments.insert(key, json!(converted));
+        }
     }
 }

@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 mod mcp;
 mod mcp_check;
+mod mcp_compose;
 mod mcp_facade;
+mod mcp_find;
 mod mcp_guides;
 mod mcp_registry;
 #[cfg(test)]

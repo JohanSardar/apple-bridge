@@ -9,3 +9,20 @@ The facade calls the same `Service::invoke` as REST and the old tools, so access
 The agent-facing descriptions live in `ab-catalog/src/agent.json` beside the frozen descriptors, so `catalog.json` and OpenAPI do not change. Tests require a summary, return description, valid example and description for every parameter; command examples must pass the Mac's validator and the `expected_version` rule must match it. Tool and operation schemas use only portable keywords. Read-only agents are not shown write tools, and each scope adds only its own tool.
 
 Goldens: `mcp-json.json` and `mcp-sse.json` were re-recorded from the Rust frontdoor; `mcp-legacy-tools.json` freezes the old 160-tool list and `mcp-surface.json` freezes the instructions, tools and per-level and per-scope listings.
+
+## Revision: first use by a new agent
+
+`calendar_add` is the 14th tool. `apple_status` is optional; the instructions start from the shortcuts. Listing the tools and instructions costs about 4,200 tokens (o200k tokenizer on the recorded surface); the budget test fails above 6,000 at 3.5 bytes per token.
+
+`apple_describe` ranks by words, not substrings: stopwords are dropped, words are stemmed, a match in the operation's name counts more than one in its summary, and a synonym table maps everyday words (text, SMS, email, screen time, wifi, voicemail, file) to operations and to `records.query` collections that have no operation of their own, such as voicemail, Safari, phone calls and voice memos. A test requires the right operation in the top three for 40 plain requests.
+
+Three operations exist only in the frontdoor, beside `blobs.read` and `blobs.stage`, so `catalog.json` and OpenAPI do not change: `usage.summary` totals Screen Time per device and app from `usage.app_day`, and `calendar.calendars` lists calendars. `calendar.create_event` takes a calendar name; reminder changes take a title instead of `id` and `expected_version`. Names, calendars, lists and folders are matched ignoring case, accents and word order, and several matches return candidates.
+
+Listed tools check their input against their schema: unknown fields, wrong types, out-of-range numbers and unknown search sources are refused before anything runs. Text, note bodies and titles are passed exactly as given; only blank values are refused. Times without an offset are read in the Mac's time zone, dates are accepted where the Mac needs timestamps, and results add `start_local`, `end_local`, `due_local` and `sent_at_local`. A read outside the agent's scopes returns `unauthorized` naming the missing scope instead of an empty result.
+
+A change that partly happened, such as a message whose text was sent and one attachment failed, returns `partial` with each part's outcome and ID and tells the agent not to repeat it with any request ID. `failed` says nothing changed only for proven no-effect outcomes. Both are MCP errors (`isError`) and the audit route records the class.
+
+`apple_search` searches each requested source separately, reports `more` with a continuation per source and `complete`, and never reports no match when the search was cut short or a requested source was not searched.
+
+A Photos change keeps its result in memory for ten minutes, never in the command ledger, which still holds only a request digest. Repeating the call with the same request ID returns that result without running again; after a restart it returns `done` without the result. `apple_command_status` reports Photos changes. The goldens `mcp-json.json`, `mcp-sse.json` and `mcp-surface.json` were re-recorded; `mcp-legacy-tools.json` is unchanged.
+
