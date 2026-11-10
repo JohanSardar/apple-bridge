@@ -1056,11 +1056,13 @@ fn remote_on_and_enable_open_the_sign_in_link_without_a_terminal() -> Check {
     let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
     let bin = short_home()?;
     let opened = bin.path().join("opened");
-    fake_program(
-        bin.path(),
-        "open",
-        &format!("echo \"$1\" >> {}", opened.display()),
-    )?;
+    for launcher in ["open", "xdg-open"] {
+        fake_program(
+            bin.path(),
+            launcher,
+            &format!("echo \"$1\" >> {}", opened.display()),
+        )?;
+    }
     answer_remote_requests(
         home.path().to_path_buf(),
         "https://relay.example.test/sign-in",
