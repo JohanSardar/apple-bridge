@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import tomllib
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -97,7 +98,8 @@ def tasks(tag, sim_socket=None):
 
     def not_sent_to_ambiguous(grader, answer):
         sent = messages_with(grader, f'{tag} are you free')
-        named = 'Kovac' in answer and 'Novak' in answer
+        plain = unicodedata.normalize('NFKD', answer).encode('ascii', 'ignore').decode()
+        named = 'Kovac' in plain and 'Novak' in plain
         return not sent and named, {'sent': len(sent), 'named_both': named}
 
     def note_created(grader, answer):
