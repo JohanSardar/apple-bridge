@@ -200,7 +200,7 @@ fn mcp_legacy_json_and_sse_payloads() -> Result {
             if response.is_empty() {
                 continue;
             }
-            let payload = if response.starts_with("event:") {
+            let payload = if response.starts_with("event:") || response.starts_with("data:") {
                 response
                     .lines()
                     .find_map(|l| l.strip_prefix("data: "))

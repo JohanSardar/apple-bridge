@@ -1,5 +1,11 @@
 #![forbid(unsafe_code)]
 mod mcp;
+mod mcp_check;
+mod mcp_facade;
+mod mcp_guides;
+mod mcp_registry;
+#[cfg(test)]
+mod mcp_tests;
 pub mod web;
 pub mod web_connector;
 mod web_metadata;
@@ -53,6 +59,7 @@ pub struct Frontdoor {
     pub config: Config,
     pub audit: Arc<dyn Audit>,
     rates: Mutex<HashMap<String, (Instant, u32)>>,
+    mcp_failures: Mutex<HashMap<(String, String), Instant>>,
 }
 impl Frontdoor {
     pub fn new(service: Arc<Service>, config: Config, audit: Arc<dyn Audit>) -> Arc<Self> {
@@ -61,6 +68,7 @@ impl Frontdoor {
             config,
             audit,
             rates: Mutex::new(HashMap::new()),
+            mcp_failures: Mutex::new(HashMap::new()),
         })
     }
     pub fn router(self: Arc<Self>) -> Router {
@@ -90,6 +98,36 @@ impl Frontdoor {
             .fallback(|| async { problem(Code::NotFound.into()) })
             .layer(middleware::from_fn_with_state(self.clone(), guard))
             .with_state(self)
+    }
+    pub(crate) fn observe_mcp(
+        &self,
+        principal: &Principal,
+        tool: &str,
+        operation: Option<&str>,
+        failure: Option<&str>,
+    ) {
+        let operation = operation.unwrap_or(tool).to_owned();
+        let key = (principal.id.clone(), operation.clone());
+        let recovered = self.mcp_failures.lock().is_ok_and(|mut failures| {
+            failures.retain(|_, at| at.elapsed() < Duration::from_secs(300));
+            if failure.is_some() {
+                failures.insert(key, Instant::now());
+                false
+            } else {
+                failures.remove(&key).is_some()
+            }
+        });
+        let class = failure.unwrap_or("ok");
+        let mut route = format!("tools/call {tool} {operation} {class}");
+        if recovered {
+            route.push_str(" recovered");
+        }
+        let _ = self.audit.record(AuditEntry {
+            principal: principal.id.clone(),
+            method: "MCP".into(),
+            route,
+            status: if failure.is_some() { 422 } else { 200 },
+        });
     }
     pub fn encode(&self, raw: &[u8]) -> Result<Vec<u8>, Error> {
         self.service.codec.json(raw)

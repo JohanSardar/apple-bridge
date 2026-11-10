@@ -25,6 +25,7 @@ thiserror.workspace = true
 tower = { version = "0.5", features = ["util"] }
 base64 = "0.22"
 futures-util = "0.3"
+ulid = "1"
 
 [dev-dependencies]
 tempfile = "3"

@@ -11,6 +11,26 @@ pub const SKILLS: &[(&str, &str, &str)] = &[
         "How to set up Apple Bridge on this Mac and connect an agent",
         include_str!("../../skills/setup.md"),
     ),
+    (
+        "messages",
+        "Reading chats, sending messages and attachments",
+        include_str!("../../skills/messages.md"),
+    ),
+    (
+        "reminders-calendar",
+        "Reminders and calendar events, dates and versions",
+        include_str!("../../skills/reminders-calendar.md"),
+    ),
+    (
+        "photos",
+        "Finding, viewing, downloading and organizing photos",
+        include_str!("../../skills/photos.md"),
+    ),
+    (
+        "files",
+        "Files, documents and moving bytes through MCP",
+        include_str!("../../skills/files.md"),
+    ),
 ];
 
 #[allow(clippy::unnecessary_wraps)]
