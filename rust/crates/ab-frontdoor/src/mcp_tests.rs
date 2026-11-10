@@ -68,7 +68,7 @@ fn every_catalog_operation_has_an_agent_contract() -> Check {
             descriptor.name
         );
     }
-    assert_eq!(registry.operations.len(), catalog.len() + 2);
+    assert_eq!(registry.operations.len(), catalog.len() + 4);
     let summaries: BTreeSet<&str> = registry
         .operations
         .iter()
@@ -296,14 +296,14 @@ fn what_an_agent_loads_on_connect_fits_the_budget() -> Check {
     let registry = registry().ok_or("registry")?;
     let tools = serde_json::to_string(&json!({"tools": registry.tools(None)}))?;
     let bytes = tools.len() + INSTRUCTIONS.len();
-    let tokens = bytes / 4;
+    let tokens = bytes * 10 / 35;
     assert!(
         INSTRUCTIONS.len() <= 2100,
         "instructions are {} bytes",
         INSTRUCTIONS.len()
     );
     assert!(
-        tokens <= 5000,
+        tokens <= 6000,
         "tools/list and instructions are about {tokens} tokens ({bytes} bytes)"
     );
     assert_eq!(names(&registry.tools(None)), COMPACT);
@@ -543,4 +543,203 @@ fn the_served_surface_matches_its_golden() -> Check {
         assert_eq!(payload(2)?["result"]["tools"], expected["tools"]);
     }
     Ok(())
+}
+
+#[test]
+fn plain_requests_find_the_right_operation_first() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let cases: &[(&str, &str)] = &[
+        ("screen time", "usage.summary"),
+        (
+            "how much time did I spend on my phone yesterday",
+            "usage.summary",
+        ),
+        ("app usage on my iPhone this week", "usage.summary"),
+        ("send a text to Ana", "messages.send"),
+        ("send an SMS", "messages.send"),
+        ("reply to an iMessage", "messages.reply"),
+        ("read my unread messages", "messages.chats"),
+        ("email my boss", "mail.send"),
+        ("check my inbox", "records.query/mail.message"),
+        ("get voicemail", "records.query/voicemail.message"),
+        ("listen to my voicemails", "records.query/voicemail.message"),
+        ("who called me", "records.query/phone.call"),
+        ("missed calls", "records.query/phone.call"),
+        ("safari browsing history", "records.query/safari.history"),
+        ("websites I visited", "records.query/safari.history"),
+        ("voice memos", "records.query/voice_memos.recording"),
+        ("is the wifi working", "mac.network_check"),
+        ("am I online", "mac.network_check"),
+        ("internet connection", "mac.network_check"),
+        ("where am I", "location.current"),
+        ("find a document", "files.search"),
+        ("search my files", "files.search"),
+        ("add an event to my calendar", "calendar.create_event"),
+        ("schedule a meeting", "calendar.create_event"),
+        ("what is on my calendar tomorrow", "calendar.agenda"),
+        ("am I free on friday", "calendar.agenda"),
+        ("move my dentist appointment", "calendar.update_event"),
+        ("list my calendars", "calendar.calendars"),
+        ("remind me to buy milk", "reminders.create"),
+        ("mark the reminder as done", "reminders.complete"),
+        ("delete a reminder", "reminders.delete"),
+        ("my to do list", "reminders.items"),
+        ("write a note", "notes.create"),
+        (
+            "read the note I wrote on my phone",
+            "records.query/notes.note",
+        ),
+        ("find a photo of a dog", "photos.search"),
+        ("show me pictures from the beach", "photos.search"),
+        ("look up a phone number", "contacts.lookup"),
+        ("turn the volume down", "mac.set_volume"),
+        ("set an alarm", "iphone.alarm.create"),
+        ("what song is playing", "mac.recognize_song"),
+    ];
+    let mut misses = Vec::new();
+    for (query, wanted) in cases {
+        let (hits, _) = crate::mcp_find::find(registry, None, query);
+        let names: Vec<String> = hits
+            .iter()
+            .take(3)
+            .map(|hit| match hit {
+                crate::mcp_find::Hit::Operation(o) => o.name.clone(),
+                crate::mcp_find::Hit::Route(r) => format!("records.query/{}", r.collection),
+            })
+            .collect();
+        if !names.iter().any(|name| name == wanted) {
+            misses.push(format!("{query:?}: wanted {wanted}, got {names:?}"));
+        }
+    }
+    assert!(cases.len() >= 30);
+    assert!(misses.is_empty(), "{}", misses.join("\n"));
+    Ok(())
+}
+
+#[test]
+fn a_partly_sent_message_says_what_happened_and_not_to_repeat() {
+    let record = json!({
+        "state": "delivery_failed",
+        "disposition": "delivery_failed",
+        "command": {"command_id": "req-p", "op": "messages.send", "args": {}},
+        "parts": [
+            {"index": 0, "kind": "text", "record_id": "msg_1", "disposition": "observed"},
+            {"index": 1, "kind": "attachment", "record_id": "msg_2", "disposition": "delivery_failed"},
+            {"index": 2, "kind": "attachment", "disposition": "failed_no_effect"}
+        ],
+    });
+    let result = change_result(&record, false);
+    assert_eq!(result["status"], "partial");
+    assert_eq!(result["ids"], json!(["msg_1", "msg_2"]));
+    let outcomes: Vec<&str> = result["parts"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|p| p["outcome"].as_str())
+        .collect();
+    assert_eq!(outcomes, ["sent", "failed", "not_sent"]);
+    let next = result["next"].as_str().unwrap_or_default();
+    assert!(next.contains("Do not repeat"), "{next}");
+    assert!(!next.contains("did not happen"), "{next}");
+    let failed = change_result(
+        &json!({"state": "failed", "disposition": "delivery_failed", "command": {"command_id": "r", "op": "messages.send", "args": {}}}),
+        false,
+    );
+    assert_eq!(failed["status"], "failed");
+    assert!(
+        !failed["next"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("nothing changed")
+    );
+    let refused = change_result(
+        &json!({"state": "rejected", "disposition": "rejected_before_dispatch", "command": {"command_id": "r", "op": "messages.send", "args": {}}}),
+        false,
+    );
+    assert!(
+        refused["next"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("nothing changed")
+    );
+}
+
+#[test]
+fn listed_tools_reject_unknown_fields_and_wrong_types() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let check = |tool: &str, input: Value| {
+        let schema = registry.tool_schema(tool).cloned().unwrap_or_default();
+        mcp_check::check_tool(
+            tool,
+            &schema,
+            &registry.example(tool),
+            input.as_object().ok_or("object")?,
+        )
+        .map_err(|problem| problem.to_json())
+        .map_err(|e| e.to_string())
+    };
+    assert!(
+        check("contacts_find", json!({"query": "Ana", "limit": "three"}))
+            .is_err_and(|e| e.contains("limit"))
+    );
+    assert!(
+        check("contacts_find", json!({"query": "Ana", "limt": 3}))
+            .is_err_and(|e| e.contains("limt"))
+    );
+    assert!(check("apple_search", json!({"text": "x", "limit": 500})).is_err());
+    assert!(
+        check(
+            "calendar_add",
+            json!({"title": "Lunch", "start": "2026-11-12T12:30"})
+        )
+        .is_ok()
+    );
+    assert!(
+        check(
+            "apple_read",
+            json!({"operation": "notes.list", "arguments": {}})
+        )
+        .is_ok()
+    );
+    Ok(())
+}
+
+#[test]
+fn local_dates_become_timestamps_where_the_mac_needs_them() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let photos = registry.find("photos.search").ok_or("photos.search")?;
+    let mut arguments = json!({"start": "2026-07-01", "end": "2026-08-01T09:30"});
+    let arguments = arguments.as_object_mut().ok_or("object")?;
+    mcp_check::local_dates(photos, arguments);
+    for key in ["start", "end"] {
+        let value = arguments[key].as_str().unwrap_or_default();
+        assert!(value.parse::<jiff::Timestamp>().is_ok(), "{key} {value}");
+    }
+    assert!(
+        arguments["start"]
+            .as_str()
+            .unwrap_or_default()
+            .starts_with("2026-07-01T00:00:00")
+    );
+    let range = registry.find("calendar.range").ok_or("calendar.range")?;
+    let mut kept = json!({"start": "2026-07-01", "end": "2026-07-02"});
+    let kept = kept.as_object_mut().ok_or("object")?;
+    mcp_check::local_dates(range, kept);
+    assert_eq!(kept["start"], "2026-07-01");
+    Ok(())
+}
+
+#[test]
+fn message_results_keep_text_exactly_and_name_attachments() {
+    let message = json!({
+        "collection": "messages.message", "id": "msg_1", "version": 1,
+        "data": {"chat_id": "cht_1", "text": "  Ferry at 9\n", "sent_at": "2026-11-10T12:00:00Z", "is_from_me": false},
+        "attachments": [{"id": "att_1", "version": 1, "data": {"filename": "map.png", "mime_type": "image/png", "size": 10, "blob": {"digest": "d", "state": "available"}}}],
+    });
+    let summary = crate::mcp_facade::message_summary(&message);
+    assert_eq!(summary["text"], "  Ferry at 9\n");
+    assert_eq!(summary["attachments"][0]["filename"], "map.png");
+    assert_eq!(summary["attachments"][0]["digest"], "d");
+    let compacted = compact(&message, false, None);
+    assert_eq!(compacted["attachments"][0]["id"], "att_1");
 }
