@@ -1,3 +1,4 @@
+import fcntl
 import base64
 import hashlib
 import http.client
@@ -127,7 +128,7 @@ class CloudReview(unittest.TestCase):
         finally:
             connection.close()
 
-    def connect(self):
+    def connect(self, exchanged=200):
         status, client = self.request('POST', '/oauth/register', json.dumps({
             'client_name': 'Review fixture', 'redirect_uris': [CALLBACK]}))
         self.assertEqual(status, 201)
@@ -149,7 +150,7 @@ class CloudReview(unittest.TestCase):
         status, tokens = self.token({
             'grant_type': 'authorization_code', 'client_id': client['client_id'],
             'redirect_uri': CALLBACK, 'code': code, 'code_verifier': verifier})
-        self.assertEqual(status, 200)
+        self.assertEqual(status, exchanged)
         return client['client_id'], tokens
 
     def token(self, fields):
@@ -186,6 +187,72 @@ class CloudReview(unittest.TestCase):
         self.assertNotEqual(status, 429,
                             f'a different public client was locked out: {body}')
 
+
+    def test_source_change_revokes_refresh_and_access(self):
+        client, tokens = self.connect()
+        self.enable("calendar")
+        read, _ = self.request("POST", "/v1/op/messages.chats", "{}",
+                               token=tokens["access_token"])
+        refreshed, _ = self.token({
+            "grant_type": "refresh_token", "client_id": client,
+            "refresh_token": tokens["refresh_token"]})
+        print(json.dumps({"normal_read": read, "normal_refresh": refreshed}))
+        self.assertIn(read, (401, 403))
+        self.assertEqual(refreshed, 400)
+
+    def test_interrupted_narrowing_retries_revocation(self):
+        client, tokens = self.connect()
+        with (self.home / "credentials.lock").open("r+b") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            child = subprocess.Popen([
+                BINARY, "remote", "enable", "--via", "cloud",
+                "--sources", "calendar", "--no-open", "--json",
+                "--home", str(self.home)], env=self.env,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                wait(lambda: json.loads(
+                    (self.home / "remote/config.json").read_text()
+                ).get("cloud_sources") == ["calendar"])
+                self.assertIsNone(child.poll())
+            finally:
+                child.kill()
+                child.wait(timeout=10)
+                fcntl.flock(lock, fcntl.LOCK_UN)
+        self.enable("calendar")
+        status, metadata = self.request(
+            "GET", "/.well-known/oauth-protected-resource/mcp")
+        self.assertEqual(status, 200)
+        self.assertEqual(metadata["scopes_supported"],
+                         ["calendar:read", "calendar:write"])
+        read, _ = self.request("POST", "/v1/op/messages.chats", "{}",
+                               token=tokens["access_token"])
+        refreshed, _ = self.token({
+            "grant_type": "refresh_token", "client_id": client,
+            "refresh_token": tokens["refresh_token"]})
+        print(json.dumps({"interrupted_then_retried_read": read,
+                          "interrupted_then_retried_refresh": refreshed}))
+        self.assertIn(read, (401, 403),
+                      "a successful retry left the removed source readable")
+        self.assertEqual(refreshed, 400)
+
+    def test_prechange_pending_request_cannot_restore_removed_source(self):
+        original = self.bridge
+
+        def narrow_then_allow(*args):
+            if args[:2] == ("connectors", "allow"):
+                self.enable("calendar")
+            return original(*args)
+
+        self.bridge = narrow_then_allow
+        _, refused = self.connect(exchanged=400)
+        status, metadata = self.request(
+            "GET", "/.well-known/oauth-protected-resource/mcp")
+        self.assertEqual(status, 200)
+        self.assertEqual(metadata["scopes_supported"],
+                         ["calendar:read", "calendar:write"])
+        print(json.dumps({"prechange_pending_exchange": refused}))
+        self.assertNotIn("access_token", refused,
+                         "an old pending request restored a removed cloud source")
 
 if __name__ == '__main__':
     unittest.main()

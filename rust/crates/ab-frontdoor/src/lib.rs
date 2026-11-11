@@ -64,6 +64,7 @@ pub struct Frontdoor {
     pub audit: Arc<dyn Audit>,
     rates: Mutex<HashMap<String, (Instant, u32)>>,
     mcp_failures: Mutex<HashMap<(String, String), Instant>>,
+    sources: std::sync::OnceLock<std::collections::BTreeSet<String>>,
 }
 impl Frontdoor {
     pub fn new(service: Arc<Service>, config: Config, audit: Arc<dyn Audit>) -> Arc<Self> {
@@ -73,6 +74,19 @@ impl Frontdoor {
             audit,
             rates: Mutex::new(HashMap::new()),
             mcp_failures: Mutex::new(HashMap::new()),
+            sources: std::sync::OnceLock::new(),
+        })
+    }
+    pub fn limit_sources(&self, sources: impl IntoIterator<Item = String>) {
+        let _ = self.sources.set(sources.into_iter().collect());
+    }
+    fn exceeds_sources(&self, grants: &[String]) -> bool {
+        self.sources.get().is_some_and(|sources| {
+            grants.iter().any(|grant| {
+                grant
+                    .split_once(':')
+                    .is_none_or(|(source, _)| !sources.contains(source))
+            })
         })
     }
     pub fn router(self: Arc<Self>) -> Router {
@@ -221,6 +235,7 @@ async fn guard(
         "http"
     };
     if (frontdoor.config.public && !principal.remote)
+        || frontdoor.exceeds_sources(&principal.grants)
         || (!principal.resource.is_empty()
             && principal.resource != format!("{scheme}://{}/mcp", host.unwrap_or_default()))
     {

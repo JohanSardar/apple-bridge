@@ -89,10 +89,12 @@ pub(crate) fn token(web: &Web, body: &[u8], origin: &str) -> Response {
         refresh_token: field(&form, "refresh_token").into(),
         scope: field(&form, "scope").into(),
     };
-    web.authority.exchange_oauth(&exchange).map_or_else(
-        |_| respond(400, &json!({"error": "invalid_grant"})),
-        |tokens| respond(200, &tokens),
-    )
+    match web.authority.exchange_oauth(&exchange) {
+        Ok(tokens) if tokens.scope.split_whitespace().all(|scope| scope == OFFLINE_ACCESS || web.offers(scope)) => {
+            respond(200, &tokens)
+        }
+        _ => respond(400, &json!({"error": "invalid_grant"})),
+    }
 }
 
 fn requested_scopes(web: &Web, query: &Query) -> Vec<Grant> {

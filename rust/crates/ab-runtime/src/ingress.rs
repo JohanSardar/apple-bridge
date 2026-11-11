@@ -96,6 +96,7 @@ impl App {
             self.connectors.clone(),
         );
         if !sources.is_empty() {
+            frontdoor.limit_sources(sources.clone());
             web.limit_sources(sources);
         }
         web.set_route(&route);
