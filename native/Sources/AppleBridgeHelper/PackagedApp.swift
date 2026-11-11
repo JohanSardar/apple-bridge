@@ -12,7 +12,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
     var connectorLabExecutable: String?
     var connectorTask: Task<Void, Never>?
     let approvals = ApprovalModel()
-    let approvalPanel = FloatingPanel(size: NSSize(width: 340, height: 360))
+    let approvalPanel = FloatingPanel(size: NSSize(width: 260, height: 240))
 
     nonisolated static func connectorCommand(_ arguments: [String], labExecutable: String?) -> Data? {
         guard let path = try? TrustedChild.bridge(labExecutable: labExecutable) else { return nil }
@@ -62,8 +62,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
 
     func present() {
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+        if let fitting = approvalPanel.contentView?.fittingSize { approvalPanel.setContentSize(fitting) }
         let size = approvalPanel.frame.size
-        approvalPanel.setFrameOrigin(NSPoint(x: screen.maxX - size.width - 24, y: screen.midY - size.height / 2))
+        approvalPanel.setFrameOrigin(NSPoint(x: screen.midX - size.width / 2, y: screen.maxY - size.height - screen.height * 0.16))
         approvalPanel.alphaValue = 0
         approvalPanel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup({ context in
@@ -77,7 +78,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
             let result = await Task.detached { Self.connectorCommand([allow ? "allow" : "deny", "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
             approvals.decided = request.client_name
             approvals.request = nil
-            approvals.outcome = result == nil ? "That request expired. Start again from the app." : allow ? "\(request.client_name) is connected" : "Denied"
+            approvals.outcome = result == nil ? "That request expired. Start again from the app." : allow ? "\(request.client_name) is connected" : "Not allowed"
             try? await Task.sleep(for: .seconds(1.6))
             if approvals.request == nil { approvalPanel.orderOut(nil) }
         }

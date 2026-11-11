@@ -36,56 +36,44 @@ struct ApprovalView: View {
     @ObservedObject var model: ApprovalModel
 
     var body: some View {
-        PanelCard(calm: true) {
-            VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    tile
-                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 15, weight: .semibold)).foregroundStyle(.secondary)
-                    Image(nsImage: GuideController.appIcon).resizable().frame(width: 58, height: 58)
+        VStack(spacing: 0) {
+            Image(nsImage: GuideController.appIcon).resizable().interpolation(.high).frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 14.5, style: .continuous))
+            if let request = model.request {
+                Text("Allow \u{201C}\(request.client_name)\u{201D} to use your Mac?")
+                    .font(.system(size: 13, weight: .bold)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 14)
+                Text(detail(request))
+                    .font(.system(size: 11)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 6)
+                if request.show_code == true {
+                    Text("Allow only if your browser shows").font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 12)
+                    Text(request.code).font(.system(size: 22, weight: .semibold)).monospacedDigit().tracking(3).padding(.top, 2)
                 }
-                .padding(.top, 26)
-                if let request = model.request {
-                    Text("\(request.client_name) wants to use Apple Bridge").font(.system(size: 19, weight: .bold)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(.top, 16)
-                    Text(request.from).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.top, 4)
-                    if let access = request.access, !access.isEmpty {
-                        Text(access).font(.system(size: 12)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                            .padding(10).frame(maxWidth: .infinity)
-                            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.06)))
-                            .padding(.top, 12)
-                    }
-                    if request.show_code == true {
-                        VStack(spacing: 2) {
-                            Text("Your browser should show").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                            Text(request.code).font(.system(size: 26, weight: .bold, design: .rounded)).tracking(4)
-                        }
-                        .padding(.top, 10)
-                    }
-                    if !model.warning.isEmpty {
-                        Label(model.warning, systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange).padding(.top, 8)
-                    }
-                    Spacer(minLength: 12)
-                    HStack(spacing: 10) {
-                        Button("Deny") { model.decide(request, false) }.buttonStyle(PillButtonStyle())
-                        Button("Allow") { model.decide(request, true) }.buttonStyle(PillButtonStyle(prominent: true))
-                    }
-                    .padding(.bottom, 24)
-                } else {
-                    if model.outcome.hasSuffix("is connected") { AllowedMark().padding(.top, 14) }
-                    Text(model.outcome.isEmpty ? "Connected" : model.outcome).font(.system(size: 19, weight: .bold)).multilineTextAlignment(.center).padding(.top, 10)
-                    Spacer(minLength: 12)
+                if !model.warning.isEmpty {
+                    Text(model.warning).font(.system(size: 11)).foregroundStyle(Color(nsColor: .systemOrange)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
+                }
+                HStack(spacing: 8) {
+                    Button("Don\u{2019}t Allow") { model.decide(request, false) }.buttonStyle(AlertButtonStyle())
+                    Button("Allow") { model.decide(request, true) }.buttonStyle(AlertButtonStyle(prominent: true))
+                }
+                .padding(.top, 18)
+            } else {
+                let connected = model.outcome.hasSuffix("is connected")
+                Text(model.outcome.isEmpty ? "Connected" : model.outcome)
+                    .font(.system(size: 13, weight: .bold)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 14)
+                if connected {
+                    Label("Allowed", systemImage: "checkmark.circle.fill").font(.system(size: 11)).foregroundStyle(Color(nsColor: .systemGreen)).padding(.top, 6)
                 }
             }
-            .padding(.horizontal, 22)
-            .frame(width: 340, height: model.request?.show_code == true ? 360 : 312)
         }
+        .padding(EdgeInsets(top: 20, leading: 16, bottom: 16, trailing: 16))
+        .frame(width: 260)
+        .background(AlertBackground())
     }
 
-    var tile: some View {
-        let name = model.request?.client_name ?? model.decided
-        let initial = name.first(where: { $0.isLetter || $0.isNumber }).map { String($0).uppercased() } ?? "?"
-        return RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(LinearGradient(colors: [Palette.sky, Palette.lagoon], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .frame(width: 58, height: 58)
-            .overlay(Text(initial).font(.system(size: 26, weight: .bold)).foregroundStyle(.white))
+    func detail(_ request: ConnectorRequest) -> String {
+        let access = request.access.map { $0.hasSuffix(".") ? $0 : $0 + "." } ?? ""
+        return [access, request.from + "."].filter { $0.count > 1 }.joined(separator: "\n")
     }
 }

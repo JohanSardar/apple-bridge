@@ -82,6 +82,27 @@ struct PillButtonStyle: ButtonStyle {
     }
 }
 
+struct AlertButtonStyle: ButtonStyle {
+    var prominent = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: prominent ? .semibold : .regular))
+            .frame(maxWidth: .infinity, minHeight: 28)
+            .foregroundStyle(prominent ? Color.white : Color(nsColor: .labelColor))
+            .background(Capsule().fill(prominent ? Color(nsColor: .controlAccentColor) : Color.primary.opacity(0.1)))
+            .brightness(configuration.isPressed ? -0.08 : 0)
+            .contentShape(Capsule())
+    }
+}
+
+struct AlertBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
+    }
+}
+
 struct AllowedMark: View {
     @State private var shown = false
     var body: some View {

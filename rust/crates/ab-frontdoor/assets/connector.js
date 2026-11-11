@@ -11,7 +11,7 @@ const match = document.querySelector('#approval-match');
 const say = (heading, text, kind) => {
   if (heading) title.textContent = heading;
   statusLine.textContent = text;
-  panel.className = 'wait' + (kind ? ' ' + kind : '');
+  panel.className = 'next' + (kind ? ' ' + kind : '');
 };
 const wait = ms => new Promise(done => setTimeout(done, ms));
 const reveal = (code, needed) => {
@@ -36,7 +36,8 @@ async function requestApproval() {
     if (result.redirect) {
       match.hidden = true;
       const denied = new URL(result.redirect).searchParams.has('error');
-      say(denied ? 'Not connected' : 'Connected', denied ? 'You chose Deny. Returning to the app…' : 'Returning to the app…', denied ? 'stopped' : 'done');
+      const name = panel.dataset.client || 'the app';
+      say(denied ? 'Not allowed.' : 'Allowed.', denied ? name + ' didn’t get access. Going back…' : 'Going back to ' + name + '…', denied ? 'stopped' : 'done');
       await wait(900);
       location.assign(result.redirect);
       return;
@@ -46,5 +47,5 @@ async function requestApproval() {
 }
 if (panel) requestApproval().catch(error => {
   match.hidden = true;
-  say('Something went wrong', error.message, 'stopped');
+  say('This didn’t go through.', error.message, 'stopped');
 });
