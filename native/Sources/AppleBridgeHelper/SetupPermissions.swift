@@ -21,7 +21,7 @@ enum SetupProbe {
     }
 
     static func run() -> Int32 {
-        let report = ["full_disk_access": fullDiskAccess(), "screen_recording": CGPreflightScreenCaptureAccess() ? "granted" : "denied"]
+        let report = ["full_disk_access": fullDiskAccess(), "screen_recording": CGPreflightScreenCaptureAccess() ? "granted" : "denied", "accessibility": AXIsProcessTrusted() ? "granted" : "denied"]
         guard let data = try? JSONSerialization.data(withJSONObject: report) else { return 1 }
         FileHandle.standardOutput.write(data)
         return 0
@@ -77,6 +77,7 @@ final class SetupPermissions {
         let fresh = await SetupProbe.fresh()
         result["full_disk_access"] = fresh["full_disk_access"] ?? SetupProbe.fullDiskAccess()
         if fresh["screen_recording"] == "granted" { result["screen_recording"] = "granted" }
+        if let accessibility = fresh["accessibility"] { result["accessibility"] = accessibility }
         for permission in SetupPermission.all {
             guard let bundle = permission.bundle else { continue }
             let code = await Task.detached {
