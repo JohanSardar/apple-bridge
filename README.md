@@ -27,10 +27,10 @@ Paste this page's link into Claude Code and say "download this and turn on MCP s
 
 **Agents, read this.** Do every step yourself. Never give the person commands, links, codes or steps to follow, and never click Allow or type a password for them. While you wait, say only "Click Allow when your Mac asks." Run `bridge skills get setup` after installing for the full version.
 
-On the Mac (Claude Code, Codex), run these in order and wait for each to finish. Use the installer even if you were given a branch or fork link; never build from source for the person:
+On the Mac (Claude Code, Codex), run these in order and wait for each to finish. Download this repository (any branch or fork link works) and run its installer; never build from source for the person:
 
 ```sh
-curl -fsSL https://eilmer.si/applebridge/install | sh
+sh docs/install                                  # from this repository; or: curl -fsSL https://eilmer.si/applebridge/install | sh
 ~/.local/bin/bridge up
 ~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
 ~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
