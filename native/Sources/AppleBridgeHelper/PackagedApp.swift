@@ -205,7 +205,6 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) { setup?.stop() }
 
     @objc func reopenSetup() {
-        setup?.state.step = 0
         setup?.start()
         window?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
