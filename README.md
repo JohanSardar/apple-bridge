@@ -41,7 +41,7 @@ Then use Apple Bridge right away to answer something real, such as the person's 
 
 In the cloud (Grok Bot), with your Tailscale plugin connected:
 
-1. Find the Mac: run `tailscale status --json` and, for each macOS peer, `GET https://<its DNSName>/connect`. The one answering `"apple_bridge": true` is it. If none answers, Apple Bridge isn't on that Mac yet; say "Ask Claude on your Mac to set up Apple Bridge first."
+1. Find the Mac: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443). The one answering `"apple_bridge": true` is it. If none answers, Apple Bridge isn't on that Mac yet; say "Ask Claude on your Mac to set up Apple Bridge first."
 2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
 3. Add the `mcp` address as your MCP server with the header `Authorization: Bearer <token>`, then use it to answer.
 

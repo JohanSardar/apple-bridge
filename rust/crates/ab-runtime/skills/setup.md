@@ -20,7 +20,7 @@ bridge stats --wait              # counts per source as each one finishes
 
 `bridge link` registers the server, then the owner allows it in the window on the Mac. A code shows only when two requests are open at once; then the owner checks that the browser shows the same code.
 
-`bridge tailscale` installs and signs in to Tailscale, and `--keep-awake` asks macOS once for the owner's password or Touch ID so the Mac stays awake with the lid closed. Cloud agents such as Grok Bot then find the Mac on the owner's Tailscale network at `https://<mac>/connect`, ask, and get a key once the owner clicks Allow.
+`bridge tailscale` installs and signs in to Tailscale, and `--keep-awake` asks macOS once for the owner's password or Touch ID so the Mac stays awake with the lid closed. Cloud agents such as Grok Bot then find the Mac on the owner's Tailscale network at `https://<mac>:8443/connect` (or 9443, 4443), ask, and get a key once the owner clicks Allow.
 
 ## Checks
 

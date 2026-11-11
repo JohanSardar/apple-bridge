@@ -26,6 +26,9 @@ struct AppleBridgeHelper {
         #endif
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
+        if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "keep-awake" {
+            exit(KeepAwake.set(CommandLine.arguments[2] == "on") ? 0 : 1)
+        }
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
             let applicationLifecycle = arguments.isEmpty || ["intent-host", "connector-approvals", "permission-guide"].contains(arguments[0])

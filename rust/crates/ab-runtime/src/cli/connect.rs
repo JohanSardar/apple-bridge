@@ -278,37 +278,61 @@ async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
         })
 }
 
-fn keep_awake(on: bool) -> Outcome {
-    if !cfg!(target_os = "macos") {
+fn sleep_disabled() -> bool {
+    Command::new("/usr/bin/pmset")
+        .arg("-g")
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .is_ok_and(|output| {
+            String::from_utf8_lossy(&output.stdout).lines().any(|line| {
+                let mut words = line.split_whitespace();
+                words.next() == Some("SleepDisabled") && words.next() == Some("1")
+            })
+        })
+}
+
+fn keep_awake(home: &Path, on: bool) -> Outcome {
+    if !cfg!(target_os = "macos") || sleep_disabled() == on {
         return Ok(());
     }
-    let (value, reason) = if on {
-        (
-            "1",
-            "Apple Bridge wants to keep this Mac awake with the lid closed, so your agents can still reach it.",
-        )
-    } else {
-        ("0", "Apple Bridge wants to let this Mac sleep again.")
-    };
-    let script = format!(
-        "do shell script \"/usr/bin/pmset -a disablesleep {value}\" with prompt \"{reason}\" with administrator privileges"
-    );
-    if quiet("/usr/bin/osascript", &["-e", &script]) {
-        Ok(())
-    } else {
-        Err(Failure::new(
-            Reason::PermissionDenied,
-            "The Mac can still sleep with the lid closed.",
-        )
-        .sentence("macOS didn't get your password or Touch ID.")
-        .then("Try again", ["bridge", "tailscale", "--keep-awake"]))
+    let saved = crate::Config::load(home)
+        .map(|config| config.helper_app)
+        .unwrap_or_default();
+    let helper = crate::bundle::helper_app(&saved, std::env::current_exe().ok().as_deref());
+    let _ = Command::new("/usr/bin/open")
+        .args(["-n", "-W", "-a", &helper, "--args", "keep-awake"])
+        .arg(if on { "on" } else { "off" })
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    if sleep_disabled() == on {
+        return Ok(());
     }
+    let failure = Failure::new(
+        Reason::PermissionDenied,
+        if on {
+            "The Mac can still sleep with the lid closed."
+        } else {
+            "The Mac still stays awake with the lid closed."
+        },
+    )
+    .sentence("macOS didn't get your password or Touch ID.");
+    Err(if on {
+        failure.then("Try again", ["bridge", "tailscale", "--keep-awake"])
+    } else {
+        failure.then(
+            "Try again",
+            ["bridge", "tailscale", "--off", "--keep-awake"],
+        )
+    })
 }
 
 pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     if args.off {
         if args.keep_awake {
-            keep_awake(false)?;
+            keep_awake(home, false)?;
         }
         let disable = super::tree::RemoteDisableArgs {
             via: Some("tailnet".into()),
@@ -320,7 +344,7 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     }
     let url = turn_on(home, "tailnet").await?;
     if args.keep_awake {
-        keep_awake(true)?;
+        keep_awake(home, true)?;
         ui::done("Awake", "with the lid closed while Apple Bridge is on");
     }
     let mcp = format!("{url}/mcp");
