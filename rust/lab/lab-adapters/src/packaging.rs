@@ -3,30 +3,20 @@ use lab_world::{Error, Result, World};
 use serde_json::Value;
 use std::{fs, process::Command};
 
-const SETUP: [&str; 23] = [
+const SETUP: [&str; 13] = [
     "CATALOG",
+    "ORDER",
     "FRESH",
-    "COMPLETE",
-    "ALL-SKIPPED",
-    "PERSIST",
-    "REOPEN",
-    "UNKNOWN",
-    "LIMITED",
-    "NO-PROMPTS",
-    "SYNC",
-    "ONLY-CLICKED-ROWS",
-    "REMOTE",
-    "QR",
-    "CONNECT",
-    "FLOW",
-    "EXPIRED-QR",
-    "PAIR-FAILURE",
-    "CONNECT-FAILURE",
+    "ALREADY-ALLOWED",
     "DENIED-CONTINUE",
+    "CONFIRMING",
+    "PASSWORD-CANCEL",
+    "PASSWORD-OK",
     "MODEL-RESUME",
-    "REVOKED",
-    "STALE",
-    "CLOSE",
+    "RESUME-AFTER-QUIT",
+    "COMPLETE",
+    "FINISHED-NOT-RESUMED",
+    "ALL-SKIPPED",
 ];
 const RELEASE: [&str; 4] = ["APPCAST", "VERSION", "SIGNATURE", "UNINSTALL"];
 

@@ -32,6 +32,9 @@ struct Delegation<'a> {
     iat: i64,
 }
 impl Authority {
+    pub fn home(&self) -> &Path {
+        &self.home
+    }
     pub fn open(home: impl AsRef<Path>) -> Result<Self, Error> {
         let home = home.as_ref().to_path_buf();
         let result = Self::open_inner(&home);

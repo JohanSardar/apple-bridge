@@ -23,6 +23,26 @@ struct Server {
     host: String,
 }
 impl Server {
+    fn tailnet() -> Self {
+        let home = tempfile::tempdir().unwrap();
+        let authority = Arc::new(Authority::open(home.path()).unwrap());
+        let address: SocketAddr = "127.0.0.1:7780".parse().unwrap();
+        let host = "mac.fixture.ts.net:8443".to_owned();
+        let connectors = Connectors::new(authority.clone());
+        connectors.on_waiting(Arc::new(|| {}));
+        let web = Web::new(authority, address, host.clone(), None, connectors.clone());
+        web.set_route("tailnet");
+        Self {
+            _home: home,
+            router: web
+                .router()
+                .layer(axum::Extension(ab_frontdoor::web::SecureTransport)),
+            connectors,
+            origin: format!("https://{host}"),
+            host,
+        }
+    }
+
     fn new() -> Self {
         let home = tempfile::tempdir().unwrap();
         let authority = Arc::new(Authority::open(home.path()).unwrap());
@@ -150,6 +170,87 @@ fn param(url: &url::Url, name: &str) -> Option<String> {
 }
 
 #[tokio::test]
+async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin() {
+    let s = Server::tailnet();
+    let discovery = s.get_json("/connect").await;
+    let request = url::Url::parse(discovery["request"].as_str().unwrap()).unwrap();
+    let response = s
+        .send(
+            s.request("POST", request.path())
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(json!({"name": "Grok Bot"}).to_string()))
+                .unwrap(),
+        )
+        .await;
+    let status = response.status();
+    let ticket = body_json(response).await;
+    assert_eq!(status, StatusCode::CREATED, "{ticket}");
+    let pending = s.connectors.pending().unwrap();
+    s.connectors
+        .decide(&pending[0].id, &pending[0].code, true)
+        .unwrap();
+    let response = s
+        .send(
+            s.request("POST", "/connect/answer")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    json!({"id": ticket["id"], "secret": ticket["secret"]}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let answer = body_json(response).await;
+    assert_eq!(answer["state"], "allowed");
+    assert!(answer["token"].as_str().unwrap().starts_with("aba-"));
+}
+
+#[tokio::test]
+async fn review_s2_agent_request_makes_a_waiting_oauth_request_ambiguous() {
+    let s = Server::tailnet();
+    let (_, client) = s
+        .register(&json!({"redirect_uris": [CLAUDE_CALLBACK], "client_name": "Claude"}))
+        .await;
+    let (_, challenge) = pkce();
+    let query = s.authorize_query(
+        client["client_id"].as_str().unwrap(),
+        CLAUDE_CALLBACK,
+        &challenge,
+    );
+    let response = s
+        .send(
+            s.request("POST", &format!("/oauth/pending?{query}"))
+                .header(header::ORIGIN, &s.origin)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let oauth = body_json(response).await;
+    assert_eq!(oauth["show_code"], false);
+    let response = s
+        .send(
+            s.request("POST", "/connect/request")
+                .header(header::ORIGIN, &s.origin)
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(json!({"name": "Claude"}).to_string()))
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let pending = s.connectors.pending().unwrap();
+    assert_eq!(pending.len(), 2);
+    let oauth = pending
+        .iter()
+        .find(|p| p.id == oauth["id"].as_str().unwrap())
+        .unwrap();
+    assert!(
+        oauth.show_code,
+        "two requests named Claude are waiting on the same tailnet, but the OAuth code stays hidden"
+    );
+}
+
+#[tokio::test]
 async fn discovery_has_what_both_clients_read() {
     let s = Server::new();
     let origin = s.origin.clone();
@@ -231,7 +332,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
         .await;
     assert_eq!(page.status(), StatusCode::OK);
     let html = body_text(page).await;
-    assert!(html.contains("Claude wants to connect to your Mac"));
+    assert!(html.contains("Allow Claude to use your Mac?"));
     assert!(
         html.contains("claude.ai"),
         "consent shows the redirect host"

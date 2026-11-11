@@ -13,6 +13,10 @@ struct AppleBridgeHelper {
             guard (try? TrustedChild.verifySessionParent()) != nil else { exit(1) }
             exit(MediaFacts.run())
         }
+        if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "permission-probe" {
+            print(GuideController.probeHere(CommandLine.arguments[2]))
+            exit(0)
+        }
         #if LAB
         if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "lab-tcc-probe" {
             do { try LabTCCProbe.run(CommandLine.arguments[2]) }
@@ -22,13 +26,16 @@ struct AppleBridgeHelper {
         #endif
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
+        if CommandLine.arguments.count >= 3, CommandLine.arguments[1] == "privileged" {
+            exit(Privileged.run(Array(CommandLine.arguments.dropFirst(2))) ? 0 : 1)
+        }
         do {
             let arguments = Array(CommandLine.arguments.dropFirst())
-            let applicationLifecycle = arguments.isEmpty || ["intent-host", "connector-approvals", "setup-snapshot"].contains(arguments[0])
+            let applicationLifecycle = arguments.isEmpty || ["intent-host", "connector-approvals", "permission-guide"].contains(arguments[0])
             if !applicationLifecycle { app.finishLaunching() }
             if arguments.first == "intent-host" {
                 BridgeIntentHost.run(arguments)
-            } else if arguments.isEmpty || ["install", "uninstall", "service-status", "connector-approvals", "setup-snapshot"].contains(arguments[0]) {
+            } else if arguments.isEmpty || ["install", "uninstall", "service-status", "connector-approvals", "permission-guide"].contains(arguments[0]) {
                 try PackagedApp.run(arguments)
             } else {
                 try HelperCommand.run(arguments)

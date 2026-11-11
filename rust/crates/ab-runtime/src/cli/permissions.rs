@@ -682,8 +682,145 @@ fn only(names: &str) -> Outcome<Vec<&'static str>> {
     Ok(chosen)
 }
 
+const WINDOW_STEPS: [&str; 6] = [
+    "contacts",
+    "calendar",
+    "reminders",
+    "photos",
+    "full_disk_access",
+    "screen_recording",
+];
+
+fn window_steps(named: Option<&[&'static str]>) -> Vec<&'static str> {
+    named.map_or_else(
+        || WINDOW_STEPS.to_vec(),
+        |chosen| {
+            chosen
+                .iter()
+                .copied()
+                .filter(|id| product_cli::GUIDE_STEPS.contains(id))
+                .collect()
+        },
+    )
+}
+
+fn listed(report: &BTreeMap<String, String>, key: &str) -> Vec<&'static Permission> {
+    let names: Vec<&str> = report
+        .get(key)
+        .map(|text| text.split(',').filter(|name| !name.is_empty()).collect())
+        .unwrap_or_default();
+    permissions()
+        .filter(|permission| names.contains(&permission.id))
+        .collect()
+}
+
+async fn window_guide(home: &Path, helper: &str, steps: &[&str]) -> Outcome {
+    let backend = Backend::Mac {
+        home,
+        helper: helper.to_owned(),
+    };
+    let was_running = super::gateway::lock_held(home);
+    ui::note(
+        "Opening the permission guide. Follow the small window next to System Settings; it closes by itself when you're done.",
+    );
+    let program = Path::new("open");
+    let report_dir = product_cli::default_report_dir();
+    let helper_path = helper.to_owned();
+    let chosen: Vec<&'static str> = product_cli::GUIDE_STEPS
+        .iter()
+        .copied()
+        .filter(|id| steps.contains(id))
+        .collect();
+    let report = tokio::task::spawn_blocking(move || {
+        product_cli::permission_guide(program, &report_dir, &helper_path, &chosen)
+    })
+    .await
+    .map_err(|_| {
+        Failure::new(
+            Reason::HelperFailed,
+            "The guide window stopped unexpectedly.",
+        )
+    })?
+    .map_err(|error| {
+        Failure::new(Reason::HelperFailed, "The guide window didn't finish.")
+            .row("Detail", ui::clean(&error.to_string()))
+            .then(
+                "Continue where you left off",
+                ["bridge", "permissions", "guide"],
+            )
+    })?;
+    let allowed = listed(&report, "allowed");
+    if was_running && !super::gateway::lock_held(home) {
+        restart_after_quit(home);
+    }
+    let settled = let_new_grants_settle(&backend, &allowed, NEW_GRANT_SETTLES).await?;
+    if let Some(note) = settled.report() {
+        ui::warn("not_reading", &note);
+    }
+    if Modes::get().json {
+        let mut statuses = BTreeMap::new();
+        for permission in permissions() {
+            statuses.insert(permission.id, backend.status(permission)?);
+        }
+        ui::json_document(serde_json::json!({
+            "permissions": statuses,
+            "allowed": allowed.iter().map(|permission| permission.id).collect::<Vec<_>>(),
+            "skipped": listed(&report, "skipped").iter().chain(listed(&report, "declined").iter()).map(|permission| permission.id).collect::<Vec<_>>(),
+        }));
+        return Ok(());
+    }
+    if allowed.is_empty() {
+        ui::note("Nothing new was allowed. Run bridge permissions guide again any time.");
+    } else {
+        ui::done(
+            "Allowed",
+            &allowed
+                .iter()
+                .map(|permission| permission.title)
+                .collect::<Vec<_>>()
+                .join(", "),
+        );
+    }
+    ui::next_steps(&[Step::new("Follow the sync", ["bridge", "stats", "--wait"])]);
+    Ok(())
+}
+
+fn restart_after_quit(home: &Path) {
+    let Ok(bridge) = std::env::current_exe() else {
+        return;
+    };
+    let started = Command::new(bridge)
+        .arg("up")
+        .arg("--home")
+        .arg(home)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if started {
+        ui::note("macOS quit Apple Bridge to apply a permission, so it was started again.");
+    } else {
+        ui::warn(
+            "not_running",
+            "macOS quit Apple Bridge to apply a permission. Run bridge up to start it again.",
+        );
+    }
+}
+
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let named = args.only.as_deref().map(only).transpose()?;
+    if args.fixture.is_none()
+        && !args.in_terminal
+        && cfg!(target_os = "macos")
+        && let Backend::Mac { helper, .. } = backend_for(home, None, args.helper_app.as_deref())
+        && !helper.is_empty()
+    {
+        let steps = window_steps(named.as_deref());
+        if !steps.is_empty() {
+            return window_guide(home, &helper, &steps).await;
+        }
+    }
     let modes = Modes::get();
     let consent = match &named {
         Some(chosen) => Consent::Only(chosen),

@@ -5,7 +5,7 @@ pub const STYLESHEET_PATH: &str = "/assets/pages.css";
 
 use std::fmt::Write;
 
-const MARK: &str = r#"<svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 18h20M4 18V14a8 8 0 0 1 16 0v4M9 18v-5.2M15 18v-5.2M12 18V10" /></svg>"#;
+pub const ICON: &str = r##"<svg class="icon" viewBox="0 0 1024 1024" aria-hidden="true"><rect width="1024" height="1024" rx="230" fill="#0088ff"/><path d="M235 660V425a63.5 80 0 0 1 127 0V660M362 660V512a64 80 0 0 1 128 0V660M490 425a64 80 0 0 1 128 0V660M618 660V512a64 80 0 0 1 128 0V660" fill="none" stroke="#fff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/></svg>"##;
 
 pub fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -49,9 +49,9 @@ impl Page<'_> {
              <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
              <meta name=\"robots\" content=\"noindex\"><title>{title}</title>\
              <link rel=\"stylesheet\" href=\"{STYLESHEET_PATH}\">{scripts}</head>\
-             <body><div class=\"shell{width}\"><header class=\"brand\">\
-             <span class=\"wordmark\">{MARK}Apple Bridge</span><nav>{nav}</nav></header>\
-             <main class=\"card\">{body}</main></div></body></html>",
+             <body><header class=\"brand\"><div class=\"brand-row\">\
+             <span class=\"wordmark\">Apple Bridge</span><nav>{nav}</nav></div></header>\
+             <div class=\"shell{width}\"><main class=\"card\">{body}</main></div></body></html>",
             nav = self.nav,
             body = self.body,
         )

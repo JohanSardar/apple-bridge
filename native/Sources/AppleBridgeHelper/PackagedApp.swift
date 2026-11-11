@@ -5,16 +5,14 @@ import SourceSupport
 import SwiftUI
 
 @MainActor
-final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class PackagedApp: NSObject, NSApplicationDelegate {
     let service = SMAppService.agent(plistName: "dev.applebridge.gateway.plist")
-    var window: NSWindow?
-    var setup: SetupModel?
-    var approvalDetails: NSTextField?
-    var setupHome: URL?
-    var snapshotDirectory: URL?
+    var arguments: [String] = []
     var connectorHome: String?
     var connectorLabExecutable: String?
     var connectorTask: Task<Void, Never>?
+    let approvals = ApprovalModel()
+    let approvalPanel = FloatingPanel(size: NSSize(width: 260, height: 240))
 
     nonisolated static func connectorCommand(_ arguments: [String], labExecutable: String?) -> Data? {
         guard let path = try? TrustedChild.bridge(labExecutable: labExecutable) else { return nil }
@@ -29,80 +27,79 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return warning
     }
 
-    struct ConnectorRequest: Decodable, Sendable {
-        let id: String
-        let code: String
-        let client_name: String
-        let redirect_host: String
-        let scopes: [String]
-        let access: String?
-        let expires_at: String
-    }
-
     func watchConnectors() {
-        var homeArguments: [String] = []
-        if let home = connectorHome { homeArguments = ["--home", home] }
-        else {
-            let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchAgents/dev.applebridge.gateway.plist")
-            if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { homeArguments = ["--home", arguments[index + 1]] }
-        }
-        let options = homeArguments
+        let options = connectorHome.map { ["--home", $0] } ?? []
         let executable = connectorLabExecutable
-        let warningHome = homeArguments.last
+        let warningHome = connectorHome
+        approvals.decide = { [weak self] request, allow in self?.decide(request, allow: allow, options: options, executable: executable) }
+        approvalPanel.contentView = NSHostingView(rootView: ApprovalView(model: approvals))
         connectorTask = Task { @MainActor [weak self] in
             var failures = 0
             var idle = 0
             while !Task.isCancelled {
                 let data = await Task.detached { Self.connectorCommand(["pending"] + options, labExecutable: executable) }.value
                 failures = data == nil ? failures + 1 : 0
-                if self?.connectorHome != nil, failures >= 3 { NSApplication.shared.terminate(nil); return }
-                let waiting = data.flatMap { try? JSONDecoder().decode([ConnectorRequest].self, from: $0) }?.isEmpty == false
-                idle = waiting || self?.window?.attachedSheet != nil ? 0 : idle + 1
-                if self?.connectorHome != nil, idle >= 30 { NSApplication.shared.terminate(nil); return }
-                if let self, let data, let requests = try? JSONDecoder().decode([ConnectorRequest].self, from: data), let request = requests.first, let window = self.window, window.attachedSheet == nil {
-                    let alert = NSAlert()
-                    alert.messageText = "Allow \(request.client_name) to connect?"
-                    let warning = Self.certificateWarning(home: warningHome).map { "\($0)\n\n" } ?? ""
-                    let host = request.redirect_host.split(separator: ":").first.map(String.init) ?? ""
-                    let destination = ["localhost", "127.0.0.1", "[::1]"].contains(host) ? "the app on the device that started this" : request.redirect_host
-                    alert.informativeText = "\(warning)Code  \(request.code)\n\nAllow only if your browser shows the same code.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to \(destination). This request expires in five minutes."
-                    alert.addButton(withTitle: "Allow")
-                    alert.addButton(withTitle: "Deny")
-                    alert.buttons.first?.keyEquivalent = ""
-                    window.level = .floating
-                    window.orderFrontRegardless()
-                    window.makeKeyAndOrderFront(nil)
-                    NSApplication.shared.activate()
-                    alert.beginSheetModal(for: window) { response in
-                        window.level = .normal
-                        let action = response == .alertFirstButtonReturn ? "allow" : "deny"
-                        Task { @MainActor in
-                            let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
-                            if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
-                            else if self.connectorHome != nil {
-                                let remaining = await Task.detached { Self.connectorCommand(["pending"] + options, labExecutable: executable) }.value
-                                if remaining.flatMap({ try? JSONDecoder().decode([ConnectorRequest].self, from: $0) })?.isEmpty != false { NSApplication.shared.terminate(nil) }
-                            }
-                            await self.setup?.refresh()
-                        }
-                    }
+                if failures >= 3 { NSApplication.shared.terminate(nil); return }
+                guard let self else { return }
+                let requests = data.flatMap { try? JSONDecoder().decode([ConnectorRequest].self, from: $0) } ?? []
+                idle = requests.isEmpty && self.approvals.request == nil ? idle + 1 : 0
+                if idle >= 30 { NSApplication.shared.terminate(nil); return }
+                if let shown = self.approvals.request, let fresh = requests.first(where: { $0.id == shown.id }), fresh != shown {
+                    self.approvals.request = fresh
+                } else if let shown = self.approvals.request, !requests.contains(where: { $0.id == shown.id }) {
+                    self.approvals.request = nil
+                    self.approvalPanel.orderOut(nil)
                 }
-                try? await Task.sleep(for: .seconds(2))
+                if self.approvals.request == nil, let next = requests.first {
+                    self.approvals.warning = Self.certificateWarning(home: warningHome) ?? ""
+                    self.approvals.request = next
+                    self.present()
+                }
+                try? await Task.sleep(for: .seconds(1))
             }
+        }
+    }
+
+    func present() {
+        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+        if let fitting = approvalPanel.contentView?.fittingSize { approvalPanel.setContentSize(fitting) }
+        let size = approvalPanel.frame.size
+        approvalPanel.setFrameOrigin(NSPoint(x: screen.midX - size.width / 2, y: screen.maxY - size.height - screen.height * 0.16))
+        approvalPanel.alphaValue = 0
+        approvalPanel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.25
+            approvalPanel.animator().alphaValue = 1
+        }, completionHandler: nil)
+    }
+
+    func fit() {
+        approvalPanel.contentView?.layoutSubtreeIfNeeded()
+        guard let size = approvalPanel.contentView?.fittingSize else { return }
+        let old = approvalPanel.frame
+        approvalPanel.setFrame(NSRect(x: old.midX - size.width / 2, y: old.maxY - size.height, width: size.width, height: size.height), display: true, animate: true)
+    }
+
+    func decide(_ request: ConnectorRequest, allow: Bool, options: [String], executable: String?) {
+        Task { @MainActor in
+            let result = await Task.detached { Self.connectorCommand([allow ? "allow" : "deny", "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
+            approvals.decided = request.client_name
+            approvals.request = nil
+            approvals.outcome = result == nil ? "That request expired. Start again from the app." : allow ? "\(request.client_name) is connected" : "Not allowed"
+            fit()
+            try? await Task.sleep(for: .seconds(1.6))
+            if approvals.request == nil { approvalPanel.orderOut(nil) }
         }
     }
 
     static func run(_ arguments: [String]) throws {
         let controller = PackagedApp()
+        controller.arguments = arguments
         if arguments.first == "connector-approvals", arguments.count >= 2 {
             controller.connectorHome = arguments[1]
             #if LAB
             if arguments.count == 3 { controller.connectorLabExecutable = arguments[2] }
             #endif
-        }
-        if arguments.first == "setup-snapshot", arguments.count == 3 {
-            controller.setupHome = URL(fileURLWithPath: arguments[1])
-            controller.snapshotDirectory = URL(fileURLWithPath: arguments[2])
         }
         switch arguments.first {
         case "uninstall":
@@ -132,103 +129,13 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    func showApprovals() {
-        NSApplication.shared.setActivationPolicy(.regular)
-        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 230), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        panel.title = "Apple Bridge Approvals"
-        panel.isReleasedWhenClosed = false
-        let text = NSTextField(wrappingLabelWithString: "Match the code in your browser before allowing a connector to use your data.")
-        text.frame = NSRect(x: 24, y: 100, width: 492, height: 90)
-        panel.contentView?.addSubview(text)
-        approvalDetails = text
-        window = panel
-        panel.center()
-        panel.makeKeyAndOrderFront(nil)
-        watchConnectors()
-    }
-
     func show() {
-        if connectorHome != nil { showApprovals(); return }
-        NSApplication.shared.setActivationPolicy(.regular)
-        let menu = NSMenu()
-        let item = NSMenuItem()
-        let application = NSMenu()
-        application.addItem(withTitle: "Quit Apple Bridge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        item.submenu = application
-        menu.addItem(item)
-        let setupItem = NSMenuItem()
-        let setupMenu = NSMenu(title: "Setup")
-        setupMenu.addItem(withTitle: "Open Setup", action: #selector(reopenSetup), keyEquivalent: "s").target = self
-        setupItem.submenu = setupMenu
-        menu.addItem(setupItem)
-        NSApplication.shared.mainMenu = menu
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Apple Bridge Setup"
-        window.isReleasedWhenClosed = false
-        let home = setupHome ?? gatewayHome()
-        let model = SetupModel(home: home, testing: snapshotDirectory != nil)
-        model.install = { [weak self] in try self?.service.register() }
-        model.syncStatus = { [weak self] in self?.service.status == .enabled }
-        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Notification.Name("dev.applebridge.setup.\(getpid())"), object: nil)
-        window.contentView = NSHostingView(rootView: SetupView(model: model))
-        window.minSize = NSSize(width: 860, height: 740)
-        self.window = window
-        window.delegate = self
-        self.setup = model
-        if snapshotDirectory == nil { model.start() }
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
-        if let directory = snapshotDirectory {
-            Task { @MainActor in
-                do { try await self.captureSetup(model, directory: directory) }
-                catch { FileHandle.standardError.write(Data("Setup snapshot failed.\n".utf8)); exit(1) }
-                NSApplication.shared.terminate(nil)
-            }
-        }
-    }
-
-    func gatewayHome() -> URL {
-        if let connectorHome { return URL(fileURLWithPath: connectorHome) }
-        let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchAgents/dev.applebridge.gateway.plist")
-        if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { return URL(fileURLWithPath: arguments[index + 1]) }
-        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AppleBridge")
+        if connectorHome != nil { watchConnectors(); return }
+        GuideController.start(arguments)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if flag, window?.isVisible == true {
-            window?.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
-        } else {
-            reopenSetup()
-        }
+        GuideController.retained?.panel.orderFrontRegardless()
         return true
-    }
-
-    func windowWillClose(_ notification: Notification) { setup?.stop() }
-
-    @objc func reopenSetup() {
-        setup?.start()
-        window?.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
-    }
-
-    func captureSetup(_ model: SetupModel, directory: URL) async throws {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        await model.refresh()
-        let before = model.statuses
-        for step in 0..<5 {
-            model.state.step = step
-            window?.contentView?.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(400))
-            guard let view = window?.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { throw CocoaError(.fileWriteUnknown) }
-            view.cacheDisplay(in: view.bounds, to: bitmap)
-            guard let data = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
-            try data.write(to: directory.appendingPathComponent("step-\(step + 1).png"), options: .atomic)
-        }
-        await model.refresh()
-        let tcc = model.permissions.compareTCC(model.statuses)
-        let report: [String: Any] = ["tcc_matches": tcc.matches, "tcc_compared": tcc.count, "status_matches": before == model.statuses, "permission_count": model.statuses.count, "snapshot_count": 5, "request_calls": NewPermissions.requestAPICalls, "fresh_setup": !FileManager.default.fileExists(atPath: model.home.appendingPathComponent("setup.json").path)]
-        try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]).write(to: directory.appendingPathComponent("report.json"), options: .atomic)
     }
 }

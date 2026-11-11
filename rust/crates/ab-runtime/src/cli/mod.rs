@@ -2,6 +2,7 @@ mod access;
 mod argv;
 mod children;
 mod commands;
+mod connect;
 mod failure;
 mod gateway;
 mod help;
@@ -312,6 +313,7 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
         Command::Connectors(group) if group.action.is_none() => "connectors",
         Command::Web(group) if group.action.is_none() => "web",
         Command::Remote(group) if group.action.is_none() => "remote",
+        Command::Relay(group) if group.action.is_none() => "relay",
         Command::Selftest(group) if group.action.is_none() => "selftest",
         Command::Shortcuts(group) if group.action.is_none() => "shortcuts",
         Command::Web(group) => match &group.action {
@@ -575,7 +577,15 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
     match command {
         Command::Up(args) => gateway::up(home, &args).await,
         Command::Down => gateway::down(home),
+        Command::Link(args) if args.client == tree::LinkClient::ClaudeApp => {
+            connect::claude_app(home).await
+        }
         Command::Link(args) => link::link(home, &args).await,
+        Command::Tailscale(args) => connect::tailscale(home, &args).await,
+        Command::Relay(group) => match group.action {
+            Some(tree::RelayAction::Setup(args)) => connect::relay_setup(home, &args).await,
+            None => Ok(()),
+        },
         Command::Unlink(args) => link::unlink(&args),
         Command::Stats(args) => stats::run(home, &args).await,
         Command::Read(args) => read::read(home, &args).await,

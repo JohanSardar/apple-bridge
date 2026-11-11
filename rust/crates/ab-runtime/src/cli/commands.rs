@@ -962,13 +962,13 @@ pub fn remote_file<T: serde::de::DeserializeOwned + Default>(
     })
 }
 
-fn check_remote_files(home: &Path) -> Outcome {
+pub(super) fn check_remote_files(home: &Path) -> Outcome {
     remote_file::<ab_remote::state::Config>(home, "config")?;
     remote_file::<Value>(home, "status")?;
     Ok(())
 }
 
-fn valid_domain(domain: &str) -> bool {
+pub(super) fn valid_domain(domain: &str) -> bool {
     domain.len() <= 253
         && domain.contains('.')
         && domain.split('.').all(|label| {
@@ -1151,7 +1151,7 @@ struct Pending {
 }
 
 #[allow(clippy::too_many_lines)]
-async fn onboard(
+pub(super) async fn onboard(
     home: &Path,
     action: &str,
     route: &str,

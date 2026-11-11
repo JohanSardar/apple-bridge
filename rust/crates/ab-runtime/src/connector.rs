@@ -45,6 +45,59 @@ async fn decide(
         .map(|()| Json(json!({"accepted":true})))
         .map_err(|_| StatusCode::BAD_REQUEST)
 }
+#[derive(Deserialize)]
+struct Ask {
+    name: String,
+}
+#[derive(Deserialize)]
+struct Answer {
+    id: String,
+    secret: String,
+}
+async fn ask(
+    State(connectors): State<Arc<Connectors>>,
+    Json(input): Json<Ask>,
+) -> Result<Json<Value>, StatusCode> {
+    connectors
+        .ask_for_agent(&input.name, "this_mac", None)
+        .and_then(|ticket| serde_json::to_value(ticket).map_err(|_| ab_trust::Error::Unavailable))
+        .map(Json)
+        .map_err(|_| StatusCode::BAD_REQUEST)
+}
+async fn answer(
+    State(connectors): State<Arc<Connectors>>,
+    Json(input): Json<Answer>,
+) -> Result<Json<Value>, StatusCode> {
+    connectors
+        .agent_answer(&input.id, &input.secret)
+        .and_then(|answer| serde_json::to_value(answer).map_err(|_| ab_trust::Error::Unavailable))
+        .map(Json)
+        .map_err(|_| StatusCode::GONE)
+}
+pub async fn ask_for_agent(home: &Path, name: &str) -> Result<Value, Error> {
+    socket_post(home, "ask", &json!({"name": name})).await
+}
+pub async fn agent_answer(home: &Path, id: &str, secret: &str) -> Result<Value, Error> {
+    socket_post(home, "answer", &json!({"id": id, "secret": secret})).await
+}
+async fn socket_post(home: &Path, route: &str, body: &Value) -> Result<Value, Error> {
+    let client = reqwest::Client::builder()
+        .unix_socket(home.join("run/connectors.sock"))
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|_| Error::Invalid)?;
+    let response = client
+        .post(format!("http://local/{route}"))
+        .header("Content-Type", "application/json")
+        .body(body.to_string())
+        .send()
+        .await
+        .map_err(|_| Error::Invalid)?;
+    if !response.status().is_success() {
+        return Err(Error::Invalid);
+    }
+    serde_json::from_slice(&response.bytes().await.map_err(|_| Error::Invalid)?).map_err(Into::into)
+}
 pub async fn serve(
     listener: tokio::net::UnixListener,
     connectors: Arc<Connectors>,
@@ -59,6 +112,8 @@ pub async fn serve(
     let router = Router::new()
         .route("/pending", get(pending))
         .route("/decision", post(decide))
+        .route("/ask", post(ask))
+        .route("/answer", post(answer))
         .with_state(connectors);
     let mut tasks = tokio::task::JoinSet::new();
     loop {

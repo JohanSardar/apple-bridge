@@ -1,4 +1,4 @@
-use ab_pages::{Page, escape};
+use ab_pages::{ICON, Page, escape};
 use ab_trust::{Grant, oauth::Client};
 use axum::{
     http::{StatusCode, header},
@@ -134,22 +134,35 @@ pub(crate) fn access(scopes: &[Grant]) -> Access {
     }
 }
 
+fn spoken(names: &[String]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => one.clone(),
+        [first @ .., last] => format!("{} and {last}", first.join(", ")),
+    }
+}
+
 pub(crate) fn access_sentence(scopes: &[Grant]) -> String {
     let access = access(scopes);
-    if access.read.len() >= SOURCES.len() && access.change.len() >= SOURCES.len() {
-        return format!(
-            "Read and change everything Apple Bridge can reach ({} services)",
-            access.read.len()
-        );
+    if access.change.len() >= SOURCES.len() {
+        return "It can read and change everything Apple Bridge can reach.".to_owned();
     }
-    let mut parts = Vec::new();
-    if !access.read.is_empty() {
-        parts.push(format!("Read: {}", access.read.join(", ")));
+    let read_only: Vec<String> = access
+        .read
+        .iter()
+        .filter(|name| !access.change.contains(name))
+        .cloned()
+        .collect();
+    match (read_only.is_empty(), access.change.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => format!("It can read and change your {}.", spoken(&access.change)),
+        (false, true) => format!("It can read your {}.", spoken(&read_only)),
+        (false, false) => format!(
+            "It can read and change your {}, and read your {}.",
+            spoken(&access.change),
+            spoken(&read_only)
+        ),
     }
-    if !access.change.is_empty() {
-        parts.push(format!("Change, right away: {}", access.change.join(", ")));
-    }
-    parts.join("\n")
 }
 
 fn list(names: &[String]) -> String {
@@ -166,44 +179,40 @@ fn list(names: &[String]) -> String {
     )
 }
 
-fn access_section(scopes: &[Grant]) -> String {
+fn access_rows(scopes: &[Grant]) -> String {
     let access = access(scopes);
-    let mut body = String::from("<section class=\"section access\">");
+    let mut rows = String::new();
     if access.read == access.change {
         let _ = write!(
-            body,
-            "<div><h2>Can read and make changes</h2>{}<p class=\"small\">Changes happen right away unless you set this app to ask you first.</p></div></section>",
+            rows,
+            "<dt>Can read and change</dt><dd>{}</dd>",
             list(&access.read)
         );
-        return body;
+        return rows;
     }
     if !access.read.is_empty() {
-        let _ = write!(body, "<div><h2>Can read</h2>{}</div>", list(&access.read));
+        let _ = write!(rows, "<dt>Can read</dt><dd>{}</dd>", list(&access.read));
     }
     if !access.change.is_empty() {
-        let _ = write!(
-            body,
-            "<div><h2>Can make changes</h2>{}<p class=\"small\">Changes happen right away unless you set this app to ask you first.</p></div>",
-            list(&access.change)
-        );
+        let _ = write!(rows, "<dt>Can change</dt><dd>{}</dd>", list(&access.change));
     }
-    body.push_str("</section>");
-    body
+    rows
 }
 
-fn request_header(client: &Client, redirect_host: &str) -> String {
-    let name = client.client_name.as_str();
-    let initial = name
-        .chars()
-        .find(|c| c.is_alphanumeric())
-        .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string());
+fn request_header(client: &Client, redirect_host: &str, scopes: &[Grant]) -> String {
+    let label = ab_trust::oauth::callback_label(redirect_host);
+    let returns = label
+        .strip_prefix("Returns to ")
+        .unwrap_or("An app on this computer");
     format!(
-        "<header class=\"request\"><div class=\"tile\" aria-hidden=\"true\">{}</div><div><h1>{} wants to connect to your Mac</h1><p class=\"lede\">{}</p></div></header>",
-        escape(&initial),
-        escape(name),
-        escape(&ab_trust::oauth::callback_label(redirect_host))
+        "<header class=\"request\">{ICON}<h1>Allow {} to use your Mac?</h1></header><dl class=\"facts\">{}<dt>Returns to</dt><dd>{}</dd></dl>",
+        escape(&client.client_name),
+        access_rows(scopes),
+        escape(returns)
     )
 }
+
+const INDICATOR: &str = r#"<svg class="indicator" viewBox="0 0 16 16" aria-hidden="true"><line x1="8" y1="1.5" x2="8" y2="4.5" opacity="1"/><line x1="12.6" y1="3.4" x2="10.5" y2="5.5" opacity=".86"/><line x1="14.5" y1="8" x2="11.5" y2="8" opacity=".72"/><line x1="12.6" y1="12.6" x2="10.5" y2="10.5" opacity=".58"/><line x1="8" y1="14.5" x2="8" y2="11.5" opacity=".44"/><line x1="3.4" y1="12.6" x2="5.5" y2="10.5" opacity=".32"/><line x1="1.5" y1="8" x2="4.5" y2="8" opacity=".22"/><line x1="3.4" y1="3.4" x2="5.5" y2="5.5" opacity=".14"/></svg>"#;
 
 pub(crate) struct Consent<'a> {
     pub client: &'a Client,
@@ -215,10 +224,9 @@ pub(crate) struct Consent<'a> {
 }
 
 pub(crate) fn consent(c: &Consent<'_>) -> Response {
-    let mut body = request_header(c.client, c.redirect_host);
-    body.push_str(&access_section(c.scopes));
+    let mut body = request_header(c.client, c.redirect_host, c.scopes);
     if c.signed_in {
-        body.push_str("<form method=\"post\" class=\"section\"><fieldset class=\"stack\"><div><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"full\" checked><span><strong>Read and make changes</strong><span class=\"muted small\">Changes happen right away</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"approve\"><span><strong>Read, and ask me before any change</strong><span class=\"muted small\">Each change waits for you</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"read\"><span><strong>Read only</strong><span class=\"muted small\">Change requests are refused</span></span></label></div></fieldset>");
+        body.push_str("<form method=\"post\" class=\"next\"><h2>How much can it do?</h2><fieldset class=\"stack\"><div><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"full\" checked><span><strong>Read and make changes</strong><span class=\"muted small\">Changes happen right away</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"approve\"><span><strong>Read, and ask me before any change</strong><span class=\"muted small\">Each change waits for you</span></span></label><label class=\"choice\"><input type=\"radio\" name=\"level\" value=\"read\"><span><strong>Read only</strong><span class=\"muted small\">Change requests are refused</span></span></label></div></fieldset>");
         for grant in c.scopes {
             let _ = write!(
                 body,
@@ -226,11 +234,12 @@ pub(crate) fn consent(c: &Consent<'_>) -> Response {
                 escape(grant.as_str())
             );
         }
-        body.push_str("<div class=\"actions end\"><button name=\"decision\" value=\"reject\">Deny</button><button name=\"decision\" value=\"approve\" class=\"primary\">Allow</button></div></form>");
+        body.push_str("<div class=\"actions\"><button name=\"decision\" value=\"approve\" class=\"primary\">Allow</button><button name=\"decision\" value=\"reject\">Don't Allow</button></div></form>");
     } else {
         let _ = write!(
             body,
-            "<section id=\"approval\" class=\"confirm\"><h2>Finish on your Mac</h2><ol class=\"steps small\"><li>A window on your Mac asks about this app.</li><li>Check that it shows this code.</li><li>Click Allow there. This page continues by itself.</li></ol><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\">····</p><p id=\"approval-status\" class=\"status\" role=\"status\">Asking your Mac…</p><p class=\"muted small\">Didn't start this? Click Cancel. Nothing is shared until you allow it.</p></section><div class=\"actions\"><a href=\"{}\">Cancel</a>",
+            "<section id=\"approval\" class=\"next\" data-client=\"{}\" aria-live=\"polite\"><h2 id=\"approval-title\">Click Allow on your Mac.</h2><p id=\"approval-status\" role=\"status\">{INDICATOR}Waiting for your Mac</p></section><section id=\"approval-match\" class=\"match\" hidden><p class=\"muted\">Two requests are open. Allow the one showing</p><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\"></p></section><div class=\"after\"><a href=\"{}\">Cancel</a>",
+            escape(&c.client.client_name),
             escape(c.cancel)
         );
         if c.passkey_available {
@@ -244,10 +253,11 @@ pub(crate) fn consent(c: &Consent<'_>) -> Response {
             );
         }
     }
+    let title = format!("Allow {}", c.client.client_name);
     document(
         StatusCode::OK,
         Page {
-            title: "Approve connection",
+            title: &title,
             body: &body,
             scripts: if c.signed_in {
                 SCRIPTS
@@ -423,10 +433,31 @@ mod tests {
         );
         assert_eq!(
             access_sentence(&grants),
-            "Read: Messages\nChange, right away: Messages"
+            "It can read and change your Messages."
         );
-        let section = access_section(&grants);
-        assert!(section.contains("Can read and make changes"), "{section}");
+        let rows = access_rows(&grants);
+        assert!(rows.contains("Can read and change"), "{rows}");
+    }
+
+    #[test]
+    fn the_mac_alert_names_every_granted_service() {
+        let grants: Vec<Grant> = [
+            "messages:read",
+            "mail:read",
+            "calendar:read",
+            "contacts:read",
+            "notes:read",
+            "capture:read",
+        ]
+        .iter()
+        .filter_map(|s| Grant::parse(s).ok())
+        .collect();
+        let sentence = access_sentence(&grants);
+        for name in [
+            "Messages", "Mail", "Calendar", "Contacts", "Notes", "Capture",
+        ] {
+            assert!(sentence.contains(name), "{sentence}");
+        }
     }
 
     #[test]
@@ -444,7 +475,7 @@ mod tests {
         );
         assert_eq!(
             access_sentence(&grants),
-            "Read: Messages, Calendar\nChange, right away: Calendar"
+            "It can read and change your Calendar, and read your Messages."
         );
     }
 }

@@ -12,6 +12,8 @@ use std::{
 pub struct Summary {
     pub id: String,
     pub code: String,
+    pub show_code: bool,
+    pub source: String,
     pub client_name: String,
     pub redirect_host: String,
     pub scopes: Vec<Grant>,
@@ -29,6 +31,22 @@ pub(crate) struct Pending {
     pub expires: Instant,
     pub redirect: Option<String>,
     pub attempts: u8,
+}
+#[derive(Debug, Serialize)]
+pub(crate) struct Poll {
+    pub redirect: String,
+    pub show_code: bool,
+}
+pub const ARMED_FILE: &str = "remote/connect-armed";
+pub const ARMED_FOR: Duration = Duration::from_mins(15);
+pub(crate) fn source_of(origin: &str, route: &str) -> &'static str {
+    if origin.starts_with("http://") {
+        "this_mac"
+    } else if route == "tailnet" {
+        "tailnet"
+    } else {
+        "public"
+    }
 }
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn decision(
@@ -86,9 +104,44 @@ pub(crate) fn decision(
     ));
     Ok(dest.into())
 }
+pub const AGENT_SERVICES: [&str; 12] = [
+    "calendar",
+    "reminders",
+    "notes",
+    "contacts",
+    "messages",
+    "mail",
+    "photos",
+    "files",
+    "safari",
+    "usage",
+    "location",
+    "maps",
+];
+#[derive(Debug)]
+struct AgentAsk {
+    summary: Summary,
+    secret: String,
+    resource: Option<String>,
+    expires: Instant,
+    outcome: Option<Result<String, ()>>,
+}
+#[derive(Debug, Serialize)]
+pub struct AgentTicket {
+    pub id: String,
+    pub secret: String,
+    pub expires_at: String,
+}
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct AgentAnswer {
+    pub state: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+}
 pub struct Connectors {
     authority: Arc<Authority>,
     pending: Mutex<HashMap<String, Pending>>,
+    asks: Mutex<HashMap<String, AgentAsk>>,
     waiting: OnceLock<Arc<dyn Fn() + Send + Sync>>,
 }
 impl std::fmt::Debug for Connectors {
@@ -101,6 +154,7 @@ impl Connectors {
         Arc::new(Self {
             authority,
             pending: Mutex::default(),
+            asks: Mutex::default(),
             waiting: OnceLock::new(),
         })
     }
@@ -132,9 +186,12 @@ impl Connectors {
             }
         };
         let dest = url::Url::parse(&code.redirect_uri).map_err(|_| Error::Invalid)?;
+        let source = source_of(origin, route);
         let summary = Summary {
             id: format!("connector:{}", oauth::token(32)),
             code: matching,
+            show_code: false,
+            source: source.into(),
             client_name: client.client_name.clone(),
             redirect_host: dest.authority().into(),
             access: crate::web_pages::access_sentence(&scopes),
@@ -160,22 +217,181 @@ impl Connectors {
                 attempts: 0,
             },
         );
+        self.reveal(&mut memory);
+        let summary = memory
+            .get(&summary.id)
+            .map_or(summary, |p| p.summary.clone());
         drop(memory);
         if let Some(waiting) = self.waiting.get() {
             waiting();
         }
         Ok(summary)
     }
+    fn armed(&self) -> bool {
+        std::fs::read_to_string(self.authority.home().join(ARMED_FILE))
+            .ok()
+            .and_then(|text| text.trim().parse::<i64>().ok())
+            .is_some_and(|until| until > jiff::Timestamp::now().as_second())
+    }
+    fn reveal(&self, memory: &mut HashMap<String, Pending>) {
+        let asking = self.asks.lock().map_or(0, |asks| {
+            asks.values()
+                .filter(|a| a.outcome.is_none() && a.expires > Instant::now())
+                .count()
+        });
+        let waiting = memory.values().filter(|p| p.redirect.is_none()).count() + asking;
+        let armed = memory
+            .values()
+            .any(|p| p.redirect.is_none() && p.summary.source == "public")
+            && self.armed();
+        for p in memory.values_mut().filter(|p| p.redirect.is_none()) {
+            if waiting > 1 || (p.summary.source == "public" && !armed) {
+                p.summary.show_code = true;
+            }
+        }
+    }
     pub fn pending(&self) -> Result<Vec<Summary>, Error> {
         let mut memory = self.pending.lock().map_err(|_| Error::Unavailable)?;
         memory.retain(|_, p| p.expires > Instant::now());
-        Ok(memory
+        self.reveal(&mut memory);
+        let mut waiting: Vec<Summary> = memory
             .values()
             .filter(|p| p.redirect.is_none())
             .map(|p| p.summary.clone())
-            .collect())
+            .collect();
+        drop(memory);
+        let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
+        asks.retain(|_, a| a.expires > Instant::now());
+        waiting.extend(
+            asks.values()
+                .filter(|a| a.outcome.is_none())
+                .map(|a| a.summary.clone()),
+        );
+        Ok(waiting)
+    }
+    pub fn ask_for_agent(
+        &self,
+        name: &str,
+        source: &str,
+        resource: Option<String>,
+    ) -> Result<AgentTicket, Error> {
+        let name = name.trim();
+        if name.is_empty()
+            || name.len() > 60
+            || name.chars().any(char::is_control)
+            || !["this_mac", "tailnet"].contains(&source)
+            || (source == "tailnet") != resource.is_some()
+        {
+            return Err(Error::Invalid);
+        }
+        if self.waiting.get().is_none() {
+            return Err(Error::Unavailable);
+        }
+        let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
+        asks.retain(|_, a| a.expires > Instant::now());
+        if asks.values().filter(|a| a.outcome.is_none()).count() >= 4 {
+            return Err(Error::Unavailable);
+        }
+        let scopes = agent_scopes();
+        let now = jiff::Timestamp::now();
+        let expires_at = jiff::Timestamp::new(now.as_second() + 300, now.subsec_nanosecond())
+            .map_err(|_| Error::Unavailable)?
+            .to_string();
+        let id = format!("agent:{}", oauth::token(32));
+        let secret = oauth::token(32);
+        asks.insert(
+            id.clone(),
+            AgentAsk {
+                summary: Summary {
+                    id: id.clone(),
+                    code: oauth::token(8),
+                    show_code: false,
+                    source: source.into(),
+                    client_name: name.into(),
+                    redirect_host: String::new(),
+                    access: crate::web_pages::access_sentence(&scopes),
+                    scopes,
+                    expires_at: expires_at.clone(),
+                },
+                secret: secret.clone(),
+                resource,
+                expires: Instant::now() + Duration::from_mins(5),
+                outcome: None,
+            },
+        );
+        drop(asks);
+        if let Some(waiting) = self.waiting.get() {
+            waiting();
+        }
+        Ok(AgentTicket {
+            id,
+            secret,
+            expires_at,
+        })
+    }
+    pub fn agent_answer(&self, id: &str, secret: &str) -> Result<AgentAnswer, Error> {
+        let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
+        asks.retain(|_, a| a.expires > Instant::now());
+        let ask = asks
+            .get(id)
+            .filter(|a| {
+                !secret.is_empty()
+                    && a.secret.len() == secret.len()
+                    && a.secret
+                        .bytes()
+                        .zip(secret.bytes())
+                        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+                        == 0
+            })
+            .ok_or(Error::Unauthorized)?;
+        let answer = match &ask.outcome {
+            None => AgentAnswer {
+                state: "waiting",
+                token: None,
+            },
+            Some(Ok(token)) => AgentAnswer {
+                state: "allowed",
+                token: Some(token.clone()),
+            },
+            Some(Err(())) => AgentAnswer {
+                state: "denied",
+                token: None,
+            },
+        };
+        if answer.state != "waiting" {
+            asks.remove(id);
+        }
+        Ok(answer)
+    }
+    fn decide_ask(&self, id: &str, approve: bool) -> Result<(), Error> {
+        let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
+        let ask = asks
+            .get_mut(id)
+            .filter(|a| a.expires > Instant::now() && a.outcome.is_none())
+            .ok_or(Error::Unauthorized)?;
+        if !approve {
+            ask.outcome = Some(Err(()));
+            return Ok(());
+        }
+        let expires = jiff::Timestamp::now()
+            .checked_add(jiff::SignedDuration::from_hours(24 * 365))
+            .ok();
+        let (agent, token) = self.authority.create_agent_until(
+            &ask.summary.client_name,
+            ab_trust::AgentLevel::DEFAULT,
+            ask.summary.scopes.clone(),
+            expires,
+        )?;
+        if let Some(resource) = &ask.resource {
+            self.authority.bind_to_resource(&agent.id, resource)?;
+        }
+        ask.outcome = Some(Ok(token));
+        Ok(())
     }
     pub fn decide(&self, id: &str, matching: &str, approve: bool) -> Result<(), Error> {
+        if id.starts_with("agent:") {
+            return self.decide_ask(id, approve);
+        }
         let mut memory = self.pending.lock().map_err(|_| Error::Unavailable)?;
         let p = memory
             .get_mut(id)
@@ -198,19 +414,36 @@ impl Connectors {
         )?);
         Ok(())
     }
-    pub(crate) fn poll(&self, id: &str, origin: &str) -> Result<String, Error> {
+    pub(crate) fn poll(&self, id: &str, origin: &str) -> Result<Poll, Error> {
         let mut memory = self.pending.lock().map_err(|_| Error::Unavailable)?;
+        memory.retain(|_, p| p.expires > Instant::now());
+        self.reveal(&mut memory);
         let p = memory
             .get(id)
-            .filter(|p| p.origin == origin && p.expires > Instant::now())
+            .filter(|p| p.origin == origin)
             .ok_or(Error::Unauthorized)?;
+        let show_code = p.summary.show_code;
         if let Some(redirect) = p.redirect.clone() {
             memory.remove(id);
-            Ok(redirect)
+            Ok(Poll {
+                redirect,
+                show_code,
+            })
         } else {
-            Ok(String::new())
+            Ok(Poll {
+                redirect: String::new(),
+                show_code,
+            })
         }
     }
+}
+
+fn agent_scopes() -> Vec<Grant> {
+    AGENT_SERVICES
+        .iter()
+        .filter(|service| ab_trust::agent_source(service))
+        .filter_map(|service| Grant::parse(&format!("{service}:write")).ok())
+        .collect()
 }
 
 #[cfg(test)]
@@ -260,7 +493,8 @@ mod tests {
         assert_eq!(
             queue
                 .poll(&summary.id, "https://mac.ab.example.com")
-                .expect("poll"),
+                .expect("poll")
+                .redirect,
             ""
         );
         queue
@@ -273,7 +507,8 @@ mod tests {
         );
         let redirect = queue
             .poll(&summary.id, "https://mac.ab.example.com")
-            .expect("poll");
+            .expect("poll")
+            .redirect;
         assert!(redirect.starts_with("https://claude.ai/api/mcp/auth_callback?"));
         assert!(redirect.contains("iss=https%3A%2F%2Fmac.ab.example.com"));
         assert!(redirect.contains("code="));
@@ -314,6 +549,48 @@ mod tests {
             queue.decide(&summary.id, &summary.code, true).is_err(),
             "locked out"
         );
+    }
+
+    #[test]
+    fn the_code_shows_only_when_a_request_could_be_confused() {
+        let (home, queue) = queue();
+        let local = request(&queue, "http://127.0.0.1:7780");
+        assert!(!local.show_code, "one request from this Mac needs no code");
+        let second = request(&queue, "http://127.0.0.1:7780");
+        assert!(second.show_code, "two at once must be told apart");
+        assert!(
+            queue
+                .pending()
+                .expect("pending")
+                .iter()
+                .all(|p| p.show_code)
+        );
+        assert!(
+            queue
+                .poll(&local.id, "http://127.0.0.1:7780")
+                .expect("poll")
+                .show_code
+        );
+
+        let (home_two, public) = super::tests::queue();
+        assert!(
+            request(&public, "https://mac.example.ts.net").show_code,
+            "an unexpected request from the internet shows the code"
+        );
+        drop(home_two);
+
+        let (armed_home, armed) = super::tests::queue();
+        std::fs::create_dir_all(armed_home.path().join("remote")).expect("remote");
+        std::fs::write(
+            armed_home.path().join(ARMED_FILE),
+            (jiff::Timestamp::now().as_second() + 600).to_string(),
+        )
+        .expect("arm");
+        assert!(
+            !request(&armed, "https://mac.example.ts.net").show_code,
+            "a request the owner just started needs no code"
+        );
+        drop(home);
     }
 
     #[test]

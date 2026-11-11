@@ -122,6 +122,10 @@ pub enum Command {
     Connectors(ConnectorsCommand),
     #[command(about = "Manage browser sign-in for this Mac's local pages")]
     Web(WebCommand),
+    #[command(about = "Let your other devices and cloud agents reach this Mac through Tailscale")]
+    Tailscale(TailscaleArgs),
+    #[command(about = "Set up your own relay server and connect this Mac to it")]
+    Relay(RelayCommand),
     #[command(about = "Use Apple Bridge from other computers; off until you enable it")]
     Remote(RemoteCommand),
     #[command(about = "Create a pairing code for a replica or iPhone")]
@@ -212,6 +216,12 @@ pub enum LinkClient {
     Claude,
     #[value(help = "Codex")]
     Codex,
+    #[value(
+        name = "claude-app",
+        alias = "claude-desktop",
+        help = "The Claude app or claude.ai, through a custom connector"
+    )]
+    ClaudeApp,
     #[value(help = "Print what any other app or bot needs")]
     Other,
 }
@@ -520,11 +530,16 @@ pub struct GuideArgs {
     #[arg(
         long,
         value_name = "NAMES",
-        help = "Request only these comma-separated permissions, without prompts, such as contacts,calendar"
+        help = "Request only these comma-separated permissions, such as contacts,calendar"
     )]
     pub only: Option<String>,
     #[arg(long, value_name = "PATH", help = "Helper app to use")]
     pub helper_app: Option<String>,
+    #[arg(
+        long,
+        help = "Walk through in this terminal instead of the guide window"
+    )]
+    pub in_terminal: bool,
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
 }
@@ -533,6 +548,50 @@ pub struct GuideArgs {
 pub struct GuideStatusArgs {
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct TailscaleArgs {
+    #[arg(long, help = "Turn Tailscale access off again")]
+    pub off: bool,
+    #[arg(
+        long,
+        help = "Keep this Mac awake with the lid closed so agents still reach it; macOS asks for your password or Touch ID"
+    )]
+    pub keep_awake: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct RelayCommand {
+    #[command(subcommand)]
+    pub action: Option<RelayAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum RelayAction {
+    #[command(about = "Install a relay on your server over ssh and connect this Mac")]
+    Setup(RelaySetupArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct RelaySetupArgs {
+    #[arg(
+        value_name = "SERVER",
+        help = "How you reach the server with ssh, such as root@203.0.113.10"
+    )]
+    pub server: String,
+    #[arg(
+        long,
+        value_name = "DOMAIN",
+        help = "A domain used only for this, such as bridge.example.com"
+    )]
+    pub domain: String,
+    #[arg(
+        long,
+        value_name = "IP",
+        help = "The server's public IPv4 address, if ssh reaches it another way"
+    )]
+    pub ip: Option<String>,
 }
 
 #[derive(Debug, Args)]

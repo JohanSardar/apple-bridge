@@ -1,22 +1,26 @@
 # Apple Bridge: setup
 
-Everything here runs on the owner's Mac. It needs no account, server or domain.
+Everything here runs on the owner's Mac. The owner only clicks Allow, or uses Touch ID, when macOS or Apple Bridge asks.
 
-## Levels
+## Rules
 
-- **Level 1, anything on this Mac (default):** Claude Code, Codex, other apps and bots, on `http://127.0.0.1:7780/mcp`. `bridge link other` prints what other apps need.
-- **Level 2, remote use (optional):** `bridge remote enable`. Only when the owner asks for it. Never turn it on for them.
+- Do every step yourself. Never give the owner commands, links, codes or steps to follow.
+- While you wait on the Mac, say only "Click Allow when your Mac asks."
+- Never click Allow, type a password or approve a request for the owner.
 
 ## Steps
 
 ```sh
-bridge up                  # starts Apple Bridge, asks nothing
-bridge link claude         # or: bridge link codex
-bridge permissions guide   # run in a terminal; it opens Settings and macOS may ask
-bridge stats --wait        # counts per source as each one finishes
+bridge up                        # starts Apple Bridge, asks nothing
+bridge permissions guide         # opens Settings with a small guide; wait for it to close
+bridge link claude               # or: bridge link codex. The Mac asks the owner to Allow
+bridge tailscale --keep-awake --yes   # only for cloud agents or "even when my Mac is shut"
+bridge stats --wait              # counts per source as each one finishes
 ```
 
-`bridge link` registers the server, then signs in through the browser. The page shows a four-digit code. The owner allows it in the Apple Bridge window, or with `bridge connectors allow --request <id> --code <code>`. Never allow a request on the owner's behalf; they must check the code.
+`bridge link` registers the server, then the owner allows it in the window on the Mac. A code shows only when two requests are open at once; then the owner checks that the browser shows the same code.
+
+`bridge tailscale` installs and signs in to Tailscale, and `--keep-awake` asks macOS once for the owner's password or Touch ID so the Mac stays awake with the lid closed. Cloud agents such as Grok Bot then find the Mac on the owner's Tailscale network at `https://<mac>:8443/connect` (or 9443, 4443), ask, and get a key once the owner clicks Allow.
 
 ## Checks
 
@@ -28,4 +32,4 @@ bridge stats --wait        # counts per source as each one finishes
 
 ## Undo
 
-`bridge unlink claude`, `bridge agents list`, `bridge agents revoke <id> --yes` (only after the owner agrees), `bridge down`.
+`bridge unlink claude`, `bridge tailscale --off --keep-awake`, `bridge agents list`, `bridge agents revoke <id> --yes` (only after the owner agrees), `bridge down`.

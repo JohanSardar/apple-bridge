@@ -69,7 +69,7 @@ fn plan(
             login: strings(&["mcp", "login", name]),
             register_signs_in: true,
         }),
-        LinkClient::Other => None,
+        LinkClient::Other | LinkClient::ClaudeApp => None,
     }
 }
 
@@ -456,7 +456,7 @@ fn explain_request(request: &Waiting) {
         ui::clean(&request.access)
     ));
     ui::note(
-        "Check the four-digit code in your browser, then allow it in the Apple Bridge window.",
+        "Click Allow in the Apple Bridge window on your Mac. If it shows a code, check that your browser shows the same one.",
     );
     ui::next_steps(&[Step::new(
         "No window? Allow it from another terminal",
@@ -586,6 +586,14 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         }
         return Ok(());
     }
+    if args.client == LinkClient::Claude
+        && !args.no_login
+        && !Modes::get().interactive()
+        && std::env::var_os("CLAUDECODE").is_some()
+        && let Some(outcome) = approve_on_mac(home, &plan, args, &url, &deadline).await
+    {
+        return outcome;
+    }
     let can_sign_in = !args.no_login && Modes::get().interactive();
     let mut sign_in_arguments = if plan.register_signs_in {
         plan.register.clone()
@@ -712,6 +720,113 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         .data("confirmed", "registered; not signed in")
         .step(login_step(&plan))),
     }
+}
+
+const MAC_APPROVAL_WAIT: Duration = Duration::from_mins(5);
+
+#[allow(clippy::too_many_lines)]
+async fn approve_on_mac(
+    home: &Path,
+    plan: &Plan,
+    args: &LinkArgs,
+    url: &str,
+    deadline: &Deadline,
+) -> Option<Outcome> {
+    let installed = Command::new(plan.program)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if !installed {
+        return None;
+    }
+    let ticket = crate::connector::ask_for_agent(home, plan.title)
+        .await
+        .ok()?;
+    let id = ticket["id"].as_str()?.to_owned();
+    let secret = ticket["secret"].as_str()?.to_owned();
+    ui::note(&format!(
+        "Asking on your Mac: click Allow in the Apple Bridge window to connect {}.",
+        plan.title
+    ));
+    let until = deadline.within(MAC_APPROVAL_WAIT);
+    let token = loop {
+        if Instant::now() >= until {
+            return Some(Err(Failure::new(
+                Reason::Timeout,
+                "Nobody answered on the Mac in time. Nothing was connected.",
+            )
+            .then("Ask again", ["bridge", "link", "claude"])));
+        }
+        tokio::time::sleep(Duration::from_millis(800)).await;
+        let Ok(answer) = crate::connector::agent_answer(home, &id, &secret).await else {
+            return Some(Err(Failure::new(
+                Reason::Timeout,
+                "The request on the Mac expired. Nothing was connected.",
+            )
+            .then("Ask again", ["bridge", "link", "claude"])));
+        };
+        match answer["state"].as_str() {
+            Some("allowed") => break answer["token"].as_str().unwrap_or_default().to_owned(),
+            Some("denied") => {
+                return Some(Err(Failure::canceled(
+                    "You chose Deny on the Mac. Nothing was connected.",
+                )));
+            }
+            _ => {}
+        }
+    };
+    if token.is_empty() {
+        return Some(Err(Failure::new(
+            Reason::ApiError,
+            "The Mac allowed it but sent no key.",
+        )));
+    }
+    ui::mask_secret(&token);
+    let mut keyed = Plan {
+        program: plan.program,
+        title: plan.title,
+        install: plan.install,
+        register: plan.register.clone(),
+        login: plan.login.clone(),
+        register_signs_in: plan.register_signs_in,
+    };
+    keyed.register.extend([
+        "--header".to_owned(),
+        format!("Authorization: Bearer {token}"),
+    ]);
+    let _ = Command::new(plan.program)
+        .args(["mcp", "remove", "--scope", args.scope.as_str(), &args.name])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    if let Err(failure) = register(&keyed, &args.name, url, deadline) {
+        return Some(Err(failure));
+    }
+    piped_result(&args.name);
+    if Modes::get().json {
+        ui::json_document(serde_json::json!({
+            "outcome": "connected",
+            "client": plan.program,
+            "name": args.name,
+            "url": url,
+            "next": "Restart Claude Code, or run /mcp, to load it.",
+        }));
+        return Some(Ok(()));
+    }
+    ui::receipt(
+        "Connected",
+        plan.title,
+        &format!(
+            "Connected {} as {}. Restart Claude Code, or run /mcp, to load it.",
+            plan.title, args.name
+        ),
+    );
+    try_it();
+    Some(Ok(()))
 }
 
 pub fn unlink(args: &UnlinkArgs) -> Outcome {

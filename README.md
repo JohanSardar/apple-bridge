@@ -15,12 +15,43 @@ Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 ```sh
 curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
+bridge permissions guide    # a small window walks you through the Mac permissions
 bridge link claude          # connect Claude Code. Or: bridge link codex
-bridge permissions guide    # allow the Mac permissions you want
-bridge stats --wait         # counts per source, as each one finishes
 ```
 
-No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connectors allow`. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+`bridge permissions guide` opens System Settings at the right page and puts a small window beside it that shows what to drag where. It moves on by itself after each permission and closes when you're done. `bridge link` asks you on your Mac: click Allow in the Apple Bridge window. An allowed agent gets full access by default. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+
+### Let your agent set it up
+
+Paste this page's link into Claude Code and say "download this and turn on MCP so you can use it". Later, paste it into Grok Bot and say "set this MCP up so you can use it even when my Mac is shut". You only click Allow, or use Touch ID, when your Mac asks.
+
+**Agents, read this.** Do every step yourself. Never give the person commands, links, codes or steps to follow, and never click Allow or type a password for them. While you wait, say only "Click Allow when your Mac asks." Run `bridge skills get setup` after installing for the full version.
+
+On the Mac (Claude Code, Codex), run these in order and wait for each to finish. Download this repository (any branch or fork link works) and run its installer; never build from source for the person:
+
+```sh
+sh docs/install                                  # from this repository; or: curl -fsSL https://eilmer.si/applebridge/install | sh
+~/.local/bin/bridge up
+~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
+~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
+~/.local/bin/bridge tailscale --keep-awake --yes   # only if they want it while away or with the lid shut
+```
+
+Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
+
+Grok Bot and other agents that run in the cloud: if you can run commands on the person's Mac (Grok Bot can, once they allow it), do the first three Mac steps above, skipping `bridge link`. Then connect yourself to this Mac over Tailscale, so it keeps working when they're away from it:
+
+1. `~/.local/bin/bridge tailscale --keep-awake --yes --json` prints this Mac's `connect` address. Without commands on the Mac, find it instead: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443); the one answering `"apple_bridge": true` is it.
+2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
+3. Add the `mcp` address as an MCP server with the header `Authorization: Bearer <token>`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
+
+### Other ways to connect
+
+| From | Run on the Mac | Then |
+|---|---|---|
+| The Claude app or claude.ai | `bridge link claude-app` | It copies an address. In Claude: Customize > Connectors > Add custom connector, paste it, click Connect, then Allow on the Mac |
+| Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale. Grok Bot finds the Mac on your Tailscale network and asks; click Allow on the Mac |
+| Your own server | `bridge relay setup root@your-server --domain bridge.example.com` | See [your own relay](docs/self-host.md) |
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 
