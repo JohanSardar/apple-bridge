@@ -554,7 +554,8 @@ async fn proxy(
         .filter(|v| v.len() == 1)
         .and_then(|v| v[0].parse::<std::net::IpAddr>().ok())
         .ok_or(Error::Contract("invalid proxy source"))?;
-    if tailnet_only && (!tailnet_address(source) || headers.contains_key("tailscale-funnel-request"))
+    if tailnet_only
+        && (!tailnet_address(source) || headers.contains_key("tailscale-funnel-request"))
     {
         return Err(Error::Contract("tailnet route refused an outside source"));
     }

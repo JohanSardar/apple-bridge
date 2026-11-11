@@ -694,8 +694,11 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
 
 fn tailnet_mcp(home: &Path) -> Outcome<String> {
     let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(Reason::InvalidConfig, "Couldn't read the remote access state.")
-            .remote("Remote", error.to_string())
+        Failure::new(
+            Reason::InvalidConfig,
+            "Couldn't read the remote access state.",
+        )
+        .remote("Remote", error.to_string())
     })?;
     status
         .routes
@@ -707,7 +710,10 @@ fn tailnet_mcp(home: &Path) -> Outcome<String> {
                 Reason::Conflict,
                 "Can't make a Tailscale token. The Tailscale route isn't on.",
             )
-            .then("Turn it on", ["bridge", "remote", "enable", "--via", "tailnet"])
+            .then(
+                "Turn it on",
+                ["bridge", "remote", "enable", "--via", "tailnet"],
+            )
         })
 }
 

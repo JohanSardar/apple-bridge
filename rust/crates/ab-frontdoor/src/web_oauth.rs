@@ -90,7 +90,12 @@ pub(crate) fn token(web: &Web, body: &[u8], origin: &str) -> Response {
         scope: field(&form, "scope").into(),
     };
     match web.authority.exchange_oauth(&exchange) {
-        Ok(tokens) if tokens.scope.split_whitespace().all(|scope| scope == OFFLINE_ACCESS || web.offers(scope)) => {
+        Ok(tokens)
+            if tokens
+                .scope
+                .split_whitespace()
+                .all(|scope| scope == OFFLINE_ACCESS || web.offers(scope)) =>
+        {
             respond(200, &tokens)
         }
         _ => respond(400, &json!({"error": "invalid_grant"})),
@@ -316,7 +321,8 @@ pub(crate) fn pending_request(web: &Web, origin: &str, ip: &str, query: &Query) 
     if !web.allow(&format!("connector-create:{ip}"), true, 50) {
         return reject(429, "Too many requests. Wait a minute and try again.");
     }
-    if query.values().any(|values| values.len() != 1) || request_error(web, query, origin).is_some() {
+    if query.values().any(|values| values.len() != 1) || request_error(web, query, origin).is_some()
+    {
         return reject(400, INVALID);
     }
     let Ok(client) = resolve_client(web, query) else {

@@ -1445,7 +1445,10 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice)
             .and_then(|authority| authority.revoke_route(ab_remote::state::CLOUD_INGRESS))
             .map_err(Failure::from)?;
         if !revoked.is_empty() && !Modes::get().json {
-            ui::row("Disconnected", &format!("{} cloud chat connection(s)", revoked.len()));
+            ui::row(
+                "Disconnected",
+                &format!("{} cloud chat connection(s)", revoked.len()),
+            );
         }
     }
     match outcome {
