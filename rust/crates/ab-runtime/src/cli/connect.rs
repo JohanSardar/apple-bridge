@@ -337,16 +337,17 @@ fn keep_awake(home: &Path, on: bool) -> Outcome {
 
 pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     if args.off {
-        if args.keep_awake {
-            keep_awake(home, false)?;
-        }
         let disable = super::tree::RemoteDisableArgs {
             via: Some("tailnet".into()),
             private: false,
             name: None,
             timeout: None,
         };
-        return commands::remote_disable(home, &disable, commands::MODERN).await;
+        commands::remote_disable(home, &disable, commands::MODERN).await?;
+        if args.keep_awake {
+            keep_awake(home, false)?;
+        }
+        return Ok(());
     }
     let url = turn_on(home, "tailnet", args.keep_awake).await?;
     if args.keep_awake {

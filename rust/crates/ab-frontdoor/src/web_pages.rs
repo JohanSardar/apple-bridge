@@ -135,21 +135,18 @@ pub(crate) fn access(scopes: &[Grant]) -> Access {
 }
 
 fn spoken(names: &[String]) -> String {
-    const SHOWN: usize = 4;
     match names {
         [] => String::new(),
         [one] => one.clone(),
-        _ if names.len() > SHOWN + 1 => format!(
-            "{} and {} more",
-            names[..SHOWN].join(", "),
-            names.len() - SHOWN
-        ),
         [first @ .., last] => format!("{} and {last}", first.join(", ")),
     }
 }
 
 pub(crate) fn access_sentence(scopes: &[Grant]) -> String {
     let access = access(scopes);
+    if access.change.len() >= SOURCES.len() {
+        return "It can read and change everything Apple Bridge can reach.".to_owned();
+    }
     let read_only: Vec<String> = access
         .read
         .iter()
@@ -440,6 +437,27 @@ mod tests {
         );
         let rows = access_rows(&grants);
         assert!(rows.contains("Can read and change"), "{rows}");
+    }
+
+    #[test]
+    fn the_mac_alert_names_every_granted_service() {
+        let grants: Vec<Grant> = [
+            "messages:read",
+            "mail:read",
+            "calendar:read",
+            "contacts:read",
+            "notes:read",
+            "capture:read",
+        ]
+        .iter()
+        .filter_map(|s| Grant::parse(s).ok())
+        .collect();
+        let sentence = access_sentence(&grants);
+        for name in [
+            "Messages", "Mail", "Calendar", "Contacts", "Notes", "Capture",
+        ] {
+            assert!(sentence.contains(name), "{sentence}");
+        }
     }
 
     #[test]
