@@ -186,6 +186,7 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
             "due_all_day",
             "start",
             "priority",
+            "alarms",
         ],
         "reminders.create_list" => vec!["title"],
         "reminders.rename_list" => vec!["id", "title"],
@@ -203,6 +204,7 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
             "due_all_day",
             "start",
             "priority",
+            "alarms",
         ],
         _ => vec![],
     };
@@ -219,6 +221,7 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
         "due_all_day",
         "start",
         "priority",
+        "alarms",
     ]
     .iter()
     .any(|k| p(a, k));
@@ -240,6 +243,33 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
         }
         _ => !s(a, "id").is_empty() && c.expected_version != 0,
     })?;
+    check(arr(a, "alarms").len() <= 8)?;
+    for alarm in arr(a, "alarms") {
+        let alarm = alarm.as_object().ok_or(Error::Invalid)?;
+        let place = p(alarm, "latitude") || p(alarm, "longitude");
+        let timed = !s(alarm, "absolute_date").is_empty();
+        let relative = p(alarm, "relative_offset");
+        check(u8::from(place) + u8::from(timed) + u8::from(relative) == 1)?;
+        if place {
+            check(
+                p(alarm, "latitude")
+                    && p(alarm, "longitude")
+                    && (-90.0..=90.0).contains(&n(alarm, "latitude"))
+                    && (-180.0..=180.0).contains(&n(alarm, "longitude"))
+                    && ["arrive", "leave"].contains(&s(alarm, "proximity"))
+                    && (!p(alarm, "radius_m") || (1.0..=100_000.0).contains(&n(alarm, "radius_m"))),
+            )?;
+        } else {
+            check(
+                !p(alarm, "proximity")
+                    && s(alarm, "location_title").is_empty()
+                    && !p(alarm, "radius_m"),
+            )?;
+        }
+        if timed {
+            check(timestamp(s(alarm, "absolute_date")))?;
+        }
+    }
     check(!p(a, "priority") || (0.0..=9.0).contains(&n(a, "priority")))
 }
 fn notes(c: &Command, a: &Args) -> Result<(), Error> {

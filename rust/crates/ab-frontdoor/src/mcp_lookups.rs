@@ -154,6 +154,7 @@ impl Call<'_> {
                 None => break,
             }
         }
+        complete &= found.len() <= limit;
         found.truncate(limit);
         let summaries = self
             .with_names(found.iter().map(|(s, _)| s.clone()).collect())

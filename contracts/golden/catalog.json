@@ -7694,6 +7694,47 @@
         "args": {
           "additionalProperties": false,
           "properties": {
+            "alarms": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "absolute_date": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "location_title": {
+                    "type": "string"
+                  },
+                  "longitude": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "proximity": {
+                    "enum": [
+                      "arrive",
+                      "leave"
+                    ],
+                    "type": "string"
+                  },
+                  "radius_m": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "relative_offset": {
+                    "nullable": true,
+                    "type": "number"
+                  }
+                },
+                "required": [],
+                "type": "object"
+              },
+              "maxItems": 8,
+              "nullable": true,
+              "type": "array"
+            },
             "due": {
               "nullable": true,
               "type": "string"
@@ -8399,6 +8440,47 @@
           "additionalProperties": false,
           "minProperties": 2,
           "properties": {
+            "alarms": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "absolute_date": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "location_title": {
+                    "type": "string"
+                  },
+                  "longitude": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "proximity": {
+                    "enum": [
+                      "arrive",
+                      "leave"
+                    ],
+                    "type": "string"
+                  },
+                  "radius_m": {
+                    "nullable": true,
+                    "type": "number"
+                  },
+                  "relative_offset": {
+                    "nullable": true,
+                    "type": "number"
+                  }
+                },
+                "required": [],
+                "type": "object"
+              },
+              "maxItems": 8,
+              "nullable": true,
+              "type": "array"
+            },
             "due": {
               "nullable": true,
               "type": "string"

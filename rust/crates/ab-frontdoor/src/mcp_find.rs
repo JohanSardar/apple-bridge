@@ -251,6 +251,8 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
     ("image", &[("photos", 4)]),
     ("selfi", &[("photos", 8), ("photos.search", 10)]),
     ("fre", &[("calendar.free_slots", 10)]),
+    ("arriv", &[("reminders.create", 10)]),
+    ("leav", &[("reminders.create", 6)]),
     ("slot", &[("calendar.free_slots", 12)]),
     ("availabl", &[("calendar.free_slots", 10)]),
     ("attachment", &[("messages.shared", 12)]),

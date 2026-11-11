@@ -284,12 +284,78 @@ pub(super) fn resolved(probe: &dyn Probe, evidence: &Value) -> Option<Value> {
 }
 
 fn field_matches(actual: &Value, name: &str, value: &Value) -> bool {
+    if name == "alarms" {
+        return alarms_match(&actual[name], value);
+    }
     let clears = matches!(name, "due" | "start" | "url" | "notes") && value == "";
     let expected = if clears { &Value::Null } else { value };
     if name == "notes" && expected.is_null() {
         return actual[name].is_null() || actual[name] == "";
     }
     equal(&actual[name], expected)
+}
+
+fn alarms_match(actual: &Value, requested: &Value) -> bool {
+    let actual: Vec<Value> = actual
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(stored_alarm)
+        .collect();
+    let requested = requested.as_array().cloned().unwrap_or_default();
+    let mut unmatched = actual.clone();
+    actual.len() == requested.len()
+        && requested.iter().all(|wanted| {
+            unmatched
+                .iter()
+                .position(|found| alarm_equal(found, wanted))
+                .map(|index| unmatched.remove(index))
+                .is_some()
+        })
+}
+
+fn stored_alarm(alarm: &Value) -> Value {
+    if let Some(place) = alarm["location"].as_object() {
+        return json!({
+            "proximity": match alarm["proximity"].as_i64() {
+                Some(1) => "arrive",
+                Some(2) => "leave",
+                _ => "",
+            },
+            "location_title": place.get("title").cloned().unwrap_or(Value::Null),
+            "latitude": place.get("latitude").cloned().unwrap_or(Value::Null),
+            "longitude": place.get("longitude").cloned().unwrap_or(Value::Null),
+            "radius_m": place.get("radius").cloned().unwrap_or(Value::Null),
+        });
+    }
+    alarm.clone()
+}
+
+fn alarm_equal(found: &Value, wanted: &Value) -> bool {
+    let close = |key: &str| match (found[key].as_f64(), wanted[key].as_f64()) {
+        (_, None) => !matches!(key, "latitude" | "longitude" | "relative_offset"),
+        (Some(a), Some(b)) => (a - b).abs() < 1e-6,
+        (None, Some(_)) => false,
+    };
+    if wanted.get("latitude").is_some_and(|v| !v.is_null()) {
+        return found["proximity"] == wanted["proximity"]
+            && close("latitude")
+            && close("longitude")
+            && close("radius_m")
+            && wanted["location_title"]
+                .as_str()
+                .is_none_or(|title| title.is_empty() || found["location_title"] == title);
+    }
+    if let Some(date) = wanted["absolute_date"].as_str().filter(|d| !d.is_empty()) {
+        return found["absolute_date"]
+            .as_str()
+            .and_then(|d| d.parse::<jiff::Timestamp>().ok())
+            .zip(date.parse::<jiff::Timestamp>().ok())
+            .is_some_and(|(a, b)| a == b);
+    }
+    found["location"].is_null()
+        && found["absolute_date"].as_str().is_none_or(str::is_empty)
+        && close("relative_offset")
 }
 
 fn settle(operation: &str, written: &Value) -> Option<Settled> {
