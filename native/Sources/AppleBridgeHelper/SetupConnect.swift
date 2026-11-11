@@ -351,6 +351,7 @@ struct ConnectView: View {
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let route = model.cloud, route.on {
                 AddressRow(model: model, label: "Connector address", value: route.mcp)
+                Text("A new public address can take up to a minute to start answering.").font(.caption).foregroundStyle(.secondary)
                 StepRow(number: 1, text: "Claude: click Open Claude. In Add custom connector, name it Apple Bridge, paste the address (it's copied), click Add, then Connect.") {
                     Button("Open Claude") { model.copyValue(route.mcp, label: "Connector address"); model.openURL(URL(string: "https://claude.ai/new?modal=add-custom-connector#customize/connectors")!) }
                 }
