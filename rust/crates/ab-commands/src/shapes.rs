@@ -45,6 +45,48 @@ const REMINDERARGS: &[Field] = &[
         kind: "*int",
         omit: true,
     },
+    Field {
+        name: "alarms",
+        kind: "*[]ReminderAlarm",
+        omit: true,
+    },
+];
+const REMINDERALARM: &[Field] = &[
+    Field {
+        name: "relative_offset",
+        kind: "*float64",
+        omit: true,
+    },
+    Field {
+        name: "absolute_date",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "proximity",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "location_title",
+        kind: "string",
+        omit: true,
+    },
+    Field {
+        name: "latitude",
+        kind: "*float64",
+        omit: true,
+    },
+    Field {
+        name: "longitude",
+        kind: "*float64",
+        omit: true,
+    },
+    Field {
+        name: "radius_m",
+        kind: "*float64",
+        omit: true,
+    },
 ];
 const CALENDARARGS: &[Field] = &[
     Field {
@@ -855,6 +897,7 @@ pub fn fields(name: &str) -> &'static [Field] {
             },
         ],
         "ReminderArgs" => REMINDERARGS,
+        "ReminderAlarm" => REMINDERALARM,
         "CalendarArgs" => CALENDARARGS,
         "CalendarRecurrence" => CALENDARRECURRENCE,
         "CalendarAlarm" => CALENDARALARM,

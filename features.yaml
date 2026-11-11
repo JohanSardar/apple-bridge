@@ -334,7 +334,7 @@ features:
       - {id: REM-OPERATION-SHAPES, levels: [sim]}
       - {id: REM-NATIVE-LIST-RACE, levels: [sim]}
       - {id: WEB-REM-WRITE, levels: [real]}
-    notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion. R2 verifies native section order, membership, reorder and owned editor and list cleanup at real."
+    notes: "Tagged list create, rename and delete verified at sim and real; AppleTruth confirms the renamed list is absent after deletion. R2 verifies native section order, membership, reorder and owned editor and list cleanup at real. Place alarms (arrive, leave, radius) were created on real Reminders from a private copy of the live home, read back and deleted by id."
   - id: calendar.read
     title: Calendar window capture, identity, recurrence, time zones, window slide
     requirements: [R-FULL, R-LIVE, R-CAL, R-NO-FALSE-DELETE]
@@ -1098,6 +1098,6 @@ features:
     modules: [native/Sources/PhotosSource, rust/crates/ab-operations, rust/crates/ab-frontdoor, rust/crates/ab-runtime]
     depends_on: [core.queries, core.permissions]
     status: in_progress
-    notes: Public PhotoKit only. Live reads use bounded PhotoKit fetches and cursor paging; temporary original transfers, on-demand JPEG previews and numbered contact sheets (MCP image content), favorite and regular-album changes are implemented. Independent review's fetch-bound and recovery-error findings have regression fixes. Native permission, signed clean-VM, real-library and large-resource qualification remain required. No permanent deletion or private people database.
+    notes: Public PhotoKit only. Live reads use bounded PhotoKit fetches and cursor paging; temporary original transfers, on-demand JPEG previews and numbered contact sheets (MCP image content), favorite and regular-album changes are implemented. Independent review's fetch-bound and recovery-error findings have regression fixes. Native permission, signed clean-VM, real-library and large-resource qualification remain required. No permanent deletion or private people database. photos_show returns one photo as the photo itself through a display rendition of photos.fetch (real library, on a private copy of the live home, a 3024x4032 JPEG, 3.5 MB, no grid or number); save writes the camera original (HEIC, same pixel size, GPS kept); messages_send photos attaches the photo file, proven in the PHOTOS-LIVE sim only because the real self chat had an unread message.
     scenarios:
       - {id: PHOTOS-LIVE, levels: [sim]}

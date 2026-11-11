@@ -594,6 +594,32 @@ impl Service {
         serde_json::value::to_raw_value(&status).map_err(|_| Code::Corrupt.into())
     }
 
+    pub async fn save_photo_file(
+        &self,
+        principal: &Principal,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<String, Error> {
+        let principal = self.identity.current(principal)?;
+        principal.authorize("photos:read")?;
+        let CommandTarget::Local(local) = &self.target else {
+            return Err(Code::Unavailable.into());
+        };
+        let store = local.query_store.as_ref().ok_or(Code::Unavailable)?;
+        let path = store
+            .blobs
+            .lock()
+            .await
+            .photo_file(name, bytes, jiff::Timestamp::now())
+            .map_err(|error| match error {
+                ab_blobs::Error::Invalid => Error::from(Code::Invalid),
+                _ => Code::Unavailable.into(),
+            })?;
+        path.into_os_string()
+            .into_string()
+            .map_err(|_| Code::Corrupt.into())
+    }
+
     async fn native_query(
         &self,
         principal: &Principal,

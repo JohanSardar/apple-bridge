@@ -5,6 +5,8 @@ mod mcp_compose;
 mod mcp_facade;
 mod mcp_find;
 mod mcp_guides;
+mod mcp_lookups;
+mod mcp_photos;
 mod mcp_registry;
 #[cfg(test)]
 mod mcp_tests;

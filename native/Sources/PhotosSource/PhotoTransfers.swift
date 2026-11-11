@@ -32,10 +32,10 @@ actor PhotoTransfers {
     func fetch(_ args: JSON) throws -> JSON {
         expire()
         try Task.checkCancellation()
-        try fields(args, ["asset_id", "resource_index", "resource_key", "network_access", "transfer_id", "offset", "length", "max_bytes", "_principal", "_request"])
+        try fields(args, ["asset_id", "resource_index", "resource_key", "rendition", "network_access", "transfer_id", "offset", "length", "max_bytes", "_principal", "_request"])
         let principal = try string(args, "_principal")
         if args["transfer_id"] != .null {
-            guard args["asset_id"] == .null, args["resource_index"] == .null, args["resource_key"] == .null, args["network_access"] == .null, args["max_bytes"] == .null else { throw SourceFailure.invalid }
+            guard args["asset_id"] == .null, args["resource_index"] == .null, args["resource_key"] == .null, args["rendition"] == .null, args["network_access"] == .null, args["max_bytes"] == .null else { throw SourceFailure.invalid }
             let id = try string(args, "transfer_id")
             guard owners[id] == principal, let job = jobs[id], let assetID = assets[id] else { throw SourceFailure.expired }
             do {
@@ -70,12 +70,16 @@ actor PhotoTransfers {
         }
         guard jobs.count < 4 else { throw SourceFailure.unavailable }
         let photo = try asset(string(args, "asset_id"))
+        let display = args["rendition"] == .null ? false : try string(args, "rendition", maximum: 16) == "display"
+        guard args["rendition"] == .null || display else { throw SourceFailure.invalid }
+        guard !display || (args["resource_index"] == .null && args["resource_key"] == .null) else { throw SourceFailure.invalid }
+        guard !display || photo.mediaType == .image || photo.mediaType == .video else { throw SourceFailure.unsupported }
         let resources = PHAssetResource.assetResources(for: photo)
         let original = resources.firstIndex { $0.type == .photo || $0.type == .video || $0.type == .audio }
-        guard args["resource_index"] != .null || original != nil else { throw SourceFailure.unsupported }
+        guard display || args["resource_index"] != .null || original != nil else { throw SourceFailure.unsupported }
         let index = try integer(args, "resource_index", default: original ?? 0, maximum: 2_147_483_647)
-        guard index < resources.count else { throw SourceFailure.invalid }
-        if args["resource_key"] != .null {
+        guard display || index < resources.count else { throw SourceFailure.invalid }
+        if !display && args["resource_key"] != .null {
             guard try string(args, "resource_key", maximum: 64) == resourceKey(resources[index], asset: photo) else { throw SourceFailure.conflict }
         }
         let network = try boolean(args, "network_access", default: false)
@@ -94,7 +98,11 @@ actor PhotoTransfers {
         let now = ContinuousClock().now
         lifetimes[id] = TransferLifetime(started: now, touched: now)
         starts[request] = (id, digest)
-        job.start(resources[index], network: network)
+        if display {
+            job.render(photo, network: network, limit: min(maximum, 64 << 20))
+        } else {
+            job.start(resources[index], network: network)
+        }
         if expiryTask == nil {
             expiryTask = Task {
                 while !self.jobs.isEmpty {
@@ -151,6 +159,7 @@ final class PhotoDownload: @unchecked Sendable {
     private let maximum: Int
     private var file: FileHandle?
     private var request: PHAssetResourceDataRequestID?
+    private var rendering: Task<Void, Never>?
     private var hash = SHA256()
     private var size = 0
     private var digest: String?
@@ -189,6 +198,23 @@ final class PhotoDownload: @unchecked Sendable {
         let stop = failed
         lock.unlock()
         if stop { PHAssetResourceManager.default().cancelDataRequest(id) }
+    }
+
+    func render(_ photo: PHAsset, network: Bool, limit: Int) {
+        let task = Task { [weak self] in
+            do {
+                let data = try await displayJPEG(photo, network: network, limit: limit)
+                self?.append(data)
+                self?.finish(failed: false)
+            } catch {
+                self?.finish(failed: true)
+            }
+        }
+        lock.lock()
+        rendering = task
+        let stop = failed
+        lock.unlock()
+        if stop { task.cancel() }
     }
 
     private func updateProgress(_ value: Double) {
@@ -254,10 +280,12 @@ final class PhotoDownload: @unchecked Sendable {
         lock.lock()
         failed = true
         let id = request
+        let task = rendering
         try? file?.close()
         file = nil
         try? FileManager.default.removeItem(at: url)
         lock.unlock()
+        task?.cancel()
         if let id { PHAssetResourceManager.default().cancelDataRequest(id) }
     }
 }

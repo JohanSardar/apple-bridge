@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 @preconcurrency import EventKit
+import CoreLocation
 import AgendaGate
 import SourceSupport
 
@@ -127,6 +128,9 @@ public final class RemindersSource: Source {
             guard let value = Int(exactly: priority.number), (0...9).contains(value) else { throw SourceFailure.invalid }
             reminder.priority = value
         }
+        if let value = args.object["alarms"] {
+            reminder.alarms = try (value == .null ? [] : value.array).map(alarm)
+        }
         for field in ["due", "start"] {
             guard let value = args.object[field] else { continue }
             var result: DateComponents?
@@ -146,6 +150,27 @@ public final class RemindersSource: Source {
 
 
 
+
+    private func alarm(_ item: JSON) throws -> EKAlarm {
+        if item["latitude"] != .null {
+            let latitude = item["latitude"].number
+            let longitude = item["longitude"].number
+            guard abs(latitude) <= 90, abs(longitude) <= 180, ["arrive", "leave"].contains(item["proximity"].string) else { throw SourceFailure.invalid }
+            let title = item["location_title"].string
+            let place = EKStructuredLocation(title: title.isEmpty ? "Location" : title)
+            place.geoLocation = CLLocation(latitude: latitude, longitude: longitude)
+            place.radius = item["radius_m"] == .null ? 100 : item["radius_m"].number
+            let alarm = EKAlarm()
+            alarm.structuredLocation = place
+            alarm.proximity = item["proximity"].string == "leave" ? .leave : .enter
+            return alarm
+        }
+        if !item["absolute_date"].string.isEmpty {
+            guard let date = parseTimestamp(item["absolute_date"].string) else { throw SourceFailure.invalid }
+            return EKAlarm(absoluteDate: date)
+        }
+        return EKAlarm(relativeOffset: item["relative_offset"].number)
+    }
 
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
         guard commandsEnabled else { throw SourceFailure.unsupported }

@@ -141,14 +141,44 @@ final class ImageRequest: @unchecked Sendable {
     }
 }
 
+func displayJPEG(_ photo: PHAsset, network: Bool, limit: Int) async throws -> Data {
+    let full = try await requestedImage(photo, target: PHImageManagerMaximumSize, resize: .none, network: network)
+    let longest = max(full.width, full.height)
+    var image = longest > 8000 ? try scaled(full, by: 8000 / Double(longest)) : full
+    while true {
+        for quality in [0.92, 0.85, 0.75, 0.65] {
+            try Task.checkCancellation()
+            let data = NSMutableData()
+            guard let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { throw SourceFailure.unavailable }
+            CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: quality, kCGImagePropertyOrientation: 1] as CFDictionary)
+            guard CGImageDestinationFinalize(destination) else { throw SourceFailure.unavailable }
+            if data.length <= limit { return data as Data }
+        }
+        guard max(image.width, image.height) > 512 else { throw SourceFailure.unavailable }
+        image = try scaled(image, by: 0.8)
+    }
+}
+
 private func renderedImage(_ photo: PHAsset, longestSide: Int, network: Bool) async throws -> CGImage {
+    let image = try await requestedImage(photo, target: CGSize(width: longestSide, height: longestSide), resize: .exact, network: network)
+    let scale = min(Double(longestSide) / Double(max(image.width, image.height)), 1)
+    if scale >= 1 { return image }
+    let width = max(1, Int((Double(image.width) * scale).rounded()))
+    let height = max(1, Int((Double(image.height) * scale).rounded()))
+    let canvas = try drawingContext(width: width, height: height)
+    canvas.interpolationQuality = .high
+    canvas.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    guard let resized = canvas.makeImage() else { throw SourceFailure.unavailable }
+    return resized
+}
+
+private func requestedImage(_ photo: PHAsset, target: CGSize, resize: PHImageRequestOptionsResizeMode, network: Bool) async throws -> CGImage {
     let options = PHImageRequestOptions()
     options.deliveryMode = .highQualityFormat
-    options.resizeMode = .exact
+    options.resizeMode = resize
     options.isNetworkAccessAllowed = network
     options.isSynchronous = false
     options.version = .current
-    let target = CGSize(width: longestSide, height: longestSide)
     let request = ImageRequest()
     let image: CGImage = try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CGImage, Error>) in
@@ -157,7 +187,7 @@ private func renderedImage(_ photo: PHAsset, longestSide: Int, network: Bool) as
                 if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
                 if (info?[PHImageCancelledKey] as? Bool) == true {
                     request.finish(.failure(CancellationError()))
-                } else if let result, let cgImage = result.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                } else if let result, let cgImage = largestImage(result) {
                     request.finish(.success(cgImage))
                 } else {
                     request.finish(.failure(SourceFailure.unavailable))
@@ -169,15 +199,12 @@ private func renderedImage(_ photo: PHAsset, longestSide: Int, network: Bool) as
         request.cancel()
     }
     try Task.checkCancellation()
-    let scale = min(Double(longestSide) / Double(max(image.width, image.height)), 1)
-    if scale >= 1 { return image }
-    let width = max(1, Int((Double(image.width) * scale).rounded()))
-    let height = max(1, Int((Double(image.height) * scale).rounded()))
-    let canvas = try drawingContext(width: width, height: height)
-    canvas.interpolationQuality = .high
-    canvas.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-    guard let resized = canvas.makeImage() else { throw SourceFailure.unavailable }
-    return resized
+    return image
+}
+
+private func largestImage(_ image: NSImage) -> CGImage? {
+    let bitmaps = image.representations.compactMap { ($0 as? NSBitmapImageRep)?.cgImage }
+    return bitmaps.max { $0.width * $0.height < $1.width * $1.height } ?? image.cgImage(forProposedRect: nil, context: nil, hints: nil)
 }
 
 private func drawingContext(width: Int, height: Int) throws -> CGContext {

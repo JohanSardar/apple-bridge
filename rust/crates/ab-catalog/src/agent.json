@@ -461,7 +461,7 @@
       ]
     },
     "reminders.create": {
-      "s": "Add a reminder to a list.",
+      "s": "Add a reminder to a list, optionally with alerts at a time or on arriving at or leaving a place.",
       "r": "The new reminder's ID (rmd_) in ids and the reminder in record.",
       "p": {
         "list_id": "List to add it to: a lst_ ID from reminders.lists.",
@@ -471,7 +471,15 @@
         "due": "When it is due: RFC 3339 timestamp, or YYYY-MM-DD for a date without a time.",
         "due_all_day": "True if due is a whole day without a time.",
         "start": "When to start: RFC 3339 timestamp or YYYY-MM-DD.",
-        "priority": "0 none, 1 high, 5 medium, 9 low."
+        "priority": "0 none, 1 high, 5 medium, 9 low.",
+        "alarms": "Alerts, replacing any old ones. Each is a time (absolute_date or relative_offset) or a place (latitude, longitude and proximity), not both.",
+        "alarms.absolute_date": "Alert time as an RFC 3339 timestamp.",
+        "alarms.relative_offset": "Alert offset from the due time in seconds; negative is before, such as -900 for 15 minutes before.",
+        "alarms.proximity": "For a place: arrive to remind on arriving there, leave on leaving.",
+        "alarms.location_title": "For a place: its name as Reminders shows it, such as Home or Whole Foods.",
+        "alarms.latitude": "For a place: latitude in degrees, -90 to 90.",
+        "alarms.longitude": "For a place: longitude in degrees, -180 to 180.",
+        "alarms.radius_m": "For a place: how close counts as there, in meters, 1 to 100000. Default 100."
       },
       "x": {
         "list_id": "lst_01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
@@ -490,7 +498,7 @@
       }
     },
     "reminders.update": {
-      "s": "Change a reminder's title, notes, due date, priority or list.",
+      "s": "Change a reminder's title, notes, due date, alerts, priority or list.",
       "r": "The reminder ID in ids and the updated reminder in record.",
       "p": {
         "id": "The reminder's rmd_ ID from reminders.items.",
@@ -501,7 +509,15 @@
         "due": "New due date: RFC 3339 timestamp or YYYY-MM-DD; empty string clears it.",
         "due_all_day": "True if due is a whole day without a time.",
         "start": "New start: RFC 3339 timestamp or YYYY-MM-DD; empty string clears it.",
-        "priority": "0 none, 1 high, 5 medium, 9 low."
+        "priority": "0 none, 1 high, 5 medium, 9 low.",
+        "alarms": "Alerts, replacing any old ones. Each is a time (absolute_date or relative_offset) or a place (latitude, longitude and proximity), not both.",
+        "alarms.absolute_date": "Alert time as an RFC 3339 timestamp.",
+        "alarms.relative_offset": "Alert offset from the due time in seconds; negative is before, such as -900 for 15 minutes before.",
+        "alarms.proximity": "For a place: arrive to remind on arriving there, leave on leaving.",
+        "alarms.location_title": "For a place: its name as Reminders shows it, such as Home or Whole Foods.",
+        "alarms.latitude": "For a place: latitude in degrees, -90 to 90.",
+        "alarms.longitude": "For a place: longitude in degrees, -180 to 180.",
+        "alarms.radius_m": "For a place: how close counts as there, in meters, 1 to 100000. Default 100."
       },
       "v": "required",
       "x": {
@@ -2381,7 +2397,7 @@
       }
     },
     "photos.preview": {
-      "s": "Look at one photo: returns it as an image.",
+      "s": "Look at one photo as a small image, for your own use. To show the person a photo, use photos_show.",
       "r": "The photo as an image attached to the result; video returns a still frame.",
       "p": {
         "max_px": "Longest side in pixels, 64 to 1536. Default 512.",
@@ -2393,8 +2409,8 @@
       }
     },
     "photos.contact_sheet": {
-      "s": "Look at up to 30 photos at once as one numbered grid image.",
-      "r": "One grid image attached to the result, and cells mapping each number to its asset_id.",
+      "s": "Scan up to 30 photos at once as one numbered grid image, for your own use only.",
+      "r": "One grid image attached to the result, and cells mapping each number to its asset_id. Never show the grid to the person; to show or send a photo use photos_show.",
       "p": {
         "asset_ids": "1 to 30 photo IDs from photos.search.",
         "columns": "Columns, 1 to 8. Default up to 5.",
@@ -2415,6 +2431,7 @@
         "asset_id": "Start a transfer for this asset. Omit when reading an existing transfer.",
         "resource_index": "Which resource from photos.get. Omit for the original.",
         "resource_key": "The resource_key from photos.get, to fail if the photo changed since.",
+        "rendition": "display: the photo as Photos shows it, as a full-resolution JPEG. Omit for the original file.",
         "network_access": "Allow downloading from iCloud. Default false.",
         "max_bytes": "Refuse resources larger than this many bytes. Default 8 GiB.",
         "transfer_id": "Read from this transfer instead of starting one.",

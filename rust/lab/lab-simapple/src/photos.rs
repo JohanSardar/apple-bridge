@@ -10,7 +10,7 @@ const PREVIEW: &str = "/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpA
 pub(super) struct Library {
     favorite: bool,
     albums: BTreeMap<String, (String, BTreeSet<String>)>,
-    transfers: BTreeMap<String, String>,
+    transfers: BTreeMap<String, (String, bool)>,
 }
 
 impl Library {
@@ -108,11 +108,16 @@ impl Library {
                     .find(|asset| asset["id"] == args["asset_id"])
                     .ok_or("invalid")?;
                 let mut resources = if args["asset_id"] == "live-fixture" {
-                    vec![json!({"index":0,"type":1}), json!({"index":1,"type":9})]
-                } else {
                     vec![
-                        json!({"index":0,"type":if args["asset_id"] == "video-fixture" {2} else {1}}),
+                        json!({"index":0,"type":1,"filename":"IMG_0003.HEIC","uti":"public.heic"}),
+                        json!({"index":1,"type":9,"filename":"IMG_0003.MOV","uti":"com.apple.quicktime-movie"}),
                     ]
+                } else if args["asset_id"] == "video-fixture" {
+                    vec![
+                        json!({"index":0,"type":2,"filename":"IMG_0002.MOV","uti":"com.apple.quicktime-movie"}),
+                    ]
+                } else {
+                    vec![json!({"index":0,"type":1,"filename":"IMG_0001.HEIC","uti":"public.heic"})]
                 };
                 for resource in &mut resources {
                     resource["resource_key"] = json!("0".repeat(64));
@@ -154,19 +159,27 @@ impl Library {
             ),
             "photos.fetch" => {
                 if let Some(transfer) = args["transfer_id"].as_str() {
-                    if self.transfers.get(transfer).map(String::as_str) != Some(principal) {
+                    let Some((owner, display)) = self.transfers.get(transfer) else {
+                        return Err("expired");
+                    };
+                    if owner != principal {
                         return Err("expired");
                     }
+                    let content = if *display {
+                        STANDARD.decode(PREVIEW).map_err(|_| "corrupt")?
+                    } else {
+                        ORIGINAL.to_vec()
+                    };
                     let offset = usize::try_from(args["offset"].as_u64().unwrap_or(0))
                         .map_err(|_| "invalid")?;
                     let length = usize::try_from(args["length"].as_u64().unwrap_or(128 << 10))
                         .map_err(|_| "invalid")?;
-                    if offset > ORIGINAL.len() {
+                    if offset > content.len() {
                         return Err("invalid");
                     }
-                    let end = (offset + length).min(ORIGINAL.len());
+                    let end = (offset + length.min(64 << 10)).min(content.len());
                     return Ok(
-                        json!({"transfer_id":transfer,"state":"ready","digest":format!("{:x}",Sha256::digest(ORIGINAL)),"size":ORIGINAL.len(),"offset":offset,"bytes":STANDARD.encode(&ORIGINAL[offset..end]),"eof":end==ORIGINAL.len()}),
+                        json!({"transfer_id":transfer,"state":"ready","digest":format!("{:x}",Sha256::digest(&content)),"size":content.len(),"offset":offset,"bytes":STANDARD.encode(&content[offset..end]),"eof":end==content.len()}),
                     );
                 }
                 if !self
@@ -182,15 +195,26 @@ impl Library {
                 {
                     return Err("conflict");
                 }
+                let display = match args["rendition"].as_str() {
+                    None => false,
+                    Some("display") => true,
+                    Some(_) => return Err("invalid"),
+                };
                 let transfer = id("photo").map_err(|_| "unavailable")?;
-                self.transfers.insert(transfer.clone(), principal.into());
+                self.transfers
+                    .insert(transfer.clone(), (principal.into(), display));
                 Ok(
                     json!({"transfer_id":transfer,"state":"downloading","idle_expiry_s":120,"max_lifetime_s":86400}),
                 )
             }
             "photos.release" => {
                 let transfer = args["transfer_id"].as_str().ok_or("invalid")?;
-                if self.transfers.get(transfer).map(String::as_str) != Some(principal) {
+                if self
+                    .transfers
+                    .get(transfer)
+                    .map(|(owner, _)| owner.as_str())
+                    != Some(principal)
+                {
                     return Err("expired");
                 }
                 self.transfers.remove(transfer);

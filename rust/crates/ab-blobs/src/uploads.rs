@@ -111,6 +111,42 @@ impl Store {
         Ok(path)
     }
 
+    pub fn photo_file(
+        &self,
+        name: &str,
+        bytes: &[u8],
+        now: jiff::Timestamp,
+    ) -> Result<PathBuf, Error> {
+        if name.is_empty()
+            || name.starts_with('.')
+            || std::path::Path::new(name)
+                .file_name()
+                .and_then(|s| s.to_str())
+                != Some(name)
+        {
+            return Err(Error::Invalid);
+        }
+        let base = self.root.join("photo-files");
+        fs::create_dir_all(&base)?;
+        fs::set_permissions(&base, fs::Permissions::from_mode(0o700))?;
+        let cutoff = std::time::SystemTime::from(now) - std::time::Duration::from_hours(24);
+        for entry in fs::read_dir(&base)?.flatten() {
+            if entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .is_ok_and(|modified| modified < cutoff)
+            {
+                let _ = fs::remove_dir_all(entry.path());
+            }
+        }
+        let parent = base.join(&ab_trust::fingerprint(bytes)[..16]);
+        fs::create_dir_all(&parent)?;
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o700))?;
+        let path = parent.join(name);
+        ab_trust::atomic_write(&path, bytes)?;
+        Ok(path)
+    }
+
     pub fn message_bytes(&self, digest: &str, size: u64) -> Result<Vec<u8>, Error> {
         let digest = Digest::try_from(digest.to_owned())?;
         let bytes = fs::read(self.path(&digest))?;

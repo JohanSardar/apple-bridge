@@ -19,7 +19,7 @@ For example, `bridge call photos.favorite --write --token-env PHOTO_TOKEN --data
 | `photos.albums` | `smart` selects smart versus user albums. Page with `offset`/`limit`. Each album reports editing capabilities. |
 | `photos.preview` | `asset_id`, optional `max_px` (64–1536, default 512), `network_access` (default true), `include_hidden` (default false). Renders one JPEG preview through PhotoKit, at most 172 KiB. Video assets give a still frame. |
 | `photos.contact_sheet` | Unique `asset_ids` (1–30), optional `columns` (1–8), `cell_px` (96–384, default 256), `network_access`, `include_hidden`. Renders one JPEG grid with a number in each cell; `cells` maps each number to its asset ID. |
-| `photos.fetch` | Start with `asset_id`, optional `resource_index`, `resource_key`, `network_access` (default false), `max_bytes` (default 8 GiB, at most 64 GiB). Without an index, select the first original photo/video/audio resource by public type. Poll/read with only `transfer_id`, `offset`, `length`. |
+| `photos.fetch` | Start with `asset_id`, optional `resource_index`, `resource_key`, `network_access` (default false), `max_bytes` (default 8 GiB, at most 64 GiB). Without an index, select the first original photo/video/audio resource by public type. `rendition: "display"` instead transfers the photo as Photos shows it as a full-resolution JPEG (see below). Poll/read with only `transfer_id`, `offset`, `length`. |
 | `photos.release` | `transfer_id`; cancel and delete the temporary resource. |
 | `photos.favorite` | `asset_id`, explicit boolean `favorite`; set and read back. |
 | `photos.album_create` | `title`; returns the new album ID after readback. |
@@ -40,6 +40,16 @@ Public PhotoKit has no search by what a photo shows, so an agent finds a photo b
 Over MCP both operations return the picture as an `image` content item that the agent can view, after a text item with the metadata. The text and `structuredContent` replace `image_base64` with a note, so the image is not sent twice. REST and `bridge call` return `image_base64` and `mime_type` under `result_json`. Each image fits one 256 KiB native frame, so the Helper lowers JPEG quality and then the scale until it is at most 172 KiB. `width` and `height` report the delivered size, which can be smaller than requested for a large preview or sheet.
 
 Pixels leave the Mac only in the response to the call that names those photos. Nothing renders in advance, nothing is cached, and nothing enters Bridge's data folder, blobs, ledger or replication. A hidden asset is refused unless the call sets `include_hidden: true`. A Mac that optimizes storage keeps small local versions but often only an iCloud original, so `photos.preview` defaults `network_access` to true: PhotoKit may download that one original from the owner's iCloud into the owner's library. With `network_access: false` such a preview fails as `unavailable`. Contact sheets default to local data, and a cell that is not local shows grey with `rendered: false`. Whatever an agent views is sent to that agent's provider, the same as text it reads.
+
+## Showing and sending photos
+
+The contact sheet and `photos.preview` are the agent's own low-resolution index. They are never the photo a person asked for, and the guides tell agents not to show them.
+
+MCP `photos_show` returns one photo as the photo itself: an `image` content item with the photo as Photos shows it, edits included, full frame, nothing drawn on it, at full resolution. It runs `photos.fetch` with `rendition: "display"`: the Helper renders the current version through `PHImageManager` at its full size, applies orientation, and encodes a JPEG with no metadata. The longest side is at most 8,000 px. It lowers JPEG quality, then scale, only as far as needed to stay within `max_bytes`; `photos_show` asks for at most 3.75 MB, which a 12-megapixel photo meets at full resolution, so chat apps that accept MCP images can show it. The bytes go through the same temporary transfer, chunked reads and SHA-256 check as an original, and the transfer is released after the read. `photos_find` returns the same clean photo when only one photo matches.
+
+`photos_show` with `save: true` also reads the original camera file, without later edits, checks its SHA-256 and writes it under the bridge home at `blobs/photo-files/<16 hex>/<library file name>`, with directories `0700` and the file `0600`, and returns its path. Desktop agents can open or attach that exact file. Each save removes saved files older than 24 hours.
+
+MCP `messages_send` takes `photos`, up to 10 asset IDs. Each photo file as Photos shows it (the edited full-size file if the photo was edited, otherwise the original) is read the same way, staged as a normal message upload under its library file name, and attached to the send, as if dragged into Messages from Photos. A repeated `request_id` returns the first send's result without reading or staging the photos again. HEIC originals stay HEIC; how an app displays a file it receives is up to that app.
 
 ## Originals, Live Photos and iCloud
 
@@ -75,7 +85,8 @@ Based on Apple's public [Photos framework](https://developer.apple.com/documenta
 - Favorite changes and regular album create/rename/membership/delete are included. PhotoKit edit capabilities are checked before changes. Smart/shared/synchronized albums are not mutated.
 - No private Photos database access, private people-name index, face recognition, inferred semantic search or undocumented cloud state. Public PhotoKit does not expose the Photos app's full people/search index.
 - No asset deletion, permanent deletion, imports, original-content editing, hiding assets, or date/location rewrites. These change the library's underlying content or visibility, rather than the requested organizational surface. Existing assets remain untouched by album deletion.
-- Previews and contact sheets render through `PHImageManager` on request, one call at a time.
+- Previews, contact sheets and display renditions render through `PHImageManager` on request, one call at a time.
+- Search by person, by what a photo shows or by text in it, and titles, captions and keywords, are available only through the Photos app's scripting interface, which needs a separate Automation permission. They are not implemented.
 - No persistent change observer/token, metadata mirror, thumbnail cache, prefetch/caching manager or background upload extension. They conflict with an on-demand, no-copy source or add no necessary capability to these operations.
 - Legacy persisted `photos.*` collections remain on disk but are never decoded, served or exported by this live source. Photos permission/readiness and hash-only approval records remain valid. Malformed known readiness records still fail closed.
 - Folder editing, custom album ordering, content-editing extensions and cross-device cloud-ID conversion are not exposed in this implementation. This is a bounded first implementation, not full PhotoKit API coverage.

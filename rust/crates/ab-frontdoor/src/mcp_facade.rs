@@ -75,6 +75,7 @@ const TOOL_SCOPES: &[(&str, &str)] = &[
     ("notes_create", "notes:write"),
     ("screen_time", "usage:read"),
     ("photos_find", "photos:read"),
+    ("photos_show", "photos:read"),
 ];
 
 pub(crate) async fn call(
@@ -119,6 +120,7 @@ pub(crate) async fn call(
         "notes_create" => call.notes_create(&input).await,
         "screen_time" => call.screen_time(&input).await,
         "photos_find" => call.photos_find(&input).await,
+        "photos_show" => call.photos_show(&input).await,
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
     };
     result.unwrap_or_else(|problem| Outcome::fail(&problem))
@@ -654,6 +656,18 @@ impl Call<'_> {
                 .await
                 .map(|v| Outcome::ok(v).named(USAGE_SUMMARY));
         }
+        if operation.name == crate::mcp_lookups::FREE_SLOTS {
+            return self
+                .free_slots(&arguments)
+                .await
+                .map(|v| Outcome::ok(v).named(crate::mcp_lookups::FREE_SLOTS));
+        }
+        if operation.name == crate::mcp_lookups::SHARED {
+            return self
+                .shared(&arguments)
+                .await
+                .map(|v| Outcome::ok(v).named(crate::mcp_lookups::SHARED));
+        }
         if operation.name == CALENDARS {
             return self
                 .calendars()
@@ -920,7 +934,7 @@ impl Call<'_> {
         }
     }
 
-    async fn command_status(&self, input: &Map<String, Value>) -> Step<Outcome> {
+    pub(crate) async fn command_status(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let id = text(input, "request_id").ok_or_else(|| {
             Problem::new("invalid", "request_id is required")
                 .field("request_id")
@@ -970,13 +984,22 @@ impl Call<'_> {
 
     async fn messages_send(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let operation = self.operation("messages.send")?;
-        let body = content(input, "text", &operation.name)?.ok_or_else(|| {
-            Problem::new("invalid", "text is required")
+        let photos = input.get("photos").and_then(Value::as_array);
+        let body = content(input, "text", &operation.name)?;
+        if body.is_none() && photos.is_none() {
+            return Err(Problem::new("invalid", "text is required")
                 .operation(&operation.name)
                 .field("text")
-                .hint("To send files, use apple_change with messages.send and files.")
-        })?;
+                .hint("Give text, photos (asset_id values from photos_find), or both."));
+        }
         let id = request_id(input)?;
+        if photos.is_some()
+            && let Ok(sent) = self
+                .command_status(&Map::from_iter([("request_id".to_owned(), json!(id))]))
+                .await
+        {
+            return Ok(sent);
+        }
         let mut arguments = Map::new();
         if let Some(chat) = text(input, "chat_id") {
             if input.contains_key("to") {
@@ -1032,7 +1055,12 @@ impl Call<'_> {
                 .expected(json!("a phone number, email or contact name, or a chat_id"))
                 .example(json!({"tool": "messages_send", "arguments": {"to": "+38640123456", "text": "On my way"}})));
         }
-        arguments.insert("text".into(), json!(body));
+        if let Some(body) = body {
+            arguments.insert("text".into(), json!(body));
+        }
+        if let Some(photos) = photos {
+            arguments.insert("files".into(), json!(self.photo_attachments(photos).await?));
+        }
         mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
         self.run_change(operation, arguments, &id, false).await
     }
