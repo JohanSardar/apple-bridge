@@ -51,6 +51,9 @@ pub(crate) fn decision(
         let over_public_host = origin.starts_with("https://");
         let (agent, _) =
             authority.create_oauth_agent(&client.client_name, level, grants, over_public_host)?;
+        if over_public_host {
+            authority.record_origin(&agent.id, origin)?;
+        }
         code.principal.clone_from(&agent.id);
         match authority.issue_oauth_code(code) {
             Ok(raw) => {

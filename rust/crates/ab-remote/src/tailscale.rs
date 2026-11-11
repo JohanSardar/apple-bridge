@@ -10,10 +10,26 @@ use tokio::{
     task::JoinSet,
 };
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Exposure {
+    #[default]
+    Funnel,
+    Tailnet,
+}
+impl Exposure {
+    #[must_use]
+    pub const fn ingress(self) -> &'static str {
+        match self {
+            Self::Funnel => "system",
+            Self::Tailnet => "tailnet",
+        }
+    }
+}
 #[derive(Debug)]
 pub struct Tailscale {
     pub home: PathBuf,
     pub api: LocalApi,
+    pub exposure: Exposure,
 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Lease {
@@ -23,6 +39,8 @@ pub struct Lease {
     pub absent: BTreeMap<String, bool>,
     #[serde(default)]
     pub private: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub tailnet: bool,
 }
 fn section<'a>(value: &'a Value, key: &str) -> Result<Option<&'a serde_json::Map<String, Value>>> {
     match value.get(key) {
@@ -56,19 +74,35 @@ impl Tailscale {
         Ok(Self {
             home,
             api: LocalApi::Unix(socket.to_owned()),
+            exposure: Exposure::Funnel,
         })
     }
     pub fn tcp(home: PathBuf, port: u16, token: String) -> Self {
         Self {
             home,
             api: LocalApi::Tcp { port, token },
+            exposure: Exposure::Funnel,
         }
     }
     pub fn system(home: PathBuf) -> Self {
         Self {
             home,
             api: LocalApi::Discover,
+            exposure: Exposure::Funnel,
         }
+    }
+    #[must_use]
+    pub fn tailnet(home: PathBuf) -> Self {
+        Self {
+            home,
+            api: LocalApi::Discover,
+            exposure: Exposure::Tailnet,
+        }
+    }
+    #[must_use]
+    pub fn exposed(mut self, exposure: Exposure) -> Self {
+        self.exposure = exposure;
+        self
     }
     async fn get(&self) -> Result<(Value, String)> {
         let response = self
@@ -138,7 +172,17 @@ impl Tailscale {
                     last_error: String::new(),
                     link: status["AuthURL"].as_str().unwrap_or_default().into(),
                 })
-            } else if capabilities.get("https").is_none() || capabilities.get("funnel").is_none() {
+            } else if self.exposure == Exposure::Tailnet && capabilities.get("https").is_none() {
+                Some(Progress {
+                    state: "https_pending",
+                    message: "Waiting for HTTPS certificates to be turned on in Tailscale".into(),
+                    pending_link: "HTTPS approval pending".into(),
+                    last_error: String::new(),
+                    link: "https://login.tailscale.com/admin/dns".into(),
+                })
+            } else if self.exposure == Exposure::Funnel
+                && (capabilities.get("https").is_none() || capabilities.get("funnel").is_none())
+            {
                 let feature: Value = match self
                     .api
                     .request(
@@ -163,10 +207,10 @@ impl Tailscale {
                 None
             };
             let Some(progress) = progress else {
-                gateway.clear_progress("system");
+                gateway.clear_progress(self.exposure.ingress());
                 return Ok(true);
             };
-            gateway.progress("system", progress);
+            gateway.progress(self.exposure.ingress(), progress);
             tokio::select! {
                 () = stopped(stop) => return Ok(false),
                 () = tokio::time::sleep(interval) => {}
@@ -176,7 +220,9 @@ impl Tailscale {
     pub async fn add(&self, target: &str) -> Result<Lease> {
         self.add_mode(target, false).await
     }
+    #[allow(clippy::too_many_lines)]
     pub(crate) async fn add_mode(&self, target: &str, private: bool) -> Result<Lease> {
+        let tailnet = !private && self.exposure == Exposure::Tailnet;
         let status: Value = self
             .api
             .request(reqwest::Method::GET, "status?peers=false", None, None)
@@ -194,7 +240,10 @@ impl Tailscale {
             .trim_end_matches('.');
         let caps = &status["Self"]["CapMap"];
         let has = |name: &str| caps.get(name).is_some();
-        if !private && (!has("https") || !has("funnel")) {
+        if tailnet && !has("https") {
+            return Err(Error::Contract("Tailscale HTTPS capability unavailable"));
+        }
+        if !private && !tailnet && (!has("https") || !has("funnel")) {
             return Err(Error::Contract(
                 "Tailscale HTTPS/Funnel capability unavailable",
             ));
@@ -210,18 +259,24 @@ impl Tailscale {
             let mut selected = None;
             for port in if private {
                 vec![7780_u16]
+            } else if tailnet {
+                vec![443_u16, 7443, 9443]
             } else {
                 vec![443_u16, 8443, 10000]
             } {
                 let permitted = allowed.iter().any(|list| list.split(',').any(|range| {
                     if let Some((a,b)) = range.split_once('-') { matches!((a.parse::<u16>(), b.parse::<u16>()), (Ok(a),Ok(b)) if (a..=b).contains(&port)) } else { range.parse::<u16>() == Ok(port) }
                 }));
-                if (private || permitted) && !port_used(&config, port)? {
+                if (private || tailnet || permitted) && !port_used(&config, port)? {
                     selected = Some(port);
                     break;
                 }
             }
-            let port = selected.ok_or(Error::Contract("no free allowed Funnel port"))?;
+            let port = selected.ok_or(Error::Contract(if tailnet {
+                "no free Tailscale HTTPS port"
+            } else {
+                "no free allowed Funnel port"
+            }))?;
             let hp = format!("{host}:{port}");
             let mut lease = Lease {
                 host: host.into(),
@@ -229,9 +284,15 @@ impl Tailscale {
                 target: target.into(),
                 absent: BTreeMap::new(),
                 private,
+                tailnet,
             };
             let mappings = if private {
                 vec![("TCP", port.to_string(), json!({"TCPForward":target}))]
+            } else if tailnet {
+                vec![
+                    ("TCP", port.to_string(), json!({"HTTPS":true})),
+                    ("Web", hp, json!({"Handlers":{"/":{"Proxy":target}}})),
+                ]
             } else {
                 vec![
                     ("TCP", port.to_string(), json!({"HTTPS":true})),
@@ -311,15 +372,15 @@ impl Tailscale {
             }
             if config["Web"][&hp] != json!({"Handlers":{"/":{"Proxy":lease.target}}})
                 || config["TCP"][lease.port.to_string()] != json!({"HTTPS":true})
-                || config["AllowFunnel"][&hp] != true
+                || (!lease.tailnet && config["AllowFunnel"][&hp] != true)
             {
                 return Err(Error::Contract("owned Funnel mapping changed"));
             }
-            for (key, index) in [
-                ("Web", hp.clone()),
-                ("TCP", lease.port.to_string()),
-                ("AllowFunnel", hp.clone()),
-            ] {
+            let mut owned = vec![("Web", hp.clone()), ("TCP", lease.port.to_string())];
+            if !lease.tailnet {
+                owned.push(("AllowFunnel", hp.clone()));
+            }
+            for (key, index) in owned {
                 let map = config[key]
                     .as_object_mut()
                     .ok_or(Error::Contract("invalid Serve section"))?;
@@ -361,7 +422,9 @@ impl Ingress for Tailscale {
             } else {
                 format!("{}:{}", lease.host, lease.port)
             };
-            let _active = gateway.ready("system", &host);
+            let name = self.exposure.ingress();
+            let tailnet_only = self.exposure == Exposure::Tailnet;
+            let _active = gateway.ready(name, &host);
             let private = lease.private;
             let (probe_host, probe_port) = (lease.host.clone(), lease.port);
             let probe_gateway = gateway.clone();
@@ -373,7 +436,7 @@ impl Ingress for Tailscale {
                     let wait =
                         match crate::localapi::certificate_expiry(&probe_host, probe_port).await {
                             Ok(expiry) => {
-                                probe_gateway.certificate_expiry("system", &expiry);
+                                probe_gateway.certificate_expiry(name, &expiry);
                                 std::time::Duration::from_secs(3600)
                             }
                             Err(_) => std::time::Duration::from_secs(15),
@@ -388,7 +451,7 @@ impl Ingress for Tailscale {
                     result = listener.accept() => match result {
                         Ok((socket, addr)) if addr.ip().is_loopback() => {
                             let path = path.clone(); let host = host.clone(); let gateway = gateway.clone();
-                            tasks.spawn(async move { proxy(socket, gateway, &host, &path).await });
+                            tasks.spawn(async move { proxy(socket, gateway, &host, &path, tailnet_only).await });
                         }
                         Ok(_) => {}
                         Err(e) => break Err(e.into()),
@@ -403,11 +466,25 @@ impl Ingress for Tailscale {
         })
     }
 }
+#[must_use]
+pub fn tailnet_address(address: std::net::IpAddr) -> bool {
+    match address {
+        std::net::IpAddr::V4(v4) => {
+            let [a, b, ..] = v4.octets();
+            a == 100 && (64..128).contains(&b)
+        }
+        std::net::IpAddr::V6(v6) => {
+            let s = v6.segments();
+            s[0] == 0xfd7a && s[1] == 0x115c && s[2] == 0xa1e0
+        }
+    }
+}
 async fn proxy(
     mut socket: tokio::net::TcpStream,
     gateway: Gateway,
     host: &str,
     path: &str,
+    tailnet_only: bool,
 ) -> Result<()> {
     let mut bytes = Vec::new();
     while !bytes.ends_with(b"\r\n\r\n") {
@@ -453,7 +530,10 @@ async fn proxy(
         .filter(|v| v.len() == 1)
         .and_then(|v| v[0].parse::<std::net::IpAddr>().ok())
         .ok_or(Error::Contract("invalid proxy source"))?;
-    let _ = source;
+    if tailnet_only && (!tailnet_address(source) || headers.contains_key("tailscale-funnel-request"))
+    {
+        return Err(Error::Contract("tailnet route refused an outside source"));
+    }
     let suffix = if suffix.is_empty() {
         "/".to_owned()
     } else if suffix.starts_with('?') {

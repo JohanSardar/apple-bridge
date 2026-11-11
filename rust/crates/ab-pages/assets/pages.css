@@ -64,6 +64,8 @@ details { margin-top: 4px; }
 details summary { cursor: pointer; color: var(--accent); }
 details p { margin-top: 4px; }
 .confirm { margin-top: 20px; padding: 18px; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; }
+.steps { margin: 10px 0 0; padding-left: 20px; color: var(--muted); }
+.steps li + li { margin-top: 2px; }
 .code { margin: 12px 0 10px; font-size: 36px; line-height: 1.1; font-weight: 650; letter-spacing: 0.16em; font-variant-numeric: tabular-nums; }
 .status { color: var(--muted); font-size: 14px; }
 .status.done { color: var(--good); }

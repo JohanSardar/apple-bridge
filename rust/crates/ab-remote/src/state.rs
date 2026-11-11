@@ -15,7 +15,11 @@ pub struct Config {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub relay_url: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cloud_sources: Vec<String>,
 }
+
+pub const CLOUD_INGRESS: &str = "system";
 
 pub fn read<T: DeserializeOwned>(home: &Path, name: &str) -> Result<T> {
     Ok(serde_json::from_slice(&fs::read(
@@ -81,6 +85,24 @@ pub struct Status {
     pub tls_termination: String,
     #[serde(default = "zero_time")]
     pub certificate_expiry: String,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub routes: BTreeMap<String, Route>,
+}
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Route {
+    pub state: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub message: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub pending_link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub last_error: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<String>,
 }
 pub const ZERO_TIME: &str = "0001-01-01T00:00:00Z";
 fn zero_time() -> String {
@@ -99,7 +121,20 @@ impl Default for Status {
             pending_link: String::new(),
             tls_termination: String::new(),
             certificate_expiry: zero_time(),
+            routes: BTreeMap::new(),
         }
+    }
+}
+
+#[must_use]
+pub fn route_name(via: &str) -> &'static str {
+    match via {
+        "relay" => "relay",
+        "private" => "private",
+        "tailnet" => "tailnet",
+        "cloud" => CLOUD_INGRESS,
+        "both" => "both",
+        _ => "system",
     }
 }
 
@@ -129,13 +164,12 @@ pub fn select(home: &Path, action: &str, via: &str, id: &str) -> Result<Config> 
         .open(dir.join("config.lock"))?;
     fs2::FileExt::lock_exclusive(&lock)?;
     let backend = match via {
-        "relay" => "relay",
-        "private" => "private",
-        "tailscale-app" | "system" => "system",
-        "both" => "both",
+        "relay" | "private" | "tailnet" | "cloud" | "tailscale-app" | "system" | "both" => {
+            route_name(via)
+        }
         _ => {
             return Err(Error::Contract(
-                "via must be relay, tailscale-app, private or both",
+                "via must be relay, tailnet, cloud, tailscale-app, private or both",
             ));
         }
     };
@@ -170,13 +204,10 @@ pub fn select(home: &Path, action: &str, via: &str, id: &str) -> Result<Config> 
         selections.insert(entry.to_owned(), action == "on");
     }
     write(home, "ingresses", &selections)?;
-    let selected = if selections.get("relay") == Some(&true) {
-        "relay"
-    } else if selections.get("private") == Some(&true) {
-        "private"
-    } else {
-        "system"
-    };
+    let selected = ["relay", "private", "system", "tailnet"]
+        .into_iter()
+        .find(|name| selections.get(*name) == Some(&true))
+        .unwrap_or("system");
     let mut config = match read::<Config>(home, "config") {
         Ok(value) => value,
         Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
@@ -190,11 +221,9 @@ pub fn select(home: &Path, action: &str, via: &str, id: &str) -> Result<Config> 
 }
 
 pub fn entries(via: &str) -> Vec<&'static str> {
-    match via {
-        "relay" => vec!["relay"],
-        "private" => vec!["private"],
+    match route_name(via) {
         "both" => vec!["relay", "system"],
-        _ => vec!["system"],
+        name => vec![name],
     }
 }
 
@@ -286,6 +315,34 @@ pub fn set_relay(home: &Path, url: &str) -> Result<()> {
     }
     url.clone_into(&mut config.relay_url);
     write(home, "config", &config)
+}
+
+pub fn set_cloud_sources(home: &Path, sources: &[String]) -> Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let dir = home.join("remote");
+    fs::create_dir_all(&dir)?;
+    fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))?;
+    let lock = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(dir.join("config.lock"))?;
+    fs2::FileExt::lock_exclusive(&lock)?;
+    let mut config = match read::<Config>(home, "config") {
+        Ok(value) => value,
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
+        Err(e) => return Err(e),
+    };
+    let mut sources = sources.to_vec();
+    sources.sort();
+    sources.dedup();
+    if config.cloud_sources != sources {
+        config.cloud_sources = sources;
+        write(home, "config", &config)?;
+    }
+    Ok(())
 }
 
 pub fn set_domain(home: &Path, domain: &str) -> Result<()> {

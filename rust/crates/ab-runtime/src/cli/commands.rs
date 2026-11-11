@@ -914,12 +914,12 @@ fn route(via: Option<&str>, private: bool, domain: Option<&str>) -> Outcome<Stri
     };
     if !matches!(
         route,
-        "relay" | "private" | "tailscale-app" | "system" | "both"
+        "relay" | "tailnet" | "cloud" | "private" | "tailscale-app" | "system" | "both"
     ) {
         return Err(Failure::new(
             Reason::InvalidValue,
             format!(
-                "Can't use --via {}. Accepted: relay, private, tailscale-app, both.",
+                "Can't use --via {}. Accepted: relay, tailnet, cloud, private, tailscale-app, both.",
                 ui::clean(route)
             ),
         ));
@@ -1014,6 +1014,23 @@ fn relay_url(url: &str) -> Outcome<String> {
         ));
     }
     Ok(url.to_owned())
+}
+
+fn cloud_sources(text: &str) -> Outcome<Vec<String>> {
+    let mut sources = Vec::new();
+    for source in text.split(',').map(str::trim) {
+        if source.is_empty() || !ab_trust::agent_source(source) || source == "system" {
+            return Err(Failure::new(
+                Reason::InvalidValue,
+                format!(
+                    "Can't use --sources {}. List services such as calendar,reminders,notes.",
+                    ui::clean_input(text)
+                ),
+            ));
+        }
+        sources.push(source.to_owned());
+    }
+    Ok(sources)
 }
 
 fn device_name(name: &str) -> Outcome {
@@ -1333,6 +1350,16 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -
             ));
         }
     }
+    let sources = match &args.sources {
+        Some(_) if route != "cloud" => {
+            return Err(Failure::new(
+                Reason::ConflictingOptions,
+                "Can't use --sources with a route other than cloud.",
+            ));
+        }
+        Some(text) => Some(cloud_sources(text)?),
+        None => None,
+    };
     if let Some(name) = &args.name {
         device_name(name)?;
     }
@@ -1345,6 +1372,9 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -
     }
     if let Some(url) = &args.relay_url {
         ab_remote::state::set_relay(home, url)?;
+    }
+    if let Some(sources) = &sources {
+        ab_remote::state::set_cloud_sources(home, sources)?;
     }
     if route == "relay" {
         ab_remote::state::set_domain(home, args.domain.as_deref().unwrap_or_default())?;
@@ -1404,7 +1434,21 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice)
             no_open: true,
         },
     };
-    match onboard(home, "off", &route, args.timeout.as_deref(), voice).await? {
+    let cloud_origin = (route == "cloud")
+        .then(|| current.routes.get(ab_remote::state::CLOUD_INGRESS))
+        .flatten()
+        .map(|route| route.url.clone())
+        .filter(|url| !url.is_empty());
+    let outcome = onboard(home, "off", &route, args.timeout.as_deref(), voice).await?;
+    if let (Ok(_), Some(origin)) = (&outcome, cloud_origin) {
+        let revoked = ab_trust::Authority::open(home)
+            .and_then(|authority| authority.revoke_from_origin(&origin))
+            .map_err(Failure::from)?;
+        if !revoked.is_empty() && !Modes::get().json {
+            ui::row("Disconnected", &format!("{} cloud chat connection(s)", revoked.len()));
+        }
+    }
+    match outcome {
         Ok(status) => report_remote(&status, false, voice),
         Err(link) => report_pending(&link),
     }

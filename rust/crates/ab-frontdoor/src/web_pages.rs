@@ -224,7 +224,7 @@ pub(crate) fn consent(c: &Consent<'_>) -> Response {
     } else {
         let _ = write!(
             body,
-            "<section id=\"approval\" class=\"confirm\"><h2>Approve on your Mac or iPhone</h2><p class=\"muted small\">Allow it there only if the code matches.</p><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\">····</p><p id=\"approval-status\" class=\"status\" role=\"status\">Asking your Mac…</p></section><div class=\"actions\"><a href=\"{}\">Cancel</a>",
+            "<section id=\"approval\" class=\"confirm\"><h2>Finish on your Mac</h2><ol class=\"steps small\"><li>A window on your Mac asks about this app.</li><li>Check that it shows this code.</li><li>Click Allow there. This page continues by itself.</li></ol><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\">····</p><p id=\"approval-status\" class=\"status\" role=\"status\">Asking your Mac…</p><p class=\"muted small\">Didn't start this? Click Cancel. Nothing is shared until you allow it.</p></section><div class=\"actions\"><a href=\"{}\">Cancel</a>",
             escape(c.cancel)
         );
         if c.passkey_available {

@@ -54,11 +54,25 @@ impl App {
         }
     }
     fn router(&self, host: &str) -> Result<Router, Error> {
-        if !hosts(&selected(&self.home)?, &self.statuses.borrow()).contains(host) {
+        let chosen = selected(&self.home)?;
+        if !hosts(&chosen, &self.statuses.borrow()).contains(host) {
             return Err(ab_operations::Error::from(Code::Unauthorized).into());
         }
+        let cloud = self
+            .statuses
+            .borrow()
+            .get(ab_remote::state::CLOUD_INGRESS)
+            .is_some_and(|status| status.active && status.host == host);
+        let sources = if cloud {
+            ab_remote::state::read::<ab_remote::state::Config>(&self.home, "config")
+                .map(|config| config.cloud_sources)
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        let key = format!("{host} {}", sources.join(","));
         let mut routers = self.routers.lock().map_err(|_| Error::Invalid)?;
-        if let Some(router) = routers.get(host) {
+        if let Some(router) = routers.get(&key) {
             return Ok(router.clone());
         }
         let frontdoor = ab_frontdoor::Frontdoor::new(
@@ -78,6 +92,9 @@ impl App {
             Some(self.approvals.clone()),
             self.connectors.clone(),
         );
+        if !sources.is_empty() {
+            web.limit_sources(sources);
+        }
         let router = frontdoor
             .router()
             .merge(self.phone.clone())
@@ -108,7 +125,7 @@ impl App {
         if routers.len() >= 4 {
             routers.clear();
         }
-        routers.insert(host.into(), router.clone());
+        routers.insert(key, router.clone());
         Ok(router)
     }
 }
@@ -149,6 +166,7 @@ fn hosts(
         .map(|(_, status)| status.host.clone())
         .collect()
 }
+const ROUTES: [&str; 4] = ["relay", "system", "tailnet", "private"];
 fn publish(
     home: &Path,
     selected: &BTreeMap<String, bool>,
@@ -156,9 +174,11 @@ fn publish(
 ) -> Result<(), Error> {
     let config =
         ab_remote::state::read::<ab_remote::state::Config>(home, "config").unwrap_or_default();
-    let active = statuses
-        .iter()
-        .find(|(name, status)| selected.get(*name) == Some(&true) && status.active);
+    let active = ROUTES.iter().find_map(|name| {
+        statuses
+            .get_key_value(*name)
+            .filter(|(_, status)| selected.get(*name) == Some(&true) && status.active)
+    });
     let progress = if active.is_some() {
         None
     } else {
@@ -186,6 +206,51 @@ fn publish(
     let mut document = serde_json::json!({"id":config.id,"state":state,
         "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
         "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { progress.map_or_else(String::new,|progress|progress.message.clone()) },"last_error":progress.map_or("",|progress|progress.last_error.as_str()),"pending_link":progress.map_or("",|progress|progress.pending_link.as_str()),"tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())});
+    let routes = ROUTES
+        .iter()
+        .filter(|name| selected.contains_key(**name))
+        .map(|name| {
+            let enabled = selected.get(*name) == Some(&true);
+            let status = statuses.get(*name);
+            let active = enabled && status.is_some_and(|status| status.active);
+            let progress = status
+                .and_then(|status| status.progress.as_ref())
+                .filter(|_| enabled && !active);
+            let state = if active {
+                "on"
+            } else if let Some(progress) = progress {
+                progress.state
+            } else if enabled {
+                "starting"
+            } else {
+                "off"
+            };
+            let url = if active && *name != "private" {
+                status.map_or_else(String::new, |status| format!("https://{}", status.host))
+            } else {
+                String::new()
+            };
+            (
+                (*name).to_owned(),
+                ab_remote::state::Route {
+                    state: state.into(),
+                    url,
+                    message: progress.map_or_else(String::new, |p| p.message.clone()),
+                    pending_link: progress.map_or_else(String::new, |p| p.pending_link.clone()),
+                    link: progress.map_or_else(String::new, |p| p.link.clone()),
+                    last_error: progress.map_or_else(String::new, |p| p.last_error.clone()),
+                    sources: if *name == ab_remote::state::CLOUD_INGRESS {
+                        config.cloud_sources.clone()
+                    } else {
+                        Vec::new()
+                    },
+                },
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    if !routes.is_empty() {
+        document["routes"] = serde_json::to_value(routes)?;
+    }
     let ct_warning = ab_remote::ct::owner_warning(home, ab_remote::ct::now());
     if !ct_warning.is_empty() {
         document["ct_warning"] = ct_warning.into();
@@ -349,7 +414,7 @@ async fn reconcile(
                 prior = current.clone();
                 publish(&home,&current,&statuses.borrow())?;
                 let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
-                for name in ["relay","system","private"] {
+                for name in ROUTES {
                     if current.get(name) != Some(&true) {
                         failed.remove(name);
                         continue;
@@ -379,6 +444,11 @@ fn configured_domain(home: &Path) -> String {
         .unwrap_or_default()
 }
 fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
+    if name == "tailnet" {
+        return Ok(Box::new(ab_remote::tailscale::Tailscale::tailnet(
+            home.join("tailnet"),
+        )));
+    }
     if name == "private" {
         return Ok(Box::new(ab_remote::private::Private {
             home: home.to_owned(),

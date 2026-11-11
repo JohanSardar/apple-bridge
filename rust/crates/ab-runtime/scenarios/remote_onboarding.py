@@ -1,3 +1,4 @@
+import http.client
 import http.server
 import json
 import os
@@ -93,7 +94,7 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
         return json.loads((home / 'remote/status.json').read_text())
 
     fresh = json.loads(subprocess.check_output([binary, 'remote', 'status', '--home', str(home)], env=env, text=True))
-    assert list(fresh) == ['id', 'state', 'backend', 'url', 'last_error', 'pending_link', 'tls_termination', 'certificate_expiry'], fresh
+    assert sorted(fresh) == sorted(['id', 'state', 'backend', 'url', 'last_error', 'pending_link', 'tls_termination', 'certificate_expiry']), fresh
     assert fresh['state'] == 'off' and fresh['certificate_expiry'] == ZERO and fresh['url'] == ''
     checks.append('remote_status_returns_the_status_document')
 
@@ -130,10 +131,86 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
             with lock:
                 phase['value'] = 'broken'
             failed = subprocess.run([binary, 'remote', 'on', '--via', 'tailscale-app', '--home', str(home)], env=env, capture_output=True, text=True, timeout=30)
-            assert failed.returncode != 0 and failed.stderr.strip() == 'remote: Remote setup failed. Turn Remote off and try again.', failed
+            assert failed.returncode != 0 and "Couldn't turn remote access on" in failed.stderr, failed
             document = status_file()
-            assert document['state'] == 'error' and document['last_error'] == 'Remote setup failed. Turn Remote off and try again.', document
+            assert document['state'] == 'error' and document['last_error'].startswith('Remote setup failed') and document['last_error'].endswith('Turn Remote off and try again.'), document
             checks.append('adapter_failure_reports_error_state_and_fails_remote_on')
+            subprocess.run([binary, 'remote', 'off', '--via', 'tailscale-app', '--home', str(home)], env=env, capture_output=True, text=True, timeout=30)
+            with lock:
+                phase['value'] = 'ready'
+
+            def bridge(*arguments, check=True):
+                result = subprocess.run([binary, *arguments, '--home', str(home)], env=env, capture_output=True, text=True, timeout=60)
+                assert not check or result.returncode == 0, result
+                return result
+
+            def proxied(port, path, source, extra=None):
+                with lock:
+                    target = configuration['Web'][f'node.fixture.test:{port}']['Handlers']['/']['Proxy']
+                address, prefix = target.removeprefix('http://').split('/', 1)
+                host = 'node.fixture.test' if port == 443 else f'node.fixture.test:{port}'
+                head = {'Host': host, 'X-Forwarded-Host': host, 'X-Forwarded-Proto': 'https', 'X-Forwarded-For': source, **(extra or {})}
+                connection = http.client.HTTPConnection(*address.split(':'), timeout=10)
+                try:
+                    connection.request('GET', '/' + prefix + path, headers=head)
+                    response = connection.getresponse()
+                    return response.status, response.read()
+                except (ConnectionError, http.client.HTTPException):
+                    return None, b''
+                finally:
+                    connection.close()
+
+            on = json.loads(bridge('remote', 'enable', '--via', 'tailnet', '--json').stdout)
+            assert on['remote']['url'] == 'https://node.fixture.test', on
+            with lock:
+                assert configuration['TCP']['443'] == {'HTTPS': True}, configuration
+                assert 'node.fixture.test:443' in configuration['Web'], configuration
+                assert not configuration.get('AllowFunnel'), configuration
+            document = status_file()
+            assert document['routes']['tailnet'] == {'state': 'on', 'url': 'https://node.fixture.test'}, document
+            checks.append('tailnet_route_serves_https_without_funnel')
+
+            status, _ = proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
+            assert status == 200, status
+            assert proxied(443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')[0] is None
+            assert proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103', {'Tailscale-Funnel-Request': '?1'})[0] is None
+            checks.append('tailnet_route_refuses_sources_outside_the_tailnet')
+
+            created = json.loads(bridge('agents', 'create', '--name', 'Grok Bot', '--tailnet', '--scope', 'calendar:read', '--expires-in', '1d', '--json').stdout)
+            assert created['address'] == 'https://node.fixture.test/mcp', created
+            checks.append('tailnet_key_is_bound_to_the_tailnet_address')
+
+            cloud = json.loads(bridge('remote', 'enable', '--via', 'cloud', '--sources', 'calendar,reminders', '--json').stdout)
+            assert cloud['remote']['url'] == 'https://node.fixture.test:8443' and cloud['remote']['backend'] == 'system', cloud
+            with lock:
+                assert configuration['AllowFunnel'] == {'node.fixture.test:8443': True}, configuration
+                assert 'node.fixture.test:443' in configuration['Web'], configuration
+            routes = status_file()['routes']
+            assert routes['tailnet']['state'] == 'on' and routes['system'] == {'state': 'on', 'url': 'https://node.fixture.test:8443', 'sources': ['calendar', 'reminders']}, routes
+            checks.append('cloud_route_opens_funnel_beside_the_tailnet_route')
+
+            status, body = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')
+            scopes = json.loads(body)['scopes_supported']
+            assert status == 200 and scopes == ['calendar:read', 'calendar:write', 'reminders:read', 'reminders:write'], (status, scopes)
+            status, body = proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
+            assert len(json.loads(body)['scopes_supported']) > 4
+            checks.append('cloud_chats_are_offered_only_the_chosen_services')
+
+            off = json.loads(bridge('remote', 'disable', '--via', 'cloud', '--json').stdout)
+            assert off['outcome'] == 'disabled', off
+            with lock:
+                assert not configuration.get('AllowFunnel') and 'node.fixture.test:8443' not in configuration.get('Web', {}), configuration
+                assert 'node.fixture.test:443' in configuration['Web'], configuration
+            routes = status_file()['routes']
+            assert routes['system']['state'] == 'off' and routes['tailnet']['state'] == 'on', routes
+            checks.append('disconnecting_cloud_chats_closes_only_the_public_address')
+
+            bridge('remote', 'disable', '--via', 'tailnet', '--json')
+            with lock:
+                assert not configuration.get('Web'), configuration
+            refused = bridge('agents', 'create', '--name', 'Other', '--tailnet', '--expires-in', '1d', '--json', check=False)
+            assert refused.returncode != 0 and 'Tailscale route' in refused.stdout + refused.stderr, refused
+            checks.append('tailnet_route_turns_off')
         finally:
             gateway.terminate()
             gateway.wait(timeout=15)

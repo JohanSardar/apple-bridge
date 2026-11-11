@@ -63,7 +63,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
                     let warning = Self.certificateWarning(home: warningHome).map { "\($0)\n\n" } ?? ""
-                    alert.informativeText = "\(warning)Code \(request.code)\n\nAllow only if this code matches your browser.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to: \(request.redirect_host)\nExpires in five minutes."
+                    alert.informativeText = "\(warning)Code  \(request.code)\n\nAllow only if your browser shows the same code.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to \(request.redirect_host). This request expires in five minutes."
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""

@@ -439,6 +439,52 @@ impl Authority {
             Ok((stored.clone(), secret.clone()))
         })
     }
+    pub fn bind_to_resource(&self, id: &str, resource: &str) -> Result<Principal, Error> {
+        if !resource.starts_with("https://") || !resource.ends_with("/mcp") {
+            return Err(Error::Invalid);
+        }
+        self.update(|d| {
+            let stored = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id && p.kind == "agent")
+                .ok_or(Error::Unavailable)?;
+            stored.remote = true;
+            stored.extra.insert("resource".into(), resource.into());
+            stored.revision += 1;
+            Ok(stored.clone())
+        })
+    }
+    pub fn record_origin(&self, id: &str, origin: &str) -> Result<(), Error> {
+        self.update(|d| {
+            let stored = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id)
+                .ok_or(Error::Unavailable)?;
+            stored.extra.insert("origin".into(), origin.into());
+            stored.revision += 1;
+            Ok(())
+        })
+    }
+    pub fn revoke_from_origin(&self, origin: &str) -> Result<Vec<String>, Error> {
+        let now = jiff::Timestamp::now().to_string();
+        self.update(|d| {
+            let mut revoked = Vec::new();
+            for p in &mut d.principals {
+                if p.kind == "agent"
+                    && p.active()
+                    && p.extra.get("origin").and_then(serde_json::Value::as_str) == Some(origin)
+                {
+                    p.token_hash.clear();
+                    p.revision += 1;
+                    p.extra.insert("revoked_at".into(), now.clone().into());
+                    revoked.push(p.id.clone());
+                }
+            }
+            Ok(revoked)
+        })
+    }
     pub fn issue_oauth_code(&self, mut c: Code) -> Result<String, Error> {
         let raw = token(32);
         c.hash = fingerprint(raw.as_bytes());
