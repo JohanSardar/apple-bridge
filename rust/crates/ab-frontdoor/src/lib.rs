@@ -50,6 +50,31 @@ pub struct AuditEntry {
 pub trait Audit: Debug + Send + Sync {
     fn record(&self, entry: AuditEntry) -> Result<(), Error>;
 }
+pub type SourceLimit = Arc<dyn Fn() -> Option<std::collections::BTreeSet<String>> + Send + Sync>;
+#[derive(Clone, Default)]
+pub struct SourceCeiling(std::sync::Arc<std::sync::OnceLock<SourceLimit>>);
+impl std::fmt::Debug for SourceCeiling {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SourceCeiling")
+    }
+}
+impl SourceCeiling {
+    pub fn set(&self, limit: SourceLimit) {
+        let _ = self.0.set(limit);
+    }
+    #[must_use]
+    pub fn current(&self) -> Option<std::collections::BTreeSet<String>> {
+        self.0.get().and_then(|limit| limit())
+    }
+    #[must_use]
+    pub fn allows(&self, scope: &str) -> bool {
+        self.current().is_none_or(|sources| {
+            scope
+                .split_once(':')
+                .is_some_and(|(source, _)| sources.contains(source))
+        })
+    }
+}
 #[derive(Debug, Clone)]
 pub struct Config {
     pub hosts: Vec<String>,
@@ -64,7 +89,7 @@ pub struct Frontdoor {
     pub audit: Arc<dyn Audit>,
     rates: Mutex<HashMap<String, (Instant, u32)>>,
     mcp_failures: Mutex<HashMap<(String, String), Instant>>,
-    sources: std::sync::OnceLock<std::collections::BTreeSet<String>>,
+    ceiling: SourceCeiling,
 }
 impl Frontdoor {
     pub fn new(service: Arc<Service>, config: Config, audit: Arc<dyn Audit>) -> Arc<Self> {
@@ -74,20 +99,14 @@ impl Frontdoor {
             audit,
             rates: Mutex::new(HashMap::new()),
             mcp_failures: Mutex::new(HashMap::new()),
-            sources: std::sync::OnceLock::new(),
+            ceiling: SourceCeiling::default(),
         })
     }
-    pub fn limit_sources(&self, sources: impl IntoIterator<Item = String>) {
-        let _ = self.sources.set(sources.into_iter().collect());
+    pub fn limit_sources(&self, limit: SourceLimit) {
+        self.ceiling.set(limit);
     }
     fn exceeds_sources(&self, grants: &[String]) -> bool {
-        self.sources.get().is_some_and(|sources| {
-            grants.iter().any(|grant| {
-                grant
-                    .split_once(':')
-                    .is_none_or(|(source, _)| !sources.contains(source))
-            })
-        })
+        grants.iter().any(|grant| !self.ceiling.allows(grant))
     }
     pub fn router(self: Arc<Self>) -> Router {
         Router::new()
@@ -399,6 +418,9 @@ async fn changes(
                     .identity
                     .current(&principal)
                     .and_then(|current| {
+                        if frontdoor.exceeds_sources(&current.grants) {
+                            return Err(Error::from(Code::Unauthorized));
+                        }
                         frontdoor
                             .service
                             .store

@@ -66,14 +66,7 @@ impl App {
             .map(|(name, _)| name.clone())
             .unwrap_or_default();
         let cloud = route == ab_remote::state::CLOUD_INGRESS;
-        let sources = if cloud {
-            ab_remote::state::read::<ab_remote::state::Config>(&self.home, "config")
-                .map(|config| config.cloud_sources)
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        };
-        let key = format!("{host} {route} {}", sources.join(","));
+        let key = format!("{host} {route}");
         let mut routers = self.routers.lock().map_err(|_| Error::Invalid)?;
         if let Some(router) = routers.get(&key) {
             return Ok(router.clone());
@@ -95,9 +88,17 @@ impl App {
             Some(self.approvals.clone()),
             self.connectors.clone(),
         );
-        if !sources.is_empty() {
-            frontdoor.limit_sources(sources.clone());
-            web.limit_sources(sources);
+        if cloud {
+            let home = self.home.clone();
+            let limit: ab_frontdoor::SourceLimit = Arc::new(move || {
+                match ab_remote::state::read::<ab_remote::state::Config>(&home, "config") {
+                    Ok(config) if config.cloud_sources.is_empty() => None,
+                    Ok(config) => Some(config.cloud_sources.into_iter().collect()),
+                    Err(_) => Some(BTreeSet::new()),
+                }
+            });
+            frontdoor.limit_sources(limit.clone());
+            web.limit_sources(limit);
         }
         web.set_route(&route);
         let router = frontdoor
@@ -422,6 +423,9 @@ async fn reconcile(
                 for name in ROUTES {
                     if current.get(name) != Some(&true) {
                         failed.remove(name);
+                        if !running.contains(name) {
+                            gateway.clear_progress(name);
+                        }
                         continue;
                     }
                     if running.contains(name) { continue; }

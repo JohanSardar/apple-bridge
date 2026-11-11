@@ -365,5 +365,74 @@ class CloudReview(unittest.TestCase):
         self.assertNotIn("AB_REVIEW_R3_AFTER_NORMAL_NARROWING", json.dumps(after))
 
 
+    def test_signin_between_revocation_and_source_save_cannot_keep_stream(self):
+        self.connect()
+        child = None
+        with (self.home / "remote/config.lock").open("r+b") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                child = subprocess.Popen([
+                    BINARY, "remote", "enable", "--via", "cloud",
+                    "--sources", "calendar", "--no-open", "--json",
+                    "--home", str(self.home)], env=self.env,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+                def revoked_before_save():
+                    credentials = json.loads(
+                        (self.home / "credentials.json").read_text())
+                    agents = [p for p in credentials["principals"]
+                              if p["kind"] == "agent"]
+                    return agents and all(p.get("revoked_at") for p in agents)
+
+                wait(revoked_before_save)
+                self.assertIsNone(child.poll())
+                self.assertEqual(json.loads(
+                    (self.home / "remote/config.json").read_text()
+                )["cloud_sources"], ["calendar", "messages"])
+                print("Revocation completed; source save is blocked by config.lock",
+                      flush=True)
+                client, tokens = self.connect()
+                stream = self.open_stream(tokens["access_token"])
+                self.append_synthetic_chat_change("AB_REVIEW_R4_BEFORE_SAVE")
+                self.assertIn("AB_REVIEW_R4_BEFORE_SAVE",
+                              json.dumps(self.next_data(stream)))
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+                if child is not None:
+                    try:
+                        stdout, stderr = child.communicate(timeout=45)
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        child.communicate(timeout=10)
+                        raise
+        self.assertEqual(child.returncode, 0, stdout + stderr)
+        sources = json.loads(
+            (self.home / "remote/config.json").read_text())["cloud_sources"]
+        self.assertEqual(sources, ["calendar"])
+        read, _ = self.request(
+            "POST", "/v1/op/messages.chats", "{}",
+            token=tokens["access_token"])
+        refreshed, refused = self.token({
+            "grant_type": "refresh_token", "client_id": client,
+            "refresh_token": tokens["refresh_token"]})
+        self.assertIn(read, (401, 403))
+        self.assertEqual(refreshed, 400)
+        self.assertNotIn("access_token", refused)
+        marker = "AB_REVIEW_R4_REMOVED_MESSAGES_AFTER_SUCCESS"
+        self.append_synthetic_chat_change(marker)
+        after = self.next_data(stream)
+        print(json.dumps({
+            "successful_narrowing": child.returncode == 0,
+            "saved_sources": sources,
+            "new_request_status": read,
+            "refresh_status": refreshed,
+            "existing_stream_after_success": after,
+        }), flush=True)
+        self.assertNotIn(
+            marker, json.dumps(after),
+            "a sign-in during narrowing kept streaming a removed source "
+            "after the narrowing command succeeded")
+
+
 if __name__ == '__main__':
     unittest.main()

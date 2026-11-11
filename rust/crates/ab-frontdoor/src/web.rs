@@ -82,7 +82,7 @@ pub struct Web {
     pub(crate) memory: Mutex<Memory>,
     pub(crate) metadata: crate::web_metadata::Fetcher,
     pub(crate) connectors: Arc<crate::web_connector::Connectors>,
-    sources: std::sync::OnceLock<std::collections::BTreeSet<String>>,
+    sources: crate::SourceCeiling,
     route: std::sync::OnceLock<String>,
 }
 impl Web {
@@ -92,18 +92,14 @@ impl Web {
     pub(crate) fn route(&self) -> &str {
         self.route.get().map_or("", String::as_str)
     }
-    pub fn limit_sources(&self, sources: impl IntoIterator<Item = String>) {
-        let _ = self.sources.set(sources.into_iter().collect());
+    pub fn limit_sources(&self, limit: crate::SourceLimit) {
+        self.sources.set(limit);
     }
     pub(crate) fn limited(&self) -> bool {
-        self.sources.get().is_some()
+        self.sources.current().is_some()
     }
     pub(crate) fn offers(&self, scope: &str) -> bool {
-        self.sources.get().is_none_or(|sources| {
-            scope
-                .split_once(':')
-                .is_some_and(|(source, _)| sources.contains(source))
-        })
+        self.sources.allows(scope)
     }
     pub fn new(
         authority: Arc<Authority>,
@@ -120,7 +116,7 @@ impl Web {
             memory: Mutex::default(),
             metadata: crate::web_metadata::Fetcher::default(),
             connectors,
-            sources: std::sync::OnceLock::new(),
+            sources: crate::SourceCeiling::default(),
             route: std::sync::OnceLock::new(),
         })
     }
