@@ -162,46 +162,46 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
                     connection.close()
 
             on = json.loads(bridge('remote', 'enable', '--via', 'tailnet', '--json').stdout)
-            assert on['remote']['url'] == 'https://node.fixture.test', on
+            assert on['remote']['url'] == 'https://node.fixture.test:8443', on
             with lock:
-                assert configuration['TCP']['443'] == {'HTTPS': True}, configuration
-                assert 'node.fixture.test:443' in configuration['Web'], configuration
+                assert configuration['TCP']['8443'] == {'HTTPS': True}, configuration
+                assert 'node.fixture.test:8443' in configuration['Web'], configuration
                 assert not configuration.get('AllowFunnel'), configuration
             document = status_file()
-            assert document['routes']['tailnet'] == {'state': 'on', 'url': 'https://node.fixture.test'}, document
+            assert document['routes']['tailnet'] == {'state': 'on', 'url': 'https://node.fixture.test:8443'}, document
             checks.append('tailnet_route_serves_https_without_funnel')
 
-            status, _ = proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
+            status, _ = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
             assert status == 200, status
-            assert proxied(443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')[0] is None
-            assert proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103', {'Tailscale-Funnel-Request': '?1'})[0] is None
+            assert proxied(8443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')[0] is None
+            assert proxied(8443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103', {'Tailscale-Funnel-Request': '?1'})[0] is None
             checks.append('tailnet_route_refuses_sources_outside_the_tailnet')
 
             created = json.loads(bridge('agents', 'create', '--name', 'Grok Bot', '--tailnet', '--scope', 'calendar:read', '--expires-in', '1d', '--json').stdout)
-            assert created['address'] == 'https://node.fixture.test/mcp', created
+            assert created['address'] == 'https://node.fixture.test:8443/mcp', created
             checks.append('tailnet_key_is_bound_to_the_tailnet_address')
 
             cloud = json.loads(bridge('remote', 'enable', '--via', 'cloud', '--sources', 'calendar,reminders', '--json').stdout)
-            assert cloud['remote']['url'] == 'https://node.fixture.test:8443' and cloud['remote']['backend'] == 'system', cloud
+            assert cloud['remote']['url'] == 'https://node.fixture.test' and cloud['remote']['backend'] == 'system', cloud
             with lock:
-                assert configuration['AllowFunnel'] == {'node.fixture.test:8443': True}, configuration
-                assert 'node.fixture.test:443' in configuration['Web'], configuration
+                assert configuration['AllowFunnel'] == {'node.fixture.test:443': True}, configuration
+                assert 'node.fixture.test:8443' in configuration['Web'], configuration
             routes = status_file()['routes']
-            assert routes['tailnet']['state'] == 'on' and routes['system'] == {'state': 'on', 'url': 'https://node.fixture.test:8443', 'sources': ['calendar', 'reminders']}, routes
+            assert routes['tailnet']['state'] == 'on' and routes['system'] == {'state': 'on', 'url': 'https://node.fixture.test', 'sources': ['calendar', 'reminders']}, routes
             checks.append('cloud_route_opens_funnel_beside_the_tailnet_route')
 
-            status, body = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')
+            status, body = proxied(443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')
             scopes = json.loads(body)['scopes_supported']
             assert status == 200 and scopes == ['calendar:read', 'calendar:write', 'reminders:read', 'reminders:write'], (status, scopes)
-            status, body = proxied(443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
+            status, body = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
             assert len(json.loads(body)['scopes_supported']) > 4
             checks.append('cloud_chats_are_offered_only_the_chosen_services')
 
             off = json.loads(bridge('remote', 'disable', '--via', 'cloud', '--json').stdout)
             assert off['outcome'] == 'disabled', off
             with lock:
-                assert not configuration.get('AllowFunnel') and 'node.fixture.test:8443' not in configuration.get('Web', {}), configuration
-                assert 'node.fixture.test:443' in configuration['Web'], configuration
+                assert not configuration.get('AllowFunnel') and 'node.fixture.test:443' not in configuration.get('Web', {}), configuration
+                assert 'node.fixture.test:8443' in configuration['Web'], configuration
             routes = status_file()['routes']
             assert routes['system']['state'] == 'off' and routes['tailnet']['state'] == 'on', routes
             checks.append('disconnecting_cloud_chats_closes_only_the_public_address')

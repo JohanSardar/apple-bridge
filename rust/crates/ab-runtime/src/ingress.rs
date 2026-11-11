@@ -58,11 +58,14 @@ impl App {
         if !hosts(&chosen, &self.statuses.borrow()).contains(host) {
             return Err(ab_operations::Error::from(Code::Unauthorized).into());
         }
-        let cloud = self
+        let route = self
             .statuses
             .borrow()
-            .get(ab_remote::state::CLOUD_INGRESS)
-            .is_some_and(|status| status.active && status.host == host);
+            .iter()
+            .find(|(_, status)| status.active && status.host == host)
+            .map(|(name, _)| name.clone())
+            .unwrap_or_default();
+        let cloud = route == ab_remote::state::CLOUD_INGRESS;
         let sources = if cloud {
             ab_remote::state::read::<ab_remote::state::Config>(&self.home, "config")
                 .map(|config| config.cloud_sources)
@@ -70,7 +73,7 @@ impl App {
         } else {
             Vec::new()
         };
-        let key = format!("{host} {}", sources.join(","));
+        let key = format!("{host} {route} {}", sources.join(","));
         let mut routers = self.routers.lock().map_err(|_| Error::Invalid)?;
         if let Some(router) = routers.get(&key) {
             return Ok(router.clone());
@@ -95,6 +98,7 @@ impl App {
         if !sources.is_empty() {
             web.limit_sources(sources);
         }
+        web.set_route(&route);
         let router = frontdoor
             .router()
             .merge(self.phone.clone())

@@ -83,8 +83,15 @@ pub struct Web {
     pub(crate) metadata: crate::web_metadata::Fetcher,
     pub(crate) connectors: Arc<crate::web_connector::Connectors>,
     sources: std::sync::OnceLock<std::collections::BTreeSet<String>>,
+    route: std::sync::OnceLock<String>,
 }
 impl Web {
+    pub fn set_route(&self, route: &str) {
+        let _ = self.route.set(route.into());
+    }
+    pub(crate) fn route(&self) -> &str {
+        self.route.get().map_or("", String::as_str)
+    }
     pub fn limit_sources(&self, sources: impl IntoIterator<Item = String>) {
         let _ = self.sources.set(sources.into_iter().collect());
     }
@@ -114,6 +121,7 @@ impl Web {
             metadata: crate::web_metadata::Fetcher::default(),
             connectors,
             sources: std::sync::OnceLock::new(),
+            route: std::sync::OnceLock::new(),
         })
     }
     pub fn router(self: Arc<Self>) -> Router {

@@ -1434,15 +1434,10 @@ pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice)
             no_open: true,
         },
     };
-    let cloud_origin = (route == "cloud")
-        .then(|| current.routes.get(ab_remote::state::CLOUD_INGRESS))
-        .flatten()
-        .map(|route| route.url.clone())
-        .filter(|url| !url.is_empty());
     let outcome = onboard(home, "off", &route, args.timeout.as_deref(), voice).await?;
-    if let (Ok(_), Some(origin)) = (&outcome, cloud_origin) {
+    if outcome.is_ok() && route == "cloud" {
         let revoked = ab_trust::Authority::open(home)
-            .and_then(|authority| authority.revoke_from_origin(&origin))
+            .and_then(|authority| authority.revoke_route(ab_remote::state::CLOUD_INGRESS))
             .map_err(Failure::from)?;
         if !revoked.is_empty() && !Modes::get().json {
             ui::row("Disconnected", &format!("{} cloud chat connection(s)", revoked.len()));

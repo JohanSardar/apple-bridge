@@ -455,7 +455,7 @@ impl Authority {
             Ok(stored.clone())
         })
     }
-    pub fn record_origin(&self, id: &str, origin: &str) -> Result<(), Error> {
+    pub fn record_connection(&self, id: &str, origin: &str, route: &str) -> Result<(), Error> {
         self.update(|d| {
             let stored = d
                 .principals
@@ -463,18 +463,21 @@ impl Authority {
                 .find(|p| p.id == id)
                 .ok_or(Error::Unavailable)?;
             stored.extra.insert("origin".into(), origin.into());
+            if !route.is_empty() {
+                stored.extra.insert("route".into(), route.into());
+            }
             stored.revision += 1;
             Ok(())
         })
     }
-    pub fn revoke_from_origin(&self, origin: &str) -> Result<Vec<String>, Error> {
+    pub fn revoke_route(&self, route: &str) -> Result<Vec<String>, Error> {
         let now = jiff::Timestamp::now().to_string();
         self.update(|d| {
             let mut revoked = Vec::new();
             for p in &mut d.principals {
                 if p.kind == "agent"
                     && p.active()
-                    && p.extra.get("origin").and_then(serde_json::Value::as_str) == Some(origin)
+                    && p.extra.get("route").and_then(serde_json::Value::as_str) == Some(route)
                 {
                     p.token_hash.clear();
                     p.revision += 1;

@@ -284,7 +284,7 @@ impl Tailscale {
             for port in if private {
                 vec![7780_u16]
             } else if tailnet {
-                vec![443_u16, 7443, 9443]
+                vec![8443_u16, 9443, 4443]
             } else {
                 vec![443_u16, 8443, 10000]
             } {

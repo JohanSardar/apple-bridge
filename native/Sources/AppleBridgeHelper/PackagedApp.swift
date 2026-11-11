@@ -69,6 +69,8 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""
+                    window.level = .floating
+                    window.orderFrontRegardless()
                     window.makeKeyAndOrderFront(nil)
                     NSApplication.shared.activate()
                     alert.beginSheetModal(for: window) { response in

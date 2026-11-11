@@ -42,7 +42,7 @@ Claude and ChatGPT on the web run in the cloud and can't join Tailscale. To reac
 1. In Setup > Connect > Cloud chats, tick the services a cloud chat may see.
 2. Click **Turn On Public Address**. The first time, Tailscale may ask you to allow Funnel for your network: click **Allow Funnel** and confirm.
 3. Add the connector address Setup shows:
-   - **Claude:** Settings > Connectors > Add custom connector. Paste the address, click Add, then Connect.
+   - **Claude:** Customize > Connectors > Add > Add custom connector (Setup's **Open Claude** button opens it). Paste the address, click Add, then Connect.
    - **ChatGPT:** Settings > Apps > Advanced settings > Developer mode, then Create app. Paste the address and choose OAuth. Developer mode needs a paid plan.
 4. A page opens with a four-digit code, and a window on your Mac shows the same code with what the chat can see. Click Allow on the Mac if they match.
 
