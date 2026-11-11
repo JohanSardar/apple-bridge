@@ -172,8 +172,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         SetupModel.agentPath()
         let model = SetupModel(home: home, testing: snapshotDirectory != nil)
         model.onActivate = { [weak self] in
-            NSApplication.shared.activate()
+            self?.window?.orderFrontRegardless()
             self?.window?.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
         }
         model.onFinish = { [weak self] in self?.window?.close() }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Self.showSetup, object: nil)
@@ -219,6 +220,8 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { setup?.stop() }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { setup != nil }
 
     @objc func reopenSetup() {
         setup?.start()

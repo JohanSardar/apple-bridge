@@ -5,10 +5,12 @@ Agents on your Mac, such as Claude Code and Codex, connect to one local address:
 ## Install
 
 ```sh
-curl -fsSL https://eilmer.si/applebridge/install | sh
+curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
 ```
 
-It needs no Node, Homebrew or `sudo`. [The script](install) puts Apple Bridge in `~/.applebridge`, links `bridge` into `~/.local/bin` and adds that folder to your PATH if it's missing. It checks the download's SHA-256 before changing anything.
+It needs no Node, Homebrew or `sudo`. [The script](install) puts Apple Bridge in `~/.applebridge`, links `bridge` into `~/.local/bin` and adds that folder to your PATH if it's missing. It checks the download's SHA-256 before changing anything. Then it starts Apple Bridge and, on a first install, opens the setup window.
+
+To install through an agent, tell it: "Install Apple Bridge from github.com/JohanSardar/apple-bridge". It runs the same command; the person at the Mac finishes setup in the window.
 
 To update, run the same command, then `bridge up`. It stops the running version first, and your Mac permissions carry over.
 
@@ -22,7 +24,17 @@ rm -rf ~/.applebridge ~/.local/bin/bridge
 
 Your data stays in `~/Library/Application Support/AppleBridge`, including a copy of your private messages and mail and Apple Bridge's credentials. Delete that folder when you no longer want them. Turn off Mac permissions in System Settings under Privacy & Security.
 
-## Quick start
+## Setup window
+
+`bridge setup` opens it; the installer does that for you the first time.
+
+1. **Choose what to connect.** Messages, Photos, Calendar, Reminders, Notes, Contacts and Mail are picked to start with; Safari, Screen and Camera, and Location are off. Each card says what it's for.
+2. **Allow permissions, one at a time.** Setup asks only for what the chosen apps need, and skips any you've already allowed. For a permission macOS asks about in a small window, such as Contacts or sending with Messages, click the button and then Allow. For Full Disk Access, Accessibility and Screen Recording, setup opens the right page in System Settings and shows a small panel beside it: drag Apple Bridge from the panel into the list and turn on its switch. Setup notices within a second and moves on. Skip anything you don't want; the rest keep working. If macOS offers to quit and reopen Apple Bridge, either answer is fine: setup picks up where it was.
+3. **Connect your agent.** Setup finds Claude Code and Codex on this Mac. Connect opens your browser once: check that the four-digit code matches the one Apple Bridge shows, then click Allow. Any other app can use the address shown there.
+
+When you leave the permission steps, setup restarts the Helper so new permissions are read right away (`bridge permissions reload` does the same by hand). Without a desktop, use the terminal steps below.
+
+## Quick start in a terminal
 
 ```sh
 bridge up                   # start Apple Bridge. It asks nothing
@@ -71,7 +83,7 @@ bridge connectors allow --request <id> --code <code>
 | `--timeout DURATION` | Stop waiting for sign-in after this long, such as `5m` (default `10m`). The server stays registered |
 | `--print` | Show the agent's commands and run nothing |
 
-Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run. It never allows a request itself.
+Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run, unless you pass `--sign-in`, which opens the browser anyway; the setup window uses that. It never allows a request itself.
 
 To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agents list`, then `bridge agents revoke <id>`.
 

@@ -13,14 +13,14 @@ Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 ## Quick start
 
 ```sh
-curl -fsSL https://eilmer.si/applebridge/install | sh
-bridge up                   # start Apple Bridge. It asks nothing
-bridge link claude          # connect Claude Code. Or: bridge link codex
-bridge permissions guide    # allow the Mac permissions you want
-bridge stats --wait         # counts per source, as each one finishes
+curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
 ```
 
-No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connectors allow`. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+That installs Apple Bridge, starts it and opens setup. Pick the apps your agents should reach, such as Messages, Photos and Calendar. Setup then asks only for the Mac permissions those apps need, one at a time: it shows you what to do, notices when you've done it and moves on. Last, connect Claude Code or Codex with one click; the browser shows a four-digit code to check before you click Allow.
+
+Prefer to ask an agent? Tell Claude Code: "Install Apple Bridge from github.com/JohanSardar/apple-bridge". It runs the same command, and you finish setup in the window it opens.
+
+No account, server or domain is needed. Reopen setup any time with `bridge setup`. In a terminal without a desktop, use `bridge link claude` and `bridge permissions guide` instead. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 
@@ -29,7 +29,7 @@ $ bridge stats
 ✓ Messages        163,101 messages · 708 chats · 6,791 attachments
 ✓ Contacts        154 contacts
 ✓ Calendar        1,776 events · 30 calendars
-! Notes           nothing yet  (needs a Mac permission: run bridge permissions guide)
+! Notes           nothing yet  (needs a Mac permission: run bridge setup)
 354,321 items in total. Counts only, no content.
 ```
 

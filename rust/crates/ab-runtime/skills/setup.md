@@ -7,10 +7,21 @@ Everything here runs on the owner's Mac. It needs no account, server or domain.
 - **Level 1, anything on this Mac (default):** Claude Code, Codex, other apps and bots, on `http://127.0.0.1:7780/mcp`. `bridge link other` prints what other apps need.
 - **Level 2, remote use (optional):** `bridge remote enable`. Only when the owner asks for it. Never turn it on for them.
 
-## Steps
+## Install
+
+When the owner asks you to install Apple Bridge, run:
+
+```sh
+curl -fsSL https://johansardar.github.io/apple-bridge/install | sh
+```
+
+It installs, starts Apple Bridge and opens the setup window on the Mac's screen. Tell the owner to finish it there: they choose the apps to connect, allow each permission and connect their agent. You can't click those for them. If you are Claude Code and they connect it in the window, the new server is available after Claude Code restarts.
+
+## Steps without the window
 
 ```sh
 bridge up                  # starts Apple Bridge, asks nothing
+bridge setup               # opens the setup window again
 bridge link claude         # or: bridge link codex
 bridge permissions guide   # run in a terminal; it opens Settings and macOS may ask
 bridge stats --wait        # counts per source as each one finishes
