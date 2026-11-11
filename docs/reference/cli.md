@@ -892,7 +892,9 @@ bridge tailscale [options]
 Let your other devices and cloud agents reach this Mac through Tailscale
 
 Options:
-  --off  Turn Tailscale access off again
+  --keep-awake  Keep this Mac awake with the lid closed so agents still reach it; macOS asks for
+                your password or Touch ID
+  --off         Turn Tailscale access off again
 
 Global options: see bridge --help
 

@@ -34,7 +34,7 @@ curl -fsSL https://eilmer.si/applebridge/install | sh
 ~/.local/bin/bridge up
 ~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
 ~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
-~/.local/bin/bridge tailscale --keep-awake --yes   # cloud agents can reach the Mac, even with the lid closed
+~/.local/bin/bridge tailscale --keep-awake --yes   # only if they want it while away or with the lid shut
 ```
 
 Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
