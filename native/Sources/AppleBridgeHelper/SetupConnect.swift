@@ -339,7 +339,7 @@ struct ConnectView: View {
             case "error": route.last_error ?? "Something went wrong. Turn it off and try again."
             default: "Starting…"
             }
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Label(text, systemImage: route.state == "error" ? "exclamationmark.triangle" : "hourglass").foregroundStyle(route.state == "error" ? .orange : .secondary)
                 Spacer()
                 if let action, let link = route.link, let url = URL(string: link) {

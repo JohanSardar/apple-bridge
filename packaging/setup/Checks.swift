@@ -55,7 +55,7 @@ struct SetupChecks {
         model.runCommand = { arguments, path in
             if arguments.first == "install-credentials" { return Data() }
             if arguments.starts(with: ["remote", "status"]) {
-                return Data(#"{"remote":{"state":"on","routes":{"system":{"state":"on","url":"https://bridge.example.test","sources":["calendar"]},"tailnet":{"state":"login_pending","link":"https://login.tailscale.com/a/x"}}}}"#.utf8)
+                return Data(#"{"remote":{"state":"on","routes":{"system":{"state":"on","url":"https:\/\/bridge.example.test","sources":["calendar"]},"tailnet":{"state":"login_pending","link":"https:\/\/login.tailscale.com\/a\/x"}}}}"#.utf8)
             }
             if arguments.first == "remote" {
                 let remote = URL(fileURLWithPath: path).appendingPathComponent("remote")
