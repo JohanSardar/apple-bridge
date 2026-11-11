@@ -1,3 +1,5 @@
+import socket
+import sqlite3
 import fcntl
 import base64
 import hashlib
@@ -210,10 +212,12 @@ class CloudReview(unittest.TestCase):
                 "--home", str(self.home)], env=self.env,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
-                wait(lambda: json.loads(
-                    (self.home / "remote/config.json").read_text()
-                ).get("cloud_sources") == ["calendar"])
+                time.sleep(2)
                 self.assertIsNone(child.poll())
+                self.assertNotEqual(json.loads(
+                    (self.home / "remote/config.json").read_text()
+                ).get("cloud_sources"), ["calendar"],
+                    "the narrower list was saved before old connections were revoked")
             finally:
                 child.kill()
                 child.wait(timeout=10)
@@ -253,6 +257,113 @@ class CloudReview(unittest.TestCase):
         print(json.dumps({"prechange_pending_exchange": refused}))
         self.assertNotIn("access_token", refused,
                          "an old pending request restored a removed cloud source")
+
+    def assert_refused(self, client, tokens):
+        read, _ = self.request("POST", "/v1/op/messages.chats", "{}",
+                               token=tokens["access_token"])
+        refreshed, refused = self.token({
+            "grant_type": "refresh_token", "client_id": client,
+            "refresh_token": tokens["refresh_token"]})
+        self.assertEqual(read, 401)
+        self.assertEqual(refreshed, 400)
+        self.assertEqual(refused, {"error": "invalid_grant"})
+        self.assertNotIn("access_token", refused)
+        self.assertNotIn("refresh_token", refused)
+        print(json.dumps({"new_request": read, "refresh": refreshed}))
+    def append_synthetic_chat_change(self, marker):
+        with sqlite3.connect(self.home / "state.db", timeout=10) as db:
+            cursor = json.loads(db.execute(
+                "SELECT value FROM meta WHERE key='cursor'").fetchone()[0])
+            cursor["sequence"] += 1
+            sequence = cursor["sequence"]
+            record = {
+                "collection": "messages.chat",
+                "id": "cht_" + f"{sequence:026d}",
+                "version": 1, "source": "messages",
+                "observed_at": "2026-11-11T00:00:00Z",
+                "deleted": False,
+                "coverage": {"fields": "full", "missing": None},
+                "data": {"display_name": marker},
+            }
+            change = {"sequence": sequence, "op": "upsert", "record": record}
+            db.execute(
+                "INSERT INTO journal(seq,epoch,source,payload) VALUES(?,?,?,?)",
+                (sequence, cursor["epoch"], "messages",
+                 json.dumps(change).encode()))
+            db.execute("INSERT INTO journal_commits VALUES(?,?)",
+                       (cursor["epoch"], sequence))
+            db.execute("UPDATE meta SET value=? WHERE key='cursor'",
+                       (json.dumps(cursor),))
+    def open_stream(self, token):
+        target = urlsplit(
+            self.api.config["Web"][HOST + ":443"]["Handlers"]["/"]["Proxy"])
+        connection = http.client.HTTPConnection(
+            target.hostname, target.port, timeout=3)
+        self.addCleanup(connection.close)
+        connection.request("GET", target.path + "/v1/changes", headers={
+            "Host": HOST, "X-Forwarded-Host": HOST,
+            "X-Forwarded-Proto": "https", "X-Forwarded-For": "203.0.113.1",
+            "Authorization": "Bearer " + token})
+        response = connection.getresponse()
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.readline(), b": connected\n")
+        self.assertEqual(response.readline(), b"\n")
+        return response
+    def next_data(self, response):
+        try:
+            while True:
+                line = response.readline()
+                if not line:
+                    return None
+                if line.startswith(b"data: "):
+                    return json.loads(line[6:])
+        except (TimeoutError, socket.timeout):
+            return None
+    def test_interrupted_narrowing_hold_only(self):
+        with (self.home / "credentials.lock").open("r+b") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            child = subprocess.Popen([
+                BINARY, "remote", "enable", "--via", "cloud",
+                "--sources", "calendar", "--no-open", "--json",
+                "--home", str(self.home)], env=self.env,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                time.sleep(2)
+                self.assertIsNone(child.poll())
+                self.assertNotEqual(json.loads(
+                    (self.home / "remote/config.json").read_text()
+                ).get("cloud_sources"), ["calendar"])
+            finally:
+                child.kill()
+                child.wait(timeout=10)
+                fcntl.flock(lock, fcntl.LOCK_UN)
+    def test_existing_stream_after_interrupted_narrowing(self):
+        client, tokens = self.connect()
+        response = self.open_stream(tokens["access_token"])
+        self.append_synthetic_chat_change("AB_REVIEW_R3_BEFORE")
+        before = self.next_data(response)
+        self.assertIn("AB_REVIEW_R3_BEFORE", json.dumps(before))
+        self.test_interrupted_narrowing_hold_only()
+        self.enable("calendar")
+        self.assert_refused(client, tokens)
+        self.append_synthetic_chat_change("AB_REVIEW_R3_AFTER_NARROWING")
+        after = self.next_data(response)
+        print(json.dumps({"post_narrowing_stream_batch": after}))
+        self.assertNotIn(
+            "AB_REVIEW_R3_AFTER_NARROWING", json.dumps(after),
+            "an already-open cloud stream exposed a removed source after narrowing")
+    def test_existing_stream_after_normal_narrowing(self):
+        client, tokens = self.connect()
+        response = self.open_stream(tokens["access_token"])
+        self.append_synthetic_chat_change("AB_REVIEW_R3_BEFORE")
+        self.assertIn("AB_REVIEW_R3_BEFORE", json.dumps(self.next_data(response)))
+        self.enable("calendar")
+        self.assert_refused(client, tokens)
+        self.append_synthetic_chat_change("AB_REVIEW_R3_AFTER_NORMAL_NARROWING")
+        after = self.next_data(response)
+        print(json.dumps({"normal_post_narrowing_stream_batch": after}))
+        self.assertNotIn("AB_REVIEW_R3_AFTER_NORMAL_NARROWING", json.dumps(after))
+
 
 if __name__ == '__main__':
     unittest.main()

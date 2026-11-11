@@ -471,13 +471,31 @@ impl Authority {
         })
     }
     pub fn revoke_route(&self, route: &str) -> Result<Vec<String>, Error> {
+        self.revoke_route_beyond(route, None)
+    }
+    pub fn revoke_route_beyond(
+        &self,
+        route: &str,
+        sources: Option<&[String]>,
+    ) -> Result<Vec<String>, Error> {
         let now = jiff::Timestamp::now().to_string();
+        let beyond = |p: &Principal| {
+            sources.is_none_or(|sources| {
+                p.grants.iter().any(|grant| {
+                    grant
+                        .as_str()
+                        .split_once(':')
+                        .is_none_or(|(source, _)| !sources.iter().any(|s| s == source))
+                })
+            })
+        };
         self.update(|d| {
             let mut revoked = Vec::new();
             for p in &mut d.principals {
                 if p.kind == "agent"
                     && p.active()
                     && p.extra.get("route").and_then(serde_json::Value::as_str) == Some(route)
+                    && beyond(p)
                 {
                     p.token_hash.clear();
                     p.revision += 1;
