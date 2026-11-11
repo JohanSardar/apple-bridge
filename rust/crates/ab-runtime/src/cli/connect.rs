@@ -126,11 +126,32 @@ fn start_tailscale() -> Outcome {
     Ok(())
 }
 
-async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
-    commands::check_remote_files(home)?;
-    if !gateway::lock_held(home) {
-        return Err(Failure::not_running(home));
+fn ensure_running(home: &Path) -> Outcome {
+    if gateway::lock_held(home) {
+        return Ok(());
     }
+    ui::note("Starting Apple Bridge…");
+    let started = std::env::current_exe().ok().is_some_and(|bridge| {
+        Command::new(bridge)
+            .arg("up")
+            .arg("--home")
+            .arg(home)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+    });
+    if started && gateway::lock_held(home) {
+        Ok(())
+    } else {
+        Err(Failure::not_running(home))
+    }
+}
+
+async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
+    ensure_running(home)?;
+    commands::check_remote_files(home)?;
     start_tailscale()?;
     let voice = commands::Voice::Modern {
         open: true,
@@ -302,10 +323,8 @@ pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Out
             format!("Can't use --domain {}. Use a name such as bridge.example.com.", ui::clean(&args.domain)),
         ));
     }
+    ensure_running(home)?;
     commands::check_remote_files(home)?;
-    if !gateway::lock_held(home) {
-        return Err(Failure::not_running(home));
-    }
     let relay = format!("https://{domain}");
     ui::phase(1, 5, &format!("Checking {}…", ui::clean(&args.server)));
     let ip = server_address(&args.server, args.ip.as_deref())?.to_string();
