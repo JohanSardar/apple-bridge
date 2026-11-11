@@ -33,16 +33,18 @@ bridge stats --wait         # counts per source, as each one finishes
 
 Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `bridge stats` and tell me how much has synced."
 
-## The two levels
+## Ways to connect
 
-The only network difference is whether the app runs on your Mac.
+Local is the default. The others are off until you turn them on, in the Setup window's Connect step or with `bridge remote`.
 
-| Level | Who connects | How | Needs |
+| Way | Who connects | How | Needs |
 |---|---|---|---|
-| 1, the default | Anything on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
-| 2, opt-in | Other computers and cloud apps such as ChatGPT | `bridge remote enable` | An invite for the hosted relay, or [your own server](self-host.md) |
+| On this Mac, the default | Agents on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
+| Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge remote enable --via tailnet` | Tailscale on this Mac and on the other device, signed in to the same account |
+| Cloud chats, opt-in | Claude and ChatGPT on the web, and other MCP apps that can't join Tailscale | `bridge remote enable --via cloud --sources calendar,reminders` | Tailscale on this Mac. It opens a public address through Tailscale Funnel |
+| Your own relay | Anyone who runs their own server | `bridge remote enable --relay-url https://relay.example.com` | [Your own server](self-host.md) |
 
-Level 1 never starts the relay. Level 2 only starts when you run `bridge remote enable`, and `bridge remote disable` stops it.
+See [connecting other devices and cloud chats](connectors/devices.md). Nothing leaves this Mac until you turn one of these on, and `bridge remote disable --via ROUTE` turns it off again.
 
 ## Start and stop
 

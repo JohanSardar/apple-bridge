@@ -154,6 +154,7 @@ impl Tailscale {
                 .filter(|millis| *millis > 0)
                 .unwrap_or(5000),
         );
+        let mut login_started = false;
         loop {
             let status: Value = self
                 .api
@@ -163,6 +164,17 @@ impl Tailscale {
                 .error_for_status()?
                 .json()
                 .await?;
+            if status["BackendState"] == "NeedsLogin"
+                && status["AuthURL"].as_str().is_none_or(str::is_empty)
+                && !login_started
+            {
+                login_started = true;
+                let _ = self
+                    .api
+                    .request(reqwest::Method::POST, "login-interactive", None, None)
+                    .await;
+                continue;
+            }
             let capabilities = &status["Self"]["CapMap"];
             let progress = if status["BackendState"] != "Running" {
                 Some(Progress {

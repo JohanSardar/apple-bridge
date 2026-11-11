@@ -106,16 +106,17 @@ final class ConnectModel: ObservableObject {
         let run = run
         Task { @MainActor in
             let data = await Task.detached { run(arguments, path) }.value
+            await refresh()
             busy.remove(key)
             done(data)
-            await refresh()
         }
     }
 
     func turnOnTailnet() {
         notice = ""
         perform("tailnet", ["remote", "enable", "--via", "tailnet", "--json", "--no-open", "--timeout", "45s"]) { [weak self] data in
-            self?.openPending(data, fallback: "Tailscale didn't answer. Open Tailscale, make sure it's signed in, then try again.")
+            if data == nil, let state = self?.tailnet?.state, state != "off" { return }
+            self?.openPending(data, fallback: "Couldn't turn on Tailscale access. Make sure Apple Bridge is running (run bridge up) and Tailscale is open, then try again.")
         }
     }
 
@@ -129,7 +130,8 @@ final class ConnectModel: ObservableObject {
         guard !cloudSources.isEmpty else { notice = "Choose at least one service for cloud chats."; return }
         let sources = CloudService.all.map(\.id).filter { cloudSources.contains($0) }.joined(separator: ",")
         perform("cloud", ["remote", "enable", "--via", "cloud", "--sources", sources, "--json", "--no-open", "--timeout", "45s"]) { [weak self] data in
-            self?.openPending(data, fallback: "The public address didn't start. Make sure Tailscale is signed in, then try again.")
+            if data == nil, let state = self?.cloud?.state, state != "off" { return }
+            self?.openPending(data, fallback: "Couldn't turn on the public address. Make sure Apple Bridge is running and Tailscale is signed in, then try again.")
         }
     }
 
@@ -228,13 +230,18 @@ struct ConnectView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Apple Bridge already works with agents on this Mac. Add other devices and cloud chats here. Everything below is optional.")
                 .foregroundStyle(.secondary)
+            if !model.notice.isEmpty {
+                Label(model.notice, systemImage: "info.circle.fill")
+                    .foregroundStyle(.primary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                    .textSelection(.enabled)
+            }
             localCard
             tailnetCard
             cloudCard
             relayCard
-            if !model.notice.isEmpty {
-                Label(model.notice, systemImage: "info.circle").foregroundStyle(.secondary).textSelection(.enabled)
-            }
         }
     }
 

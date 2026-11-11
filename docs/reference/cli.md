@@ -507,6 +507,8 @@ Options:
   --name <NAME>            Agent name, 1 to 120 bytes
   --scope <ACCESS>         Access grants, comma-separated, such as messages:read,contacts:read
                            (default: reminders:read)
+  --tailnet                Let the token work only at this Mac's Tailscale address, from your other
+                           devices
 
 Global options: see bridge --help
 
@@ -910,8 +912,10 @@ Options:
   --open                Open sign-in links in the browser even without a terminal, unless over SSH
   --private             Use the private route; same as --via private
   --relay-url <URL>     Your own relay's address
+  --sources <SOURCES>   Cloud route only: services cloud chats may see, such as calendar,reminders
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route (default: relay) (accepted: relay, private, tailscale-app, both)
+  --via <ROUTE>         Route (default: relay) (accepted: relay, tailnet, cloud, private,
+                        tailscale-app, both)
 
 Global options: see bridge --help
 
@@ -940,8 +944,8 @@ Options:
   --name <NAME>         Name for this Mac
   --private             Turn off the private route; same as --via private
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, private, tailscale-app,
-                        both)
+  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, tailnet, cloud,
+                        private, tailscale-app, both)
 
 Global options: see bridge --help
 
@@ -1034,8 +1038,10 @@ Options:
   --open                Open sign-in links in the browser even without a terminal, unless over SSH
   --private             Use the private route; same as --via private
   --relay-url <URL>     Your own relay's address
+  --sources <SOURCES>   Cloud route only: services cloud chats may see, such as calendar,reminders
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route (default: relay) (accepted: relay, private, tailscale-app, both)
+  --via <ROUTE>         Route (default: relay) (accepted: relay, tailnet, cloud, private,
+                        tailscale-app, both)
 
 Global options: see bridge --help
 
@@ -1055,8 +1061,8 @@ Options:
   --name <NAME>         Name for this Mac
   --private             Turn off the private route; same as --via private
   --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, private, tailscale-app,
-                        both)
+  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, tailnet, cloud,
+                        private, tailscale-app, both)
 
 Global options: see bridge --help
 ```
