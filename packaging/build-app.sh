@@ -45,7 +45,6 @@ values["CFBundleShortVersionString"] = version
 values["CFBundleVersion"] = version
 values["CFBundleName"] = "Apple Bridge"
 values["CFBundleDisplayName"] = "Apple Bridge"
-values["NSContactsUsageDescription"] = "Apple Bridge synchronizes your contacts."
 info.write_bytes(plistlib.dumps(values))
 arguments = ["bridge", "start", "--role", "gateway", "--api-addr", sys.argv[3], "--peer-addr", sys.argv[4]]
 if sys.argv[2]:

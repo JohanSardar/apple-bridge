@@ -19,7 +19,7 @@ pub struct Leaf {
 const GROUPS: &[(&str, &[&str])] = &[
     (
         "Getting started",
-        &["up", "link", "unlink", "permissions", "stats", "down"],
+        &["up", "setup", "link", "unlink", "permissions", "stats", "down"],
     ),
     ("Reading data", &["read", "search", "call", "skills"]),
     ("Access", &["agents", "tokens", "connectors", "web"]),
@@ -55,7 +55,6 @@ pub const DEPRECATED: &[(&str, &str)] = &[
     ("shortcuts install-pack", "bridge shortcuts install"),
     ("revoke", "bridge tokens revoke"),
     ("scope", "bridge tokens update"),
-    ("setup", "bridge selftest messages"),
 ];
 
 const AGENT_FIELDS: &[(&str, &str, bool)] = &[
@@ -163,7 +162,7 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.",
+            "Opens a browser for sign-in only on a local, interactive terminal, or with --sign-in; the address is always printed.",
             "Piped, stdout holds only the server name; bridge link other prints only the MCP address.",
         ],
         schema: LINK_FIELDS,
@@ -215,6 +214,21 @@ pub const LEAVES: &[Leaf] = &[
             "Run bridge down before updating or uninstalling. Moving or deleting the installation does not stop a running gateway.",
         ],
         schema: &[("home", "string", false), ("outcome", "string", false)],
+    },
+    Leaf {
+        path: "setup",
+        examples: &[("Open the setup window", "bridge setup")],
+        notes: &[
+            "Choose the services to connect, then allow only the permissions they need, one at a time. Each step is optional and setup notices when you allow one.",
+            "It needs a logged-in Mac desktop. In a terminal without one, use bridge permissions guide.",
+        ],
+        schema: &[("outcome", "string", false), ("app", "string", false)],
+    },
+    Leaf {
+        path: "permissions reload",
+        examples: &[("Start reading with new permissions", "bridge permissions reload")],
+        notes: &["Run it after allowing a permission in System Settings. The setup window does this for you."],
+        schema: &[("outcome", "string", false)],
     },
     Leaf {
         path: "permissions guide",
@@ -846,12 +860,6 @@ pub const LEAVES: &[Leaf] = &[
             ("outcome", "string", false),
             ("next", "array", false),
         ],
-    },
-    Leaf {
-        path: "setup",
-        examples: &[],
-        notes: &["This sends real messages to your own chat through the Helper."],
-        schema: &[],
     },
 ];
 

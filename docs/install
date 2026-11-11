@@ -77,23 +77,33 @@ main() {
     tar -xzf "$work/package.tgz" -C "$work"
 
     mkdir -p "$bin_dir"
+    fresh=yes
     if [ -e "$root" ]; then
-        "$root/bin/bridge" down || fail "couldn't stop the running version. Nothing was changed."
+        fresh=no
+        "$root/bin/bridge" down >/dev/null || fail "couldn't stop the running version. Nothing was changed."
         mv "$root" "$work/previous"
     fi
     mv "$work/package" "$root"
     ln -sfn "$root/bin/bridge" "$link"
 
-    echo "Apple Bridge $VERSION is installed."
+    if ! address=$("$root/bin/bridge" up 2>"$work/up.log"); then
+        cat "$work/up.log" >&2
+        fail "Apple Bridge $VERSION is installed but didn't start. Run: bridge up"
+    fi
+    echo "Apple Bridge $VERSION is installed and running."
+    echo "Agents on this Mac connect to $address"
+    echo
+    if [ "$fresh" = yes ] && "$root/bin/bridge" setup >/dev/null 2>&1; then
+        echo "Setup is open in a new window. Choose what to connect and allow its"
+        echo "permissions there. If an agent ran this, the person at this Mac finishes it."
+    elif [ "$fresh" = yes ]; then
+        echo "To choose what to connect, run this on the Mac's desktop: bridge setup"
+        echo "Without a desktop, allow permissions in the terminal: bridge permissions guide"
+    else
+        echo "Your settings and permissions carried over. To change them: bridge setup"
+    fi
+    echo
     add_to_path
-    cat <<'NEXT'
-
-Next:
-  bridge up                   # start Apple Bridge. It asks nothing
-  bridge link claude          # connect Claude Code. Or: bridge link codex
-  bridge permissions guide    # allow the Mac permissions you want
-  bridge stats --wait         # counts per source, as each one finishes
-NEXT
 }
 
 main "$@"

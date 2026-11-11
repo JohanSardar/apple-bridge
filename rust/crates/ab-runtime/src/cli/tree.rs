@@ -96,6 +96,8 @@ pub struct Globals {
 pub enum Command {
     #[command(about = "Start Apple Bridge on this Mac for local agents")]
     Up(UpArgs),
+    #[command(about = "Open the setup window: choose what to connect and allow its permissions")]
+    Setup(SetupArgs),
     #[command(about = "Connect Claude Code or Codex to this Mac")]
     Link(LinkArgs),
     #[command(about = "Disconnect Claude Code or Codex")]
@@ -163,11 +165,6 @@ pub enum Command {
         about = "Change a token's access (deprecated: bridge tokens update)"
     )]
     Scope(ScopeArgs),
-    #[command(
-        hide = true,
-        about = "Run the Messages self-test, which sends real messages to yourself (deprecated: bridge selftest messages)"
-    )]
-    Setup(SelftestArgs),
     #[cfg(feature = "lab-harness")]
     #[command(name = "lab-operation-catalog", hide = true)]
     LabOperationCatalog,
@@ -258,6 +255,12 @@ pub struct LinkArgs {
     pub no_login: bool,
     #[arg(
         long,
+        conflicts_with = "no_login",
+        help = "Sign in through the browser even without a terminal"
+    )]
+    pub sign_in: bool,
+    #[arg(
+        long,
         alias = "no-browser",
         help = "Print the sign-in address instead of opening a browser"
     )]
@@ -268,6 +271,12 @@ pub struct LinkArgs {
         help = "Stop waiting for sign-in after this long (default: 10m)"
     )]
     pub timeout: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct SetupArgs {
+    #[arg(long, value_name = "PATH", help = "Apple Bridge app to open")]
+    pub helper_app: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -506,6 +515,8 @@ pub enum PermissionsAction {
     Guide(GuideArgs),
     #[command(about = "Show which permissions are allowed; never asks macOS")]
     Status(GuideStatusArgs),
+    #[command(about = "Restart the Helper so permissions allowed in System Settings take effect")]
+    Reload,
     #[command(about = "Ask macOS for one permission through the Helper")]
     Request {
         #[arg(value_name = "PERMISSION", help = "Permission name, such as camera")]

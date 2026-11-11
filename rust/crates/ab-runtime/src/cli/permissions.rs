@@ -1,9 +1,9 @@
 use super::{
-    Failure, Outcome,
+    Failure, Outcome, commands,
     failure::{Reason, Step},
     modes::Modes,
     stats,
-    tree::{GuideArgs, GuideStatusArgs},
+    tree::{GuideArgs, GuideStatusArgs, SetupArgs},
     ui,
 };
 use crate::{Config, product_cli};
@@ -765,6 +765,88 @@ pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     print_checklist(&backend)?;
     ui::next_steps(&[Step::new("Follow the sync", ["bridge", "stats", "--wait"])]);
     Ok(())
+}
+
+pub fn open_setup(home: &Path, args: &SetupArgs) -> Outcome {
+    let Backend::Mac { helper, .. } = backend_for(home, None, args.helper_app.as_deref()) else {
+        return Ok(());
+    };
+    if helper.is_empty() {
+        return Err(Failure::new(
+            Reason::HelperFailed,
+            "Can't open setup. No Apple Bridge app was found.",
+        )
+        .sentence("Install Apple Bridge, or pass --helper-app.")
+        .then(
+            "Or allow permissions in the terminal",
+            ["bridge", "permissions", "guide"],
+        ));
+    }
+    let opened = Command::new("open")
+        .args(["-n", "-a"])
+        .arg(&helper)
+        .args(["--args", "setup"])
+        .arg(commands::absolute(home))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if !opened {
+        return Err(Failure::new(
+            Reason::SpawnFailed,
+            "Couldn't open the setup window. It needs a logged-in Mac desktop.",
+        )
+        .then(
+            "Allow permissions in the terminal instead",
+            ["bridge", "permissions", "guide"],
+        ));
+    }
+    if Modes::get().json {
+        ui::json_document(serde_json::json!({"outcome": "opened", "app": helper}));
+    } else {
+        ui::done("Opened", "Apple Bridge setup");
+    }
+    Ok(())
+}
+
+pub async fn reload(home: &Path) -> Outcome {
+    let backend = backend_for(home, None, None);
+    let outcome = match backend.restart_session().await? {
+        SessionRestart::NotNeeded | SessionRestart::NotRunning => "not_running",
+        SessionRestart::CouldNotStop => "failed",
+        SessionRestart::Stopped(previous) => {
+            let deadline = Instant::now() + NEW_GRANT_SETTLES;
+            loop {
+                if backend.session_replaced(previous).await {
+                    break "reloaded";
+                }
+                if Instant::now() >= deadline {
+                    break "failed";
+                }
+                tokio::time::sleep(POLL).await;
+            }
+        }
+    };
+    if Modes::get().json {
+        ui::json_document(serde_json::json!({"outcome": outcome}));
+    }
+    match outcome {
+        "reloaded" => {
+            ui::done("Reloaded", "the Helper");
+            Ok(())
+        }
+        "not_running" => {
+            ui::note("Apple Bridge is not running. New permissions take effect with bridge up.");
+            Ok(())
+        }
+        _ => Err(Failure::new(
+            Reason::HelperFailed,
+            "The Helper did not restart, so new permissions are not read yet.",
+        )
+        .then("Restart Apple Bridge", ["bridge", "down"])
+        .then("Then start it again", ["bridge", "up"])),
+    }
 }
 
 #[cfg(test)]

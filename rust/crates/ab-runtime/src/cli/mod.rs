@@ -589,6 +589,7 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
         Command::Permissions(group) => match group.action {
             Some(PermissionsAction::Guide(args)) => permissions::guide(home, &args).await,
             Some(PermissionsAction::Status(args)) => permissions::status(home, &args),
+            Some(PermissionsAction::Reload) => permissions::reload(home).await,
             Some(PermissionsAction::Request { name, helper_app }) => {
                 commands::permission_request(home, &name, helper_app.as_deref()).await
             }
@@ -692,7 +693,7 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             Some(SelftestAction::Messages(args)) => commands::selftest(&args),
             None => Ok(()),
         },
-        Command::Setup(args) => commands::selftest(&args),
+        Command::Setup(args) => permissions::open_setup(home, &args),
         Command::Completion(args) => {
             ui::out(&help::completion(args.shell));
             Ok(())

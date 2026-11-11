@@ -91,6 +91,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if arguments.count == 3 { controller.connectorLabExecutable = arguments[2] }
             #endif
         }
+        if arguments.first == "setup", arguments.count == 2 {
+            controller.setupHome = URL(fileURLWithPath: arguments[1])
+        }
         if arguments.first == "setup-snapshot", arguments.count == 3 {
             controller.setupHome = URL(fileURLWithPath: arguments[1])
             controller.snapshotDirectory = URL(fileURLWithPath: arguments[2])
@@ -140,6 +143,12 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func show() {
         if connectorHome != nil { showApprovals(); return }
+        let home = setupHome ?? gatewayHome()
+        if snapshotDirectory == nil, !claimSetup(home) {
+            DistributedNotificationCenter.default().postNotificationName(Self.showSetup, object: nil, userInfo: nil, deliverImmediately: true)
+            NSApplication.shared.terminate(nil)
+            return
+        }
         NSApplication.shared.setActivationPolicy(.regular)
         let menu = NSMenu()
         let item = NSMenuItem()
@@ -147,22 +156,28 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         application.addItem(withTitle: "Quit Apple Bridge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = application
         menu.addItem(item)
-        let setupItem = NSMenuItem()
-        let setupMenu = NSMenu(title: "Setup")
-        setupMenu.addItem(withTitle: "Open Setup", action: #selector(reopenSetup), keyEquivalent: "s").target = self
-        setupItem.submenu = setupMenu
-        menu.addItem(setupItem)
+        let editItem = NSMenuItem()
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit
+        menu.addItem(editItem)
         NSApplication.shared.mainMenu = menu
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 580), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Apple Bridge Setup"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
-        let home = setupHome ?? gatewayHome()
+        SetupModel.agentPath()
         let model = SetupModel(home: home, testing: snapshotDirectory != nil)
-        model.install = { [weak self] in try self?.service.register() }
-        model.syncStatus = { [weak self] in self?.service.status == .enabled }
-        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Notification.Name("dev.applebridge.setup.\(getpid())"), object: nil)
+        model.onActivate = { [weak self] in
+            NSApplication.shared.activate()
+            self?.window?.makeKeyAndOrderFront(nil)
+        }
+        model.onFinish = { [weak self] in self?.window?.close() }
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Self.showSetup, object: nil)
         window.contentView = NSHostingView(rootView: SetupView(model: model))
-        window.minSize = NSSize(width: 860, height: 740)
         self.window = window
         window.delegate = self
         self.setup = model
@@ -177,6 +192,18 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 NSApplication.shared.terminate(nil)
             }
         }
+    }
+
+    static let showSetup = Notification.Name("dev.applebridge.setup.show")
+    var setupLock: Int32 = -1
+
+    func claimSetup(_ home: URL) -> Bool {
+        try? FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let descriptor = open(home.appendingPathComponent("setup.lock").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
+        guard descriptor >= 0 else { return true }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { close(descriptor); return false }
+        setupLock = descriptor
+        return true
     }
 
     func gatewayHome() -> URL {
@@ -194,7 +221,6 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) { setup?.stop() }
 
     @objc func reopenSetup() {
-        setup?.state.step = 0
         setup?.start()
         window?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
@@ -202,20 +228,29 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func captureSetup(_ model: SetupModel, directory: URL) async throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        await model.refresh()
-        let before = model.statuses
-        for step in 0..<5 {
-            model.state.step = step
+        model.statuses = ["contacts": "granted"]
+        model.agents = [LocalAgent(id: "claude", title: "Claude Code", path: "/usr/local/bin/claude", added: false), LocalAgent(id: "codex", title: "Codex", path: nil, added: false)]
+        var shots: [(String, () -> Void)] = [
+            ("welcome", { model.state.step = .welcome }),
+            ("services", { model.state.step = .services })
+        ]
+        for permission in model.plan {
+            shots.append(("permission-" + permission.id, { model.state.step = .permissions; model.state.current = permission.id; model.waitingInSettings = nil; model.celebrating = nil }))
+        }
+        shots += [
+            ("permission-waiting", { model.state.current = "full_disk_access"; model.waitingInSettings = "full_disk_access" }),
+            ("permission-allowed", { model.celebrating = "full_disk_access" }),
+            ("connect", { model.celebrating = nil; model.state.step = .connect; model.links = ["claude": .connected] }),
+            ("done", { model.state.step = .done })
+        ]
+        for (name, apply) in shots {
+            apply()
+            try await Task.sleep(for: .milliseconds(500))
             window?.contentView?.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(400))
             guard let view = window?.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { throw CocoaError(.fileWriteUnknown) }
             view.cacheDisplay(in: view.bounds, to: bitmap)
             guard let data = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
-            try data.write(to: directory.appendingPathComponent("step-\(step + 1).png"), options: .atomic)
+            try data.write(to: directory.appendingPathComponent(name + ".png"), options: .atomic)
         }
-        await model.refresh()
-        let tcc = model.permissions.compareTCC(model.statuses)
-        let report: [String: Any] = ["tcc_matches": tcc.matches, "tcc_compared": tcc.count, "status_matches": before == model.statuses, "permission_count": model.statuses.count, "snapshot_count": 5, "request_calls": NewPermissions.requestAPICalls, "fresh_setup": !FileManager.default.fileExists(atPath: model.home.appendingPathComponent("setup.json").path)]
-        try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]).write(to: directory.appendingPathComponent("report.json"), options: .atomic)
     }
 }

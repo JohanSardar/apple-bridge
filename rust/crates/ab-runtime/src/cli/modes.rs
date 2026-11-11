@@ -70,7 +70,7 @@ pub fn legacy_spelling() -> bool {
     let second = words.get(1).map_or("", String::as_str);
     matches!(
         first,
-        "agent" | "token" | "connector" | "revoke" | "scope" | "setup"
+        "agent" | "token" | "connector" | "revoke" | "scope"
     ) || matches!(
         (first, second),
         ("web", "devices" | "lock")
