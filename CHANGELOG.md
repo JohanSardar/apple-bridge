@@ -4,6 +4,18 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-11
+
+### Added
+
+- `photos_show` gives the person the photo itself: full frame and full resolution, nothing drawn on it. Contact sheets are only for finding a photo.
+- Setup has a Connect step: local agents use `http://127.0.0.1:7780/mcp`, other devices and Grok Bot connect over Tailscale with `bridge remote enable --via tailnet`, and cloud chats such as Claude use `--via cloud` through Tailscale Funnel.
+- `bridge permissions guide` is one small window that points at each macOS prompt or Settings page. Mac approvals need no code.
+
+### Fixed
+
+- Notes writes no longer fail with `permission_missing` when Notes is closed.
+
 ### Changed
 
 - MCP answers simple reads in one call. The connect instructions and `apple_read` name the common reads (`reminders.lists`, `reminders.items` with a list name, `notes.list`) and no longer suggest `apple_status` first. `time_zone` is optional wherever the Mac's time zone is filled in. `reminders.lists` returns titles, counts and IDs only. New listed tools: `screen_time` (default yesterday, top five apps per device) and `photos_find` (filters in, a numbered contact sheet out). Message results name the sender and the chat. `apple_describe` ranks reads above capture for looking and finding. Screen Time totals count real rows, whose days carry a time zone and whose seconds are fractional. A request ID belongs to the agent that used it. A read-only agent missing a write scope is told it needs a new agent, and `bridge agents update` refuses write scopes for a read agent instead of storing a read scope. See [ADR 0031](docs/adr/0031-compact-mcp-surface.md).
