@@ -156,8 +156,7 @@ final class ConnectModel: ObservableObject {
         let scopes = CloudService.all.map { "\($0.id):write" }.joined(separator: ",")
         perform("key", ["agents", "create", "--name", device == .grok ? "Grok Bot" : device.rawValue, "--tailnet", "--scope", scopes, "--expires-in", "90d", "--json"]) { [weak self] data in
             struct Created: Decodable { let token: String }
-            struct Envelope: Decodable { let agent: Created }
-            guard let data, let token = (try? JSONDecoder().decode(Envelope.self, from: data))?.agent.token else {
+            guard let data, let token = (try? JSONDecoder().decode(Created.self, from: data))?.token else {
                 self?.notice = "Couldn't make a key. Turn on Tailscale access first."
                 return
             }
