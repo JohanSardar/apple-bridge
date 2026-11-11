@@ -17,7 +17,6 @@ use std::{
 const TAILSCALE_APP: &str = "/Applications/Tailscale.app";
 const TAILSCALE_PACKAGE: &str = "https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg";
 const TAILSCALE_TEAM: &str = "(W5364U7YZB)";
-const INSTALL_WAIT: Duration = Duration::from_mins(15);
 const CLAUDE_CONNECTORS: &str =
     "https://claude.ai/new?modal=add-custom-connector#customize/connectors";
 
@@ -51,7 +50,7 @@ fn copy(text: &str) -> bool {
     child.wait().is_ok_and(|status| status.success()) && wrote
 }
 
-fn install_tailscale() -> Outcome {
+fn install_tailscale(home: &Path, keep_awake: bool) -> Outcome {
     let package = std::env::temp_dir().join(format!("Tailscale-{}.pkg", std::process::id()));
     let _ = std::fs::remove_file(&package);
     ui::phase(1, 3, "Downloading Tailscale from tailscale.com…");
@@ -82,25 +81,25 @@ fn install_tailscale() -> Outcome {
     ui::phase(
         2,
         3,
-        "Opening the Tailscale installer. Follow it to the end…",
+        "Installing Tailscale. macOS asks for your password or Touch ID…",
     );
-    if !quiet("/usr/bin/open", &[&package.to_string_lossy()]) {
-        return Err(Failure::new(
-            Reason::SpawnFailed,
-            "Couldn't open the Tailscale installer.",
-        ));
+    let mut arguments = vec![
+        "--tailscale-package".to_owned(),
+        package.to_string_lossy().into_owned(),
+    ];
+    if keep_awake {
+        arguments.push("--keep-awake".to_owned());
     }
-    let deadline = Instant::now() + INSTALL_WAIT;
-    while !Path::new(TAILSCALE_APP).exists() {
-        if Instant::now() >= deadline {
-            return Err(
-                Failure::new(Reason::Timeout, "Tailscale isn't installed yet.")
-                    .then("Run this again when it is", ["bridge", "tailscale"]),
-            );
-        }
-        std::thread::sleep(Duration::from_secs(1));
+    privileged(home, &arguments);
+    let _ = std::fs::remove_file(&package);
+    if Path::new(TAILSCALE_APP).exists() {
+        return Ok(());
     }
-    Ok(())
+    Err(
+        Failure::new(Reason::PermissionDenied, "Tailscale isn't installed.")
+            .sentence("macOS didn't get your password or Touch ID.")
+            .then("Try again", ["bridge", "tailscale"]),
+    )
 }
 
 const TAILSCALE_CLI: &str = "/Applications/Tailscale.app/Contents/MacOS/Tailscale";
@@ -187,7 +186,7 @@ fn sign_in_to_tailscale() -> Outcome {
     Ok(())
 }
 
-fn start_tailscale() -> Outcome {
+fn start_tailscale(home: &Path, keep_awake: bool) -> Outcome {
     if !cfg!(target_os = "macos") {
         return Ok(());
     }
@@ -195,11 +194,11 @@ fn start_tailscale() -> Outcome {
         if !Modes::get().interactive() && !Modes::get().yes {
             return Err(
                 Failure::new(Reason::NotFound, "Tailscale isn't installed on this Mac.")
-                    .sentence("Installing it needs a person to click through the installer.")
+                    .sentence("Installing it asks for the owner's password or Touch ID.")
                     .then("Install it and turn it on", ["bridge", "tailscale"]),
             );
         }
-        install_tailscale()?;
+        install_tailscale(home, keep_awake)?;
     }
     if !running("Tailscale") {
         ui::note("Starting Tailscale…");
@@ -241,10 +240,10 @@ fn ensure_running(home: &Path) -> Outcome {
     }
 }
 
-async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
+async fn turn_on(home: &Path, route: &str, keep_awake: bool) -> Outcome<String> {
     ensure_running(home)?;
     commands::check_remote_files(home)?;
-    start_tailscale()?;
+    start_tailscale(home, keep_awake)?;
     let voice = commands::Voice::Modern {
         open: true,
         no_open: false,
@@ -292,21 +291,28 @@ fn sleep_disabled() -> bool {
         })
 }
 
-fn keep_awake(home: &Path, on: bool) -> Outcome {
-    if !cfg!(target_os = "macos") || sleep_disabled() == on {
-        return Ok(());
-    }
+fn privileged(home: &Path, arguments: &[String]) {
     let saved = crate::Config::load(home)
         .map(|config| config.helper_app)
         .unwrap_or_default();
     let helper = crate::bundle::helper_app(&saved, std::env::current_exe().ok().as_deref());
     let _ = Command::new("/usr/bin/open")
-        .args(["-n", "-W", "-a", &helper, "--args", "keep-awake"])
-        .arg(if on { "on" } else { "off" })
+        .args(["-n", "-W", "-a", &helper, "--args", "privileged"])
+        .args(arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
+}
+
+fn keep_awake(home: &Path, on: bool) -> Outcome {
+    if !cfg!(target_os = "macos") || sleep_disabled() == on {
+        return Ok(());
+    }
+    privileged(
+        home,
+        &[if on { "--keep-awake" } else { "--let-sleep" }.to_owned()],
+    );
     if sleep_disabled() == on {
         return Ok(());
     }
@@ -342,7 +348,7 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
         };
         return commands::remote_disable(home, &disable, commands::MODERN).await;
     }
-    let url = turn_on(home, "tailnet").await?;
+    let url = turn_on(home, "tailnet", args.keep_awake).await?;
     if args.keep_awake {
         keep_awake(home, true)?;
         ui::done("Awake", "with the lid closed while Apple Bridge is on");
@@ -370,7 +376,7 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
 }
 
 pub async fn claude_app(home: &Path) -> Outcome {
-    let url = turn_on(home, "cloud").await?;
+    let url = turn_on(home, "cloud", false).await?;
     let mcp = format!("{url}/mcp");
     let armed = home.join(ab_frontdoor::web_connector::ARMED_FILE);
     let until = jiff::Timestamp::now().as_second()
