@@ -280,6 +280,8 @@ async fn guard(
         .get::<axum::extract::MatchedPath>()
         .map_or_else(|| "unmatched".into(), |path| path.as_str().to_owned());
     let principal_id = principal.id.clone();
+    let checked = principal.clone();
+    let checked_host = host.map(str::to_owned);
     request.extensions_mut().insert(principal);
     let (parts, body) = request.into_parts();
     let limit = if route == "/v1/blobs" && method == "POST" {
@@ -290,6 +292,18 @@ async fn guard(
     let Ok(bytes) = to_bytes(body, limit).await else {
         return problem(Code::Invalid.into());
     };
+    let still_allowed = frontdoor
+        .service
+        .identity
+        .current(&checked)
+        .is_ok_and(|current| !frontdoor.exceeds_sources(&current.grants));
+    if !still_allowed {
+        return authentication_problem(
+            Code::Unauthorized.into(),
+            frontdoor.config.public,
+            checked_host.as_deref(),
+        );
+    }
     let response = next
         .run(Request::from_parts(parts, Body::from(bytes)))
         .await;
