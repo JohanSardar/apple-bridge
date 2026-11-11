@@ -74,6 +74,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     window.makeKeyAndOrderFront(nil)
                     NSApplication.shared.activate()
                     alert.beginSheetModal(for: window) { response in
+                        window.level = .normal
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
