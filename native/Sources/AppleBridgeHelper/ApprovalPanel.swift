@@ -14,11 +14,11 @@ struct ConnectorRequest: Decodable, Sendable, Equatable {
 
     var from: String {
         switch source {
-        case "this_mac": return "An app on this Mac"
-        case "tailnet": return "A device on your Tailscale network"
+        case "this_mac": return "Asked by an app on this Mac"
+        case "tailnet": return "Asked from your Tailscale network"
         default:
             let host = redirect_host.split(separator: ":").first.map(String.init) ?? redirect_host
-            return ["localhost", "127.0.0.1", "[::1]"].contains(host) ? "An app on the device that started this" : "Returns to " + host
+            return ["localhost", "127.0.0.1", "[::1]"].contains(host) ? "Asked by an app on the device that started this" : "Returns to " + host
         }
     }
 }
@@ -58,13 +58,9 @@ struct ApprovalView: View {
                 }
                 .padding(.top, 18)
             } else {
-                let connected = model.outcome.hasSuffix("is connected")
                 Text(model.outcome.isEmpty ? "Connected" : model.outcome)
                     .font(.system(size: 13, weight: .bold)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 14)
-                if connected {
-                    Label("Allowed", systemImage: "checkmark.circle.fill").font(.system(size: 11)).foregroundStyle(Color(nsColor: .systemGreen)).padding(.top, 6)
-                }
             }
         }
         .padding(EdgeInsets(top: 20, leading: 16, bottom: 16, trailing: 16))

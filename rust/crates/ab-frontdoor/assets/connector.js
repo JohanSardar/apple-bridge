@@ -12,6 +12,7 @@ const say = (heading, text, kind) => {
   if (heading) title.textContent = heading;
   statusLine.textContent = text;
   panel.className = 'next' + (kind ? ' ' + kind : '');
+  if (kind) document.querySelector('.after')?.setAttribute('hidden', '');
 };
 const wait = ms => new Promise(done => setTimeout(done, ms));
 const reveal = (code, needed) => {

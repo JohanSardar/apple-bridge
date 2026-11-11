@@ -278,8 +278,38 @@ async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
         })
 }
 
+fn keep_awake(on: bool) -> Outcome {
+    if !cfg!(target_os = "macos") {
+        return Ok(());
+    }
+    let (value, reason) = if on {
+        (
+            "1",
+            "Apple Bridge wants to keep this Mac awake with the lid closed, so your agents can still reach it.",
+        )
+    } else {
+        ("0", "Apple Bridge wants to let this Mac sleep again.")
+    };
+    let script = format!(
+        "do shell script \"/usr/bin/pmset -a disablesleep {value}\" with prompt \"{reason}\" with administrator privileges"
+    );
+    if quiet("/usr/bin/osascript", &["-e", &script]) {
+        Ok(())
+    } else {
+        Err(Failure::new(
+            Reason::PermissionDenied,
+            "The Mac can still sleep with the lid closed.",
+        )
+        .sentence("macOS didn't get your password or Touch ID.")
+        .then("Try again", ["bridge", "tailscale", "--keep-awake"]))
+    }
+}
+
 pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     if args.off {
+        if args.keep_awake {
+            keep_awake(false)?;
+        }
         let disable = super::tree::RemoteDisableArgs {
             via: Some("tailnet".into()),
             private: false,
@@ -289,6 +319,10 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
         return commands::remote_disable(home, &disable, commands::MODERN).await;
     }
     let url = turn_on(home, "tailnet").await?;
+    if args.keep_awake {
+        keep_awake(true)?;
+        ui::done("Awake", "with the lid closed while Apple Bridge is on");
+    }
     let mcp = format!("{url}/mcp");
     let connect = format!("{url}/connect");
     if Modes::get().json {
@@ -298,7 +332,6 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     if !Modes::get().stdout_tty() {
         ui::outln(&mcp);
     }
-    let copied = copy(&connect);
     ui::receipt(
         "On",
         &mcp,
@@ -306,12 +339,8 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     );
     ui::blank();
     ui::note(&format!(
-        "Cloud agents such as Grok Bot: tell them \"connect to Apple Bridge at {connect}\".{}",
-        if copied { " It's copied." } else { "" }
+        "Cloud agents such as Grok Bot find this Mac on your Tailscale network at {connect}. They ask on this Mac first, and you click Allow."
     ));
-    ui::note(
-        "They ask on this Mac first, and you click Allow. Only devices on your Tailscale network can reach it.",
-    );
     ui::next_steps(&[Step::new("Turn it off", ["bridge", "tailscale", "--off"])]);
     Ok(())
 }

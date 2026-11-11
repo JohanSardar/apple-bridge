@@ -554,6 +554,11 @@ pub struct GuideStatusArgs {
 pub struct TailscaleArgs {
     #[arg(long, help = "Turn Tailscale access off again")]
     pub off: bool,
+    #[arg(
+        long,
+        help = "Keep this Mac awake with the lid closed so agents still reach it; macOS asks for your password or Touch ID"
+    )]
+    pub keep_awake: bool,
 }
 
 #[derive(Debug, Args)]

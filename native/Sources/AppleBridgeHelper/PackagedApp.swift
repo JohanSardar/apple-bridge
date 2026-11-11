@@ -73,12 +73,20 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         }, completionHandler: nil)
     }
 
+    func fit() {
+        approvalPanel.contentView?.layoutSubtreeIfNeeded()
+        guard let size = approvalPanel.contentView?.fittingSize else { return }
+        let old = approvalPanel.frame
+        approvalPanel.setFrame(NSRect(x: old.midX - size.width / 2, y: old.maxY - size.height, width: size.width, height: size.height), display: true, animate: true)
+    }
+
     func decide(_ request: ConnectorRequest, allow: Bool, options: [String], executable: String?) {
         Task { @MainActor in
             let result = await Task.detached { Self.connectorCommand([allow ? "allow" : "deny", "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
             approvals.decided = request.client_name
             approvals.request = nil
             approvals.outcome = result == nil ? "That request expired. Start again from the app." : allow ? "\(request.client_name) is connected" : "Not allowed"
+            fit()
             try? await Task.sleep(for: .seconds(1.6))
             if approvals.request == nil { approvalPanel.orderOut(nil) }
         }

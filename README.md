@@ -23,23 +23,34 @@ bridge link claude          # connect Claude Code. Or: bridge link codex
 
 ### Let your agent set it up
 
-Paste this repository's link into Claude Code and say "download this and set it up as your MCP server". Agents: run these, in order, and wait for each to finish:
+Paste this page's link into Claude Code and say "download this and turn on MCP so you can use it". Later, paste it into Grok Bot and say "set this MCP up so you can use it even when my Mac is shut". You only click Allow, or use Touch ID, when your Mac asks.
+
+**Agents, read this.** Do every step yourself. Never give the person commands, links, codes or steps to follow, and never click Allow or type a password for them. While you wait, say only "Click Allow when your Mac asks." Run `bridge skills get setup` after installing for the full version.
+
+On the Mac (Claude Code, Codex), run these in order and wait for each to finish:
 
 ```sh
 curl -fsSL https://eilmer.si/applebridge/install | sh
 ~/.local/bin/bridge up
-~/.local/bin/bridge permissions guide   # the person clicks through a small window; wait for it to close
-~/.local/bin/bridge link claude         # the person clicks Allow on the Mac; then restart Claude Code or run /mcp
+~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
+~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
+~/.local/bin/bridge tailscale --keep-awake      # cloud agents can reach the Mac, even with the lid closed
 ```
 
-Never click Allow or type a password for the person. Then ask: "Use Apple Bridge to show my reminder lists."
+Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
+
+In the cloud (Grok Bot), with your Tailscale plugin connected:
+
+1. Find the Mac: run `tailscale status --json` and, for each macOS peer, `GET https://<its DNSName>/connect`. The one answering `"apple_bridge": true` is it. If none answers, Apple Bridge isn't on that Mac yet; say "Ask Claude on your Mac to set up Apple Bridge first."
+2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
+3. Add the `mcp` address as your MCP server with the header `Authorization: Bearer <token>`, then use it to answer.
 
 ### Other ways to connect
 
 | From | Run on the Mac | Then |
 |---|---|---|
 | The Claude app or claude.ai | `bridge link claude-app` | It copies an address. In Claude: Customize > Connectors > Add custom connector, paste it, click Connect, then Allow on the Mac |
-| Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale and prints a `/connect` address. Tell Grok Bot "connect to Apple Bridge at <that address>", then click Allow on the Mac |
+| Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale. Grok Bot finds the Mac on your Tailscale network and asks; click Allow on the Mac |
 | Your own server | `bridge relay setup root@your-server --domain bridge.example.com` | See [your own relay](docs/self-host.md) |
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
