@@ -34,3 +34,9 @@ Messages from `messages_read` and `apple_search` carry `from` (the contact's nam
 
 An agent's `request_id` is scoped to that agent: the command ID is the readable request ID followed by a hash of the principal and the full request ID, and results show the agent its own ID. A change admitted before this under the raw ID is still found by that agent, so a retry never acts twice. A read-only agent cannot be given write access, so its refusals say to connect a new agent, and `bridge agents update` refuses write scopes for a read agent.
 
+
+## Showing a photo and finding more without new tools
+
+`photos_show` is the 17th tool: one photo as the photo itself, full resolution, for the person, with `save` for the original file. `photos_find` tells agents its grid is their private index and returns the photo itself for a single match, and `messages_send` takes `photos`. To stay under the 6,000-token budget, sentences that repeat the instructions were removed from `apple_read`, `apple_change`, `messages_read` and `apple_describe`, and the two Photos tools return a plain object schema; listing now measures 6,000 tokens by the test's 3.5-bytes-per-token rule, exactly the budget, so the next tool needs room made first.
+
+`calendar.free_slots` and `messages.shared` are frontdoor-only reads reached through `apple_read` and found by `apple_describe`, so the list does not grow: free time between timed events within working hours, and a chat's attachments by kind and links with their senders.

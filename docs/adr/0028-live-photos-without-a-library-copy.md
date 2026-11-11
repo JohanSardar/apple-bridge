@@ -17,3 +17,11 @@ Organization writes also use the native query envelope. The existing durable app
 Hash-only durable records are supplemented by a bounded memory-only preview in the owner's browser. Approval fails closed when that preview has expired or was lost on restart; an identical pending request restores it. The paired iPhone cannot approve Photos changes until its preview protocol supports this transient model. Independent security review remains required before qualification.
 
 Public PhotoKit only. No Photos database reads or private people-name search. No asset deletion or permanent deletion. Regular-album membership removal and album deletion must not delete assets.
+
+## Revision: showing and sending the photo itself
+
+Agents showed the person a numbered contact-sheet cell, a 172 KiB thumbnail, as if it were the photo. `photos.fetch` gains `rendition: "display"`: the Helper renders the current version at full size through `PHImageManager`, applies orientation and encodes a metadata-free JPEG, at most 8,000 px on the longest side, re-encoded or scaled only as far as `max_bytes` requires. It uses the existing temporary transfer, so large images never exceed the native frame. MCP `photos_show` returns it as image content.
+
+Two deliberate exceptions to "no photo bytes on disk or in blobs", both made only by an explicit agent call: `photos_show` with `save` writes the original under the bridge home (`blobs/photo-files`, `0700`/`0600`, removed after 24 hours by the next save), and `messages_send` with `photos` stages each original as an ordinary message upload with that upload's expiry. Neither enters state, snapshots or replication.
+
+People, scene and text search, and titles, captions and keywords, exist publicly only in the Photos app's scripting dictionary, behind an Automation permission the owner has not granted. They stay out of scope.
