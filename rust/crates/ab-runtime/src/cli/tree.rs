@@ -255,12 +255,6 @@ pub struct LinkArgs {
     pub no_login: bool,
     #[arg(
         long,
-        conflicts_with = "no_login",
-        help = "Sign in through the browser even without a terminal"
-    )]
-    pub sign_in: bool,
-    #[arg(
-        long,
         alias = "no-browser",
         help = "Print the sign-in address instead of opening a browser"
     )]

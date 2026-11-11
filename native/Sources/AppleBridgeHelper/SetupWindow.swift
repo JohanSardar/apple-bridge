@@ -33,6 +33,8 @@ final class SetupModel: ObservableObject {
     var onFinish: () -> Void = {}
     var refreshTask: Task<Void, Never>?
     var grantedThisRun = false
+    var asked: Set<String> = []
+    var runInTerminal: @Sendable ([String], String) -> Bool = { arguments, home in SetupModel.terminal(arguments, home: home) }
     var runCommand: @Sendable ([String], String) -> Data? = { arguments, home in SetupModel.command(arguments, home: home) }
     var openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }
     private var icons: [String: NSImage] = [:]
@@ -49,7 +51,7 @@ final class SetupModel: ObservableObject {
     var plan: [SetupPermission] { state.plan }
     var current: SetupPermission? { state.current.flatMap(SetupPermission.named) }
     var position: Int { (plan.firstIndex { $0.id == state.current } ?? 0) + 1 }
-    func allowed(_ id: String) -> Bool { SetupState.allowed(statuses[id]) }
+    func allowed(_ id: String) -> Bool { state.allowed(id, statuses: statuses) }
     var askCount: Int { plan.filter { !allowed($0.id) }.count }
 
     func save() {
@@ -126,18 +128,38 @@ final class SetupModel: ObservableObject {
             return
         }
         guard !testing, busy.insert(permission.id).inserted else { return }
+        asked.insert(permission.id)
         Task { @MainActor in
             defer { busy.remove(permission.id) }
-            do { try await permissions.request(permission) } catch {}
+            do {
+                try await permissions.request(permission)
+                if permission.bundle != nil { state.automated.insert(permission.id); save() }
+            } catch {}
             await refresh()
             if !allowed(permission.id) { withAnimation { _ = declined.insert(permission.id) } }
         }
     }
 
+    func arrive(_ permission: SetupPermission) async {
+        guard !testing, !permission.usesSettings, !asked.contains(permission.id), !declined.contains(permission.id), !allowed(permission.id),
+              [nil, "not_determined", "target_not_running", "unknown"].contains(statuses[permission.id]) else { return }
+        try? await Task.sleep(for: .milliseconds(800))
+        guard state.current == permission.id, state.step == .permissions else { return }
+        allow(permission)
+    }
+
     func openSettings(_ permission: SetupPermission) {
         waitingInSettings = permission.id
         guard !testing else { return }
+        let cold = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").isEmpty
         openURL(permission.settingsURL)
+        if cold {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(1500))
+                guard waitingInSettings == permission.id else { return }
+                openURL(permission.settingsURL)
+            }
+        }
         if permission.usesSettings {
             if guide == nil { guide = SetupGuide(model: self) }
             guide?.show()
@@ -240,12 +262,41 @@ final class SetupModel: ObservableObject {
         guard !testing, links[agent.id] != .waiting else { return }
         links[agent.id] = .waiting
         let path = home.path
-        let run = runCommand
+        let run = runInTerminal
         Task { @MainActor in
-            let data = await Task.detached { run(["link", agent.id, "--sign-in"], path) }.value
-            withAnimation { links[agent.id] = data == nil ? .failed : .connected }
-            if data != nil { onActivate() }
+            let linked = await Task.detached { run(["link", agent.id], path) }.value
+            withAnimation { links[agent.id] = linked ? .connected : .failed }
+            onActivate()
         }
+    }
+
+    nonisolated static func terminal(_ arguments: [String], home: String) -> Bool {
+        guard let path = try? TrustedChild.bridge() else { return false }
+        let primary = posix_openpt(O_RDWR | O_NOCTTY)
+        guard primary >= 0 else { return false }
+        defer { close(primary) }
+        guard grantpt(primary) == 0, unlockpt(primary) == 0, let name = ptsname(primary) else { return false }
+        let secondary = open(name, O_RDWR | O_NOCTTY)
+        guard secondary >= 0 else { return false }
+        var actions: posix_spawn_file_actions_t?
+        var attributes: posix_spawnattr_t?
+        posix_spawn_file_actions_init(&actions)
+        posix_spawnattr_init(&attributes)
+        defer { posix_spawn_file_actions_destroy(&actions); posix_spawnattr_destroy(&attributes) }
+        for descriptor: Int32 in 0...2 { posix_spawn_file_actions_adddup2(&actions, secondary, descriptor) }
+        posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT | TrustedChild.spawnFlags))
+        let argv = ([path] + arguments + ["--home", home]).map { strdup($0) } + [nil]
+        let environment = ProcessInfo.processInfo.environment.merging(["TERM": "xterm-256color"]) { _, new in new }.map { strdup($0.key + "=" + $0.value) } + [nil]
+        defer { (argv + environment).forEach { free($0) } }
+        var pid: pid_t = 0
+        let started = posix_spawn(&pid, path, &actions, &attributes, argv, environment)
+        close(secondary)
+        guard started == 0, (try? TrustedChild.admit(pid, identifier: TrustedChild.bridgeName)) != nil else { return false }
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while read(primary, &buffer, buffer.count) > 0 {}
+        var status: Int32 = 0
+        while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+        return status == 0
     }
 
     func copyAddress() {
@@ -523,6 +574,7 @@ struct PermissionStep: View {
                 .padding(.bottom, 28)
             }
             .padding(.horizontal, 44)
+            .task(id: permission.id) { await model.arrive(permission) }
         }
     }
 
@@ -593,28 +645,57 @@ struct Instruction: View {
 struct PromptInstructions: View {
     @ObservedObject var model: SetupModel
     let permission: SetupPermission
-    var hint: String {
-        if model.declined.contains(permission.id) {
-            return "macOS didn't allow it. Turn on Apple Bridge in System Settings, or skip it for now. Everything else still works."
-        }
-        if let bundle = permission.bundle, let name = SetupService.all.first(where: { $0.app == bundle })?.title {
-            return "macOS will ask whether Apple Bridge may use \(name). Click Allow."
-        }
-        return "macOS will ask you once. Click Allow."
-    }
     var body: some View {
+        let declined = model.declined.contains(permission.id)
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: model.declined.contains(permission.id) ? "exclamationmark.triangle.fill" : "hand.tap.fill")
-                    .foregroundStyle(model.declined.contains(permission.id) ? Color.orange : Color.accentColor).font(.title3)
-                Text(hint).font(.body).fixedSize(horizontal: false, vertical: true)
+            if declined {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.title3)
+                    Text("macOS didn't allow it. Turn on Apple Bridge in System Settings, or skip it for now. Everything else still works.")
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color(nsColor: .separatorColor)))
+            } else {
+                HStack(alignment: .center, spacing: 24) {
+                    PromptPreview(permission: permission)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("macOS asks you once.").font(.headline)
+                        Text("Click \(permission.button) in its window.").foregroundStyle(.secondary)
+                    }
+                }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color(nsColor: .separatorColor)))
-            StatusLine(model: model, permission: permission, waitingText: model.declined.contains(permission.id) ? "Waiting for you to turn it on in System Settings…" : "Waiting for your answer…")
+            StatusLine(model: model, permission: permission, waitingText: declined ? "Waiting for you to turn it on in System Settings…" : "Waiting for your answer…")
         }
+    }
+}
+
+struct PromptPreview: View {
+    let permission: SetupPermission
+    @State private var pulse = false
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack(alignment: .bottomTrailing) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)).resizable().frame(width: 40, height: 40)
+                Image(systemName: "hand.raised.circle.fill").font(.system(size: 16)).foregroundStyle(.white, .blue).offset(x: 4, y: 4)
+            }
+            Text("“Apple Bridge” \(permission.prompt)").font(.system(size: 12, weight: .semibold)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Text("Don't Allow").font(.system(size: 11)).frame(maxWidth: .infinity).padding(.vertical, 5)
+                    .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                Text(permission.button).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity).padding(.vertical, 5)
+                    .background(Capsule().fill(Color.accentColor))
+                    .overlay(Capsule().stroke(Color.accentColor.opacity(0.5), lineWidth: 3).scaleEffect(pulse ? 1.18 : 1).opacity(pulse ? 0 : 1))
+            }
+        }
+        .padding(14)
+        .frame(width: 250)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(nsColor: .windowBackgroundColor)))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .onAppear { withAnimation(.easeOut(duration: 1.2).repeatForever(autoreverses: false)) { pulse = true } }
     }
 }
 
@@ -658,9 +739,7 @@ struct ConnectStep: View {
                     .font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
             }
         } footer: {
-            Button("Back") {
-                if model.plan.isEmpty { model.go(.services) } else { model.beginPermissions() }
-            }
+            Button("Back") { model.go(.services) }
             Spacer()
             Button { model.go(.done) } label: { Text(model.links.values.contains(.connected) ? "Continue" : "Skip for Now").frame(minWidth: 110) }
                 .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)

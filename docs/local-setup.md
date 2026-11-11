@@ -83,7 +83,7 @@ bridge connectors allow --request <id> --code <code>
 | `--timeout DURATION` | Stop waiting for sign-in after this long, such as `5m` (default `10m`). The server stays registered |
 | `--print` | Show the agent's commands and run nothing |
 
-Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run, unless you pass `--sign-in`, which opens the browser anyway; the setup window uses that. It never allows a request itself.
+Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run. The setup window runs it in a terminal of its own, so sign-in opens the browser. It never allows a request itself.
 
 To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agents list`, then `bridge agents revoke <id>`.
 

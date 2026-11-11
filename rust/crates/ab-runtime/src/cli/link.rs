@@ -586,7 +586,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         }
         return Ok(());
     }
-    let can_sign_in = !args.no_login && (args.sign_in || Modes::get().interactive());
+    let can_sign_in = !args.no_login && Modes::get().interactive();
     let mut sign_in_arguments = if plan.register_signs_in {
         plan.register.clone()
     } else {
@@ -660,7 +660,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         try_it();
         return Ok(());
     }
-    if !args.no_open && !args.sign_in && !Modes::get().browser_allowed() && !plan.register_signs_in {
+    if !args.no_open && !Modes::get().browser_allowed() && !plan.register_signs_in {
         sign_in_arguments.push("--no-browser".to_owned());
     }
     let limit = deadline.end.map_or(SIGN_IN_WAIT, |end| {

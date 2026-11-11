@@ -41,7 +41,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func watchConnectors() {
         var homeArguments: [String] = []
-        if let home = connectorHome { homeArguments = ["--home", home] }
+        if let home = connectorHome ?? setup?.home.path { homeArguments = ["--home", home] }
         else {
             let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LaunchAgents/dev.applebridge.gateway.plist")
             if let data = try? Data(contentsOf: plist), let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], let arguments = values["ProgramArguments"] as? [String], let index = arguments.firstIndex(of: "--home"), index + 1 < arguments.count { homeArguments = ["--home", arguments[index + 1]] }
@@ -67,6 +67,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""
+                    window.orderFrontRegardless()
                     window.makeKeyAndOrderFront(nil)
                     NSApplication.shared.activate()
                     alert.beginSheetModal(for: window) { response in
@@ -127,6 +128,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func showApprovals() {
+        if let home = connectorHome, Self.setupOpen(URL(fileURLWithPath: home)) { NSApplication.shared.terminate(nil); return }
         NSApplication.shared.setActivationPolicy(.regular)
         let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 230), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         panel.title = "Apple Bridge Approvals"
@@ -171,12 +173,11 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         SetupModel.agentPath()
         let model = SetupModel(home: home, testing: snapshotDirectory != nil)
-        model.onActivate = { [weak self] in
-            self?.window?.orderFrontRegardless()
-            self?.window?.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
+        model.onActivate = { [weak self] in self?.raise() }
+        model.onSettings = { [weak self] in
+            self?.window?.level = .normal
+            self?.window?.orderOut(nil)
         }
-        model.onSettings = { [weak self] in self?.window?.orderOut(nil) }
         model.onFinish = { [weak self] in self?.window?.close() }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Self.showSetup, object: nil)
         window.contentView = FirstMouseHostingView(rootView: SetupView(model: model))
@@ -185,9 +186,8 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         self.setup = model
         if snapshotDirectory == nil { model.start() }
         window.center()
-        window.orderFrontRegardless()
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
+        raise()
+        if snapshotDirectory == nil { watchConnectors() }
         if let directory = snapshotDirectory {
             Task { @MainActor in
                 do { try await self.captureSetup(model, directory: directory) }
@@ -199,6 +199,15 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     static let showSetup = Notification.Name("dev.applebridge.setup.show")
     var setupLock: Int32 = -1
+
+    static func setupOpen(_ home: URL) -> Bool {
+        let descriptor = open(home.appendingPathComponent("setup.lock").path, O_RDWR | O_CLOEXEC)
+        guard descriptor >= 0 else { return false }
+        defer { close(descriptor) }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else { return true }
+        flock(descriptor, LOCK_UN)
+        return false
+    }
 
     func claimSetup(_ home: URL) -> Bool {
         try? FileManager.default.createDirectory(at: home, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -222,6 +231,18 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { setup?.stop() }
+
+    func raise() {
+        guard let window else { return }
+        if !window.isKeyWindow { window.level = .floating }
+        window.orderFrontRegardless()
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        if setup != nil { window?.level = .normal }
+    }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { setup != nil }
 

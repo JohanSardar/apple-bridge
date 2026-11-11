@@ -162,7 +162,7 @@ pub const LEAVES: &[Leaf] = &[
             ),
         ],
         notes: &[
-            "Opens a browser for sign-in only on a local, interactive terminal, or with --sign-in; the address is always printed.",
+            "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.",
             "Piped, stdout holds only the server name; bridge link other prints only the MCP address.",
         ],
         schema: LINK_FIELDS,
