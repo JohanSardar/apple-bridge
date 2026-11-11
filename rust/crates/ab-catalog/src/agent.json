@@ -2381,7 +2381,7 @@
       }
     },
     "photos.preview": {
-      "s": "Look at one photo: returns it as an image.",
+      "s": "Look at one photo as a small image, for your own use. To show the person a photo, use photos_show.",
       "r": "The photo as an image attached to the result; video returns a still frame.",
       "p": {
         "max_px": "Longest side in pixels, 64 to 1536. Default 512.",
@@ -2393,8 +2393,8 @@
       }
     },
     "photos.contact_sheet": {
-      "s": "Look at up to 30 photos at once as one numbered grid image.",
-      "r": "One grid image attached to the result, and cells mapping each number to its asset_id.",
+      "s": "Scan up to 30 photos at once as one numbered grid image, for your own use only.",
+      "r": "One grid image attached to the result, and cells mapping each number to its asset_id. Never show the grid to the person; to show or send a photo use photos_show.",
       "p": {
         "asset_ids": "1 to 30 photo IDs from photos.search.",
         "columns": "Columns, 1 to 8. Default up to 5.",
@@ -2415,6 +2415,7 @@
         "asset_id": "Start a transfer for this asset. Omit when reading an existing transfer.",
         "resource_index": "Which resource from photos.get. Omit for the original.",
         "resource_key": "The resource_key from photos.get, to fail if the photo changed since.",
+        "rendition": "display: the photo as Photos shows it, as a full-resolution JPEG. Omit for the original file.",
         "network_access": "Allow downloading from iCloud. Default false.",
         "max_bytes": "Refuse resources larger than this many bytes. Default 8 GiB.",
         "transfer_id": "Read from this transfer instead of starting one.",

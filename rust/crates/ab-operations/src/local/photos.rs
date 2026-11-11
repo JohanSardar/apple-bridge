@@ -118,11 +118,15 @@ pub(super) fn validate(query: &NativeQuery, args: &Value) -> Result<(), Error> {
                 "asset_id",
                 "resource_index",
                 "resource_key",
+                "rendition",
                 "network_access",
                 "max_bytes",
             ]
         };
-        if fields.keys().any(|key| !allowed.contains(&key.as_str())) {
+        if fields.keys().any(|key| !allowed.contains(&key.as_str()))
+            || fields.contains_key("rendition")
+                && (fields.contains_key("resource_index") || fields.contains_key("resource_key"))
+        {
             return Err(Code::Invalid.into());
         }
     }

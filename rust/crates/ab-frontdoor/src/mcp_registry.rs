@@ -20,6 +20,7 @@ pub(crate) const COMPACT: &[&str] = &[
     "notes_create",
     "screen_time",
     "photos_find",
+    "photos_show",
 ];
 
 pub(crate) const BLOB_READ: &str = "blobs.read";

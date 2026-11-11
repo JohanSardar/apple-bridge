@@ -1434,6 +1434,17 @@ impl Call<'_> {
             }
             return Ok(Outcome::ok(value).named("photos.search"));
         }
+        if let [only] = ids.as_slice() {
+            let mut shown = self
+                .photos_show(&Map::from_iter([("asset_id".to_owned(), only.clone())]))
+                .await?;
+            shown.value["photos"] =
+                json!([{"asset_id": only, "taken_at": shown.value["taken_at"]}]);
+            if next_cursor.is_string() {
+                shown.value["next_cursor"] = next_cursor;
+            }
+            return Ok(shown);
+        }
         let sheet = self
             .read_one(&Map::from_iter([
                 ("operation".to_owned(), json!("photos.contact_sheet")),
@@ -1462,7 +1473,7 @@ impl Call<'_> {
             .collect();
         let mut value = json!({
             "photos": photos,
-            "next": "The image shows the photos numbered as listed. To open one larger, call apple_read with photos.preview and its asset_id.",
+            "next": "This numbered grid is only your index of the matches, at low resolution; never show or describe it to the person as a photo. To show or send one, call photos_show with its asset_id, which returns the photo itself.",
         });
         if next_cursor.is_string() {
             value["next_cursor"] = next_cursor;

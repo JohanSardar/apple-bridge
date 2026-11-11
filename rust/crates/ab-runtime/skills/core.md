@@ -9,7 +9,7 @@ Answer a simple read with one call; no status check or lookup is needed first. A
 - Reminder lists: `apple_read` with `reminders.lists`. Reminders: `reminders.items` with `list` (a name such as Groceries) or `smart` (`today`).
 - Notes: `apple_read` with `notes.list`; one note, or any record, with `records.get` and its `id`.
 - Today's events: `calendar_events`. Chats: `messages_read`. People: `contacts_find`.
-- Screen Time: `screen_time` (default yesterday). Photos: `photos_find` returns a numbered contact sheet.
+- Screen Time: `screen_time` (default yesterday). Photos: `photos_find` returns a numbered grid only you see; `photos_show` returns the photo itself for the person.
 - Adding: `messages_send`, `reminders_add`, `calendar_add`, `notes_create`.
 - Text across everything: `apple_search`.
 - Anything else: `apple_describe` with a plain `query`, then `apple_read` or `apple_change`.
