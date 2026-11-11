@@ -34,14 +34,14 @@ curl -fsSL https://eilmer.si/applebridge/install | sh
 ~/.local/bin/bridge up
 ~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
 ~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
-~/.local/bin/bridge tailscale --keep-awake      # cloud agents can reach the Mac, even with the lid closed
+~/.local/bin/bridge tailscale --keep-awake --yes   # cloud agents can reach the Mac, even with the lid closed
 ```
 
 Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
 
 Grok Bot and other agents that run in the cloud: if you can run commands on the person's Mac (Grok Bot can, once they allow it), do the first three Mac steps above, skipping `bridge link`. Then connect yourself to this Mac over Tailscale, so it keeps working when they're away from it:
 
-1. `~/.local/bin/bridge tailscale --keep-awake --json` prints this Mac's `connect` address. Without commands on the Mac, find it instead: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443); the one answering `"apple_bridge": true` is it.
+1. `~/.local/bin/bridge tailscale --keep-awake --yes --json` prints this Mac's `connect` address. Without commands on the Mac, find it instead: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443); the one answering `"apple_bridge": true` is it.
 2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
 3. Add the `mcp` address as an MCP server with the header `Authorization: Bearer <token>`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
 

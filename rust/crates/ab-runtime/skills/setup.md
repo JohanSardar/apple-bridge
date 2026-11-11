@@ -14,7 +14,7 @@ Everything here runs on the owner's Mac. The owner only clicks Allow, or uses To
 bridge up                        # starts Apple Bridge, asks nothing
 bridge permissions guide         # opens Settings with a small guide; wait for it to close
 bridge link claude               # or: bridge link codex. The Mac asks the owner to Allow
-bridge tailscale --keep-awake    # only for cloud agents or "even when my Mac is shut"
+bridge tailscale --keep-awake --yes   # only for cloud agents or "even when my Mac is shut"
 bridge stats --wait              # counts per source as each one finishes
 ```
 
