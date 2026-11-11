@@ -194,6 +194,53 @@ impl Drop for Cleanup {
     }
 }
 
+fn focus(mut status: state::Status, via: &str, action: &str) -> state::Status {
+    let names = state::entries(via);
+    let routes: Vec<_> = names
+        .iter()
+        .filter_map(|name| status.routes.get(*name).map(|route| (*name, route.clone())))
+        .collect();
+    if status.routes.is_empty() {
+        return status;
+    }
+    let on = routes.iter().find(|(_, route)| route.state == "on");
+    let failed = routes.iter().find(|(_, route)| route.state == "error");
+    let waiting = routes
+        .iter()
+        .find(|(_, route)| !matches!(route.state.as_str(), "on" | "off" | "error"));
+    let (state, chosen) = if action == "on" {
+        if let Some(found) = on {
+            ("on", Some(found))
+        } else if let Some(found) = failed {
+            ("error", Some(found))
+        } else if let Some(found) = waiting {
+            (found.1.state.as_str(), Some(found))
+        } else {
+            ("starting", None)
+        }
+    } else if routes.iter().all(|(_, route)| route.state == "off") {
+        ("off", None)
+    } else {
+        ("stopping", None)
+    };
+    state.clone_into(&mut status.state);
+    if let Some((name, route)) = chosen {
+        (*name).clone_into(&mut status.backend);
+        status.url.clone_from(&route.url);
+        status.message.clone_from(&route.message);
+        status.last_error.clone_from(&route.last_error);
+        status.pending_link.clone_from(&route.pending_link);
+    } else {
+        status.message.clear();
+        status.last_error.clear();
+        status.pending_link.clear();
+        if state == "off" {
+            status.url.clear();
+        }
+    }
+    status
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn wait(
     home: &Path,
@@ -213,6 +260,7 @@ async fn wait(
         if let Ok(status) = state::read::<state::Status>(home, "status")
             && status.id == id
         {
+            let status = focus(status, via, action);
             if !status.message.is_empty() && status.message != notice {
                 writeln!(out, "{}", status.message)?;
                 notice.clone_from(&status.message);

@@ -42,7 +42,7 @@ struct SetupState: Codable {
     var completed: Set<Int> = []
     var phone = false
     var connectors: Set<String> = []
-    static let titles = ["Welcome", "Permissions", "Pair iPhone", "Connect AI", "Done"]
+    static let titles = ["Welcome", "Permissions", "Pair iPhone", "Connect", "Done"]
     mutating func advance() {
         completed.insert(step)
         step = min(step + 1, 4)

@@ -1,10 +1,10 @@
 # Connecting Claude and ChatGPT
 
-Run `bridge remote status` on your Mac. Your connector address is the URL it shows, followed by `/mcp`. Keep the Mac on and Apple Bridge running while you connect and use it.
+Claude and ChatGPT reach your Mac through a public address. The simple way is the cloud chats step in Setup > Connect, which uses Tailscale Funnel; see [connecting other devices and cloud chats](devices.md). With your own relay, run `bridge remote status` on your Mac: your connector address is the URL it shows, followed by `/mcp`. Keep the Mac on and Apple Bridge running while you connect and use it.
 
-**Claude:** Customize → Connectors → Add → Add custom connector. Give it a name, paste the address and choose Continue, then Add, then Connect.
+**Claude:** Customize > Connectors > Add > Add custom connector. Give it a name, paste the address and choose Add, then Connect.
 
-**ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with this address and OAuth. Developer mode needs a paid plan. OpenAI moves these settings often, and this path hasn't been walked with a real ChatGPT account yet.
+**ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with this address and OAuth. Developer mode needs a paid plan.
 
 **Claude Code:** `claude mcp add --transport http apple-bridge <address>`, then `/mcp` to sign in.
 

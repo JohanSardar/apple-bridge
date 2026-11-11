@@ -82,8 +82,25 @@ pub struct Web {
     pub(crate) memory: Mutex<Memory>,
     pub(crate) metadata: crate::web_metadata::Fetcher,
     pub(crate) connectors: Arc<crate::web_connector::Connectors>,
+    sources: crate::SourceCeiling,
+    route: std::sync::OnceLock<String>,
 }
 impl Web {
+    pub fn set_route(&self, route: &str) {
+        let _ = self.route.set(route.into());
+    }
+    pub(crate) fn route(&self) -> &str {
+        self.route.get().map_or("", String::as_str)
+    }
+    pub fn limit_sources(&self, limit: crate::SourceLimit) {
+        self.sources.set(limit);
+    }
+    pub(crate) fn limited(&self) -> bool {
+        self.sources.current().is_some()
+    }
+    pub(crate) fn offers(&self, scope: &str) -> bool {
+        self.sources.allows(scope)
+    }
     pub fn new(
         authority: Arc<Authority>,
         address: std::net::SocketAddr,
@@ -99,6 +116,8 @@ impl Web {
             memory: Mutex::default(),
             metadata: crate::web_metadata::Fetcher::default(),
             connectors,
+            sources: crate::SourceCeiling::default(),
+            route: std::sync::OnceLock::new(),
         })
     }
     pub fn router(self: Arc<Self>) -> Router {
@@ -477,9 +496,9 @@ fn route(
         (
             "GET",
             "/.well-known/oauth-protected-resource" | "/.well-known/oauth-protected-resource/mcp",
-        ) => respond(200, &crate::web_oauth::protected_resource(origin)),
+        ) => respond(200, &crate::web_oauth::protected_resource(w, origin)),
         ("GET", "/.well-known/oauth-authorization-server") => {
-            respond(200, &crate::web_oauth::authorization_server(origin))
+            respond(200, &crate::web_oauth::authorization_server(w, origin))
         }
         ("POST", "/oauth/register") => crate::web_oauth::register(w, body),
         ("POST", "/oauth/token") => crate::web_oauth::token(w, body, origin),

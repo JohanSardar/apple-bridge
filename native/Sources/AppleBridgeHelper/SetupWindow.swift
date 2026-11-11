@@ -27,10 +27,12 @@ final class SetupModel: ObservableObject {
         NSPasteboard.general.setString(value, forType: .string)
     }
     let testing: Bool
+    let connect: ConnectModel
 
     init(home: URL, testing: Bool = false) {
         self.home = home
         self.testing = testing
+        self.connect = ConnectModel(home: home, testing: testing) { arguments, home in SetupModel.command(arguments, home: home) }
         if let data = try? Data(contentsOf: home.appendingPathComponent("setup.json")), let saved = try? JSONDecoder().decode(SetupState.self, from: data) {
             state = saved
             state.step = min(max(state.step, 0), 4)
@@ -66,6 +68,7 @@ final class SetupModel: ObservableObject {
     func refresh() async {
         statuses = await permissions.status()
         syncEnabled = syncStatus?() ?? false
+        await connect.refresh()
         if let expiry = pairingExpiry, expiry < Date() { qr = nil; message = "Pairing code expired. Click Show Pairing QR to try again, or continue without a phone."; pairingExpiry = nil }
         guard !testing else { return }
         certificateWarning = PackagedApp.certificateWarning(home: home.path) ?? ""
@@ -129,16 +132,7 @@ final class SetupModel: ObservableObject {
         }
     }
     func enableRemote() {
-        guard !testing, busy.insert("remote").inserted else { return }
-        message = "Follow the browser link to enable Remote. You can continue while it connects."
-        let path = home.path
-        let run = runCommand
-        Task { @MainActor in
-            let data = await Task.detached { run(["remote", "enable", "--open"], path) }.value
-            busy.remove("remote")
-            await refresh()
-            message = data == nil ? "Remote did not connect. Check your internet connection and try Enable Remote again. Local features still work." : "Remote is ready."
-        }
+        connect.turnOnTailnet()
     }
     func pair() {
         guard !testing, busy.insert("pair").inserted else { return }
@@ -158,13 +152,6 @@ final class SetupModel: ObservableObject {
             pairingExpiry = Date().addingTimeInterval(600)
             message = "In Apple Bridge on iPhone, choose Pair Mac and scan this code. It expires in 10 minutes."
         }
-    }
-    func connect(_ provider: String) {
-        guard !testing, remoteReady, !connectorURL.isEmpty else { message = "Enable Remote first. Then try Connect again. Local features still work."; return }
-        copyURL(connectorURL)
-        let page = provider == "Claude.ai" ? "https://claude.ai/settings/connectors" : "https://chatgpt.com/#settings/Connectors"
-        openURL(URL(string: page)!)
-        message = "Connector URL copied. Add a custom connector in \(provider) and paste it. Match the four-digit code, then click Allow on this Mac. Return here after connecting."
     }
 }
 
@@ -239,23 +226,14 @@ struct SetupView: View {
             if let qr = model.qr { Image(nsImage: qr).interpolation(.none).resizable().scaledToFit().frame(width: 300, height: 300).padding(12).background(.white) }
             Text("No iPhone? Continue to use your Mac on its own.").foregroundStyle(.secondary)
         case 3:
-            Text("Connect your AI using a private approval on this Mac.")
-            remoteControls
-            ForEach(["Claude.ai", "ChatGPT"], id: \.self) { provider in
-                HStack {
-                    Button("Connect \(provider)") { model.connect(provider) }
-                    Text(model.state.connectors.contains(provider) ? "✓ Connected" : "Not connected yet").foregroundStyle(model.state.connectors.contains(provider) ? .green : .secondary)
-                }
-            }
-            Text("Each button copies your connector URL and opens connector settings. Paste the URL into a custom connector. Match the four-digit code and click Allow on your Mac. If denied or expired, connect again for a new code.")
-            if !model.connectorURL.isEmpty { Text(model.connectorURL).font(.caption).textSelection(.enabled) }
+            ConnectView(model: model.connect)
         default:
             Text("You're ready to use what you enabled.").font(.title2)
             Text(model.syncEnabled ? "✓ Background sync is on" : "Background sync is off — return to Welcome to enable it.")
             Text("\(SetupPermission.all.filter { model.state.label($0.id, status: model.statuses[$0.id]) == "Allowed" }.count) permissions allowed · \(model.state.skipped.count) skipped")
             Text(model.state.phone ? "✓ iPhone paired" : "iPhone not paired — Mac features still work.")
             ForEach(["Claude.ai", "ChatGPT"], id: \.self) { provider in
-                Text(model.state.connectors.contains(provider) ? "✓ \(provider) connected" : "\(provider) not connected — return to Connect AI to add it.")
+                Text(model.state.connectors.contains(provider) ? "✓ \(provider) connected" : "\(provider) not connected — return to Connect to add it.")
             }
             Text("Missing access? Open Setup > Open Setup, go back to Permissions, and use Open Settings. Changes appear here automatically.")
         }
@@ -265,8 +243,8 @@ struct SetupView: View {
             if !model.certificateWarning.isEmpty {
                 Label(model.certificateWarning, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).textSelection(.enabled)
             }
-            Text(model.remoteReady ? "✓ Remote ready" : "Remote is needed for iPhone pairing and AI connectors.")
-            if !model.remoteReady { Button(model.busy.contains("remote") ? "Connecting…" : "Enable Remote") { model.enableRemote() }.disabled(model.busy.contains("remote")) }
+            Text(model.remoteReady ? "✓ Remote ready" : "Pairing away from home uses Tailscale. Your iPhone needs Tailscale signed in to the same account.")
+            if !model.remoteReady { Button(model.connect.busy.contains("tailnet") ? "Turning On…" : "Turn On Tailscale Access") { model.enableRemote() }.disabled(model.connect.busy.contains("tailnet")) }
         }
     }
 }

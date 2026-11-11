@@ -586,6 +586,12 @@ pub struct RemoteEnableArgs {
     pub domain: Option<String>,
     #[arg(long, value_name = "URL", help = "Your own relay's address")]
     pub relay_url: Option<String>,
+    #[arg(
+        long,
+        value_name = "SOURCES",
+        help = "Cloud route only: services cloud chats may see, such as calendar,reminders"
+    )]
+    pub sources: Option<String>,
     #[arg(long, value_name = "NAME", help = "Name for this Mac")]
     pub name: Option<String>,
     #[arg(
@@ -607,6 +613,10 @@ pub struct RemoteEnableArgs {
 fn route_values() -> clap::builder::PossibleValuesParser {
     clap::builder::PossibleValuesParser::new([
         clap::builder::PossibleValue::new("relay"),
+        clap::builder::PossibleValue::new("tailnet")
+            .help("Your devices on your Tailscale network only"),
+        clap::builder::PossibleValue::new("cloud")
+            .help("A public address for cloud chats such as Claude and ChatGPT"),
         clap::builder::PossibleValue::new("private"),
         clap::builder::PossibleValue::new("tailscale-app"),
         clap::builder::PossibleValue::new("both"),
@@ -819,6 +829,11 @@ pub struct AgentCreateArgs {
         help = "Stop the token working after this long, such as 1h, 7d or 90d (default: never)"
     )]
     pub expires_in: Option<String>,
+    #[arg(
+        long,
+        help = "Let the token work only at this Mac's Tailscale address, from your other devices"
+    )]
+    pub tailnet: bool,
 }
 
 #[derive(Debug, Args)]

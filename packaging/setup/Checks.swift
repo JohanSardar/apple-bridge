@@ -54,6 +54,9 @@ struct SetupChecks {
         model.syncStatus = { installed }
         model.runCommand = { arguments, path in
             if arguments.first == "install-credentials" { return Data() }
+            if arguments.starts(with: ["remote", "status"]) {
+                return Data(#"{"remote":{"state":"on","routes":{"system":{"state":"on","url":"https:\/\/bridge.example.test","sources":["calendar"]},"tailnet":{"state":"login_pending","link":"https:\/\/login.tailscale.com\/a\/x"}}}}"#.utf8)
+            }
             if arguments.first == "remote" {
                 let remote = URL(fileURLWithPath: path).appendingPathComponent("remote")
                 try? FileManager.default.createDirectory(at: remote, withIntermediateDirectories: true)
@@ -70,6 +73,7 @@ struct SetupChecks {
             }
             return false
         }
+        model.connect.run = model.runCommand
         await model.refresh()
         check("Q1-NO-PROMPTS", model.permissions.requests.isEmpty)
         model.enableSync()
@@ -84,8 +88,13 @@ struct SetupChecks {
         check("Q1-ONLY-CLICKED-ROWS", model.permissions.requests == permissions.map(\.id))
         model.move(true)
         model.enableRemote()
-        let remoteSettled = await settled("remote")
-        check("Q1-REMOTE", remoteSettled && model.remoteReady)
+        var remoteSettled = false
+        for _ in 0..<200 where !remoteSettled {
+            remoteSettled = !model.connect.busy.contains("tailnet")
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        await model.refresh()
+        check("Q1-REMOTE", remoteSettled && model.remoteReady && model.connect.tailnet?.state == "login_pending")
         model.pair()
         let pairingSettled = await settled("pair")
         check("Q1-QR", pairingSettled && model.qr != nil && model.pairingExpiry != nil)
@@ -93,9 +102,9 @@ struct SetupChecks {
         try Data(credentials.utf8).write(to: home.appendingPathComponent("credentials.json"))
         await model.refresh()
         model.move(true)
-        model.connect("Claude.ai")
-        model.connect("ChatGPT")
-        check("Q1-CONNECT", opened.count == 2 && copied == Array(repeating: "https://bridge.example.test/mcp", count: 2) && model.message.contains("four-digit code"))
+        model.connect.copy = { copied.append($0) }
+        model.connect.copyValue(model.connect.cloud?.mcp ?? "", label: "Connector address")
+        check("Q1-CONNECT", model.connect.cloud?.on == true && copied == ["https://bridge.example.test/mcp"] && model.connect.cloudSources == ["calendar"] && opened.isEmpty)
         model.move(true)
         model.state.advance()
         check("Q1-FLOW", model.state.step == 4 && model.state.completed == Set(0...4) && model.state.phone && model.state.connectors.count == 2)
@@ -106,9 +115,9 @@ struct SetupChecks {
         model.pair()
         let failedPairSettled = await settled("pair")
         check("Q1-PAIR-FAILURE", failedPairSettled && model.message.contains("Enable Remote") && model.message.contains("continue"))
-        model.remoteReady = false
-        model.connect("ChatGPT")
-        check("Q1-CONNECT-FAILURE", model.message.contains("Enable Remote") && opened.count == 2)
+        model.connect.cloudSources = []
+        model.connect.turnOnCloud()
+        check("Q1-CONNECT-FAILURE", model.connect.notice.contains("at least one service") && model.connect.busy.isEmpty)
         model.permissions.denied = "camera"
         model.request(permissions.first { $0.id == "camera" }!)
         let deniedSettled = await settled("camera")

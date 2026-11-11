@@ -439,6 +439,73 @@ impl Authority {
             Ok((stored.clone(), secret.clone()))
         })
     }
+    pub fn bind_to_resource(&self, id: &str, resource: &str) -> Result<Principal, Error> {
+        if !resource.starts_with("https://") || !resource.ends_with("/mcp") {
+            return Err(Error::Invalid);
+        }
+        self.update(|d| {
+            let stored = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id && p.kind == "agent")
+                .ok_or(Error::Unavailable)?;
+            stored.remote = true;
+            stored.extra.insert("resource".into(), resource.into());
+            stored.revision += 1;
+            Ok(stored.clone())
+        })
+    }
+    pub fn record_connection(&self, id: &str, origin: &str, route: &str) -> Result<(), Error> {
+        self.update(|d| {
+            let stored = d
+                .principals
+                .iter_mut()
+                .find(|p| p.id == id)
+                .ok_or(Error::Unavailable)?;
+            stored.extra.insert("origin".into(), origin.into());
+            if !route.is_empty() {
+                stored.extra.insert("route".into(), route.into());
+            }
+            stored.revision += 1;
+            Ok(())
+        })
+    }
+    pub fn revoke_route(&self, route: &str) -> Result<Vec<String>, Error> {
+        self.revoke_route_beyond(route, None)
+    }
+    pub fn revoke_route_beyond(
+        &self,
+        route: &str,
+        sources: Option<&[String]>,
+    ) -> Result<Vec<String>, Error> {
+        let now = jiff::Timestamp::now().to_string();
+        let beyond = |p: &Principal| {
+            sources.is_none_or(|sources| {
+                p.grants.iter().any(|grant| {
+                    grant
+                        .as_str()
+                        .split_once(':')
+                        .is_none_or(|(source, _)| !sources.iter().any(|s| s == source))
+                })
+            })
+        };
+        self.update(|d| {
+            let mut revoked = Vec::new();
+            for p in &mut d.principals {
+                if p.kind == "agent"
+                    && p.active()
+                    && p.extra.get("route").and_then(serde_json::Value::as_str) == Some(route)
+                    && beyond(p)
+                {
+                    p.token_hash.clear();
+                    p.revision += 1;
+                    p.extra.insert("revoked_at".into(), now.clone().into());
+                    revoked.push(p.id.clone());
+                }
+            }
+            Ok(revoked)
+        })
+    }
     pub fn issue_oauth_code(&self, mut c: Code) -> Result<String, Error> {
         let raw = token(32);
         c.hash = fingerprint(raw.as_bytes());

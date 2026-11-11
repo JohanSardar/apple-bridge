@@ -2,7 +2,7 @@
 
 The relay lets Claude, ChatGPT and your iPhone reach your Mac from anywhere. It forwards encrypted traffic to your Mac, and the TLS keys stay on your Mac.
 
-You can use the hosted relay on `lexaai.tech`, with an invite, or run your own by following this guide. It takes about ten minutes.
+Most people don't need a relay: Tailscale covers your own devices, and cloud chats use Tailscale Funnel (see [connecting other devices and cloud chats](connectors/devices.md)). Run your own relay if you'd rather use your own server and domain. It takes about ten minutes.
 
 ## What you need
 

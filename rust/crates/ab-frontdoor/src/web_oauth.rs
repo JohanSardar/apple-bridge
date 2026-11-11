@@ -15,21 +15,24 @@ use std::collections::HashMap;
 
 type Query = HashMap<String, Vec<String>>;
 
-fn all_scopes() -> Vec<String> {
+fn all_scopes(web: &Web) -> Vec<String> {
     Grant::agent_scopes()
+        .into_iter()
+        .filter(|scope| web.offers(scope))
+        .collect()
 }
 
-pub(crate) fn protected_resource(origin: &str) -> Value {
+pub(crate) fn protected_resource(web: &Web, origin: &str) -> Value {
     json!({
         "resource": format!("{origin}/mcp"),
         "authorization_servers": [origin],
-        "scopes_supported": all_scopes(),
+        "scopes_supported": all_scopes(web),
         "bearer_methods_supported": ["header"],
     })
 }
 
-pub(crate) fn authorization_server(origin: &str) -> Value {
-    let mut scopes = all_scopes();
+pub(crate) fn authorization_server(web: &Web, origin: &str) -> Value {
+    let mut scopes = all_scopes(web);
     scopes.push(OFFLINE_ACCESS.to_owned());
     json!({
         "issuer": origin,
@@ -86,19 +89,34 @@ pub(crate) fn token(web: &Web, body: &[u8], origin: &str) -> Response {
         refresh_token: field(&form, "refresh_token").into(),
         scope: field(&form, "scope").into(),
     };
-    web.authority.exchange_oauth(&exchange).map_or_else(
-        |_| respond(400, &json!({"error": "invalid_grant"})),
-        |tokens| respond(200, &tokens),
-    )
+    match web.authority.exchange_oauth(&exchange) {
+        Ok(tokens)
+            if tokens
+                .scope
+                .split_whitespace()
+                .all(|scope| scope == OFFLINE_ACCESS || web.offers(scope)) =>
+        {
+            respond(200, &tokens)
+        }
+        _ => respond(400, &json!({"error": "invalid_grant"})),
+    }
 }
 
-fn requested_scopes(query: &Query) -> Vec<Grant> {
+fn requested_scopes(web: &Web, query: &Query) -> Vec<Grant> {
     let raw = field(query, "scope");
     if raw.trim().is_empty() {
+        if web.limited() {
+            return all_scopes(web)
+                .iter()
+                .filter(|scope| scope.ends_with(":read"))
+                .filter_map(|scope| Grant::parse(scope).ok())
+                .collect();
+        }
         return Grant::parse("messages:read").into_iter().collect();
     }
     raw.split_whitespace()
         .filter(|scope| *scope != OFFLINE_ACCESS)
+        .filter(|scope| web.offers(scope))
         .filter_map(|scope| Grant::parse(scope).ok())
         .filter(|grant| oauth::agent_grants("approve", std::slice::from_ref(grant)).is_ok())
         .collect()
@@ -136,7 +154,7 @@ fn see_other(location: &str) -> Response {
     }
 }
 
-fn request_error(query: &Query, origin: &str) -> Option<&'static str> {
+fn request_error(web: &Web, query: &Query, origin: &str) -> Option<&'static str> {
     if field(query, "response_type") != "code" {
         return Some("unsupported_response_type");
     }
@@ -151,7 +169,7 @@ fn request_error(query: &Query, origin: &str) -> Option<&'static str> {
     {
         return Some("invalid_request");
     }
-    requested_scopes(query)
+    requested_scopes(web, query)
         .is_empty()
         .then_some("invalid_scope")
 }
@@ -182,7 +200,7 @@ pub(crate) fn authorize(
     };
     let redirect_uri = field(query, "redirect_uri");
     let state = field(query, "state");
-    if let Some(error) = request_error(query, origin) {
+    if let Some(error) = request_error(web, query, origin) {
         return client_redirect(redirect_uri, state, origin, &[("error", error)])
             .map_or_else(web_pages::invalid_request, |to| see_other(&to));
     }
@@ -222,7 +240,7 @@ fn show_consent(
     web_pages::consent(&web_pages::Consent {
         client,
         redirect_host: destination.authority(),
-        scopes: &requested_scopes(query),
+        scopes: &requested_scopes(web, query),
         cancel: &cancel,
         signed_in,
         passkey_available,
@@ -272,7 +290,7 @@ fn decide(
             return respond(400, &json!({"error": "invalid_scope"}));
         };
         match oauth::agent_grants(level, &grants) {
-            Ok(grants) if ab_trust::subset(&grants, &requested_scopes(query)) => grants,
+            Ok(grants) if ab_trust::subset(&grants, &requested_scopes(web, query)) => grants,
             _ => return respond(400, &json!({"error": "invalid_scope"})),
         }
     } else {
@@ -284,6 +302,7 @@ fn decide(
         code_for(client, query, origin),
         field(query, "state"),
         origin,
+        web.route(),
         decision == "approve",
         level,
         &grants,
@@ -302,7 +321,8 @@ pub(crate) fn pending_request(web: &Web, origin: &str, ip: &str, query: &Query) 
     if !web.allow(&format!("connector-create:{ip}"), true, 50) {
         return reject(429, "Too many requests. Wait a minute and try again.");
     }
-    if query.values().any(|values| values.len() != 1) || request_error(query, origin).is_some() {
+    if query.values().any(|values| values.len() != 1) || request_error(web, query, origin).is_some()
+    {
         return reject(400, INVALID);
     }
     let Ok(client) = resolve_client(web, query) else {
@@ -315,7 +335,8 @@ pub(crate) fn pending_request(web: &Web, origin: &str, ip: &str, query: &Query) 
             code,
             field(query, "state"),
             origin,
-            requested_scopes(query),
+            web.route(),
+            requested_scopes(web, query),
         )
         .map_or_else(
             |_| reject(503, "Approval is unavailable. Try again in a few minutes."),

@@ -63,17 +63,26 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
                     let warning = Self.certificateWarning(home: warningHome).map { "\($0)\n\n" } ?? ""
-                    alert.informativeText = "\(warning)Code \(request.code)\n\nAllow only if this code matches your browser.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to: \(request.redirect_host)\nExpires in five minutes."
+                    let host = request.redirect_host.split(separator: ":").first.map(String.init) ?? ""
+                    let destination = ["localhost", "127.0.0.1", "[::1]"].contains(host) ? "the app on the device that started this" : request.redirect_host
+                    alert.informativeText = "\(warning)Code  \(request.code)\n\nAllow only if your browser shows the same code.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to \(destination). This request expires in five minutes."
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""
+                    window.level = .floating
+                    window.orderFrontRegardless()
                     window.makeKeyAndOrderFront(nil)
                     NSApplication.shared.activate()
                     alert.beginSheetModal(for: window) { response in
+                        window.level = .normal
                         let action = response == .alertFirstButtonReturn ? "allow" : "deny"
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
                             if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
+                            else if self.connectorHome != nil {
+                                let remaining = await Task.detached { Self.connectorCommand(["pending"] + options, labExecutable: executable) }.value
+                                if remaining.flatMap({ try? JSONDecoder().decode([ConnectorRequest].self, from: $0) })?.isEmpty != false { NSApplication.shared.terminate(nil) }
+                            }
                             await self.setup?.refresh()
                         }
                     }
@@ -187,14 +196,18 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        reopenSetup()
+        if flag, window?.isVisible == true {
+            window?.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
+        } else {
+            reopenSetup()
+        }
         return true
     }
 
     func windowWillClose(_ notification: Notification) { setup?.stop() }
 
     @objc func reopenSetup() {
-        setup?.state.step = 0
         setup?.start()
         window?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()

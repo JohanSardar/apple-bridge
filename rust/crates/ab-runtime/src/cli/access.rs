@@ -603,6 +603,11 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
         }
     };
     let modes = Modes::get();
+    let tailnet = if args.tailnet {
+        Some(tailnet_mcp(home)?)
+    } else {
+        None
+    };
     let authority = open(home)?;
     let asked = if expires.is_none() {
         lasting_consent(
@@ -627,12 +632,20 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
             ),
             other => Failure::from(other),
         })?;
+    let agent = match &tailnet {
+        Some(resource) => authority
+            .bind_to_resource(&agent.id, resource)
+            .map_err(Failure::from)?,
+        None => agent,
+    };
     ui::mask_secret(&token);
     if modes.json || modes.legacy_json() {
         #[derive(serde::Serialize)]
         struct Created<'a> {
             agent: AgentSummary<'a>,
             token: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            address: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
             outcome: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -641,6 +654,7 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
         let created = Created {
             agent: summary(&agent),
             token: &token,
+            address: tailnet.as_deref(),
             outcome: modes.json.then_some("created"),
             next: modes.json.then(|| {
                 vec![
@@ -670,8 +684,37 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
         agent_rows(&agent);
         ui::row("Expires", &expires_text(expires.as_ref()));
     }
+    if let Some(resource) = &tailnet {
+        ui::row("Address", resource);
+        ui::row("Header", "Authorization: Bearer <the token above>");
+    }
     ui::note("The token above is shown once. Keep it secret.");
     Ok(())
+}
+
+fn tailnet_mcp(home: &Path) -> Outcome<String> {
+    let status = ab_remote::state::status(home).map_err(|error| {
+        Failure::new(
+            Reason::InvalidConfig,
+            "Couldn't read the remote access state.",
+        )
+        .remote("Remote", error.to_string())
+    })?;
+    status
+        .routes
+        .get("tailnet")
+        .filter(|route| route.state == "on" && route.url.starts_with("https://"))
+        .map(|route| format!("{}/mcp", route.url))
+        .ok_or_else(|| {
+            Failure::new(
+                Reason::Conflict,
+                "Can't make a Tailscale token. The Tailscale route isn't on.",
+            )
+            .then(
+                "Turn it on",
+                ["bridge", "remote", "enable", "--via", "tailnet"],
+            )
+        })
 }
 
 #[allow(clippy::too_many_lines)]

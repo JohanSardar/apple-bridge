@@ -25,6 +25,7 @@ pub(crate) struct Pending {
     pub oauth: Code,
     pub state: String,
     pub origin: String,
+    pub route: String,
     pub expires: Instant,
     pub redirect: Option<String>,
     pub attempts: u8,
@@ -36,6 +37,7 @@ pub(crate) fn decision(
     mut code: Code,
     state: &str,
     origin: &str,
+    route: &str,
     approve: bool,
     level: &str,
     grants: &[Grant],
@@ -51,6 +53,9 @@ pub(crate) fn decision(
         let over_public_host = origin.starts_with("https://");
         let (agent, _) =
             authority.create_oauth_agent(&client.client_name, level, grants, over_public_host)?;
+        if over_public_host {
+            authority.record_connection(&agent.id, origin, route)?;
+        }
         code.principal.clone_from(&agent.id);
         match authority.issue_oauth_code(code) {
             Ok(raw) => {
@@ -108,6 +113,7 @@ impl Connectors {
         code: Code,
         state: &str,
         origin: &str,
+        route: &str,
         scopes: Vec<Grant>,
     ) -> Result<Summary, Error> {
         let mut memory = self.pending.lock().map_err(|_| Error::Unavailable)?;
@@ -148,6 +154,7 @@ impl Connectors {
                 oauth: code,
                 state: state.into(),
                 origin: origin.into(),
+                route: route.into(),
                 expires: Instant::now() + Duration::from_mins(5),
                 redirect: None,
                 attempts: 0,
@@ -184,6 +191,7 @@ impl Connectors {
             p.oauth.clone(),
             &p.state,
             &p.origin,
+            &p.route,
             approve,
             ab_trust::AgentLevel::DEFAULT_NAME,
             &p.summary.scopes,
@@ -238,6 +246,7 @@ mod tests {
                 },
                 "state",
                 origin,
+                "system",
                 vec![Grant::parse("calendar:read").expect("grant")],
             )
             .expect("begin")

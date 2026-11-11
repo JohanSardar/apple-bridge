@@ -1749,6 +1749,19 @@
           "type": "string",
           "value_hint": "<ACCESS>",
           "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--tailnet",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Let the token work only at this Mac's Tailscale address, from your other devices",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
         }
       ],
       "path": "bridge agents create",
@@ -3147,6 +3160,19 @@
           "aliases": [],
           "default": null,
           "global": false,
+          "name": "--sources",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Cloud route only: services cloud chats may see, such as calendar,reminders",
+          "type": "string",
+          "value_hint": "<SOURCES>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
           "name": "--timeout",
           "repeatable": false,
           "required": false,
@@ -3169,6 +3195,8 @@
           "value_hint": "<ROUTE>",
           "values": [
             "relay",
+            "tailnet",
+            "cloud",
             "private",
             "tailscale-app",
             "both"
@@ -3321,6 +3349,8 @@
           "value_hint": "<ROUTE>",
           "values": [
             "relay",
+            "tailnet",
+            "cloud",
             "private",
             "tailscale-app",
             "both"
@@ -3701,6 +3731,19 @@
           "aliases": [],
           "default": null,
           "global": false,
+          "name": "--sources",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Cloud route only: services cloud chats may see, such as calendar,reminders",
+          "type": "string",
+          "value_hint": "<SOURCES>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
           "name": "--timeout",
           "repeatable": false,
           "required": false,
@@ -3723,6 +3766,8 @@
           "value_hint": "<ROUTE>",
           "values": [
             "relay",
+            "tailnet",
+            "cloud",
             "private",
             "tailscale-app",
             "both"
@@ -3870,6 +3915,8 @@
           "value_hint": "<ROUTE>",
           "values": [
             "relay",
+            "tailnet",
+            "cloud",
             "private",
             "tailscale-app",
             "both"
