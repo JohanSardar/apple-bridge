@@ -63,7 +63,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
     func present() {
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
         let size = approvalPanel.frame.size
-        approvalPanel.setFrameOrigin(NSPoint(x: screen.maxX - size.width - 18, y: screen.maxY - size.height - 14))
+        approvalPanel.setFrameOrigin(NSPoint(x: screen.maxX - size.width - 24, y: screen.midY - size.height / 2))
         approvalPanel.alphaValue = 0
         approvalPanel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup({ context in
