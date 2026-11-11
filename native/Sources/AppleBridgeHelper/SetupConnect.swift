@@ -71,7 +71,7 @@ final class ConnectModel: ObservableObject {
 
     static let tailscaleApp = URL(fileURLWithPath: "/Applications/Tailscale.app")
     static let tailscalePackage = URL(string: "https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg")!
-    static let tailscaleTeam = "W5364U7YZB"
+    nonisolated static let tailscaleTeam = "W5364U7YZB"
     static let selfHostGuide = URL(string: "https://github.com/JohanSardar/apple-bridge/blob/main/docs/self-host.md")!
 
     func refresh() async {
