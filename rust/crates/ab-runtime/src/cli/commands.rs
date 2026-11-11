@@ -968,7 +968,7 @@ pub(super) fn check_remote_files(home: &Path) -> Outcome {
     Ok(())
 }
 
-fn valid_domain(domain: &str) -> bool {
+pub(super) fn valid_domain(domain: &str) -> bool {
     domain.len() <= 253
         && domain.contains('.')
         && domain.split('.').all(|label| {

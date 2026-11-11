@@ -124,6 +124,8 @@ pub enum Command {
     Web(WebCommand),
     #[command(about = "Let your other devices and cloud agents reach this Mac through Tailscale")]
     Tailscale(TailscaleArgs),
+    #[command(about = "Set up your own relay server and connect this Mac to it")]
+    Relay(RelayCommand),
     #[command(about = "Use Apple Bridge from other computers; off until you enable it")]
     Remote(RemoteCommand),
     #[command(about = "Create a pairing code for a replica or iPhone")]
@@ -552,6 +554,28 @@ pub struct GuideStatusArgs {
 pub struct TailscaleArgs {
     #[arg(long, help = "Turn Tailscale access off again")]
     pub off: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct RelayCommand {
+    #[command(subcommand)]
+    pub action: Option<RelayAction>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum RelayAction {
+    #[command(about = "Install a relay on your server over ssh and connect this Mac")]
+    Setup(RelaySetupArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct RelaySetupArgs {
+    #[arg(value_name = "SERVER", help = "How you reach the server with ssh, such as root@203.0.113.10")]
+    pub server: String,
+    #[arg(long, value_name = "DOMAIN", help = "A domain used only for this, such as bridge.example.com")]
+    pub domain: String,
+    #[arg(long, value_name = "IP", help = "The server's public IPv4 address, if ssh reaches it another way")]
+    pub ip: Option<String>,
 }
 
 #[derive(Debug, Args)]

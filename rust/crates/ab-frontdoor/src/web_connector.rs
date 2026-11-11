@@ -279,6 +279,9 @@ impl Connectors {
         {
             return Err(Error::Invalid);
         }
+        if self.waiting.get().is_none() {
+            return Err(Error::Unavailable);
+        }
         let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
         asks.retain(|_, a| a.expires > Instant::now());
         if asks.values().filter(|a| a.outcome.is_none()).count() >= 4 {

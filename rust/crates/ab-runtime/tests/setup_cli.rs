@@ -11,6 +11,7 @@ fn bridge() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_bridge"));
     command
         .env("APPLE_BRIDGE_SECRET_STORE", "file")
+        .env_remove("CLAUDECODE")
         .stdin(Stdio::null());
     command
 }

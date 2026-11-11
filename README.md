@@ -15,12 +15,32 @@ Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 ```sh
 curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
+bridge permissions guide    # a small window walks you through the Mac permissions
 bridge link claude          # connect Claude Code. Or: bridge link codex
-bridge permissions guide    # allow the Mac permissions you want
-bridge stats --wait         # counts per source, as each one finishes
 ```
 
-No account, server or domain is needed. `bridge link` signs in through your browser: check the four-digit code on the page, then allow it in the Apple Bridge window or with `bridge connectors allow`. An allowed agent gets full access by default: it can read, and its changes happen right away. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+`bridge permissions guide` opens System Settings at the right page and puts a small window beside it that shows what to drag where. It moves on by itself after each permission and closes when you're done. `bridge link` asks you on your Mac: click Allow in the Apple Bridge window. An allowed agent gets full access by default. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+
+### Let your agent set it up
+
+Paste this repository's link into Claude Code and say "download this and set it up as your MCP server". Agents: run these, in order, and wait for each to finish:
+
+```sh
+curl -fsSL https://eilmer.si/applebridge/install | sh
+~/.local/bin/bridge up
+~/.local/bin/bridge permissions guide   # the person clicks through a small window; wait for it to close
+~/.local/bin/bridge link claude         # the person clicks Allow on the Mac; then restart Claude Code or run /mcp
+```
+
+Never click Allow or type a password for the person. Then ask: "Use Apple Bridge to show my reminder lists."
+
+### Other ways to connect
+
+| From | Run on the Mac | Then |
+|---|---|---|
+| The Claude app or claude.ai | `bridge link claude-app` | It copies an address. In Claude: Customize > Connectors > Add custom connector, paste it, click Connect, then Allow on the Mac |
+| Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale and prints a `/connect` address. Tell Grok Bot "connect to Apple Bridge at <that address>", then click Allow on the Mac |
+| Your own server | `bridge relay setup root@your-server --domain bridge.example.com` | See [your own relay](docs/self-host.md) |
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 

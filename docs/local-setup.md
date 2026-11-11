@@ -26,8 +26,8 @@ Your data stays in `~/Library/Application Support/AppleBridge`, including a copy
 
 ```sh
 bridge up                   # start Apple Bridge. It asks nothing
+bridge permissions guide    # a small window walks you through the Mac permissions
 bridge link claude          # connect Claude Code. Or: bridge link codex
-bridge permissions guide    # allow the Mac permissions you want
 bridge stats --wait         # counts per source, as each one finishes
 ```
 
@@ -35,14 +35,14 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 
 ## Ways to connect
 
-Local is the default. The others are off until you turn them on, in the Setup window's Connect step or with `bridge remote`.
+Local is the default. The others are off until you turn them on with one command.
 
 | Way | Who connects | How | Needs |
 |---|---|---|---|
 | On this Mac, the default | Agents on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
-| Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge remote enable --via tailnet` | Tailscale on this Mac and on the other device, signed in to the same account |
-| Cloud chats, opt-in | Claude and ChatGPT on the web, and other MCP apps that can't join Tailscale | `bridge remote enable --via cloud --sources calendar,reminders` | Tailscale on this Mac. It opens a public address through Tailscale Funnel |
-| Your own relay | Anyone who runs their own server | `bridge remote enable --relay-url https://relay.example.com` | [Your own server](self-host.md) |
+| Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge tailscale` | A Tailscale account; it installs and starts Tailscale on this Mac |
+| Cloud chats, opt-in | The Claude app, claude.ai, ChatGPT and other MCP apps that can't join Tailscale | `bridge link claude-app` | A Tailscale account. It opens a public address through Tailscale Funnel |
+| Your own relay | Anyone who runs their own server | `bridge relay setup root@server --domain bridge.example.com` | [Your own server](self-host.md) |
 
 See [connecting other devices and cloud chats](connectors/devices.md). Nothing leaves this Mac until you turn one of these on, and `bridge remote disable --via ROUTE` turns it off again.
 
@@ -58,7 +58,7 @@ Run `bridge down` before updating or uninstalling. Moving, replacing or deleting
 
 ## Connect an agent
 
-`bridge link claude` adds the server to Claude Code, then signs in through your browser. The page shows a four-digit code. Check that the Apple Bridge window on your Mac shows the same code, and click Allow. Without the app, `bridge link` prints the command to run in another terminal:
+`bridge link claude` adds the server to Claude Code, then signs in through your browser. The page says "Approve on your Mac" and a small Apple Bridge panel asks you to Allow. If both show a four-digit code, more than one app is asking at once: allow only the one whose code matches. When Claude Code runs `bridge link claude` itself, there is no browser: the panel asks, you click Allow, and Claude Code gets a key; restart Claude Code or run `/mcp` to load it. Without the app, `bridge link` prints the command to run in another terminal:
 
 ```sh
 bridge connectors allow --request <id> --code <code>
@@ -93,9 +93,9 @@ Send the token as `Authorization: Bearer <token>`, to `/mcp` or to the REST API 
 
 ## Mac permissions
 
-`bridge permissions guide` lists Full Disk Access, Contacts, Calendar and Reminders with their status, then walks through any that are missing. For each one it waits for you, then asks macOS for that permission alone or opens the right page in System Settings. You can skip any of them, and the other sources keep working. When it has asked macOS for something, it asks the gateway to restart its connected Helper so a new permission starts reading right away, and says so if it cannot confirm that. An older gateway that cannot restart the Helper needs `bridge down`, then `bridge up`.
+`bridge permissions guide` opens a small panel that walks through Contacts, Calendar, Reminders, Photos, Full Disk Access and Screen Recording, skipping any you already allowed. For the first four it asks macOS, and you click Allow in macOS's box. For Full Disk Access and Screen Recording it opens System Settings at the right page, sits beside it, and shows an animation of dragging Apple Bridge into the list; if Apple Bridge is already listed, switch it on. macOS then asks for your password or Touch ID. Cancelling that box doesn't end the guide; drag it in again when you're ready. After the grant, macOS may ask to quit Apple Bridge: click Later, or Quit & Reopen, and the guide carries on either way and starts Apple Bridge again if macOS stopped it. "Not Now" skips a permission, and the panel closes itself when you're done. It needs no terminal, so an agent can start it and you click through.
 
-The Settings step waits up to ten minutes. If the window is not visible, click System Settings in the Dock or use Mission Control to find the Space containing it; Apple Bridge cannot force a Settings window onto your current Space. Press Ctrl-C at any time and rerun `bridge permissions guide` to continue: existing grants are kept, including after a timeout.
+`--only camera,microphone,location` walks through just those. `--in-terminal` keeps the older walkthrough in the terminal, one prompt at a time, which is what runs without a Helper app. After the guide, Apple Bridge restarts its Helper so new permissions start reading right away.
 
 macOS may list Apple Bridge in Accessibility with its switch off without showing a permission prompt. The Notes folder-rename capability checks `AXIsProcessTrusted` through the Helper, which is not a request to grant access. This check stays so Notes folder UI remains available when you have allowed it. The guide does not request Accessibility or switch it on. Legacy `onboard` explicitly requests Accessibility; it is not run by this guide.
 

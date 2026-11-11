@@ -214,6 +214,14 @@
           "summary": "Manage browser sign-in for this Mac's local pages"
         },
         {
+          "name": "tailscale",
+          "summary": "Let your other devices and cloud agents reach this Mac through Tailscale"
+        },
+        {
+          "name": "relay",
+          "summary": "Set up your own relay server and connect this Mac to it"
+        },
+        {
           "name": "remote",
           "summary": "Use Apple Bridge from other computers; off until you enable it"
         },
@@ -392,6 +400,7 @@
           "values": [
             "claude",
             "codex",
+            "claude-app",
             "other"
           ]
         }
@@ -564,6 +573,7 @@
           "values": [
             "claude",
             "codex",
+            "claude-app",
             "other"
           ]
         }
@@ -722,13 +732,26 @@
         },
         {
           "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--in-terminal",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Walk through in this terminal instead of the guide window",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
           "default": null,
           "global": false,
           "name": "--only",
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Request only these comma-separated permissions, without prompts, such as contacts,calendar",
+          "summary": "Request only these comma-separated permissions, such as contacts,calendar",
           "type": "string",
           "value_hint": "<NAMES>",
           "values": []
@@ -3017,6 +3040,145 @@
       "subcommands": [],
       "summary": "List signed-in browsers",
       "usage": "bridge web devices [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "deprecated": null,
+      "examples": [
+        {
+          "command": "bridge tailscale",
+          "summary": "Let your devices and Grok Bot reach this Mac"
+        },
+        {
+          "command": "bridge tailscale --off",
+          "summary": "Turn it off"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-tailscale",
+      "lifecycle": "stable",
+      "notes": [
+        "Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your Tailscale network can reach it.",
+        "Cloud agents ask at the printed /connect address, and you click Allow on this Mac."
+      ],
+      "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--off",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Turn Tailscale access off again",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge tailscale",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "connect",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Let your other devices and cloud agents reach this Mac through Tailscale",
+      "usage": "bridge tailscale [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "deprecated": null,
+      "examples": [],
+      "hidden": false,
+      "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-relay",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [],
+      "path": "bridge relay",
+      "result_schema": null,
+      "subcommands": [
+        {
+          "name": "setup",
+          "summary": "Install a relay on your server over ssh and connect this Mac"
+        }
+      ],
+      "summary": "Set up your own relay server and connect this Mac to it",
+      "usage": "bridge relay <command> [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [
+        {
+          "name": "SERVER",
+          "required": true,
+          "summary": "How you reach the server with ssh, such as root@203.0.113.10",
+          "values": []
+        }
+      ],
+      "deprecated": null,
+      "examples": [
+        {
+          "command": "bridge relay setup root@203.0.113.10 --domain bridge.example.com",
+          "summary": "Install a relay on your server and connect this Mac"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md#bridge-relay-setup",
+      "lifecycle": "stable",
+      "notes": [
+        "Shows the two DNS records to add and waits until they are live, then installs the relay over ssh and connects this Mac.",
+        "Run it again to pick up where it stopped."
+      ],
+      "options": [
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--domain",
+          "repeatable": false,
+          "required": true,
+          "short": null,
+          "summary": "A domain used only for this, such as bridge.example.com",
+          "type": "string",
+          "value_hint": "<DOMAIN>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--ip",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "The server's public IPv4 address, if ssh reaches it another way",
+          "type": "string",
+          "value_hint": "<IP>",
+          "values": []
+        }
+      ],
+      "path": "bridge relay setup",
+      "result_schema": null,
+      "subcommands": [],
+      "summary": "Install a relay on your server over ssh and connect this Mac",
+      "usage": "bridge relay setup <SERVER> [options]"
     },
     {
       "aliases": [],

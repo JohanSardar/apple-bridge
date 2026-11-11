@@ -29,9 +29,11 @@ Access:
   web         Manage browser sign-in for this Mac's local pages
 
 Remote and replicas:
-  remote  Use Apple Bridge from other computers; off until you enable it
-  pair    Create a pairing code for a replica or iPhone
-  join    Join a gateway as a replica with a pairing code
+  tailscale  Let your other devices and cloud agents reach this Mac through Tailscale
+  relay      Set up your own relay server and connect this Mac to it
+  remote     Use Apple Bridge from other computers; off until you enable it
+  pair       Create a pairing code for a replica or iPhone
+  join       Join a gateway as a replica with a pairing code
 
 Maintenance:
   status      Show this home's role and sync position
@@ -99,7 +101,7 @@ bridge link <CLIENT> [options]
 Connect Claude Code or Codex to this Mac
 
 Arguments:
-  <CLIENT>  Which agent to connect (accepted: claude, codex, other)
+  <CLIENT>  Which agent to connect (accepted: claude, codex, claude-app, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -132,7 +134,7 @@ bridge unlink <CLIENT> [options]
 Disconnect Claude Code or Codex
 
 Arguments:
-  <CLIENT>  Which agent to disconnect (accepted: claude, codex, other)
+  <CLIENT>  Which agent to disconnect (accepted: claude, codex, claude-app, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -174,8 +176,8 @@ Walk through the Mac permissions Apple Bridge reads with
 
 Options:
   --helper-app <PATH>  Helper app to use
-  --only <NAMES>       Request only these comma-separated permissions, without prompts, such as
-                       contacts,calendar
+  --in-terminal        Walk through in this terminal instead of the guide window
+  --only <NAMES>       Request only these comma-separated permissions, such as contacts,calendar
 
 Global options: see bridge --help
 
@@ -881,6 +883,67 @@ List signed-in browsers
 Deprecated: use bridge web sessions list.
 
 Global options: see bridge --help
+```
+
+## bridge tailscale
+
+```text
+bridge tailscale [options]
+Let your other devices and cloud agents reach this Mac through Tailscale
+
+Options:
+  --off  Turn Tailscale access off again
+
+Global options: see bridge --help
+
+Examples:
+  Let your devices and Grok Bot reach this Mac
+    bridge tailscale
+
+  Turn it off
+    bridge tailscale --off
+
+Notes:
+  Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your
+  Tailscale network can reach it.
+  Cloud agents ask at the printed /connect address, and you click Allow on this Mac.
+```
+
+## bridge relay
+
+```text
+bridge relay <command> [options]
+Set up your own relay server and connect this Mac to it
+
+Commands:
+  setup  Install a relay on your server over ssh and connect this Mac
+
+Global options: see bridge --help
+```
+
+## bridge relay setup
+
+```text
+bridge relay setup <SERVER> [options]
+Install a relay on your server over ssh and connect this Mac
+
+Arguments:
+  <SERVER>  How you reach the server with ssh, such as root@203.0.113.10
+
+Options:
+  --domain <DOMAIN>  A domain used only for this, such as bridge.example.com
+  --ip <IP>          The server's public IPv4 address, if ssh reaches it another way
+
+Global options: see bridge --help
+
+Examples:
+  Install a relay on your server and connect this Mac
+    bridge relay setup root@203.0.113.10 --domain bridge.example.com
+
+Notes:
+  Shows the two DNS records to add and waits until they are live, then installs the relay over ssh
+  and connects this Mac.
+  Run it again to pick up where it stopped.
 ```
 
 ## bridge remote

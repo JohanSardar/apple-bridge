@@ -586,7 +586,11 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         }
         return Ok(());
     }
-    if args.client == LinkClient::Claude && !args.no_login && !Modes::get().interactive() {
+    if args.client == LinkClient::Claude
+        && !args.no_login
+        && !Modes::get().interactive()
+        && std::env::var_os("CLAUDECODE").is_some()
+    {
         if let Some(outcome) = approve_on_mac(home, &plan, args, &url, &deadline).await {
             return outcome;
         }
@@ -728,6 +732,16 @@ async fn approve_on_mac(
     url: &str,
     deadline: &Deadline,
 ) -> Option<Outcome> {
+    let installed = Command::new(plan.program)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    if !installed {
+        return None;
+    }
     let ticket = crate::connector::ask_for_agent(home, plan.title).await.ok()?;
     let id = ticket["id"].as_str()?.to_owned();
     let secret = ticket["secret"].as_str()?.to_owned();

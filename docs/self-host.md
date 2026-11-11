@@ -4,6 +4,14 @@ The relay lets Claude, ChatGPT and your iPhone reach your Mac from anywhere. It 
 
 Most people don't need a relay: Tailscale covers your own devices, and cloud chats use Tailscale Funnel (see [connecting other devices and cloud chats](connectors/devices.md)). Run your own relay if you'd rather use your own server and domain. It takes about ten minutes.
 
+## The short way
+
+```sh
+bridge relay setup root@203.0.113.10 --domain bridge.example.com
+```
+
+It checks that `ssh` reaches the server, shows the two DNS records to add and waits until they're live, installs the relay over ssh, waits for its certificate and connects this Mac. It copies your connector address at the end. Run it again to pick up where it stopped. The steps below are what it does, for doing it by hand.
+
 ## What you need
 
 - A small Linux server with a public IPv4 address. 1 GB of memory is plenty. x86_64 only for now.
@@ -63,7 +71,7 @@ It prints your address, for example `https://8f3a….bridge.example.com/mcp`. Yo
 
 **ChatGPT:** turn on Developer mode in ChatGPT's settings, then create an app with the same address and OAuth. Developer mode needs a paid ChatGPT plan.
 
-A page opens saying which app wants what, with a four-digit code. Your Mac shows the same code in an Allow or Deny window. Check that the codes match, then choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connectors list` and `bridge connectors allow --request ID --code CODE` do the same.
+A page opens saying which app wants what, and your Mac shows the same request with Allow and Deny. If a four-digit code appears, check that both sides match before you choose Allow. Your iPhone can approve too, if it's paired. On a Mac with no screen in reach, `bridge connectors list` and `bridge connectors allow --request ID --code CODE` do the same.
 
 ## Letting other people use your relay
 
@@ -105,7 +113,6 @@ Your Mac looks for this itself. About once an hour while Remote is on, it asks t
 
 - `bridge remote status`, as `ct_warning`
 - `bridge doctor`
-- the Setup window
 - the connector approval window
 - `bridge pair --iphone`
 
