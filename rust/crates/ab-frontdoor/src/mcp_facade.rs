@@ -656,6 +656,18 @@ impl Call<'_> {
                 .await
                 .map(|v| Outcome::ok(v).named(USAGE_SUMMARY));
         }
+        if operation.name == crate::mcp_lookups::FREE_SLOTS {
+            return self
+                .free_slots(&arguments)
+                .await
+                .map(|v| Outcome::ok(v).named(crate::mcp_lookups::FREE_SLOTS));
+        }
+        if operation.name == crate::mcp_lookups::SHARED {
+            return self
+                .shared(&arguments)
+                .await
+                .map(|v| Outcome::ok(v).named(crate::mcp_lookups::SHARED));
+        }
         if operation.name == CALENDARS {
             return self
                 .calendars()

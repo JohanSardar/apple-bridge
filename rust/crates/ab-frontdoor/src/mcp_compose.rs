@@ -196,7 +196,7 @@ fn civil_date(field: &str, raw: &str) -> Step<jiff::civil::Date> {
         })
 }
 
-fn moment(field: &str, raw: &str, local: bool) -> Step<String> {
+pub(crate) fn moment(field: &str, raw: &str, local: bool) -> Step<String> {
     if !local && let Ok(timestamp) = raw.parse::<jiff::Timestamp>() {
         return Ok(timestamp.to_string());
     }

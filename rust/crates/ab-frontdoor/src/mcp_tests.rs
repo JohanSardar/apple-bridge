@@ -68,7 +68,7 @@ fn every_catalog_operation_has_an_agent_contract() -> Check {
             descriptor.name
         );
     }
-    assert_eq!(registry.operations.len(), catalog.len() + 4);
+    assert_eq!(registry.operations.len(), catalog.len() + 6);
     let summaries: BTreeSet<&str> = registry
         .operations
         .iter()

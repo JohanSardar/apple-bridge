@@ -66,6 +66,7 @@ pub fn sim(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
     );
     queries(&client, evidence)?;
     previews(&client, evidence)?;
+    shown(world, evidence)?;
     originals(world, &client, evidence)?;
     albums(world, &client, evidence)?;
     denial(world, &client, evidence)
@@ -208,6 +209,110 @@ fn previews(client: &Client, evidence: &mut Evidence) -> Result<()> {
         "contact_sheet_rejects_duplicates",
         duplicate.is_some_and(|(_, value)| value["error"]["code"] == "invalid"),
         "",
+    );
+    Ok(())
+}
+
+fn shown(world: &World, evidence: &mut Evidence) -> Result<()> {
+    let client = Client::new(world, "photos:read,messages:read,messages:write")?;
+    let shown = client.call_mcp_result(
+        "photos_show",
+        &json!({"asset_id":"photo-fixture","save":true}),
+        30,
+    )?;
+    let image = shown["content"]
+        .as_array()
+        .and_then(|items| items.iter().find(|item| item["type"] == "image"))
+        .and_then(|item| item["data"].as_str())
+        .and_then(|data| STANDARD.decode(data).ok())
+        .unwrap_or_default();
+    let file = shown["structuredContent"]["file"]
+        .as_str()
+        .unwrap_or_default();
+    evidence.check(
+        "show_returns_the_display_rendition_alone",
+        shown["isError"] != true
+            && image.starts_with(&[0xff, 0xd8])
+            && shown["structuredContent"].get("photos").is_none(),
+        &format!("isError {} image {} bytes", shown["isError"], image.len()),
+    );
+    evidence.check(
+        "show_saves_the_original_file",
+        file.ends_with("/IMG_0001.HEIC")
+            && std::fs::read(file).is_ok_and(|bytes| bytes == b"synthetic-photo-original"),
+        "",
+    );
+    let one = client.call_mcp_result("photos_find", &json!({"type":"video"}), 30)?;
+    evidence.check(
+        "one_match_returns_the_photo_not_a_sheet",
+        one["structuredContent"]["photos"]
+            .as_array()
+            .is_some_and(|rows| rows.len() == 1 && rows[0].get("number").is_none())
+            && one["content"]
+                .as_array()
+                .is_some_and(|items| items.iter().any(|item| item["type"] == "image")),
+        "",
+    );
+    sent(world, &client, evidence)
+}
+
+fn sent(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()> {
+    world.control(
+        "/messages",
+        &json!({"action": "seed", "key": "", "count": 0}),
+    )?;
+    let mut chat_id = String::new();
+    crate::assertions::await_until(20, || {
+        chat_id = client
+            .call_mcp_result(
+                "apple_read",
+                &json!({"operation":"records.query","arguments":{"collection":"messages.chat","limit":1}}),
+                10,
+            )
+            .ok()
+            .and_then(|r| r["structuredContent"]["records"][0]["id"].as_str().map(str::to_owned))
+            .unwrap_or_default();
+        !chat_id.is_empty()
+    });
+    let tag = random_id("photo")?;
+    let request = random_id("req")?;
+    let sent = client.call_mcp_result(
+        "messages_send",
+        &json!({"chat_id":chat_id,"text":format!("[ab-test {tag}] photo"),"photos":["photo-fixture"],"request_id":request}),
+        30,
+    )?;
+    evidence.check(
+        "send_attaches_the_original",
+        sent["structuredContent"]["status"] == "done",
+        &sent["structuredContent"].to_string(),
+    );
+    let again = client.call_mcp_result(
+        "messages_send",
+        &json!({"chat_id":chat_id,"text":format!("[ab-test {tag}] photo"),"photos":["photo-fixture"],"request_id":request}),
+        30,
+    )?;
+    evidence.check(
+        "repeated_request_id_does_not_send_twice",
+        again["structuredContent"]["status"] == "done"
+            && again["structuredContent"]["ids"] == sent["structuredContent"]["ids"],
+        "",
+    );
+    let shared = client.call_mcp_result(
+        "apple_read",
+        &json!({"operation":"messages.shared","arguments":{"chat_id":chat_id,"kind":"image"}}),
+        30,
+    )?;
+    let original = format!("{:x}", Sha256::digest(b"synthetic-photo-original"));
+    evidence.check(
+        "sent_file_is_the_untouched_original",
+        shared["structuredContent"]["items"]
+            .as_array()
+            .is_some_and(|items| {
+                items.iter().any(|item| {
+                    item["filename"] == "IMG_0001.HEIC" && item["digest"] == original.as_str()
+                })
+            }),
+        &shared["structuredContent"].to_string(),
     );
     Ok(())
 }
