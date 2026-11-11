@@ -192,7 +192,12 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        reopenSetup()
+        if flag, window?.isVisible == true {
+            window?.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate()
+        } else {
+            reopenSetup()
+        }
         return true
     }
 
