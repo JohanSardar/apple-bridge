@@ -28,19 +28,38 @@ enum SetupProbe {
     }
 
     static func fresh() async -> [String: String] {
-        guard let executable = Bundle.main.executableURL else { return [:] }
-        return await Task.detached {
-            let process = Process()
-            process.executableURL = executable
-            process.arguments = [argument]
-            let output = Pipe()
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            do { try process.run() } catch { return [:] }
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            return (try? JSONDecoder().decode([String: String].self, from: data)) ?? [:]
-        }.value
+        guard let executable = Bundle.main.executablePath else { return [:] }
+        return await Task.detached { spawn(executable) }.value
+    }
+
+    private typealias Disclaim = @convention(c) (UnsafeMutablePointer<posix_spawnattr_t?>, Int32) -> Int32
+
+    private static func spawn(_ executable: String) -> [String: String] {
+        var pipes: [Int32] = [-1, -1]
+        guard pipe(&pipes) == 0 else { return [:] }
+        defer { close(pipes[0]) }
+        var actions: posix_spawn_file_actions_t?
+        var attributes: posix_spawnattr_t?
+        posix_spawn_file_actions_init(&actions)
+        posix_spawnattr_init(&attributes)
+        defer { posix_spawn_file_actions_destroy(&actions); posix_spawnattr_destroy(&attributes) }
+        posix_spawn_file_actions_adddup2(&actions, pipes[1], 1)
+        posix_spawn_file_actions_addopen(&actions, 2, "/dev/null", O_WRONLY, 0)
+        posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_CLOEXEC_DEFAULT))
+        if let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_spawnattrs_setdisclaim") {
+            _ = unsafeBitCast(symbol, to: Disclaim.self)(&attributes, 1)
+        }
+        let argv = [strdup(executable), strdup(argument), nil]
+        let environment = ProcessInfo.processInfo.environment.map { strdup($0.key + "=" + $0.value) } + [nil]
+        defer { (argv + environment).forEach { free($0) } }
+        var pid: pid_t = 0
+        let started = posix_spawn(&pid, executable, &actions, &attributes, argv, environment)
+        close(pipes[1])
+        guard started == 0 else { return [:] }
+        let data = FileHandle(fileDescriptor: pipes[0], closeOnDealloc: false).readDataToEndOfFile()
+        var status: Int32 = 0
+        while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+        return (try? JSONDecoder().decode([String: String].self, from: data)) ?? [:]
     }
 }
 

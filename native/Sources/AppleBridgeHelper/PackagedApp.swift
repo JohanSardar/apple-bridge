@@ -163,7 +163,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
         editItem.submenu = edit
         menu.addItem(editItem)
         NSApplication.shared.mainMenu = menu
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 580), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 820, height: 600), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Apple Bridge Setup"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
@@ -176,14 +176,16 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.window?.makeKeyAndOrderFront(nil)
             NSApplication.shared.activate()
         }
+        model.onSettings = { [weak self] in self?.window?.orderOut(nil) }
         model.onFinish = { [weak self] in self?.window?.close() }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenSetup), name: Self.showSetup, object: nil)
-        window.contentView = NSHostingView(rootView: SetupView(model: model))
+        window.contentView = FirstMouseHostingView(rootView: SetupView(model: model))
         self.window = window
         window.delegate = self
         self.setup = model
         if snapshotDirectory == nil { model.start() }
         window.center()
+        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
         if let directory = snapshotDirectory {

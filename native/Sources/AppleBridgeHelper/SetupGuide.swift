@@ -4,13 +4,12 @@ import SwiftUI
 @MainActor
 final class SetupGuide {
     let panel: NSPanel
-    private var placed: NSRect?
+    private var following: Task<Void, Never>?
 
     init(model: SetupModel) {
-        panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 372, height: 132), styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow], backing: .buffered, defer: false)
+        panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 392, height: 150), styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .utilityWindow], backing: .buffered, defer: false)
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.isMovableByWindowBackground = true
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.hidesOnDeactivate = false
@@ -20,30 +19,33 @@ final class SetupGuide {
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.contentView = NSHostingView(rootView: GuideView(model: model))
+        panel.contentView = FirstMouseHostingView(rootView: GuideView(model: model))
     }
 
     func show() {
-        placed = nil
-        follow()
+        panel.setFrame(target(), display: true)
         panel.orderFrontRegardless()
-        Task { @MainActor in
-            for _ in 0..<12 {
-                try? await Task.sleep(for: .milliseconds(250))
-                follow()
+        following?.cancel()
+        following = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                self?.follow()
+                try? await Task.sleep(for: .milliseconds(400))
             }
         }
     }
 
     func follow() {
-        guard panel.isVisible || placed == nil else { return }
-        if let placed, placed != panel.frame { return }
+        guard panel.isVisible else { return }
         let frame = target()
-        panel.setFrame(frame, display: true, animate: placed != nil)
-        placed = panel.frame
+        guard abs(frame.minX - panel.frame.minX) > 1 || abs(frame.minY - panel.frame.minY) > 1 else { return }
+        panel.setFrame(frame, display: true, animate: true)
     }
 
-    func close() { panel.orderOut(nil) }
+    func close() {
+        following?.cancel()
+        following = nil
+        panel.orderOut(nil)
+    }
 
     private func target() -> NSRect {
         let size = panel.frame.size
@@ -79,10 +81,12 @@ struct GuideView: View {
                     Text("Taking you back to setup…").font(.callout).foregroundStyle(.secondary)
                 } else {
                     Text("Drag Apple Bridge into the \(permission?.title ?? "") list").font(.headline).fixedSize(horizontal: false, vertical: true)
-                    Text("Then turn on its switch. If it's already listed, just turn it on.").font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text("Then turn on its switch. If it's already listed, just turn it on. If macOS offers to quit Apple Bridge, click Later.").font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.mini)
                         Text("Waiting…").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Back to Setup") { model.leaveSettings() }.controlSize(.small)
                     }
                     .padding(.top, 2)
                 }
@@ -90,8 +94,12 @@ struct GuideView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
-        .frame(width: 372, height: 132)
+        .frame(width: 392, height: 150)
         .background(.regularMaterial)
         .onAppear { nudge = true }
     }
+}
+
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

@@ -29,6 +29,7 @@ final class SetupModel: ObservableObject {
     let testing: Bool
     var guide: SetupGuide?
     var onActivate: () -> Void = {}
+    var onSettings: () -> Void = {}
     var onFinish: () -> Void = {}
     var refreshTask: Task<Void, Never>?
     var grantedThisRun = false
@@ -140,12 +141,20 @@ final class SetupModel: ObservableObject {
         if permission.usesSettings {
             if guide == nil { guide = SetupGuide(model: self) }
             guide?.show()
+            onSettings()
         }
     }
 
+    func leaveSettings() {
+        closeGuide()
+        waitingInSettings = nil
+    }
+
     func closeGuide() {
-        guide?.close()
-        guide = nil
+        guard let guide else { return }
+        guide.close()
+        self.guide = nil
+        onActivate()
     }
 
     func start() {
@@ -174,7 +183,6 @@ final class SetupModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(returning ? 700 : 900))
             if returning {
                 closeGuide()
-                onActivate()
                 try? await Task.sleep(for: .milliseconds(500))
             }
             guard celebrating == id else { return }
@@ -328,7 +336,7 @@ struct SetupView: View {
             .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             .id(model.state.step.rawValue + (model.state.current ?? ""))
         }
-        .frame(width: 760, height: 580)
+        .frame(width: 820, height: 600)
         .background(
             LinearGradient(colors: [Color(nsColor: .windowBackgroundColor), Color(nsColor: .underPageBackgroundColor).opacity(0.6)], startPoint: .top, endPoint: .bottom)
         )
@@ -400,7 +408,7 @@ struct WelcomeLabel: LabelStyle {
 
 struct ServicesStep: View {
     @ObservedObject var model: SetupModel
-    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
     var summary: String {
         let count = model.askCount
         if model.state.services.isEmpty { return "Choose at least one to continue." }
@@ -408,7 +416,7 @@ struct ServicesStep: View {
     }
     var body: some View {
         StepFrame(title: "What should your agents reach?", subtitle: "Pick the apps to connect. Setup asks only for what they need, and you can change this later.") {
-            LazyVGrid(columns: columns, spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(SetupService.all) { service in ServiceCard(model: model, service: service) }
             }
         } footer: {
@@ -433,13 +441,13 @@ struct ServiceCard: View {
                 AppTile(model: model, service: service, size: 38)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(service.title).font(.headline).foregroundStyle(.primary)
-                    Text(service.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(service.detail).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title2).foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.5))
             }
-            .padding(.horizontal, 14).frame(height: 66)
+            .padding(.horizontal, 14).frame(height: 56)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(selected ? Color.accentColor.opacity(0.09) : Color(nsColor: .controlBackgroundColor)))
             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(selected ? Color.accentColor.opacity(0.7) : Color(nsColor: .separatorColor), lineWidth: selected ? 1.5 : 1))
             .contentShape(Rectangle())
@@ -473,6 +481,7 @@ struct PermissionStep: View {
                     ProgressSegments(total: model.plan.count, current: model.position)
                 }
                 .padding(.top, 36)
+                Spacer(minLength: 16)
                 HStack(alignment: .top, spacing: 22) {
                     ZStack {
                         SymbolTile(symbol: permission.symbol, tint: permission.tint.color, size: 76)
@@ -487,7 +496,7 @@ struct PermissionStep: View {
                         Text(permission.why).font(.title3).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(.top, 30)
+                .padding(.top, 8)
                 Group {
                     if permission.usesSettings { SettingsInstructions(model: model, permission: permission) }
                     else { PromptInstructions(model: model, permission: permission) }
