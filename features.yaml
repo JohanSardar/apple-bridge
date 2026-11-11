@@ -480,7 +480,7 @@ features:
       - {id: PKG-INSTALL, levels: [real]}
       - {id: PKG-BACKGROUND, levels: [real]}
   - id: packaging.setup
-    title: First-run permission checklist, iPhone QR pairing and AI connectors
+    title: Guided permission panel beside System Settings and Mac-side connection approvals
     requirements: [R-PKG, R-SECURE]
     milestone: M5
     modules: [packaging/setup, native/AppleBridgeHelper]

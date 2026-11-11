@@ -590,10 +590,9 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         && !args.no_login
         && !Modes::get().interactive()
         && std::env::var_os("CLAUDECODE").is_some()
+        && let Some(outcome) = approve_on_mac(home, &plan, args, &url, &deadline).await
     {
-        if let Some(outcome) = approve_on_mac(home, &plan, args, &url, &deadline).await {
-            return outcome;
-        }
+        return outcome;
     }
     let can_sign_in = !args.no_login && Modes::get().interactive();
     let mut sign_in_arguments = if plan.register_signs_in {
@@ -723,8 +722,9 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
     }
 }
 
-const MAC_APPROVAL_WAIT: Duration = Duration::from_secs(300);
+const MAC_APPROVAL_WAIT: Duration = Duration::from_mins(5);
 
+#[allow(clippy::too_many_lines)]
 async fn approve_on_mac(
     home: &Path,
     plan: &Plan,
@@ -742,7 +742,9 @@ async fn approve_on_mac(
     if !installed {
         return None;
     }
-    let ticket = crate::connector::ask_for_agent(home, plan.title).await.ok()?;
+    let ticket = crate::connector::ask_for_agent(home, plan.title)
+        .await
+        .ok()?;
     let id = ticket["id"].as_str()?.to_owned();
     let secret = ticket["secret"].as_str()?.to_owned();
     ui::note(&format!(
@@ -777,7 +779,10 @@ async fn approve_on_mac(
         }
     };
     if token.is_empty() {
-        return Some(Err(Failure::new(Reason::ApiError, "The Mac allowed it but sent no key.")));
+        return Some(Err(Failure::new(
+            Reason::ApiError,
+            "The Mac allowed it but sent no key.",
+        )));
     }
     ui::mask_secret(&token);
     let mut keyed = Plan {
@@ -791,7 +796,10 @@ async fn approve_on_mac(
     let at = keyed.register.len().saturating_sub(2);
     keyed.register.splice(
         at..at,
-        ["--header".to_owned(), format!("Authorization: Bearer {token}")],
+        [
+            "--header".to_owned(),
+            format!("Authorization: Bearer {token}"),
+        ],
     );
     let _ = Command::new(plan.program)
         .args(["mcp", "remove", "--scope", args.scope.as_str(), &args.name])
@@ -816,7 +824,10 @@ async fn approve_on_mac(
     ui::receipt(
         "Connected",
         plan.title,
-        &format!("Connected {} as {}. Restart Claude Code, or run /mcp, to load it.", plan.title, args.name),
+        &format!(
+            "Connected {} as {}. Restart Claude Code, or run /mcp, to load it.",
+            plan.title, args.name
+        ),
     );
     try_it();
     Some(Ok(()))

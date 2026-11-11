@@ -23,7 +23,10 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     ("Reading data", &["read", "search", "call", "skills"]),
     ("Access", &["agents", "tokens", "connectors", "web"]),
-    ("Remote and replicas", &["tailscale", "relay", "remote", "pair", "join"]),
+    (
+        "Remote and replicas",
+        &["tailscale", "relay", "remote", "pair", "join"],
+    ),
     (
         "Maintenance",
         &[
@@ -171,7 +174,10 @@ pub const LEAVES: &[Leaf] = &[
     Leaf {
         path: "tailscale",
         examples: &[
-            ("Let your devices and Grok Bot reach this Mac", "bridge tailscale"),
+            (
+                "Let your devices and Grok Bot reach this Mac",
+                "bridge tailscale",
+            ),
             ("Turn it off", "bridge tailscale --off"),
         ],
         notes: &[

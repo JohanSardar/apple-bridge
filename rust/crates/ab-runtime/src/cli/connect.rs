@@ -1,12 +1,14 @@
 use super::{
-    Failure, Outcome, commands, gateway,
+    Failure, Outcome, commands,
     failure::{Reason, Step},
+    gateway,
     modes::Modes,
     tree::TailscaleArgs,
     ui,
 };
 use std::{
-    io::Write,
+    io::{BufRead, BufReader, Write},
+    net::ToSocketAddrs,
     path::Path,
     process::{Command, Stdio},
     time::{Duration, Instant},
@@ -15,8 +17,9 @@ use std::{
 const TAILSCALE_APP: &str = "/Applications/Tailscale.app";
 const TAILSCALE_PACKAGE: &str = "https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg";
 const TAILSCALE_TEAM: &str = "(W5364U7YZB)";
-const INSTALL_WAIT: Duration = Duration::from_secs(900);
-const CLAUDE_CONNECTORS: &str = "https://claude.ai/new?modal=add-custom-connector#customize/connectors";
+const INSTALL_WAIT: Duration = Duration::from_mins(15);
+const CLAUDE_CONNECTORS: &str =
+    "https://claude.ai/new?modal=add-custom-connector#customize/connectors";
 
 fn quiet(program: &str, arguments: &[&str]) -> bool {
     Command::new(program)
@@ -76,8 +79,12 @@ fn install_tailscale() -> Outcome {
         )
         .sentence("Install Tailscale from tailscale.com/download instead."));
     }
-    ui::phase(2, 3, "Opening the Tailscale installer. Follow it to the end…");
-    if !quiet("/usr/bin/open", &["-W", &package.to_string_lossy()]) {
+    ui::phase(
+        2,
+        3,
+        "Opening the Tailscale installer. Follow it to the end…",
+    );
+    if !quiet("/usr/bin/open", &[&package.to_string_lossy()]) {
         return Err(Failure::new(
             Reason::SpawnFailed,
             "Couldn't open the Tailscale installer.",
@@ -86,14 +93,94 @@ fn install_tailscale() -> Outcome {
     let deadline = Instant::now() + INSTALL_WAIT;
     while !Path::new(TAILSCALE_APP).exists() {
         if Instant::now() >= deadline {
-            return Err(Failure::new(
-                Reason::Timeout,
-                "Tailscale isn't installed yet.",
-            )
-            .then("Run this again when it is", ["bridge", "tailscale"]));
+            return Err(
+                Failure::new(Reason::Timeout, "Tailscale isn't installed yet.")
+                    .then("Run this again when it is", ["bridge", "tailscale"]),
+            );
         }
         std::thread::sleep(Duration::from_secs(1));
     }
+    Ok(())
+}
+
+const TAILSCALE_CLI: &str = "/Applications/Tailscale.app/Contents/MacOS/Tailscale";
+
+fn tailscale_state() -> String {
+    Command::new(TAILSCALE_CLI)
+        .args(["status", "--json"])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .and_then(|output| serde_json::from_slice::<serde_json::Value>(&output.stdout).ok())
+        .and_then(|status| status["BackendState"].as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+
+fn sign_in_to_tailscale() -> Outcome {
+    let state = tailscale_state();
+    if state == "Running" || state.is_empty() {
+        return Ok(());
+    }
+    if state != "NeedsLogin" {
+        let _ = quiet(TAILSCALE_CLI, &["up"]);
+        if tailscale_state() == "Running" {
+            return Ok(());
+        }
+    }
+    let mut login = Command::new(TAILSCALE_CLI)
+        .arg("login")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let (sender, receiver) = std::sync::mpsc::channel();
+    for stream in [
+        login
+            .stderr
+            .take()
+            .map(|s| Box::new(s) as Box<dyn std::io::Read + Send>),
+        login
+            .stdout
+            .take()
+            .map(|s| Box::new(s) as Box<dyn std::io::Read + Send>),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        let sender = sender.clone();
+        std::thread::spawn(move || {
+            for line in BufReader::new(stream).lines().map_while(Result::ok) {
+                if let Some(link) = line
+                    .split_whitespace()
+                    .find(|word| word.starts_with("https://login.tailscale.com/"))
+                {
+                    let _ = sender.send(link.to_owned());
+                }
+            }
+        });
+    }
+    if let Ok(link) = receiver.recv_timeout(Duration::from_secs(20)) {
+        ui::note(
+            "Sign in to Tailscale in your browser. It's free, and you can use Google, GitHub, Apple or Microsoft.",
+        );
+        if !ab_remote::onboarding::open_link(&link) {
+            ui::row("Sign-in link", &link);
+        }
+    }
+    let deadline = Instant::now() + Duration::from_mins(10);
+    while tailscale_state() != "Running" {
+        if Instant::now() >= deadline {
+            let _ = login.kill();
+            return Err(
+                Failure::new(Reason::Timeout, "Tailscale isn't signed in yet.")
+                    .then("Run this again when it is", ["bridge", "tailscale"]),
+            );
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    }
+    let _ = login.wait();
+    ui::done("Signed in", "to Tailscale");
     Ok(())
 }
 
@@ -103,19 +190,21 @@ fn start_tailscale() -> Outcome {
     }
     if !Path::new(TAILSCALE_APP).exists() {
         if !Modes::get().interactive() && !Modes::get().yes {
-            return Err(Failure::new(
-                Reason::NotFound,
-                "Tailscale isn't installed on this Mac.",
-            )
-            .sentence("Installing it needs a person to click through the installer.")
-            .then("Install it and turn it on", ["bridge", "tailscale"]));
+            return Err(
+                Failure::new(Reason::NotFound, "Tailscale isn't installed on this Mac.")
+                    .sentence("Installing it needs a person to click through the installer.")
+                    .then("Install it and turn it on", ["bridge", "tailscale"]),
+            );
         }
         install_tailscale()?;
     }
     if !running("Tailscale") {
         ui::note("Starting Tailscale…");
         if !quiet("/usr/bin/open", &["-g", "-a", TAILSCALE_APP]) {
-            return Err(Failure::new(Reason::SpawnFailed, "Couldn't start Tailscale."));
+            return Err(Failure::new(
+                Reason::SpawnFailed,
+                "Couldn't start Tailscale.",
+            ));
         }
         let deadline = Instant::now() + Duration::from_secs(20);
         while !running("Tailscale") && Instant::now() < deadline {
@@ -123,7 +212,7 @@ fn start_tailscale() -> Outcome {
         }
         std::thread::sleep(Duration::from_secs(2));
     }
-    Ok(())
+    sign_in_to_tailscale()
 }
 
 fn ensure_running(home: &Path) -> Outcome {
@@ -131,7 +220,7 @@ fn ensure_running(home: &Path) -> Outcome {
         return Ok(());
     }
     ui::note("Starting Apple Bridge…");
-    let started = std::env::current_exe().ok().is_some_and(|bridge| {
+    let started = std::env::current_exe().is_ok_and(|bridge| {
         Command::new(bridge)
             .arg("up")
             .arg("--home")
@@ -160,17 +249,19 @@ async fn turn_on(home: &Path, route: &str) -> Outcome<String> {
     match commands::onboard(home, "on", route, None, voice).await? {
         Ok(_) => {}
         Err(link) => {
-            return Err(Failure::new(
-                Reason::Timeout,
-                "Waiting for you to finish in the browser.",
-            )
-            .row("Sign-in link", link)
-            .then("Then run this again", ["bridge", "tailscale"]));
+            return Err(
+                Failure::new(Reason::Timeout, "Waiting for you to finish in the browser.")
+                    .row("Sign-in link", link)
+                    .then("Then run this again", ["bridge", "tailscale"]),
+            );
         }
     }
     let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(Reason::InvalidConfig, "Couldn't read the remote access state.")
-            .remote("Remote", error.to_string())
+        Failure::new(
+            Reason::InvalidConfig,
+            "Couldn't read the remote access state.",
+        )
+        .remote("Remote", error.to_string())
     })?;
     let key = if route == "cloud" { "system" } else { route };
     status
@@ -210,13 +301,14 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
         &mcp,
         "Your devices on Tailscale can reach Apple Bridge now.",
     );
-    ui::row("Address", &mcp);
     ui::blank();
     ui::note(&format!(
         "Cloud agents such as Grok Bot: tell them \"connect to Apple Bridge at {connect}\".{}",
         if copied { " It's copied." } else { "" }
     ));
-    ui::note("They ask on this Mac first, and you click Allow. Only devices on your Tailscale network can reach it.");
+    ui::note(
+        "They ask on this Mac first, and you click Allow. Only devices on your Tailscale network can reach it.",
+    );
     ui::next_steps(&[Step::new("Turn it off", ["bridge", "tailscale", "--off"])]);
     Ok(())
 }
@@ -263,7 +355,10 @@ pub async fn claude_app(home: &Path) -> Outcome {
 fn server_address(server: &str, given: Option<&str>) -> Outcome<std::net::IpAddr> {
     if let Some(ip) = given {
         return ip.parse().map_err(|_| {
-            Failure::new(Reason::InvalidValue, format!("Can't use --ip {}.", ui::clean(ip)))
+            Failure::new(
+                Reason::InvalidValue,
+                format!("Can't use --ip {}.", ui::clean(ip)),
+            )
         });
     }
     let config = Command::new("ssh").args(["-G", server]).output()?;
@@ -271,7 +366,6 @@ fn server_address(server: &str, given: Option<&str>) -> Outcome<std::net::IpAddr
         .lines()
         .find_map(|line| line.strip_prefix("hostname ").map(str::to_owned))
         .unwrap_or_else(|| server.rsplit('@').next().unwrap_or(server).to_owned());
-    use std::net::ToSocketAddrs;
     (host.as_str(), 22)
         .to_socket_addrs()
         .ok()
@@ -298,7 +392,8 @@ fn dig(kind: &str, name: &str) -> String {
 }
 
 fn dns_ready(domain: &str, ip: &str) -> bool {
-    dig("NS", domain).contains(&format!("ns1.{domain}.")) && dig("A", &format!("ns1.{domain}")).contains(ip)
+    dig("NS", domain).contains(&format!("ns1.{domain}."))
+        && dig("A", &format!("ns1.{domain}")).contains(ip)
 }
 
 async fn relay_answers(domain: &str) -> bool {
@@ -315,12 +410,16 @@ async fn relay_answers(domain: &str) -> bool {
         .is_ok_and(|response| response.status().is_success())
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Outcome {
     let domain = args.domain.trim().trim_end_matches('.').to_lowercase();
     if !commands::valid_domain(&domain) {
         return Err(Failure::new(
             Reason::InvalidValue,
-            format!("Can't use --domain {}. Use a name such as bridge.example.com.", ui::clean(&args.domain)),
+            format!(
+                "Can't use --domain {}. Use a name such as bridge.example.com.",
+                ui::clean(&args.domain)
+            ),
         ));
     }
     ensure_running(home)?;
@@ -328,18 +427,32 @@ pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Out
     let relay = format!("https://{domain}");
     ui::phase(1, 5, &format!("Checking {}…", ui::clean(&args.server)));
     let ip = server_address(&args.server, args.ip.as_deref())?.to_string();
-    if !quiet("ssh", &["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", &args.server, "true"]) {
+    if !quiet(
+        "ssh",
+        &[
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=10",
+            &args.server,
+            "true",
+        ],
+    ) {
         return Err(Failure::new(
             Reason::ApiError,
             format!("Can't sign in to {} with ssh.", ui::clean(&args.server)),
         )
-        .sentence("Check that `ssh <server>` works without a password prompt, then run this again."));
+        .sentence(
+            "Check that `ssh <server>` works without a password prompt, then run this again.",
+        ));
     }
     ab_remote::state::set_relay(home, &relay).map_err(|error| {
-        Failure::new(Reason::InvalidConfig, "Couldn't save the relay address.").remote("Remote", error.to_string())
+        Failure::new(Reason::InvalidConfig, "Couldn't save the relay address.")
+            .remote("Remote", error.to_string())
     })?;
     let key = ab_remote::relay::public_key(home, &relay).map_err(|error| {
-        Failure::new(Reason::ApiError, "Couldn't read this Mac's relay key.").remote("Remote", ui::redact_urls(&error.to_string()))
+        Failure::new(Reason::ApiError, "Couldn't read this Mac's relay key.")
+            .remote("Remote", ui::redact_urls(&error.to_string()))
     })?;
     ui::phase(2, 5, "Checking your domain…");
     if !dns_ready(&domain, &ip) {
@@ -348,11 +461,22 @@ pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Out
         ui::row(&format!("ns1.{domain}"), &format!("A    {ip}"));
         ui::row(&domain, &format!("NS   ns1.{domain}"));
         ui::note("Also open ports 443 and 53 (TCP and UDP) on the server's firewall.");
-        let deadline = Instant::now() + Duration::from_secs(3600);
+        let deadline = Instant::now() + Duration::from_hours(1);
         while !dns_ready(&domain, &ip) {
             if Instant::now() >= deadline {
-                return Err(Failure::new(Reason::Timeout, "The DNS records aren't visible yet.")
-                    .then("Run this again later", ["bridge", "relay", "setup", &args.server, "--domain", &domain]));
+                return Err(
+                    Failure::new(Reason::Timeout, "The DNS records aren't visible yet.").then(
+                        "Run this again later",
+                        [
+                            "bridge",
+                            "relay",
+                            "setup",
+                            &args.server,
+                            "--domain",
+                            &domain,
+                        ],
+                    ),
+                );
             }
             tokio::time::sleep(Duration::from_secs(10)).await;
         }
@@ -371,29 +495,57 @@ pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Out
             .sentence("The lines above say why. Fix it, then run this again; it picks up where it stopped."));
     }
     ui::phase(4, 5, "Waiting for the relay's certificate…");
-    let deadline = Instant::now() + Duration::from_secs(900);
+    let deadline = Instant::now() + Duration::from_mins(15);
     while !relay_answers(&domain).await {
         if Instant::now() >= deadline {
-            return Err(Failure::new(Reason::Timeout, "The relay isn't answering on HTTPS yet.")
-                .sentence("Let's Encrypt can take a few minutes after DNS changes.")
-                .then("Run this again later", ["bridge", "relay", "setup", &args.server, "--domain", &domain]));
+            return Err(
+                Failure::new(Reason::Timeout, "The relay isn't answering on HTTPS yet.")
+                    .sentence("Let's Encrypt can take a few minutes after DNS changes.")
+                    .then(
+                        "Run this again later",
+                        [
+                            "bridge",
+                            "relay",
+                            "setup",
+                            &args.server,
+                            "--domain",
+                            &domain,
+                        ],
+                    ),
+            );
         }
         tokio::time::sleep(Duration::from_secs(10)).await;
     }
     ui::phase(5, 5, "Connecting this Mac…");
-    let voice = commands::Voice::Modern { open: true, no_open: false };
+    let voice = commands::Voice::Modern {
+        open: true,
+        no_open: false,
+    };
     if let Err(link) = commands::onboard(home, "on", "relay", None, voice).await? {
-        return Err(Failure::new(Reason::Timeout, "Waiting for you to finish in the browser.").row("Sign-in link", link));
+        return Err(
+            Failure::new(Reason::Timeout, "Waiting for you to finish in the browser.")
+                .row("Sign-in link", link),
+        );
     }
     let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(Reason::InvalidConfig, "Couldn't read the remote access state.").remote("Remote", error.to_string())
+        Failure::new(
+            Reason::InvalidConfig,
+            "Couldn't read the remote access state.",
+        )
+        .remote("Remote", error.to_string())
     })?;
     let mcp = format!("{}/mcp", status.url.trim_end_matches('/'));
     let copied = copy(&mcp);
-    ui::receipt("Ready", &mcp, "Your relay is running and this Mac is connected.");
+    ui::receipt(
+        "Ready",
+        &mcp,
+        "Your relay is running and this Mac is connected.",
+    );
     ui::row("Address", &mcp);
     if copied {
-        ui::note("The address is copied. Add it as a custom connector in Claude or ChatGPT, then click Allow on this Mac.");
+        ui::note(
+            "The address is copied. Add it as a custom connector in Claude or ChatGPT, then click Allow on this Mac.",
+        );
     }
     Ok(())
 }

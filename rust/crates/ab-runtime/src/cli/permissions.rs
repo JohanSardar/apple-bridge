@@ -720,7 +720,9 @@ async fn window_guide(home: &Path, helper: &str, steps: &[&str]) -> Outcome {
         helper: helper.to_owned(),
     };
     let was_running = super::gateway::lock_held(home);
-    ui::note("Opening the permission guide. Follow the small window next to System Settings; it closes by itself when you're done.");
+    ui::note(
+        "Opening the permission guide. Follow the small window next to System Settings; it closes by itself when you're done.",
+    );
     let program = Path::new("open");
     let report_dir = product_cli::default_report_dir();
     let helper_path = helper.to_owned();
@@ -733,11 +735,19 @@ async fn window_guide(home: &Path, helper: &str, steps: &[&str]) -> Outcome {
         product_cli::permission_guide(program, &report_dir, &helper_path, &chosen)
     })
     .await
-    .map_err(|_| Failure::new(Reason::HelperFailed, "The guide window stopped unexpectedly."))?
+    .map_err(|_| {
+        Failure::new(
+            Reason::HelperFailed,
+            "The guide window stopped unexpectedly.",
+        )
+    })?
     .map_err(|error| {
         Failure::new(Reason::HelperFailed, "The guide window didn't finish.")
             .row("Detail", ui::clean(&error.to_string()))
-            .then("Continue where you left off", ["bridge", "permissions", "guide"])
+            .then(
+                "Continue where you left off",
+                ["bridge", "permissions", "guide"],
+            )
     })?;
     let allowed = listed(&report, "allowed");
     if was_running && !super::gateway::lock_held(home) {
@@ -800,14 +810,15 @@ fn restart_after_quit(home: &Path) {
 
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let named = args.only.as_deref().map(only).transpose()?;
-    if args.fixture.is_none() && !args.in_terminal && cfg!(target_os = "macos") {
-        if let Backend::Mac { helper, .. } = backend_for(home, None, args.helper_app.as_deref())
-            && !helper.is_empty()
-        {
-            let steps = window_steps(named.as_deref());
-            if !steps.is_empty() {
-                return window_guide(home, &helper, &steps).await;
-            }
+    if args.fixture.is_none()
+        && !args.in_terminal
+        && cfg!(target_os = "macos")
+        && let Backend::Mac { helper, .. } = backend_for(home, None, args.helper_app.as_deref())
+        && !helper.is_empty()
+    {
+        let steps = window_steps(named.as_deref());
+        if !steps.is_empty() {
+            return window_guide(home, &helper, &steps).await;
         }
     }
     let modes = Modes::get();

@@ -70,17 +70,15 @@ a:hover { text-decoration: underline; }
 @keyframes hop { 0%, 60%, 100% { opacity: 0.3; transform: none; } 30% { opacity: 1; transform: translateY(-2px); background: var(--accent); } }
 .wait { display: flex; gap: 14px; align-items: flex-start; margin-top: 22px; padding: 16px 18px; border-radius: 12px; background: var(--raised); border: 1px solid var(--line); }
 .wait h2 { margin: 0 0 2px; font-size: 15px; }
-.beacon { flex: none; position: relative; width: 12px; height: 12px; margin-top: 5px; border-radius: 50%; background: var(--accent); }
-.beacon::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: ring 1.8s ease-out infinite; }
-@keyframes ring { 0% { transform: scale(0.4); opacity: 0.8; } 100% { transform: scale(1.4); opacity: 0; } }
+.beacon { flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .wait.done { border-color: var(--good); }
-.wait.done .beacon { background: var(--good); }
-.wait.done .beacon::after, .wait.stopped .beacon::after { animation: none; }
-.wait.stopped .beacon { background: var(--danger); }
+.wait.done .beacon { animation: none; border-color: var(--good); background: var(--good); }
+.wait.stopped .beacon { animation: none; border-color: var(--danger); }
 .match { margin-top: 12px; padding: 14px 18px; border-radius: 12px; border: 1px dashed var(--line); text-align: center; }
 .match .code { margin: 6px 0 0; }
 .fine { margin-top: 14px; }
-@media (prefers-reduced-motion: reduce) { .link i, .beacon::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .link i, .beacon { animation: none; } }
 .section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
 .access > div + div { margin-top: 14px; }
 .access p { color: var(--muted); }

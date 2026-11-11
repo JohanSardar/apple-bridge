@@ -234,7 +234,12 @@ impl Connectors {
             .is_some_and(|until| until > jiff::Timestamp::now().as_second())
     }
     fn reveal(&self, memory: &mut HashMap<String, Pending>) {
-        let waiting = memory.values().filter(|p| p.redirect.is_none()).count();
+        let asking = self.asks.lock().map_or(0, |asks| {
+            asks.values()
+                .filter(|a| a.outcome.is_none() && a.expires > Instant::now())
+                .count()
+        });
+        let waiting = memory.values().filter(|p| p.redirect.is_none()).count() + asking;
         let armed = memory
             .values()
             .any(|p| p.redirect.is_none() && p.summary.source == "public")
@@ -553,11 +558,25 @@ mod tests {
         assert!(!local.show_code, "one request from this Mac needs no code");
         let second = request(&queue, "http://127.0.0.1:7780");
         assert!(second.show_code, "two at once must be told apart");
-        assert!(queue.pending().expect("pending").iter().all(|p| p.show_code));
-        assert!(queue.poll(&local.id, "http://127.0.0.1:7780").expect("poll").show_code);
+        assert!(
+            queue
+                .pending()
+                .expect("pending")
+                .iter()
+                .all(|p| p.show_code)
+        );
+        assert!(
+            queue
+                .poll(&local.id, "http://127.0.0.1:7780")
+                .expect("poll")
+                .show_code
+        );
 
         let (home_two, public) = super::tests::queue();
-        assert!(request(&public, "https://mac.example.ts.net").show_code, "an unexpected request from the internet shows the code");
+        assert!(
+            request(&public, "https://mac.example.ts.net").show_code,
+            "an unexpected request from the internet shows the code"
+        );
         drop(home_two);
 
         let (armed_home, armed) = super::tests::queue();
@@ -567,7 +586,10 @@ mod tests {
             (jiff::Timestamp::now().as_second() + 600).to_string(),
         )
         .expect("arm");
-        assert!(!request(&armed, "https://mac.example.ts.net").show_code, "a request the owner just started needs no code");
+        assert!(
+            !request(&armed, "https://mac.example.ts.net").show_code,
+            "a request the owner just started needs no code"
+        );
         drop(home);
     }
 

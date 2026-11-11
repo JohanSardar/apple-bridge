@@ -104,14 +104,15 @@ final class GuideController: ObservableObject {
         }
         if [.waitingForDrop, .cancelledPassword, .confirming].contains(flow.moment), await granted([step.id]).contains(step.id) {
             flow.allow()
-            allowedAt = Date()
             save()
         }
         guard flow.moment == .allowed else { return }
+        if allowedAt == nil { allowedAt = Date() }
         let waited = Date().timeIntervalSince(allowedAt ?? Date())
         if dialog && waited < 120 { return }
         if waited < 1.4 { return }
         passwordUp = false
+        allowedAt = nil
         await advance(after: 0.6)
     }
 

@@ -570,11 +570,22 @@ pub enum RelayAction {
 
 #[derive(Debug, Args)]
 pub struct RelaySetupArgs {
-    #[arg(value_name = "SERVER", help = "How you reach the server with ssh, such as root@203.0.113.10")]
+    #[arg(
+        value_name = "SERVER",
+        help = "How you reach the server with ssh, such as root@203.0.113.10"
+    )]
     pub server: String,
-    #[arg(long, value_name = "DOMAIN", help = "A domain used only for this, such as bridge.example.com")]
+    #[arg(
+        long,
+        value_name = "DOMAIN",
+        help = "A domain used only for this, such as bridge.example.com"
+    )]
     pub domain: String,
-    #[arg(long, value_name = "IP", help = "The server's public IPv4 address, if ssh reaches it another way")]
+    #[arg(
+        long,
+        value_name = "IP",
+        help = "The server's public IPv4 address, if ssh reaches it another way"
+    )]
     pub ip: Option<String>,
 }
 

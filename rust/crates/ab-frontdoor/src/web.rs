@@ -367,7 +367,9 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
     let origin = format!("{}://{host}", if secure { "https" } else { "http" });
     let public = path == "/oauth/register" || path == "/oauth/token";
     let origins: Vec<_> = r.headers.get_all(header::ORIGIN).iter().collect();
-    if (public && !origins.is_empty() || !public && method != "GET" && method != "HEAD")
+    let agent_api = path == "/connect/request" || path == "/connect/answer";
+    if (public && !origins.is_empty()
+        || !public && method != "GET" && method != "HEAD" && !(agent_api && origins.is_empty()))
         && (origins.len() != 1 || origins[0].to_str().ok() != Some(&origin))
     {
         return reject(403, "origin");
@@ -580,7 +582,12 @@ fn connect_request(
             input["secret"].as_str().unwrap_or_default(),
         )
         .map_or_else(
-            |_| reject(410, "This request expired or was already answered. Ask again."),
+            |_| {
+                reject(
+                    410,
+                    "This request expired or was already answered. Ask again.",
+                )
+            },
             |answer| respond(200, &answer),
         )
 }

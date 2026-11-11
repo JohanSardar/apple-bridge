@@ -28,6 +28,7 @@ final class ApprovalModel: ObservableObject {
     @Published var request: ConnectorRequest?
     @Published var warning = ""
     @Published var outcome = ""
+    @Published var decided = ""
     var decide: (ConnectorRequest, Bool) -> Void = { _, _ in }
 }
 
@@ -69,7 +70,8 @@ struct ApprovalView: View {
                     }
                     .padding(.bottom, 24)
                 } else {
-                    Text(model.outcome.isEmpty ? "Connected" : model.outcome).font(.system(size: 19, weight: .bold)).padding(.top, 18)
+                    if model.outcome.hasSuffix("is connected") { AllowedMark().padding(.top, 14) }
+                    Text(model.outcome.isEmpty ? "Connected" : model.outcome).font(.system(size: 19, weight: .bold)).multilineTextAlignment(.center).padding(.top, 10)
                     Spacer(minLength: 12)
                 }
             }
@@ -79,7 +81,7 @@ struct ApprovalView: View {
     }
 
     var tile: some View {
-        let name = model.request?.client_name ?? "?"
+        let name = model.request?.client_name ?? model.decided
         let initial = name.first(where: { $0.isLetter || $0.isNumber }).map { String($0).uppercased() } ?? "?"
         return RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(LinearGradient(colors: [Palette.sky, Palette.lagoon], startPoint: .topLeading, endPoint: .bottomTrailing))

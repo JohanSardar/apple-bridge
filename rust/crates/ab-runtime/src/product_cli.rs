@@ -206,7 +206,7 @@ pub const GUIDE_STEPS: [&str; 9] = [
     "full_disk_access",
     "screen_recording",
 ];
-const GUIDE_TIMEOUT: Duration = Duration::from_secs(3600);
+const GUIDE_TIMEOUT: Duration = Duration::from_hours(1);
 
 pub fn guide_arguments(app: &str, steps: &[&str], report: &Path) -> Vec<String> {
     let mut arguments: Vec<String> = ["-n", "-W", "-g", "-a"]
