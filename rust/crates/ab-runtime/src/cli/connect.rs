@@ -161,11 +161,11 @@ fn sign_in_to_tailscale() -> Outcome {
         });
     }
     if let Ok(link) = receiver.recv_timeout(Duration::from_secs(20)) {
-        ui::note(
-            "Sign in to Tailscale in your browser. It's free, and you can use Google, GitHub, Apple or Microsoft.",
-        );
-        if !ab_remote::onboarding::open_link(&link) {
-            ui::row("Sign-in link", &link);
+        ui::note("Sign in to Tailscale in your browser. It's free, and you can use Google, GitHub, Apple or Microsoft.");
+        ui::row("Sign-in link", &link);
+        let over_ssh = std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some();
+        if !over_ssh {
+            let _ = ab_remote::onboarding::open_link(&link);
         }
     }
     let deadline = Instant::now() + Duration::from_mins(10);

@@ -793,14 +793,9 @@ async fn approve_on_mac(
         login: plan.login.clone(),
         register_signs_in: plan.register_signs_in,
     };
-    let at = keyed.register.len().saturating_sub(2);
-    keyed.register.splice(
-        at..at,
-        [
-            "--header".to_owned(),
-            format!("Authorization: Bearer {token}"),
-        ],
-    );
+    keyed
+        .register
+        .extend(["--header".to_owned(), format!("Authorization: Bearer {token}")]);
     let _ = Command::new(plan.program)
         .args(["mcp", "remove", "--scope", args.scope.as_str(), &args.name])
         .stdin(Stdio::null())
