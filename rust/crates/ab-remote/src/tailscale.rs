@@ -583,7 +583,7 @@ async fn proxy(
         output.push_str("connection: close\r\n");
     }
     output.push_str("\r\n");
-    let mut upstream = gateway.connect().await?;
+    let mut upstream = gateway.connect_stream(None, Some(source)).await?;
     upstream.write_all(output.as_bytes()).await?;
     tokio::io::copy_bidirectional(&mut socket, &mut upstream).await?;
     Ok(())

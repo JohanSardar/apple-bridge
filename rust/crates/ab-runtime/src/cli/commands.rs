@@ -1374,7 +1374,14 @@ pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -
         ab_remote::state::set_relay(home, url)?;
     }
     if let Some(sources) = &sources {
+        let before = remote_file::<ab_remote::state::Config>(home, "config")?.cloud_sources;
         ab_remote::state::set_cloud_sources(home, sources)?;
+        let after = remote_file::<ab_remote::state::Config>(home, "config")?.cloud_sources;
+        if before != after {
+            ab_trust::Authority::open(home)
+                .and_then(|authority| authority.revoke_route(ab_remote::state::CLOUD_INGRESS))
+                .map_err(Failure::from)?;
+        }
     }
     if route == "relay" {
         ab_remote::state::set_domain(home, args.domain.as_deref().unwrap_or_default())?;

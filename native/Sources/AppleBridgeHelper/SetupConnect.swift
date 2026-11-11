@@ -54,6 +54,7 @@ final class ConnectModel: ObservableObject {
     @Published var notice = ""
     @Published var copied = ""
     @Published var tailscaleInstalled = false
+    var sourcesLoaded = false
     let home: URL
     let testing: Bool
     var run: @Sendable ([String], String) -> Data?
@@ -88,7 +89,10 @@ final class ConnectModel: ObservableObject {
         tailnet = routes["tailnet"]
         cloud = routes["system"]
         relay = routes["relay"]
-        if let sources = cloud?.sources, !sources.isEmpty, busy.isEmpty { cloudSources = Set(sources) }
+        if let sources = cloud?.sources, !sources.isEmpty, busy.isEmpty, cloud?.on == true || !sourcesLoaded {
+            cloudSources = Set(sources)
+            sourcesLoaded = true
+        }
     }
 
     func copyValue(_ value: String, label: String) {
