@@ -115,7 +115,7 @@
       "to": {"type": "string", "description": "Phone number in international form, email, or a contact's name."},
       "chat_id": {"type": "string", "description": "An existing chat's cht_ ID. Use instead of to."},
       "text": {"type": "string", "description": "Message text, sent exactly as given. Optional with photos."},
-      "photos": {"type": "array", "minItems": 1, "maxItems": 10, "items": {"type": "string"}, "description": "asset_ids from photos_find; attaches the original files."},
+      "photos": {"type": "array", "minItems": 1, "maxItems": 10, "items": {"type": "string"}, "description": "asset_ids from photos_find; attaches the photo files."},
       "service": {"type": "string", "enum": ["iMessage", "SMS", "RCS"], "description": "Only for a number or email without an existing chat. Default iMessage."},
       "request_id": {"type": "string", "description": "Your ID for this send; repeating it never sends twice."}
     }},

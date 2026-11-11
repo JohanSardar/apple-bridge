@@ -13,7 +13,7 @@ Photos is read live from the Mac's library. It has no text search and is not par
 - The numbered grid and `photos.preview` are your own low-resolution index. Never show them to the person or describe their blur, crop or numbers as the photo.
 - To show a photo, call `photos_show` with its `asset_id`: it returns the photo itself, full frame and full resolution as Photos shows it, with nothing drawn on it. Show that image as it is.
 - `photos_show` with `save: true` also saves the original file on the Mac and returns `file`, its path, for desktop agents to open or attach.
-- To send a photo in Messages, pass its `asset_id` in `photos` to `messages_send`; the original file is attached, as if dragged in from Photos.
+- To send a photo in Messages, pass its `asset_id` in `photos` to `messages_send`; the photo file is attached as Photos shows it, as if dragged in from Photos.
 
 ## Downloading originals
 

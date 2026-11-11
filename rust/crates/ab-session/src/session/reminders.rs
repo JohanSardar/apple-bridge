@@ -202,8 +202,19 @@ pub(super) fn verified(operation: &str, written: &Value) -> bool {
         "reminders.create_list" | "reminders.rename_list" => {
             observed.is_object() && observed["title"] == written["saved"]["title"]
         }
-        _ => observed.is_object() && equal(observed, &written["saved"]),
+        _ => {
+            observed.is_object()
+                && equal(&alarms_sorted(observed), &alarms_sorted(&written["saved"]))
+        }
     }
+}
+
+fn alarms_sorted(reminder: &Value) -> Value {
+    let mut reminder = reminder.clone();
+    if let Some(alarms) = reminder["alarms"].as_array_mut() {
+        alarms.sort_by_key(Value::to_string);
+    }
+    reminder
 }
 
 pub(super) fn absent(operation: &str) -> bool {

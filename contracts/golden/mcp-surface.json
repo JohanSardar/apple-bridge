@@ -878,7 +878,7 @@
             "type": "string"
           },
           "photos": {
-            "description": "asset_ids from photos_find; attaches the original files.",
+            "description": "asset_ids from photos_find; attaches the photo files.",
             "items": {
               "type": "string"
             },

@@ -75,6 +75,16 @@ impl Call<'_> {
         details: &Value,
         limit: u64,
     ) -> Step<PhotoFile> {
+        self.photo_file(id, details, limit, false).await
+    }
+
+    async fn photo_file(
+        &self,
+        id: &str,
+        details: &Value,
+        limit: u64,
+        current: bool,
+    ) -> Step<PhotoFile> {
         let resources: Vec<&Value> = details["resources"]
             .as_array()
             .into_iter()
@@ -87,10 +97,11 @@ impl Call<'_> {
                 .copied()
         };
         let video = details["type"] == "video";
-        let chosen = if video {
-            pick(&[CURRENT_VIDEO, ORIGINAL_VIDEO])
-        } else {
-            pick(&[CURRENT_PHOTO, ORIGINAL_PHOTO])
+        let chosen = match (video, current) {
+            (true, true) => pick(&[CURRENT_VIDEO, ORIGINAL_VIDEO]),
+            (true, false) => pick(&[ORIGINAL_VIDEO]),
+            (false, true) => pick(&[CURRENT_PHOTO, ORIGINAL_PHOTO]),
+            (false, false) => pick(&[ORIGINAL_PHOTO]),
         }
         .ok_or_else(|| {
             Problem::new("unsupported", "this asset has no photo or video file").field("asset_id")
@@ -236,7 +247,7 @@ impl Call<'_> {
                 .await
                 .map_err(|p| p.field("photos"))?;
             let file = self
-                .photo_original(id, &details, ATTACH_MAX_BYTES)
+                .photo_file(id, &details, ATTACH_MAX_BYTES, true)
                 .await
                 .map_err(|p| p.field("photos"))?;
             let upload = self

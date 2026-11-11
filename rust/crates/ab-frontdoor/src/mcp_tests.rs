@@ -1012,3 +1012,165 @@ fn every_request_id_can_be_checked_including_query_prefixed_ones() {
         );
     }
 }
+
+#[allow(clippy::unwrap_used)]
+mod original_review {
+    use super::*;
+    use crate::{Audit, AuditEntry, Config, Frontdoor};
+    use ab_operations::{
+        Code, Command, CommandTarget, Cursor, Error, ForwardReply, GatewayRoute, GatewayTransport,
+        Identity, ReadQuery, ReadStore, RemoteGateway, Service, Task, Visibility,
+    };
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use serde_json::value::RawValue;
+    use std::sync::Arc;
+    #[derive(Debug)]
+    struct Expiring(Option<jiff::Timestamp>);
+    impl Identity for Expiring {
+        fn authenticate(&self, _: &str) -> Result<Principal, Error> {
+            Ok(Principal {
+                id: "agent:synthetic".into(),
+                kind: "agent".into(),
+                grants: vec!["photos:read".into()],
+                level: "read".into(),
+                resource: String::new(),
+                remote: false,
+                expires_at: self.0,
+            })
+        }
+        fn current(&self, principal: &Principal) -> Result<Principal, Error> {
+            Ok(principal.clone())
+        }
+        fn sign(&self, _: &Principal, _: &str, _: &str) -> Result<String, Error> {
+            Ok("synthetic-proof".into())
+        }
+    }
+    #[derive(Debug)]
+    struct Quiet;
+    impl ReadStore for Quiet {
+        fn head(&self) -> Result<Cursor, Error> {
+            Ok(Cursor {
+                epoch: "synthetic".into(),
+                subscription_revision: 1,
+                sequence: 0,
+            })
+        }
+        fn read(&self, _: &Visibility, _: &ReadQuery) -> Result<Box<RawValue>, Error> {
+            Err(Code::Unavailable.into())
+        }
+        fn read_model(&self, _: &Visibility, _: &str, _: &Value) -> Result<Box<RawValue>, Error> {
+            Err(Code::Unavailable.into())
+        }
+        fn changes(&self, _: &Visibility, _: &Cursor) -> Result<Option<Box<RawValue>>, Error> {
+            Ok(None)
+        }
+    }
+    #[derive(Debug)]
+    struct Plain;
+    impl ab_operations::Codec for Plain {
+        fn json(&self, raw: &[u8]) -> Result<Vec<u8>, Error> {
+            Ok(raw.to_vec())
+        }
+        fn command_hash(&self, _: &Command) -> Result<String, Error> {
+            Ok("hash".into())
+        }
+        fn fingerprint(&self, _: &[u8]) -> String {
+            "hash".into()
+        }
+    }
+    #[derive(Debug)]
+    struct NoAudit;
+    impl Audit for NoAudit {
+        fn record(&self, _: AuditEntry) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[derive(Debug)]
+    struct PhotoGateway;
+    impl GatewayTransport for PhotoGateway {
+        fn connected(&self) -> bool {
+            true
+        }
+        fn exchange<'a>(
+            &'a self,
+            _: &'a GatewayRoute,
+            _: String,
+            body: Vec<u8>,
+        ) -> Task<'a, ForwardReply> {
+            Box::pin(async move {
+                let input: Value = serde_json::from_slice(&body).unwrap();
+                let query = &input["native_query"];
+                let args = &query["args"];
+                let result = match query["op"].as_str().unwrap() {
+                    "photos.fetch" if args["transfer_id"].is_null() => {
+                        json!({"transfer_id": if args["resource_index"] == 0 {"original"} else {"edited"}})
+                    }
+                    "photos.fetch" => {
+                        let bytes = if args["transfer_id"] == "original" {
+                            b"camera-original".as_slice()
+                        } else {
+                            b"edited-render".as_slice()
+                        };
+                        json!({"state":"ready", "size":bytes.len(), "bytes":STANDARD.encode(bytes),
+                            "digest":ab_trust::fingerprint(bytes), "eof":true})
+                    }
+                    "photos.release" => json!({}),
+                    _ => panic!("unexpected query: {query}"),
+                };
+                Ok(ForwardReply {
+                    result: serde_json::value::to_raw_value(&json!({"result_json":result}))
+                        .unwrap(),
+                    lookup_only: false,
+                })
+            })
+        }
+    }
+    #[tokio::test]
+    async fn s1_edited_asset_saves_camera_original() {
+        let identity = Arc::new(Expiring(None));
+        let principal = identity.authenticate("synthetic").unwrap();
+        let store = Arc::new(Quiet);
+        let codec = Arc::new(Plain);
+        let service = Arc::new(Service {
+            store: store.clone(),
+            identity: identity.clone(),
+            codec: codec.clone(),
+            target: CommandTarget::Remote(Arc::new(RemoteGateway {
+                route: GatewayRoute::Feed,
+                transport: Arc::new(PhotoGateway),
+                identity,
+                store,
+                codec,
+            })),
+        });
+        let frontdoor = Frontdoor::new(
+            service,
+            Config {
+                hosts: vec![],
+                origins: vec![],
+                public: false,
+                requests_per_second: 100,
+            },
+            Arc::new(NoAudit),
+        );
+        let call = crate::mcp_facade::Call {
+            frontdoor: &frontdoor,
+            principal: &principal,
+            registry: registry().unwrap(),
+        };
+        let file = call
+            .photo_original(
+                "edited-fixture",
+                &json!({"type":"image", "resources":[
+                    {"index":0,"type":1,"filename":"IMG_0001.HEIC"},
+                    {"index":1,"type":5,"filename":"FullSizeRender.jpeg"}
+                ]}),
+                1000,
+            )
+            .await
+            .unwrap_or_else(|p| panic!("{}", p.to_json()));
+        assert_eq!(String::from_utf8(file.bytes).unwrap(), "camera-original");
+        assert_eq!(file.name, "IMG_0001.HEIC");
+    }
+}
