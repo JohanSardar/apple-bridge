@@ -55,12 +55,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.reply(200, {'BackendState': 'Running', 'Self': {'DNSName': 'node.fixture.test.', 'CapMap': {}}})
                 else:
                     self.reply(200, {'BackendState': 'Running', 'Self': {'DNSName': 'node.fixture.test.', 'CapMap': {'https': None, 'funnel': None, 'https://tailscale.com/cap/funnel-ports?ports=443,8443,10000': None}}})
-            elif 'query-feature' in self.path:
-                self.reply(200, {'Complete': False, 'URL': 'https://login.fixture.test/f/funnel-1'})
             else:
                 self.reply(200, configuration)
     def do_POST(self):
         global configuration
+        if 'query-feature' in self.path:
+            self.rfile.read(int(self.headers.get('Content-Length') or 0))
+            return self.reply(200, {'Complete': False, 'URL': 'https://login.tailscale.com/f/funnel?node=fixture'})
         value = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         with lock:
             if self.headers.get('If-Match') != str(etag['value']):
@@ -111,7 +112,7 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
                 phase['value'] = 'funnel'
             pending = wait(lambda: status_file() if status_file()['state'] == 'funnel_pending' else None)
             assert pending['message'] == 'Waiting for Funnel approval' and pending['pending_link'] == 'Funnel approval pending', pending
-            wait(lambda: 'https://login.fixture.test/f/funnel-1' in opened.read_text())
+            wait(lambda: 'https://login.tailscale.com/f/funnel?node=fixture' in opened.read_text())
             checks.append('funnel_pending_state_and_link_opened')
             assert client.poll() is None
             with lock:
@@ -120,7 +121,7 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
             assert client.returncode == 0, errors
             lines = output.splitlines()
             assert 'Waiting for Tailscale login' in lines and 'https://login.fixture.test/a/login-1' in lines, lines
-            assert 'Waiting for Funnel approval' in lines and 'https://login.fixture.test/f/funnel-1' in lines, lines
+            assert 'Waiting for Funnel approval' in lines and 'https://login.tailscale.com/f/funnel?node=fixture' in lines, lines
             assert lines[-2:] == ['https://node.fixture.test', 'https://node.fixture.test/mcp'], lines
             document = json.loads(subprocess.check_output([binary, 'remote', 'status', '--home', str(home)], env=env, text=True))
             assert document['state'] == 'on' and document['url'] == 'https://node.fixture.test' and document['backend'] == 'system' and document['last_error'] == '' and document['pending_link'] == '', document

@@ -122,7 +122,7 @@ final class ConnectModel: ObservableObject {
 
     func turnOffTailnet() {
         deviceKey = ""
-        perform("tailnet", ["remote", "disable", "--via", "tailnet", "--json", "--timeout", "45s"])
+        perform("tailnet-off", ["remote", "disable", "--via", "tailnet", "--json", "--timeout", "45s"])
     }
 
     func turnOnCloud() {
@@ -136,7 +136,7 @@ final class ConnectModel: ObservableObject {
     }
 
     func disconnectCloud() {
-        perform("cloud", ["remote", "disable", "--via", "cloud", "--json", "--timeout", "45s"]) { [weak self] data in
+        perform("cloud-off", ["remote", "disable", "--via", "cloud", "--json", "--timeout", "45s"]) { [weak self] data in
             self?.notice = data == nil ? "Couldn't close the public address. Try again." : "Cloud chats are disconnected and the public address is closed."
         }
     }
@@ -271,10 +271,12 @@ struct ConnectView: View {
                 deviceSteps(route)
                 HStack {
                     Spacer()
-                    Button("Turn Off") { model.turnOffTailnet() }.disabled(model.busy.contains("tailnet"))
+                    Button(model.busy.contains("tailnet-off") ? "Turning Off…" : "Turn Off") { model.turnOffTailnet() }.disabled(model.busy.contains("tailnet-off"))
                 }
+            } else if let route = model.tailnet, route.state != "off" {
+                pendingNotice(route)
+                HStack { Spacer(); Button("Cancel") { model.turnOffTailnet() }.disabled(model.busy.contains("tailnet-off")) }
             } else {
-                pendingNotice(model.tailnet)
                 StepRow(number: model.tailscaleInstalled ? 1 : 2, text: "Turn on Tailscale access for Apple Bridge. If Tailscale asks you to sign in, use the account your other devices use.") {
                     Button(model.busy.contains("tailnet") ? "Turning On…" : "Turn On") { model.turnOnTailnet() }
                         .buttonStyle(PrimaryButtonStyle())
@@ -329,7 +331,7 @@ struct ConnectView: View {
             }
             let text = switch route.state {
             case "login_pending": "Tailscale needs you to sign in."
-            case "https_pending": "Tailscale needs HTTPS turned on for your network, once. Click Turn On HTTPS, then Enable."
+            case "https_pending": "Tailscale needs HTTPS turned on for your network, once. Click Turn On HTTPS, then Enable HTTPS."
             case "funnel_pending": "Tailscale needs you to allow Funnel for your network, once. Click Allow Funnel and confirm."
             case "error": route.last_error ?? "Something went wrong. Turn it off and try again."
             default: "Starting…"
@@ -360,9 +362,9 @@ struct ConnectView: View {
                 HStack {
                     Text("Sharing: " + CloudService.all.filter { model.cloudSources.contains($0.id) }.map(\.title).joined(separator: ", ")).font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button(model.busy.contains("cloud") ? "Disconnecting…" : "Disconnect and Close Address") { model.disconnectCloud() }
+                    Button(model.busy.contains("cloud-off") ? "Disconnecting…" : "Disconnect and Close Address") { model.disconnectCloud() }
                         .buttonStyle(DestructiveButtonStyle())
-                        .disabled(model.busy.contains("cloud"))
+                        .disabled(model.busy.contains("cloud-off"))
                 }
             } else {
                 Text("Choose what cloud chats may see").font(.headline)
@@ -379,11 +381,12 @@ struct ConnectView: View {
                     if !model.tailscaleInstalled { Text("Install Tailscale first, above.").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
                     if model.cloud.map({ $0.state != "off" }) == true {
-                        Button("Cancel") { model.disconnectCloud() }.disabled(model.busy.contains("cloud"))
+                        Button("Cancel") { model.disconnectCloud() }.disabled(model.busy.contains("cloud-off"))
+                    } else {
+                        Button(model.busy.contains("cloud") ? "Turning On…" : "Turn On Public Address") { model.turnOnCloud() }
+                            .buttonStyle(PrimaryButtonStyle())
+                            .disabled(model.busy.contains("cloud") || !model.tailscaleInstalled)
                     }
-                    Button(model.busy.contains("cloud") ? "Turning On…" : "Turn On Public Address") { model.turnOnCloud() }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .disabled(model.busy.contains("cloud") || !model.tailscaleInstalled)
                 }
             }
         }

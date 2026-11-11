@@ -63,7 +63,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     let alert = NSAlert()
                     alert.messageText = "Allow \(request.client_name) to connect?"
                     let warning = Self.certificateWarning(home: warningHome).map { "\($0)\n\n" } ?? ""
-                    alert.informativeText = "\(warning)Code  \(request.code)\n\nAllow only if your browser shows the same code.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to \(request.redirect_host). This request expires in five minutes."
+                    let host = request.redirect_host.split(separator: ":").first.map(String.init) ?? ""
+                    let destination = ["localhost", "127.0.0.1", "[::1]"].contains(host) ? "the app on the device that started this" : request.redirect_host
+                    alert.informativeText = "\(warning)Code  \(request.code)\n\nAllow only if your browser shows the same code.\n\n\(request.access ?? request.scopes.joined(separator: ", "))\n\nReturns to \(destination). This request expires in five minutes."
                     alert.addButton(withTitle: "Allow")
                     alert.addButton(withTitle: "Deny")
                     alert.buttons.first?.keyEquivalent = ""
@@ -74,6 +76,7 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
                             if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
+                            else if self.connectorHome != nil { self.window?.orderOut(nil) }
                             await self.setup?.refresh()
                         }
                     }

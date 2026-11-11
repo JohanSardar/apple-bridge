@@ -142,6 +142,26 @@ impl Tailscale {
         response.error_for_status()?;
         Ok(true)
     }
+    async fn feature_link(&self, feature: &str) -> String {
+        let response = self
+            .api
+            .request(
+                reqwest::Method::POST,
+                &format!("query-feature?feature={feature}"),
+                None,
+                Some(Vec::new()),
+            )
+            .await;
+        let value: Value = match response {
+            Ok(response) => response.json().await.unwrap_or(Value::Null),
+            Err(_) => Value::Null,
+        };
+        value["URL"]
+            .as_str()
+            .filter(|url| url.starts_with("https://login.tailscale.com/"))
+            .unwrap_or_default()
+            .to_owned()
+    }
     async fn await_ready(
         &self,
         gateway: &Gateway,
@@ -185,35 +205,27 @@ impl Tailscale {
                     link: status["AuthURL"].as_str().unwrap_or_default().into(),
                 })
             } else if self.exposure == Exposure::Tailnet && capabilities.get("https").is_none() {
+                let link = self.feature_link("serve").await;
                 Some(Progress {
                     state: "https_pending",
                     message: "Waiting for HTTPS certificates to be turned on in Tailscale".into(),
                     pending_link: "HTTPS approval pending".into(),
                     last_error: String::new(),
-                    link: "https://login.tailscale.com/admin/dns".into(),
+                    link: if link.is_empty() {
+                        "https://login.tailscale.com/admin/dns".into()
+                    } else {
+                        link
+                    },
                 })
             } else if self.exposure == Exposure::Funnel
                 && (capabilities.get("https").is_none() || capabilities.get("funnel").is_none())
             {
-                let feature: Value = match self
-                    .api
-                    .request(
-                        reqwest::Method::GET,
-                        "query-feature?feature=funnel",
-                        None,
-                        None,
-                    )
-                    .await
-                {
-                    Ok(response) => response.json().await.unwrap_or(Value::Null),
-                    Err(_) => Value::Null,
-                };
                 Some(Progress {
                     state: "funnel_pending",
                     message: "Waiting for Funnel approval".into(),
                     pending_link: "Funnel approval pending".into(),
                     last_error: String::new(),
-                    link: feature["URL"].as_str().unwrap_or_default().into(),
+                    link: self.feature_link("funnel").await,
                 })
             } else {
                 None

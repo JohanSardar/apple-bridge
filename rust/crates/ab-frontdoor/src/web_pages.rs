@@ -136,6 +136,12 @@ pub(crate) fn access(scopes: &[Grant]) -> Access {
 
 pub(crate) fn access_sentence(scopes: &[Grant]) -> String {
     let access = access(scopes);
+    if access.read.len() >= SOURCES.len() && access.change.len() >= SOURCES.len() {
+        return format!(
+            "Read and change everything Apple Bridge can reach ({} services)",
+            access.read.len()
+        );
+    }
     let mut parts = Vec::new();
     if !access.read.is_empty() {
         parts.push(format!("Read: {}", access.read.join(", ")));
