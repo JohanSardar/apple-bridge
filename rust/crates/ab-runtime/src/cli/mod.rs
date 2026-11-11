@@ -2,6 +2,7 @@ mod access;
 mod argv;
 mod children;
 mod commands;
+mod connect;
 mod failure;
 mod gateway;
 mod help;
@@ -575,7 +576,11 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
     match command {
         Command::Up(args) => gateway::up(home, &args).await,
         Command::Down => gateway::down(home),
+        Command::Link(args) if args.client == tree::LinkClient::ClaudeApp => {
+            connect::claude_app(home).await
+        }
         Command::Link(args) => link::link(home, &args).await,
+        Command::Tailscale(args) => connect::tailscale(home, &args).await,
         Command::Unlink(args) => link::unlink(&args),
         Command::Stats(args) => stats::run(home, &args).await,
         Command::Read(args) => read::read(home, &args).await,

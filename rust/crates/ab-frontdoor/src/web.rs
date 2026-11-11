@@ -506,6 +506,9 @@ fn route(
         ("GET", _) if path.starts_with("/oauth/pending/") => {
             crate::web_oauth::pending_poll(w, path, origin, ip)
         }
+        ("GET" | "POST", "/connect" | "/connect/request" | "/connect/answer") => {
+            connect_request(w, r, path, body, origin, ip)
+        }
         ("GET" | "POST", "/oauth/authorize") => {
             crate::web_oauth::authorize(w, r, body, origin, q, identity)
         }
@@ -518,6 +521,68 @@ fn route(
         }
         _ => StatusCode::NOT_FOUND.into_response(),
     }
+}
+fn connect_request(
+    w: &Web,
+    r: &axum::http::request::Parts,
+    path: &str,
+    body: &[u8],
+    origin: &str,
+    ip: &str,
+) -> Response {
+    if w.route() != "tailnet" || !origin.starts_with("https://") {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    if path == "/connect" {
+        return respond(
+            200,
+            &json!({
+                "apple_bridge": true,
+                "mcp": format!("{origin}/mcp"),
+                "request": format!("{origin}/connect/request"),
+                "how": "POST {\"name\": \"Your app\"} to request, then POST {\"id\", \"secret\"} to /connect/answer every few seconds until the owner allows it on the Mac. Send the token as Authorization: Bearer <token> to the mcp address.",
+            }),
+        );
+    }
+    let json_body = r
+        .headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("application/json"));
+    let Ok(input) = serde_json::from_slice::<Value>(body) else {
+        return reject(400, "Send JSON.");
+    };
+    if r.method != axum::http::Method::POST || !json_body {
+        return reject(400, "Send JSON with POST.");
+    }
+    if path == "/connect/request" {
+        if !w.allow(&format!("connect-create:{ip}"), true, 10) {
+            return reject(429, "Too many requests. Wait a minute and try again.");
+        }
+        return w
+            .connectors
+            .ask_for_agent(
+                input["name"].as_str().unwrap_or_default(),
+                "tailnet",
+                Some(format!("{origin}/mcp")),
+            )
+            .map_or_else(
+                |_| reject(400, "Send a short name, such as {\"name\": \"Grok Bot\"}, and try again in a minute."),
+                |ticket| respond(201, &ticket),
+            );
+    }
+    if !w.allow(&format!("connect-poll:{ip}"), false, 60) {
+        return reject(429, "Wait a moment and try again.");
+    }
+    w.connectors
+        .agent_answer(
+            input["id"].as_str().unwrap_or_default(),
+            input["secret"].as_str().unwrap_or_default(),
+        )
+        .map_or_else(
+            |_| reject(410, "This request expired or was already answered. Ask again."),
+            |answer| respond(200, &answer),
+        )
 }
 fn script(source: &'static str) -> Response {
     (

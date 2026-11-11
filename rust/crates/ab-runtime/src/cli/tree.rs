@@ -122,6 +122,8 @@ pub enum Command {
     Connectors(ConnectorsCommand),
     #[command(about = "Manage browser sign-in for this Mac's local pages")]
     Web(WebCommand),
+    #[command(about = "Let your other devices and cloud agents reach this Mac through Tailscale")]
+    Tailscale(TailscaleArgs),
     #[command(about = "Use Apple Bridge from other computers; off until you enable it")]
     Remote(RemoteCommand),
     #[command(about = "Create a pairing code for a replica or iPhone")]
@@ -212,6 +214,12 @@ pub enum LinkClient {
     Claude,
     #[value(help = "Codex")]
     Codex,
+    #[value(
+        name = "claude-app",
+        alias = "claude-desktop",
+        help = "The Claude app or claude.ai, through a custom connector"
+    )]
+    ClaudeApp,
     #[value(help = "Print what any other app or bot needs")]
     Other,
 }
@@ -520,11 +528,16 @@ pub struct GuideArgs {
     #[arg(
         long,
         value_name = "NAMES",
-        help = "Request only these comma-separated permissions, without prompts, such as contacts,calendar"
+        help = "Request only these comma-separated permissions, such as contacts,calendar"
     )]
     pub only: Option<String>,
     #[arg(long, value_name = "PATH", help = "Helper app to use")]
     pub helper_app: Option<String>,
+    #[arg(
+        long,
+        help = "Walk through in this terminal instead of the guide window"
+    )]
+    pub in_terminal: bool,
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
 }
@@ -533,6 +546,12 @@ pub struct GuideArgs {
 pub struct GuideStatusArgs {
     #[arg(long, value_name = "FILE", hide = true)]
     pub fixture: Option<PathBuf>,
+}
+
+#[derive(Debug, Args)]
+pub struct TailscaleArgs {
+    #[arg(long, help = "Turn Tailscale access off again")]
+    pub off: bool,
 }
 
 #[derive(Debug, Args)]

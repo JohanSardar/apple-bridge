@@ -23,7 +23,7 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     ("Reading data", &["read", "search", "call", "skills"]),
     ("Access", &["agents", "tokens", "connectors", "web"]),
-    ("Remote and replicas", &["remote", "pair", "join"]),
+    ("Remote and replicas", &["tailscale", "remote", "pair", "join"]),
     (
         "Maintenance",
         &[
@@ -167,6 +167,22 @@ pub const LEAVES: &[Leaf] = &[
             "Piped, stdout holds only the server name; bridge link other prints only the MCP address.",
         ],
         schema: LINK_FIELDS,
+    },
+    Leaf {
+        path: "tailscale",
+        examples: &[
+            ("Let your devices and Grok Bot reach this Mac", "bridge tailscale"),
+            ("Turn it off", "bridge tailscale --off"),
+        ],
+        notes: &[
+            "Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your Tailscale network can reach it.",
+            "Cloud agents ask at the printed /connect address, and you click Allow on this Mac.",
+        ],
+        schema: &[
+            ("outcome", "string", false),
+            ("mcp", "string", false),
+            ("connect", "string", false),
+        ],
     },
     Leaf {
         path: "unlink",

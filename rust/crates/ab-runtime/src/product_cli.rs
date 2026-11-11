@@ -195,6 +195,64 @@ pub fn permissions_request(
     Ok(states)
 }
 
+pub const GUIDE_STEPS: [&str; 9] = [
+    "contacts",
+    "calendar",
+    "reminders",
+    "photos",
+    "camera",
+    "microphone",
+    "location",
+    "full_disk_access",
+    "screen_recording",
+];
+const GUIDE_TIMEOUT: Duration = Duration::from_secs(3600);
+
+pub fn guide_arguments(app: &str, steps: &[&str], report: &Path) -> Vec<String> {
+    let mut arguments: Vec<String> = ["-n", "-W", "-g", "-a"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    arguments.push(helper_or_default(app));
+    arguments.extend(["--args", "permission-guide", "--report"].map(str::to_owned));
+    arguments.push(report.to_string_lossy().into_owned());
+    arguments.push("--steps".into());
+    arguments.push(steps.join(","));
+    arguments
+}
+
+pub fn permission_guide(
+    program: &Path,
+    report_dir: &Path,
+    app: &str,
+    steps: &[&str],
+) -> Result<BTreeMap<String, String>, Error> {
+    if steps.is_empty() || steps.iter().any(|step| !GUIDE_STEPS.contains(step)) {
+        return Err(Error::Invalid);
+    }
+    let report = Report(report_dir.join(format!("permission-guide-{}.json", run_id())));
+    run_bounded(
+        program,
+        &guide_arguments(app, steps, &report.0),
+        GUIDE_TIMEOUT,
+    )?;
+    let resume = report_dir.join("permission-guide.json");
+    let reopening = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + GUIDE_TIMEOUT;
+    while !report.0.exists()
+        && (resume.exists() || Instant::now() < reopening)
+        && Instant::now() < deadline
+    {
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    let data = std::fs::read(&report.0).map_err(|_| {
+        Error::Io(std::io::Error::other(
+            "The guide closed before it finished. Run bridge permissions guide again to continue.",
+        ))
+    })?;
+    Ok(serde_json::from_slice(&data)?)
+}
+
 #[derive(Debug)]
 pub struct SelfTest {
     pub data: String,

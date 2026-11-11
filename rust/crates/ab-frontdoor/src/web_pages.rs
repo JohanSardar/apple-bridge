@@ -198,12 +198,14 @@ fn request_header(client: &Client, redirect_host: &str) -> String {
         .find(|c| c.is_alphanumeric())
         .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string());
     format!(
-        "<header class=\"request\"><div class=\"tile\" aria-hidden=\"true\">{}</div><div><h1>{} wants to connect to your Mac</h1><p class=\"lede\">{}</p></div></header>",
+        "<header class=\"request\"><div class=\"pair\" aria-hidden=\"true\"><div class=\"tile\">{}</div><span class=\"link\"><i></i><i></i><i></i></span><div class=\"tile mac\">{MARK}</div></div><h1>Connect {} to Apple Bridge</h1><p class=\"lede\">{}</p></header>",
         escape(&initial),
         escape(name),
         escape(&ab_trust::oauth::callback_label(redirect_host))
     )
 }
+
+const MARK: &str = r#"<svg viewBox="0 0 24 24"><path d="M2 18h20M4 18V14a8 8 0 0 1 16 0v4M9 18v-5.2M15 18v-5.2M12 18V10" /></svg>"#;
 
 pub(crate) struct Consent<'a> {
     pub client: &'a Client,
@@ -230,7 +232,7 @@ pub(crate) fn consent(c: &Consent<'_>) -> Response {
     } else {
         let _ = write!(
             body,
-            "<section id=\"approval\" class=\"confirm\"><h2>Finish on your Mac</h2><ol class=\"steps small\"><li>A window on your Mac asks about this app.</li><li>Check that it shows this code.</li><li>Click Allow there. This page continues by itself.</li></ol><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\">····</p><p id=\"approval-status\" class=\"status\" role=\"status\">Asking your Mac…</p><p class=\"muted small\">Didn't start this? Click Cancel. Nothing is shared until you allow it.</p></section><div class=\"actions\"><a href=\"{}\">Cancel</a>",
+            "<section id=\"approval\" class=\"wait\" aria-live=\"polite\"><span class=\"beacon\" aria-hidden=\"true\"></span><div><h2 id=\"approval-title\">Approve on your Mac</h2><p id=\"approval-status\" class=\"status\" role=\"status\">A small window on your Mac asks you to allow this. This page continues by itself.</p></div></section><section id=\"approval-match\" class=\"match\" hidden><p class=\"small muted\">More than one app is asking right now. Allow only the one that shows this code:</p><p id=\"approval-code\" class=\"code\" aria-label=\"Matching code\"></p></section><p class=\"muted small fine\">Didn't start this? Close this page. Nothing is shared until you allow it on your Mac.</p><div class=\"actions\"><a href=\"{}\">Cancel</a>",
             escape(c.cancel)
         );
         if c.passkey_available {

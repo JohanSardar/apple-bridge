@@ -358,6 +358,6 @@ pub(crate) fn pending_poll(web: &Web, path: &str, origin: &str, ip: &str) -> Res
                 "This approval has expired or was already used. Start again from your connector.",
             )
         },
-        |redirect| respond(200, &json!({"redirect": redirect})),
+        |poll| respond(200, &json!({"redirect": poll.redirect, "show_code": poll.show_code})),
     )
 }

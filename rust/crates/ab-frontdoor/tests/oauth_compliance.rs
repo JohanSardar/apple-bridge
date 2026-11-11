@@ -231,7 +231,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
         .await;
     assert_eq!(page.status(), StatusCode::OK);
     let html = body_text(page).await;
-    assert!(html.contains("Claude wants to connect to your Mac"));
+    assert!(html.contains("Connect Claude to Apple Bridge"));
     assert!(
         html.contains("claude.ai"),
         "consent shows the redirect host"
