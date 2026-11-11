@@ -79,7 +79,10 @@ final class PackagedApp: NSObject, NSApplicationDelegate, NSWindowDelegate {
                         Task { @MainActor in
                             let result = await Task.detached { Self.connectorCommand([action, "--request", request.id, "--code", request.code] + options, labExecutable: executable) }.value
                             if result == nil { self.approvalDetails?.stringValue = "Approval was refused or expired. Start again from your connector." }
-                            else if self.connectorHome != nil { self.window?.orderOut(nil) }
+                            else if self.connectorHome != nil {
+                                let remaining = await Task.detached { Self.connectorCommand(["pending"] + options, labExecutable: executable) }.value
+                                if remaining.flatMap({ try? JSONDecoder().decode([ConnectorRequest].self, from: $0) })?.isEmpty != false { NSApplication.shared.terminate(nil) }
+                            }
                             await self.setup?.refresh()
                         }
                     }
