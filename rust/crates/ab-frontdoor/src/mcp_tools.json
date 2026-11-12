@@ -2,7 +2,7 @@
   {
     "name": "apple_status",
     "title": "Apple Bridge status",
-    "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused. Reads nothing private.",
+    "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused.",
     "inputSchema": {"type": "object", "properties": {}},
     "outputSchema": {"type": "object", "properties": {"access": {"type": "object"}, "sources": {"type": "array"}, "time_zone": {"type": "string"}, "now": {"type": "string"}, "next": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -11,7 +11,7 @@
   {
     "name": "apple_describe",
     "title": "Find operations",
-    "description": "Look up what you can do. query: the best operations for a task in plain words, such as screen time yesterday or get voicemail, best first. operation: its exact arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation, one line each.",
+    "description": "Look up what you can do. query: the best operations for a task in plain words, such as screen time yesterday, best first. operation: its exact arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation, one line each.",
     "inputSchema": {"type": "object", "properties": {
       "query": {"type": "string", "description": "The task in plain words."},
       "operation": {"type": "string", "description": "Operation name, such as reminders.create."},
@@ -24,7 +24,7 @@
   {
     "name": "apple_search",
     "title": "Search Apple data",
-    "description": "Search the owner's data for text in one call: contacts, messages, notes, mail, reminders, calendar, files, Safari, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
+    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, Safari, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
     "inputSchema": {"type": "object", "required": ["text"], "properties": {
       "text": {"type": "string", "description": "Words to find."},
       "sources": {"type": "array", "items": {"type": "string"}, "description": "Only these sources, such as notes, mail, calendar or messages, or a collection such as notes.note. Default all you can read."},
@@ -68,7 +68,7 @@
   {
     "name": "apple_command_status",
     "title": "Check a change",
-    "description": "Check a change that came back pending or indeterminate, including Photos changes, by its request_id. Returns the same result as apple_change.",
+    "description": "Check a change that came back pending or indeterminate by its request_id. Returns the same result as apple_change.",
     "inputSchema": {"type": "object", "required": ["request_id"], "properties": {
       "request_id": {"type": "string", "description": "The request_id from apple_change or another changing tool."},
       "verbose": {"type": "boolean", "description": "Include the full history and the Mac's raw result. Default false."}
@@ -191,7 +191,7 @@
     "name": "notes_create",
     "title": "Create a note",
     "scope": "notes:write",
-    "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns the new note's id. To read notes, use apple_search or apple_read with notes.list.",
+    "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns the new note's id.",
     "inputSchema": {"type": "object", "required": ["title"], "properties": {
       "title": {"type": "string", "description": "Note title."},
       "text": {"type": "string", "description": "Body as plain text."},
@@ -232,7 +232,8 @@
       "near": {"type": "object", "properties": {"lat": {"type": "number", "description": "Latitude."}, "lon": {"type": "number", "description": "Longitude."}}, "required": ["lat", "lon"], "description": "Near this point, with radius_m."},
       "radius_m": {"type": "number", "description": "Meters from near, up to 100000."},
       "cursor": {"type": "string", "description": "next_cursor from the last result, same filters."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 30, "description": "Default 20."}
+      "limit": {"type": "integer", "minimum": 1, "maximum": 30, "description": "Default 20."},
+      "places": {"type": "boolean", "description": "Instead list places photos were taken, with dates, counts and an asset_id each."}
     }},
     "outputSchema": {"type": "object"},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},

@@ -2377,6 +2377,18 @@
         "limit": 50
       }
     },
+    "photos.places": {
+      "s": "List the places photos were taken, by city, US state and country, with dates and photo counts.",
+      "r": "places with place, city, state, country, photo_count, first_taken_at, last_taken_at and one asset_id to show; countries and us_states rollups; complete false means call again for the rest.",
+      "p": {
+        "start": "Taken on or after, RFC 3339.",
+        "end": "Taken before, RFC 3339.",
+        "include_screenshots": "Also count screenshots. Default false."
+      },
+      "x": {
+        "start": "2026-01-01T00:00:00Z"
+      }
+    },
     "photos.get": {
       "s": "Get one photo's details, location and downloadable resources.",
       "r": "Metadata, location and resources (original, edited, Live Photo video) with resource_index and resource_key for photos.fetch.",

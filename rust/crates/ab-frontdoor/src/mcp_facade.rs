@@ -694,6 +694,11 @@ impl Call<'_> {
         let started = std::time::Instant::now();
         let body = if operation.kind == OperationKind::Query {
             let mut body = json!({"args": arguments});
+            match operation.name.as_str() {
+                "photos.places" => body["deadline_ms"] = json!(45_000),
+                "photos.search" | "photos.get" => body["deadline_ms"] = json!(10_000),
+                _ => {}
+            }
             if input.get("request_id").is_some_and(|id| !id.is_null()) {
                 let id = self.command_id(&request_id(input)?).await?;
                 body["id"] = json!(if id.starts_with("qry_") {

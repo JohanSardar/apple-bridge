@@ -411,7 +411,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused. Reads nothing private.",
+      "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused.",
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -444,7 +444,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Look up what you can do. query: the best operations for a task in plain words, such as screen time yesterday or get voicemail, best first. operation: its exact arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation, one line each.",
+      "description": "Look up what you can do. query: the best operations for a task in plain words, such as screen time yesterday, best first. operation: its exact arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation, one line each.",
       "inputSchema": {
         "properties": {
           "domain": {
@@ -493,7 +493,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Search the owner's data for text in one call: contacts, messages, notes, mail, reminders, calendar, files, Safari, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
+      "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, Safari, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
       "inputSchema": {
         "properties": {
           "after": {
@@ -690,7 +690,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Check a change that came back pending or indeterminate, including Photos changes, by its request_id. Returns the same result as apple_change.",
+      "description": "Check a change that came back pending or indeterminate by its request_id. Returns the same result as apple_change.",
       "inputSchema": {
         "properties": {
           "request_id": {
@@ -1228,7 +1228,7 @@
         "openWorldHint": false,
         "readOnlyHint": false
       },
-      "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns the new note's id. To read notes, use apple_search or apple_read with notes.list.",
+      "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns the new note's id.",
       "inputSchema": {
         "properties": {
           "folder": {
@@ -1402,6 +1402,10 @@
               "lon"
             ],
             "type": "object"
+          },
+          "places": {
+            "description": "Instead list places photos were taken, with dates, counts and an asset_id each.",
+            "type": "boolean"
           },
           "radius_m": {
             "description": "Meters from near, up to 100000.",

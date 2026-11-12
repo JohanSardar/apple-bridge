@@ -7897,6 +7897,52 @@
       "name": "photos_get"
     },
     {
+      "description": "Where photos were taken, by place name: each place (city, US state, country) with photo_count, first_taken_at, last_taken_at and one representative asset_id, plus countries and us_states rollups. Scans the library live between start and end, skipping screenshots unless include_screenshots. Names come from Apple's geocoder and are remembered only in memory, per 5 km cell; when complete is false, Apple's rate limit stopped the lookup early, so call again for the rest. No library metadata is stored. (operation version 1)",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "args": {
+            "additionalProperties": false,
+            "properties": {
+              "end": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              "include_hidden": {
+                "type": "boolean"
+              },
+              "include_screenshots": {
+                "type": "boolean"
+              },
+              "start": {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [],
+            "type": "object"
+          },
+          "deadline_ms": {
+            "maximum": 60000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "id": {
+            "maxLength": 128,
+            "pattern": "^qry_[A-Za-z0-9._:-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "args"
+        ],
+        "type": "object"
+      },
+      "name": "photos_places"
+    },
+    {
       "description": "Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-1536, default 512), and returns it as an image the agent can view; REST callers get image_base64. Video assets return a still frame. Hidden assets need include_hidden. network_access (default true) lets PhotoKit download this one original from the owner's iCloud when the Mac keeps only a thumbnail; set false to use local data only. Each call sends this photo's pixels to the caller; nothing is cached or sent ahead of time. Narrow with photos.search first and preview only what you need. (operation version 1)",
       "inputSchema": {
         "additionalProperties": false,
@@ -7982,7 +8028,7 @@
       "name": "photos_release"
     },
     {
-      "description": "Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots. (operation version 1)",
+      "description": "Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. Each asset has place, its place name, when it has a location. No library metadata is stored. Pages are live, not snapshots. (operation version 1)",
       "inputSchema": {
         "additionalProperties": false,
         "properties": {

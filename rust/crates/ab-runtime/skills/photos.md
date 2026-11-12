@@ -5,6 +5,8 @@ Photos is read live from the Mac's library. It has no text search and is not par
 ## Finding photos
 
 - `photos.search` with filters: `start`, `end`, `type`, `album_id`, `favorite`, `near` and `radius_m`. Follow `next_cursor` by passing it as `cursor` with the same filters, even when a page is empty.
+- Every asset from `photos.search` and `photos_find` has `place`, such as "Mykonos, Greece" or "Chicago, Illinois, United States", when the photo has a location.
+- Where were photos taken: `photos_find` with `places: true` (or `photos.places`) and `start`/`end` lists each place with its city, US state, country, dates, photo count and one `asset_id`, plus `countries` and `us_states` rollups. For a photo from every place, show each place's `asset_id` with `photos_show`. If `complete` is false, Apple's place lookup paused; call again a minute later for the rest.
 - `photos.albums` lists albums; `photos.get` shows one asset's details and resources.
 - To find a photo by what it shows, look at it: `photos_find` (or `photos.contact_sheet` with about 20 IDs) returns a numbered grid of small thumbnails; read the numbers against `cells`. Images come back as image content. Each image costs time and tokens and its pixels go to your provider, so look only at what the task needs.
 

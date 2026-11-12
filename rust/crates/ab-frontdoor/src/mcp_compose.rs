@@ -1395,6 +1395,25 @@ impl Call<'_> {
     }
 
     pub(crate) async fn photos_find(&self, input: &Map<String, Value>) -> Step<Outcome> {
+        if input.get("places") == Some(&json!(true)) {
+            let filters: Map<String, Value> = input
+                .iter()
+                .filter(|(key, _)| matches!(key.as_str(), "start" | "end"))
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+            let mut found = self
+                .read_one(&Map::from_iter([
+                    ("operation".to_owned(), json!("photos.places")),
+                    ("arguments".to_owned(), Value::Object(filters)),
+                ]))
+                .await?;
+            found.value["next"] = json!(if found.value["complete"] == false {
+                "Apple's place lookup paused before naming every spot; call again in a minute for the rest. To show one photo per place, call photos_show with each place's asset_id."
+            } else {
+                "To show one photo per place, call photos_show with each place's asset_id."
+            });
+            return Ok(found);
+        }
         let limit = input
             .get("limit")
             .and_then(Value::as_u64)
@@ -1409,6 +1428,15 @@ impl Call<'_> {
             ]))
             .await?;
         let next_cursor = found.value["next_cursor"].clone();
+        let places: Map<String, Value> = found.value["assets"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|asset| {
+                let id = asset["asset_id"].as_str().or_else(|| asset["id"].as_str())?;
+                asset["place"].is_string().then(|| (id.to_owned(), asset["place"].clone()))
+            })
+            .collect();
         let ids: Vec<Value> = found.value["assets"]
             .as_array()
             .into_iter()
@@ -1440,6 +1468,9 @@ impl Call<'_> {
                 .await?;
             shown.value["photos"] =
                 json!([{"asset_id": only, "taken_at": shown.value["taken_at"]}]);
+            if let Some(place) = only.as_str().and_then(|id| places.get(id)) {
+                shown.value["photos"][0]["place"] = place.clone();
+            }
             if next_cursor.is_string() {
                 shown.value["next_cursor"] = next_cursor;
             }
@@ -1464,6 +1495,9 @@ impl Call<'_> {
                 });
                 if let Some(local) = crate::mcp_facade::local_time_of(cell["created_at"].as_str()) {
                     photo["taken_at_local"] = json!(local);
+                }
+                if let Some(place) = cell["asset_id"].as_str().and_then(|id| places.get(id)) {
+                    photo["place"] = place.clone();
                 }
                 if cell["rendered"] == false {
                     photo["shown"] = json!("grey: not on this Mac");
