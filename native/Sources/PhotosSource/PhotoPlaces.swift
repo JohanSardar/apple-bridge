@@ -63,6 +63,13 @@ actor PhotoPlaces {
         if country == "United States" || country == nil, let context = names.cityWithContext(.short), let code = context.split(separator: ",").last?.trimmingCharacters(in: .whitespaces) {
             state = usStates[code]
         }
+        if state == nil, country == "United States" || country == nil, let address = names.fullAddress(includingRegion: true, singleLine: true) {
+            state = address.components(separatedBy: ", ").reversed().lazy.compactMap { part -> String? in
+                let words = part.split(separator: " ")
+                guard words.count == 2, words[1].allSatisfy(\.isNumber) else { return nil }
+                return usStates[String(words[0])]
+            }.first
+        }
         let full = names.cityWithContext(.full)
         let name: String
         if let state {
