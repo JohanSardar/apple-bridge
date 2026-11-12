@@ -18,13 +18,6 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
             vec![],
         ),
         (
-            "photos.places",
-            "Where photos were taken, by place name: each place (city, US state, country) with photo_count, first_taken_at, last_taken_at and one representative asset_id, plus countries and us_states rollups. Scans the library live between start and end, skipping screenshots unless include_screenshots. Names come from Apple's geocoder and are remembered only in memory, per 5 km cell; when complete is false, Apple's rate limit stopped the lookup early, so call again for the rest. No library metadata is stored.",
-            false,
-            json!({"start":text,"end":text,"include_hidden":boolean,"include_screenshots":boolean}),
-            vec![],
-        ),
-        (
             "photos.get",
             "Live asset details, location and all public PhotoKit resources, including video, paired Live Photo video, adjustment data and edited/original representations. Resource indexes are local to this response.",
             false,
@@ -96,6 +89,7 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
         ),
     ];
     let viewing = viewing(&text, &boolean);
+    entries.insert(1, places(&text, &boolean));
     entries.splice(4..4, viewing);
     for (name, description, write, properties, required) in entries {
         operations.push(descriptor(
@@ -111,6 +105,16 @@ pub fn descriptors(output: &Value) -> Vec<OperationDescriptor> {
 }
 
 type Entry = (&'static str, &'static str, bool, Value, Vec<&'static str>);
+
+fn places(text: &Value, boolean: &Value) -> Entry {
+    (
+        "photos.places",
+        "Where photos were taken, by place name: each place (city, US state, country) with photo_count, first_taken_at, last_taken_at and one representative asset_id, plus countries and us_states rollups. Scans the library live between start and end, skipping screenshots unless include_screenshots. Names come from Apple's geocoder and are remembered only in memory, per 5 km cell; when complete is false, Apple's rate limit stopped the lookup early, so call again for the rest. No library metadata is stored.",
+        false,
+        json!({"start":text,"end":text,"include_hidden":boolean,"include_screenshots":boolean}),
+        vec![],
+    )
+}
 
 fn viewing(text: &Value, boolean: &Value) -> [Entry; 2] {
     [
