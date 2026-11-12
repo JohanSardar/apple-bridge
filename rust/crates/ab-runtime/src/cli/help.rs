@@ -6,8 +6,7 @@ fn push(text: &mut String, piece: &str) {
     text.push_str(piece);
 }
 
-pub const DOCS: &str =
-    "https://eilmer.si/applebridge/source/docs/reference/cli.md";
+pub const DOCS: &str = "https://eilmer.si/applebridge/source/docs/reference/cli.md";
 
 pub struct Leaf {
     pub path: &'static str,
