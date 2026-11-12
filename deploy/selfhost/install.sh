@@ -2,7 +2,7 @@
 set -euo pipefail
 NODE_VERSION=24.11.0
 NODE_SHA256=46da9a098973ab7ba4fca76945581ecb2eaf468de347173897044382f10e0a0a
-REPO=JohanSardar/apple-bridge
+DOWNLOADS=https://eilmer.si/applebridge/download
 
 fetch_node_archive() {
   local destination=$1
@@ -58,13 +58,13 @@ work=$(mktemp -d)
 trap 'status=$?; rm -rf "$work"; [ "$status" = 0 ] || echo "The install stopped before it finished. Fix the error above and run it again; repeating it is safe." >&2' EXIT
 if [ -z "$bundle" ]; then
   if [ "$version" = latest ]; then
-    version=$(curl -fsS -m 20 "https://api.github.com/repos/$REPO/releases?per_page=30" | python3 -c 'import json,sys
-print(next(r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("relay-")))')
+    version=$(curl -fsS --proto '=https' --proto-redir '=https' -m 20 "$DOWNLOADS/relay-latest")
   fi
+  [[ $version =~ ^relay-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a relay release: $version" >&2; exit 1; }
   name="ab-relay-${version#relay-}-linux-amd64.tar.gz"
-  curl -fsSL -m 300 -o "$work/$name" "https://github.com/$REPO/releases/download/$version/$name"
-  curl -fsSL -m 30 -o "$work/$name.sha256" "https://github.com/$REPO/releases/download/$version/$name.sha256"
-  (cd "$work" && sha256sum -c "$name.sha256" >/dev/null)
+  curl -fsSL --proto '=https' --proto-redir '=https' -m 300 -o "$work/$name" "$DOWNLOADS/$version/$name"
+  curl -fsSL --proto '=https' --proto-redir '=https' -m 30 -o "$work/$name.sha256" "$DOWNLOADS/$version/$name.sha256"
+  [ "$(sha256sum "$work/$name" | cut -d ' ' -f 1)" = "$(cut -d ' ' -f 1 "$work/$name.sha256")" ] || { echo "The relay download does not match its checksum. Nothing was installed." >&2; exit 1; }
   bundle=$work/$name
 fi
 tar -C "$work" -xzf "$bundle"

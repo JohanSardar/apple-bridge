@@ -2,8 +2,7 @@
 
 **Give Claude Code, Codex and other agents your Mac's Messages, Mail, Calendar, Notes and more through one local MCP server.**
 
-[![Rust](https://github.com/JohanSardar/apple-bridge/actions/workflows/rust.yml/badge.svg)](https://github.com/JohanSardar/apple-bridge/actions/workflows/rust.yml)
-[![Swift](https://github.com/JohanSardar/apple-bridge/actions/workflows/swift.yml/badge.svg)](https://github.com/JohanSardar/apple-bridge/actions/workflows/swift.yml)
+[![Pipeline](https://eilmer.si/applebridge/pipeline.svg)](https://eilmer.si/applebridge/pipelines)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on remote use, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
