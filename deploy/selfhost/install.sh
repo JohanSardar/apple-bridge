@@ -58,12 +58,13 @@ work=$(mktemp -d)
 trap 'status=$?; rm -rf "$work"; [ "$status" = 0 ] || echo "The install stopped before it finished. Fix the error above and run it again; repeating it is safe." >&2' EXIT
 if [ -z "$bundle" ]; then
   if [ "$version" = latest ]; then
-    version=$(curl -fsS -m 20 "$DOWNLOADS/relay-latest")
+    version=$(curl -fsS --proto '=https' --proto-redir '=https' -m 20 "$DOWNLOADS/relay-latest")
   fi
+  [[ $version =~ ^relay-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a relay release: $version" >&2; exit 1; }
   name="ab-relay-${version#relay-}-linux-amd64.tar.gz"
-  curl -fsSL -m 300 -o "$work/$name" "$DOWNLOADS/$version/$name"
-  curl -fsSL -m 30 -o "$work/$name.sha256" "$DOWNLOADS/$version/$name.sha256"
-  (cd "$work" && sha256sum -c "$name.sha256" >/dev/null)
+  curl -fsSL --proto '=https' --proto-redir '=https' -m 300 -o "$work/$name" "$DOWNLOADS/$version/$name"
+  curl -fsSL --proto '=https' --proto-redir '=https' -m 30 -o "$work/$name.sha256" "$DOWNLOADS/$version/$name.sha256"
+  [ "$(sha256sum "$work/$name" | cut -d ' ' -f 1)" = "$(cut -d ' ' -f 1 "$work/$name.sha256")" ] || { echo "The relay download does not match its checksum. Nothing was installed." >&2; exit 1; }
   bundle=$work/$name
 fi
 tar -C "$work" -xzf "$bundle"

@@ -22,5 +22,11 @@ atomic deployment/rollback; this directory does not change the relay runtime.
 
 The staging command excludes this README. Publish the two HTML pages, CSS,
 and staged installer. Verify HTTP status, content type and installer bytes
-on the public URL before launch. Release archives go in `applebridge/download/<tag>/`
-on the server; they are not in git.
+on the public URL before launch. Release files are not in git and not in the staged
+site: they live in a separate folder on the server, passed to `deploy/relay/site.py`
+as `--downloads`, so redeploying the site never removes them. They are served at
+`/applebridge/download/<tag>/<file>`. Relay bundles go in `relay-<version>/` as
+`ab-relay-<version>-linux-amd64.tar.gz` plus its `.sha256`, and the file
+`relay-latest` holds the newest tag, such as `relay-0.1.7`, which
+`deploy/selfhost/install.sh` downloads by default. No relay release has been
+published yet.

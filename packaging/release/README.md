@@ -71,8 +71,8 @@ no npm command is needed. Verify the extracted app again and record the archive'
 SHA-256. The flat curl app has no Sparkle updater: rerun the checksum-pinned
 installer to update. Sparkle qualification below applies to the separate DMG.
 
-Upload the archive to `applebridge/download/v<version>/` in the website root on
-the relay server, so it is served at
+Upload the archive to `v<version>/` in the downloads folder on the relay
+server (see `deploy/site/README.md`), so it is served at
 `https://eilmer.si/applebridge/download/v<version>/applebridge-<version>.tgz`,
 and create the matching GitLab release with a link to it before changing
 `VERSION` and `SHA256` in `docs/install`. Stage the public website with

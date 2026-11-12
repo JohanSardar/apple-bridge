@@ -8,6 +8,7 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument('root', type=Path)
 parser.add_argument('--port', type=int, default=8793)
+parser.add_argument('--downloads', type=Path, required=True)
 args = parser.parse_args()
 routes = {
     '/': ('index.html', 'text/html; charset=utf-8'),
@@ -52,13 +53,16 @@ def download_file(path):
         return None
     name = match.group(1)
     content_type = DOWNLOAD_TYPES.get(Path(name).suffix, 'text/plain; charset=utf-8' if '/' not in name else None)
-    file = args.root / 'applebridge/download' / name
-    if content_type is None or not file.is_file():
+    base = args.downloads.resolve()
+    file = (base / name).resolve()
+    if content_type is None or not file.is_relative_to(base) or not file.is_file():
         return None
     return file, content_type
 
 
 class Site(BaseHTTPRequestHandler):
+    timeout = 30
+
     def do_HEAD(self):
         self.serve(False)
 
