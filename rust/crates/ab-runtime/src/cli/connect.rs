@@ -547,7 +547,7 @@ pub async fn relay_setup(home: &Path, args: &super::tree::RelaySetupArgs) -> Out
     }
     ui::phase(3, 5, "Installing the relay on your server…");
     let install = format!(
-        "set -e; curl -fsSL https://raw.githubusercontent.com/JohanSardar/apple-bridge/main/deploy/selfhost/install.sh -o /tmp/ab-relay-install.sh; if [ \"$(id -u)\" = 0 ]; then bash /tmp/ab-relay-install.sh --domain {domain} --owner-key {key}; else sudo bash /tmp/ab-relay-install.sh --domain {domain} --owner-key {key}; fi"
+        "set -e; curl -fsSL https://eilmer.si/applebridge/selfhost/install.sh -o /tmp/ab-relay-install.sh; if [ \"$(id -u)\" = 0 ]; then bash /tmp/ab-relay-install.sh --domain {domain} --owner-key {key}; else sudo bash /tmp/ab-relay-install.sh --domain {domain} --owner-key {key}; fi"
     );
     let installed = Command::new("ssh")
         .args(["-t", &args.server, &install])

@@ -71,12 +71,14 @@ no npm command is needed. Verify the extracted app again and record the archive'
 SHA-256. The flat curl app has no Sparkle updater: rerun the checksum-pinned
 installer to update. Sparkle qualification below applies to the separate DMG.
 
-Publish the archive to the matching versioned GitHub release before changing
+Upload the archive to `applebridge/download/v<version>/` in the website root on
+the relay server, so it is served at
+`https://eilmer.si/applebridge/download/v<version>/applebridge-<version>.tgz`,
+and create the matching GitLab release with a link to it before changing
 `VERSION` and `SHA256` in `docs/install`. Stage the public website with
 `packaging/site/package.py` and coordinate deployment with the relay owner.
-Copy the same installer to the retained owner Pages repository. Require exact
-installer parity at both public URLs and a successful download of the pinned
-archive before announcing the release.
+Require exact installer parity at the public URL and a successful download of
+the pinned archive before announcing the release.
 
 Qualify installation from the public curl URL on a fresh authorized macOS guest.
 Verify its existing SIP and Gatekeeper policy first; do not change security
@@ -135,7 +137,7 @@ Run `bridge down` before updating or uninstalling an npm installation. The gatew
 
 ## iPhone releases
 
-The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://github.com/JohanSardar/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
+The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://eilmer.si/applebridge/iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
 
 ## Local qualification
 

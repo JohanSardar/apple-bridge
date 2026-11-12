@@ -4,6 +4,12 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-12
+
+### Changed
+
+- The project moved from GitHub to GitLab: <https://gitlab.com/johansardar/apple-bridge>. The install command, release downloads, the self-host installer and every link in `bridge` now go through `eilmer.si/applebridge`, so none of them depend on GitHub.
+
 ## [0.1.6] - 2026-11-11
 
 ### Added

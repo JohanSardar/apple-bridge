@@ -7,7 +7,7 @@ fn push(text: &mut String, piece: &str) {
 }
 
 pub const DOCS: &str =
-    "https://github.com/JohanSardar/apple-bridge/blob/main/docs/reference/cli.md";
+    "https://eilmer.si/applebridge/source/docs/reference/cli.md";
 
 pub struct Leaf {
     pub path: &'static str,
