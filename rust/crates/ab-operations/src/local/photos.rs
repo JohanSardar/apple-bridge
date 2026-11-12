@@ -86,7 +86,7 @@ pub(super) fn validate(query: &NativeQuery, args: &Value) -> Result<(), Error> {
     }
     let descriptor = descriptor_for(&query.op)?;
     validate_value(args, &descriptor.input["properties"]["args"])?;
-    if query.op == "photos.search" {
+    if matches!(query.op.as_str(), "photos.search" | "photos.places") {
         let start = args.get("start").map(|v| {
             v.as_str()
                 .ok_or(Code::Invalid)?

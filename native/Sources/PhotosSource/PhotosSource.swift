@@ -6,8 +6,9 @@ import SourceSupport
 
 public actor PhotosSource: Source {
     public nonisolated let name = "photos"
-    public static let operations = ["photos.search", "photos.get", "photos.albums", "photos.preview", "photos.contact_sheet", "photos.fetch", "photos.release", "photos.favorite", "photos.album_create", "photos.album_rename", "photos.album_add", "photos.album_remove", "photos.album_delete"]
+    public static let operations = ["photos.search", "photos.places", "photos.get", "photos.albums", "photos.preview", "photos.contact_sheet", "photos.fetch", "photos.release", "photos.favorite", "photos.album_create", "photos.album_rename", "photos.album_add", "photos.album_remove", "photos.album_delete"]
     private let transfers: PhotoTransfers
+    private let places = PhotoPlaces()
     private var searches: [String: PhotoSearchContinuation] = [:]
     private var searchExpiryTask: Task<Void, Never>?
 
@@ -38,10 +39,19 @@ public actor PhotosSource: Source {
         publicFields.removeValue(forKey: "_request")
         let args = JSON.object(publicFields)
         switch operation {
-        case "photos.search": return try search(args)
+        case "photos.search": return try await search(args)
+        case "photos.places": return try await placeSummary(args)
         case "photos.get":
             try fields(args, ["asset_id"])
-            return try details(asset(try string(args, "asset_id")))
+            let value = try asset(try string(args, "asset_id"))
+            let place = await named([value], budget: .seconds(2))[value.localIdentifier]
+            var result = try details(value).object
+            if let place, case .object(var location) = result["location"] {
+                location["place"] = .string(place.name)
+                result["location"] = .object(location)
+                result["place"] = .string(place.name)
+            }
+            return .object(result)
         case "photos.albums": return try albums(args)
         case "photos.preview": return try await photoPreview(args)
         case "photos.contact_sheet": return try await photoContactSheet(args)
@@ -49,7 +59,7 @@ public actor PhotosSource: Source {
         }
     }
 
-    private func search(_ args: JSON) throws -> JSON {
+    private func search(_ args: JSON) async throws -> JSON {
         try fields(args, ["start", "end", "type", "album_id", "favorite", "include_hidden", "near", "radius_m", "cursor", "limit"])
         let limit = try integer(args, "limit", default: 50, maximum: 200, minimum: 1)
         let cursor = args["cursor"] == .null ? nil : try PhotoSearchCursor.decode(string(args, "cursor", maximum: 2048))
@@ -108,12 +118,12 @@ public actor PhotosSource: Source {
             results = PHAsset.fetchAssets(with: options)
         }
         try Task.checkCancellation()
-        var rows: [JSON] = []
+        var found: [PHAsset] = []
         var index = 0
         let stop = min(results.count, options.fetchLimit - 1)
         var boundary = continuation?.cursor.date
         var excluded = continuation?.excluded ?? []
-        while index < stop && rows.count < limit {
+        while index < stop && found.count < limit {
             try Task.checkCancellation()
             let value = results.object(at: index)
             index += 1
@@ -122,7 +132,7 @@ public actor PhotosSource: Source {
             if let near {
                 guard let location = value.location, near.distance(from: location) <= radius else { continue }
             }
-            rows.append(summary(value))
+            found.append(value)
         }
         var next: JSON = .null
         if index < results.count {
@@ -145,7 +155,92 @@ public actor PhotosSource: Source {
             }
             next = .string(try cursor.encode())
         }
+        let names = await named(found, budget: .seconds(3))
+        let rows: [JSON] = found.map { value in
+            var row = summary(value).object
+            if let place = names[value.localIdentifier] { row["place"] = .string(place.name) }
+            return .object(row)
+        }
         return .object(["assets": .array(rows), "examined_count": .number(Double(index)), "next_cursor": next, "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited)])
+    }
+
+    private func named(_ assets: [PHAsset], budget: Duration) async -> [String: PhotoPlace] {
+        var spots: [(PlaceCell, CLLocation)] = []
+        var seen: Set<PlaceCell> = []
+        var cells: [(String, PlaceCell)] = []
+        for value in assets {
+            guard let cell = PlaceCell(value.location), let location = value.location else { continue }
+            cells.append((value.localIdentifier, cell))
+            if seen.insert(cell).inserted { spots.append((cell, location)) }
+        }
+        _ = await places.resolve(spots, budget: budget)
+        var result: [String: PhotoPlace] = [:]
+        for (id, cell) in cells {
+            if let place = await places.cached(cell) { result[id] = place }
+        }
+        return result
+    }
+
+    private func placeSummary(_ args: JSON) async throws -> JSON {
+        try fields(args, ["start", "end", "include_hidden", "include_screenshots"])
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        options.includeHiddenAssets = try boolean(args, "include_hidden", default: false)
+        var predicates: [NSPredicate] = []
+        var bounds: [Date] = []
+        for (key, relation) in [("start", ">="), ("end", "<")] where args[key] != .null {
+            guard let date = parseTimestamp(try string(args, key)) else { throw SourceFailure.invalid }
+            bounds.append(date)
+            predicates.append(NSPredicate(format: "creationDate \(relation) %@", date as NSDate))
+        }
+        if bounds.count == 2, bounds[0] >= bounds[1] { throw SourceFailure.invalid }
+        if try !boolean(args, "include_screenshots", default: false) {
+            predicates.append(NSPredicate(format: "(mediaSubtypes & %d) == 0", PHAssetMediaSubtype.photoScreenshot.rawValue))
+        }
+        options.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        let results = PHAsset.fetchAssets(with: options)
+        guard results.count <= 500_000 else { throw SourceFailure.unavailable }
+        var located: [(PHAsset, PlaceCell)] = []
+        var spots: [(PlaceCell, CLLocation)] = []
+        var seen: Set<PlaceCell> = []
+        var unlocated = 0
+        for index in 0..<results.count {
+            if index % 1000 == 0 { try Task.checkCancellation() }
+            let value = results.object(at: index)
+            guard let location = value.location, let cell = PlaceCell(location) else { unlocated += 1; continue }
+            located.append((value, cell))
+            if seen.insert(cell).inserted { spots.append((cell, location)) }
+        }
+        let complete = await places.resolve(spots, budget: .seconds(25))
+        var groups: [String: PlaceGroup] = [:]
+        var order: [String] = []
+        var unnamed = 0
+        for (value, cell) in located {
+            guard let place = await places.cached(cell) else { unnamed += 1; continue }
+            if groups[place.name] == nil { order.append(place.name); groups[place.name] = PlaceGroup(place: place) }
+            groups[place.name]?.add(value)
+        }
+        let rows = order.compactMap { groups[$0] }
+        func rollup(_ key: (PhotoPlace) -> String?) -> JSON {
+            var totals: [String: PlaceGroup] = [:]
+            var keys: [String] = []
+            for group in rows {
+                guard let name = key(group.place) else { continue }
+                if totals[name] == nil { keys.append(name); totals[name] = PlaceGroup(place: group.place) }
+                totals[name]?.merge(group)
+            }
+            return .array(keys.compactMap { name in totals[name].map { $0.rollup(name) } })
+        }
+        return .object([
+            "places": .array(rows.map(\.json)),
+            "countries": rollup(\.country),
+            "us_states": rollup(\.state),
+            "located_count": .number(Double(located.count)),
+            "unlocated_count": .number(Double(unlocated)),
+            "unnamed_count": .number(Double(unnamed)),
+            "complete": .bool(complete),
+            "limited": .bool(PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited),
+        ])
     }
 
     private func albums(_ args: JSON) throws -> JSON {
@@ -259,6 +354,46 @@ public actor PhotosSource: Source {
             return .object(["completed": .bool(true), "album_id": .string(id)])
         }
         return .object(["completed": .bool(true), "affected_count": .number(Double(max(1, members.count)))])
+    }
+}
+
+private struct PlaceGroup {
+    let place: PhotoPlace
+    var count = 0
+    var first: Date?
+    var last: Date?
+    var places: [String] = []
+    var pick: PHAsset?
+    var pickRank = -1
+
+    mutating func add(_ value: PHAsset) {
+        count += 1
+        if let date = value.creationDate {
+            first = first.map { min($0, date) } ?? date
+            last = last.map { max($0, date) } ?? date
+        }
+        let rank = (value.isFavorite ? 2 : 0) + (value.mediaType == .image ? 1 : 0)
+        if rank > pickRank { pick = value; pickRank = rank }
+    }
+
+    mutating func merge(_ other: PlaceGroup) {
+        count += other.count
+        first = [first, other.first].compactMap { $0 }.min()
+        last = [last, other.last].compactMap { $0 }.max()
+        if !places.contains(other.place.name) { places.append(other.place.name) }
+    }
+
+    var json: JSON {
+        var row = place.json.object
+        row["photo_count"] = .number(Double(count))
+        row["first_taken_at"] = first.map { .string(timestamp($0)) } ?? .null
+        row["last_taken_at"] = last.map { .string(timestamp($0)) } ?? .null
+        row["asset_id"] = pick.map { .string($0.localIdentifier) } ?? .null
+        return .object(row)
+    }
+
+    func rollup(_ name: String) -> JSON {
+        .object(["name": .string(name), "photo_count": .number(Double(count)), "first_taken_at": first.map { .string(timestamp($0)) } ?? .null, "last_taken_at": last.map { .string(timestamp($0)) } ?? .null, "places": .array(places.map(JSON.string))])
     }
 }
 

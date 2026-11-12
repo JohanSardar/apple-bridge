@@ -34,7 +34,7 @@ impl Library {
 
     fn assets(&self) -> Vec<Value> {
         vec![
-            json!({"id":"photo-fixture","type":"image","created_at":"2020-01-02T00:00:00Z","favorite":self.favorite,"subtypes":0}),
+            json!({"id":"photo-fixture","type":"image","created_at":"2020-01-02T00:00:00Z","favorite":self.favorite,"subtypes":0,"place":"Springfield, Illinois, United States"}),
             json!({"id":"video-fixture","type":"video","created_at":"2020-01-01T00:00:00Z","favorite":false,"subtypes":0}),
             json!({"id":"live-fixture","type":"image","created_at":"2019-01-01T00:00:00Z","favorite":false,"subtypes":8}),
         ]
@@ -101,6 +101,12 @@ impl Library {
                 let rows = if near { &assets[..0] } else { &assets[..end] };
                 Ok(json!({"assets":rows,"examined_count":end,"next_cursor":next,"limited":false}))
             }
+            "photos.places" => Ok(json!({
+                "places":[{"place":"Springfield, Illinois, United States","city":"Springfield","state":"Illinois","country":"United States","photo_count":1,"first_taken_at":"2020-01-02T00:00:00Z","last_taken_at":"2020-01-02T00:00:00Z","asset_id":"photo-fixture"}],
+                "countries":[{"name":"United States","photo_count":1,"first_taken_at":"2020-01-02T00:00:00Z","last_taken_at":"2020-01-02T00:00:00Z","places":["Springfield, Illinois, United States"]}],
+                "us_states":[{"name":"Illinois","photo_count":1,"first_taken_at":"2020-01-02T00:00:00Z","last_taken_at":"2020-01-02T00:00:00Z","places":["Springfield, Illinois, United States"]}],
+                "located_count":1,"unlocated_count":2,"unnamed_count":0,"complete":true,"limited":false
+            })),
             "photos.get" => {
                 let mut asset = self
                     .assets()

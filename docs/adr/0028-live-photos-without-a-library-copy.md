@@ -25,3 +25,9 @@ Agents showed the person a numbered contact-sheet cell, a 172 KiB thumbnail, as 
 Two deliberate exceptions to "no photo bytes on disk or in blobs", both made only by an explicit agent call: `photos_show` with `save` writes the original under the bridge home (`blobs/photo-files`, `0700`/`0600`, removed after 24 hours by the next save), and `messages_send` with `photos` stages each photo file, as Photos shows it, as an ordinary message upload with that upload's expiry. Neither enters state, snapshots or replication.
 
 People, scene and text search, and titles, captions and keywords, exist publicly only in the Photos app's scripting dictionary, behind an Automation permission the owner has not granted. They stay out of scope.
+
+## Revision: place names
+
+Agents asked which places the owner visited had to guess from thumbnails: about 70 calls and 10 minutes for one question. PhotoKit exposes coordinates but not the place names Photos shows, so the Helper turns coordinates into names with MapKit's `MKReverseGeocodingRequest`, which needs no Location Services permission. Each search asset with a location gains `place`, and `photos.places` groups a date range's photos by place with counts, first and last dates and one representative asset, plus country and US state rollups.
+
+Lookups go to Apple's geocoding service with one coordinate per 0.05° cell, the first photo seen there, never the photo. Answers stay in Helper memory only (at most 50,000 cells, cleared on restart) and never enter Bridge state, snapshots, replication or disk, so "no library metadata is stored" still holds. Apple rate-limits geocoding: lookups run one at a time under a per-call budget, a refusal pauses them for a minute, and `photos.places` reports `complete: false` instead of guessing. Screenshots are skipped by default because they rarely carry the owner's location.

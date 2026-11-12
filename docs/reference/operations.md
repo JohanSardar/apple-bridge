@@ -6,7 +6,7 @@ This lists the catalog only: whether an operation is usable depends on its sourc
 
 `bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.
 
-160 operations.
+161 operations.
 
 ## audio
 
@@ -2206,7 +2206,20 @@ Create an annotated PDF artifact
 
 ### photos.search
 
-Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. No library metadata is stored. Pages are live, not snapshots.
+Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoKit; coordinate-radius filtering examines at most 1000 candidates per page. examined_count is this page's candidates, not a library total. Follow next_cursor, even on empty pages, keeping the same filters. Each asset has place, its place name, when it has a location. No library metadata is stored. Pages are live, not snapshots.
+
+- Kind: `query`
+- Scope: `photos:read`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | object | yes |  |
+| `deadline_ms` | integer | no |  |
+| `id` | string | no |  |
+
+### photos.places
+
+Where photos were taken, by place name: each place (city, US state, country) with photo_count, first_taken_at, last_taken_at and one representative asset_id, plus countries and us_states rollups. Scans the library live between start and end, skipping screenshots unless include_screenshots. Names come from Apple's geocoder and are remembered only in memory, per 5 km cell; when complete is false, Apple's rate limit stopped the lookup early, so call again for the rest. No library metadata is stored.
 
 - Kind: `query`
 - Scope: `photos:read`
