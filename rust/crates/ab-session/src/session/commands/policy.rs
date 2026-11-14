@@ -40,20 +40,18 @@ pub(super) fn capturable(disposition: &str, evidence: &Value) -> bool {
 }
 
 pub(super) fn needs_capture(operation: &str) -> bool {
-    let source = operation.split('.').next().unwrap_or_default();
-    source != "mac"
-        && !matches!(
-            operation,
-            "focus.set"
-                | "speech.say"
-                | "capture.play_sound"
-                | "capture.screenshot"
-                | "capture.camera_photo"
-                | "capture.record_audio"
-                | "print.document"
-                | "maps.open"
-                | "shortcuts.run"
-        )
+    !matches!(
+        operation,
+        "focus.set"
+            | "speech.say"
+            | "capture.play_sound"
+            | "capture.screenshot"
+            | "capture.camera_photo"
+            | "capture.record_audio"
+            | "mac.screen_record"
+            | "print.document"
+            | "maps.open"
+    )
 }
 
 pub(super) fn saved_frame(saved: &Value) -> Result<IpcFrame, Error> {
@@ -61,6 +59,9 @@ pub(super) fn saved_frame(saved: &Value) -> Result<IpcFrame, Error> {
 }
 
 pub(super) fn source_of(operation: &str) -> &str {
+    if operation == "mac.screen_record" {
+        return "capture";
+    }
     operation.split('.').next().unwrap_or_default()
 }
 
@@ -95,7 +96,7 @@ mod tests {
 
     #[test]
     fn capture_requires_observation_and_limits_indeterminate_to_messages() {
-        for source in ["messages", "calendar", "", "mac"] {
+        for source in ["messages", "calendar", ""] {
             for disposition in [
                 "indeterminate",
                 "locally_observed",
@@ -118,7 +119,14 @@ mod tests {
     }
 
     #[test]
-    fn capture_exemptions_are_exact_except_for_the_mac_source() {
+    fn screen_recording_is_owned_with_capture() {
+        assert_eq!(source_of("mac.screen_record"), "capture");
+        assert_eq!(source_of("capture.screenshot"), "capture");
+        assert!(crate::session::RUST_COMMAND_SOURCES.contains(&source_of("mac.screen_record")));
+    }
+
+    #[test]
+    fn capture_exemptions_are_exact() {
         for operation in [
             "focus.set",
             "speech.say",
@@ -127,10 +135,8 @@ mod tests {
             "capture.camera_photo",
             "capture.record_audio",
             "print.document",
+            "mac.screen_record",
             "maps.open",
-            "shortcuts.run",
-            "mac.open",
-            "mac.other",
         ] {
             assert!(!needs_capture(operation), "{operation}");
         }
@@ -140,8 +146,7 @@ mod tests {
             "files.write",
             "capture.other",
             "focus.other",
-            "shortcuts.other",
-            "macaroni.open",
+            "mac.other",
         ] {
             assert!(needs_capture(operation), "{operation}");
         }

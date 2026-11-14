@@ -20,22 +20,20 @@ pub const SUPPORTED: &[&str] = &[
     "reminders",
     "mail",
     "messages",
-    "safari",
     "usage",
     "notes",
     "phone",
     "voicemail",
     "voice_memos",
     "files",
-    "mac",
     "focus",
-    "shortcuts",
     "pdf",
 ];
 pub const CONFIG_FILE: &str = "session/rust-capture.json";
 pub const STATE_DIRECTORY: &str = "session/capture-state";
 pub const STAGING_DIRECTORY: &str = "session/staging";
 const STAGED: &[&str] = &["notes", "voice_memos", "voicemail"];
+const REMOVED: &[&str] = &["safari", "mac", "shortcuts"];
 const FACTS_ROOT: &str = "session/facts";
 const CALENDAR_LOOKUPS: &str = "calendar-lookups.json";
 pub const FILES_BLOB: &str = "files-blob:";
@@ -161,10 +159,6 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
     let user_home = text(user)?;
     Ok(BTreeMap::from([
         (
-            "safari".to_owned(),
-            json!({"root": text(&library.join("Safari"))?, "facts": "native"}),
-        ),
-        (
             "usage".to_owned(),
             json!({"root": text(&library.join("Biome"))?}),
         ),
@@ -207,16 +201,8 @@ fn defaults(home: &Path, user: &Path) -> Result<BTreeMap<String, Value>, Error> 
             }),
         ),
         (
-            "mac".to_owned(),
-            json!({"root": facts_root("mac")?, "facts": "native"}),
-        ),
-        (
             "focus".to_owned(),
             json!({"root": facts_root("focus")?, "home": user_home, "facts": "native", "facts_poll_ms": 30_000}),
-        ),
-        (
-            "shortcuts".to_owned(),
-            json!({"root": facts_root("shortcuts")?, "facts_poll_ms": 30_000}),
         ),
         ("pdf".to_owned(), json!({"root": facts_root("pdf")?})),
         (
@@ -272,7 +258,12 @@ fn staged_blobs(
 
 fn read_file(home: &Path) -> Result<Option<File>, Error> {
     match std::fs::read(home.join(CONFIG_FILE)) {
-        Ok(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
+        Ok(bytes) => {
+            let mut file: File = serde_json::from_slice(&bytes)?;
+            file.sources
+                .retain(|name, _| !REMOVED.contains(&name.as_str()));
+            Ok(Some(file))
+        }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(error.into()),
     }
@@ -381,7 +372,6 @@ pub fn load(home: &Path, user: Option<&Path>) -> Result<Option<Loaded>, Error> {
             readiness: user.is_some(),
             queries: NativeQueries {
                 mail_bodies,
-                shortcut_roots: user.map(ab_native::shortcut_actions::default_roots),
                 staged: staged_blobs(home, user)?,
             },
         },

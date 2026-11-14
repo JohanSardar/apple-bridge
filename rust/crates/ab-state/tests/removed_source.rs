@@ -514,3 +514,38 @@ fn a_collection_read_does_not_hide_an_unreadable_row() {
             .is_err()
     );
 }
+
+#[test]
+fn a_command_from_a_removed_source_does_not_stop_the_ledger() {
+    let home = tempfile::tempdir().expect("home");
+    let state = gateway_with_contacts(home.path());
+    Connection::open(home.path().join("ledger.db"))
+        .expect("ledger")
+        .execute(
+            "INSERT INTO commands VALUES('cmd_removed','owner','hash','observed',?)",
+            [
+                json!({"source": "mac", "command": {"id": "cmd_removed", "op": "mac.set_volume"}})
+                    .to_string()
+                    .as_bytes(),
+            ],
+        )
+        .expect("plant");
+    let state = reopened(state, home.path());
+    assert!(state.commands().expect("commands").is_empty());
+    assert!(matches!(
+        state.command("cmd_removed"),
+        Err(ab_state::Error::Contract(ab_domain::ErrorCode::NotFound))
+    ));
+    let mut state = state;
+    let reused = serde_json::from_value(json!({
+        "command": {"command_id": "cmd_removed", "op": "reminders.create", "args": {}},
+        "principal": "owner", "source": "reminders", "request_hash": "hash", "state": "admitted",
+        "admission_era": state.admission_era().expect("era"),
+        "created_at": "2026-01-01T00:00:00Z", "expires_at": "2099-01-01T00:00:00Z",
+    }))
+    .expect("record");
+    assert!(matches!(
+        state.transition_command(None, reused),
+        Err(ab_state::Error::IdReused)
+    ));
+}

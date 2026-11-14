@@ -27,28 +27,6 @@ fn receive(socket: &mut UnixStream) -> Fallible<(usize, Value)> {
     Ok((size + 4, serde_json::from_slice(&bytes)?))
 }
 
-fn history(directory: &Path, visits: u32) -> Fallible<()> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64() - 978_307_200.0;
-    let staged = directory.join("History.db.staged");
-    let _ = std::fs::remove_file(&staged);
-    let connection = rusqlite::Connection::open(&staged)?;
-    connection.execute_batch(
-        "BEGIN;CREATE TABLE history_items(id INTEGER PRIMARY KEY,url TEXT,visit_count INTEGER);
-         CREATE TABLE history_visits(id INTEGER PRIMARY KEY,history_item INTEGER,visit_time REAL,title TEXT);
-         INSERT INTO history_items VALUES(1,'https://example.com/',2);",
-    )?;
-    for visit in 0..visits {
-        connection.execute(
-            "INSERT INTO history_visits VALUES(?1,1,?2,?3)",
-            rusqlite::params![visit + 1, now - f64::from(visit), format!("Visit {visit}")],
-        )?;
-    }
-    connection.execute_batch("COMMIT")?;
-    drop(connection);
-    std::fs::rename(&staged, directory.join("History.db"))?;
-    Ok(())
-}
-
 fn expect_silence(socket: &mut UnixStream) -> Fallible<()> {
     socket.set_read_timeout(Some(Duration::from_millis(400)))?;
     let mut byte = [0; 1];
@@ -435,8 +413,8 @@ fn ab_native_decode(text: &str) -> Fallible<Vec<u8>> {
 #[test]
 fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
     let directory = temporary("watch")?;
-    history(&directory, 2)?;
-    let config = json!({"safari":{"root":directory}}).to_string();
+    envelope(&directory, &[1, 2])?;
+    let config = json!({"mail":{"root":directory}}).to_string();
     let mut session = wire(
         readers::from_config(&config)?,
         Options {
@@ -449,10 +427,13 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
         json!({}),
     )?;
     let (size, first) = receive(&mut session.gateway)?;
-    commit(&mut session, "safari", &first, size)?;
+    commit(&mut session, "mail", &first, size)?;
     std::thread::sleep(Duration::from_millis(600));
     let started = std::time::Instant::now();
-    history(&directory, 3)?;
+    rusqlite::Connection::open(directory.join("Envelope Index"))?.execute(
+        "INSERT INTO messages(ROWID,mailbox,subject,sender,date_received,read,message_id) VALUES(3,1,1,1,1700000000,0,'<synthetic-3@example.com>')",
+        [],
+    )?;
     let (_, second) = receive(&mut session.gateway)?;
     assert_eq!(second["predecessor"], first["checkpoint"]);
     assert!(started.elapsed() < Duration::from_secs(3));
@@ -466,17 +447,17 @@ fn watcher_wakes_the_producer_long_before_the_poll_interval() -> Fallible<()> {
 #[test]
 fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
     let home = temporary("home")?;
-    let directory = temporary("home-safari")?;
-    history(&directory, 2)?;
+    let directory = temporary("home-mail")?;
+    envelope(&directory, &[1, 2])?;
     assert!(production::load(&home, None)?.is_none());
     std::fs::create_dir_all(home.join("session"))?;
     std::fs::write(
         home.join(production::CONFIG_FILE),
-        json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
+        json!({"sources":{"mail":{"root":directory},"safari":{"root":directory},"mac":{"root":directory},"shortcuts":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
     assert_eq!(
         production::load(&home, None)?.ok_or("config")?.sources(),
-        ["safari"]
+        ["mail"]
     );
     std::fs::write(
         home.join(production::CONFIG_FILE),
@@ -495,13 +476,13 @@ fn production_config_flips_a_source_to_rust_and_back() -> Fallible<()> {
 
     std::fs::write(
         home.join(production::CONFIG_FILE),
-        json!({"sources":{"safari":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
+        json!({"sources":{"mail":{"root":directory}},"watch":false,"poll_ms":20}).to_string(),
     )?;
     let attached = production::load(&home, None)?
         .ok_or("config")?
         .attached(None)?;
     let mut world = wire(attached.readers, attached.options, json!({}))?;
-    assert_eq!(receive(&mut world.gateway)?.1["source"], "safari");
+    assert_eq!(receive(&mut world.gateway)?.1["source"], "mail");
     world.finish()?;
     std::fs::remove_dir_all(home)?;
     std::fs::remove_dir_all(directory)?;
@@ -998,7 +979,7 @@ struct Slow {
 
 impl readers::CaptureReader for Slow {
     fn source(&self) -> &'static str {
-        "safari"
+        "mail"
     }
 
     fn root(&self) -> &Path {
@@ -1033,7 +1014,7 @@ fn a_busy_reader_never_delays_blob_reads_for_other_sources() -> Fallible<()> {
         std::collections::BTreeMap::new();
     let (release, held) = std::sync::mpsc::channel();
     let (entered, busy) = std::sync::mpsc::channel();
-    sources.insert("safari".into(), Box::new(Slow { entered, held }));
+    sources.insert("mail".into(), Box::new(Slow { entered, held }));
     let mut session = wire(sources, polling(None), json!({}))?;
     busy.recv_timeout(Duration::from_secs(10))?;
     send(

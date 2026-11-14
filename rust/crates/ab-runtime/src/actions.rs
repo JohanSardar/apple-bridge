@@ -17,9 +17,6 @@ impl ActionResolver for Actions {
         if command.op.starts_with("messages.") {
             return self.messages(principal, command);
         }
-        if command.op.starts_with("mac.") && command.op != "mac.screen_record" {
-            return mac_action(command);
-        }
         if command.op.starts_with("mail.") {
             return self.mail(principal, command);
         }
@@ -419,30 +416,6 @@ fn note_failure(mut error: Error) -> Error {
     error
 }
 
-fn mac_action(command: &Command) -> Result<PreparedAction, Error> {
-    let command_shape = ab_commands::Command {
-        id: command.id.clone(),
-        op: command.op.clone(),
-        args: command.args.clone(),
-        expected_version: command.expected_version,
-        wait_ms: i64::try_from(command.wait_ms).map_err(|_| Code::Invalid)?,
-    };
-    let bytes = ab_commands::native_action(
-        &command_shape,
-        &ab_commands::ActionContext {
-            origin: command.origin.clone(),
-            ..ab_commands::ActionContext::default()
-        },
-    )
-    .map_err(command_error)?;
-    Ok(PreparedAction {
-        action: serde_json::from_slice(&bytes).map_err(|_| Code::Corrupt)?,
-        expected_state: None,
-        collection: String::new(),
-        serialization_key: "lists".into(),
-    })
-}
-
 fn native_action(command: &Command) -> Result<PreparedAction, Error> {
     Ok(PreparedAction {
         action: serde_json::value::to_raw_value(&json!({
@@ -480,7 +453,6 @@ fn native_command(op: &str) -> bool {
                 | "capture.record_audio"
                 | "mac.screen_record"
                 | "print.document"
-                | "shortcuts.run"
                 | "focus.set"
         )
 }

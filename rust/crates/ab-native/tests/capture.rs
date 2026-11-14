@@ -1,9 +1,6 @@
 #![allow(clippy::unwrap_used)]
 
-use ab_native::{
-    capture::{Context, Snapshot},
-    safari::{Kind, ReadContext, Reader},
-};
+use ab_native::capture::{Context, Snapshot};
 use std::{
     path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
@@ -48,47 +45,6 @@ fn snapshot_rejects_replacement_before_completeness() {
     drop(scan);
     std::fs::remove_dir_all(root).unwrap();
 }
-#[test]
-fn pending_safari_scans_require_ordered_acknowledgements() {
-    let root = directory();
-    let path = root.join("Bookmarks.plist");
-    let bytes=b"<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>Children</key><array/></dict></plist>";
-    std::fs::write(&path, bytes).unwrap();
-    let context = ReadContext {
-        capture: Context {
-            observed_at: "2026-01-01T00:00:00.000Z".into(),
-            checkpoint: "a".into(),
-            scan_id: "a".into(),
-        },
-        generation: "synthetic".into(),
-        now: 0.0,
-        days: 90.0,
-        max_rows: 100_000,
-        automation_permitted: false,
-    };
-    let mut reader = Reader::default();
-    let first = reader
-        .poll(&root, Kind::Bookmarks, &context)
-        .unwrap()
-        .unwrap();
-    let second = reader
-        .poll(&root, Kind::Bookmarks, &context)
-        .unwrap()
-        .unwrap();
-    reader.commit(second).unwrap();
-    assert!(reader.commit(first).is_err());
-    std::fs::write(&path, b"broken").unwrap();
-    assert!(reader.poll(&root, Kind::Bookmarks, &context).is_err());
-    std::fs::write(&path, bytes).unwrap();
-    assert!(
-        reader
-            .poll(&root, Kind::Bookmarks, &context)
-            .unwrap()
-            .is_none()
-    );
-    std::fs::remove_dir_all(root).unwrap();
-}
-
 #[test]
 fn xml_plist_limits_apply_before_constructing_nested_values() {
     use ab_native::plist;

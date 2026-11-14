@@ -2,9 +2,8 @@ use crate::media_facts::MediaFacts;
 
 use super::{
     AgendaReader, Arc, BTreeMap, CaptureReader, Debug, Deserialize, Duration, Error, FilesReader,
-    FocusReader, MacReader, MailReader, MessagesReader, NotesReader, Path, PathBuf, PdfReader,
-    SafariReader, ShortcutsReader, TelephonyReader, UsageReader, VoiceMemosReader, native_facts,
-    shortcuts,
+    FocusReader, MailReader, MessagesReader, NotesReader, Path, PathBuf, PdfReader,
+    TelephonyReader, UsageReader, VoiceMemosReader, native_facts,
 };
 
 #[derive(Debug, Deserialize)]
@@ -39,10 +38,6 @@ struct SourceConfig {
     roots: Vec<PathBuf>,
     #[serde(default = "default_media_retry")]
     media_retry_ms: u64,
-    #[serde(default = "default_tabs_poll")]
-    tabs_poll_ms: u64,
-    #[serde(default)]
-    executable: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,10 +55,6 @@ enum NativeMarker {
 
 fn default_media_retry() -> u64 {
     60_000
-}
-
-fn default_tabs_poll() -> u64 {
-    5_000
 }
 
 fn default_facts_poll() -> u64 {
@@ -162,13 +153,6 @@ pub fn from_config_linked(
     let mut readers: BTreeMap<String, Box<dyn CaptureReader>> = BTreeMap::new();
     for (source, config) in sources {
         let reader: Box<dyn CaptureReader> = match source.as_str() {
-            "safari" => {
-                let client = linked_client(config.facts.as_ref(), inherited)?;
-                Box::new(
-                    SafariReader::new(config.root, config.generation)
-                        .with_tabs(client, Duration::from_millis(config.tabs_poll_ms.max(1))),
-                )
-            }
             "focus" => {
                 let client =
                     linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
@@ -181,14 +165,6 @@ pub fn from_config_linked(
                 ))
             }
             "pdf" => Box::new(PdfReader::new(config.root)),
-            "shortcuts" => Box::new(ShortcutsReader::new(
-                config.root,
-                config
-                    .executable
-                    .clone()
-                    .unwrap_or_else(|| PathBuf::from(shortcuts::EXECUTABLE)),
-                Duration::from_millis(config.facts_poll_ms.max(1)),
-            )),
             "mail" => Box::new(MailReader::new(config.root)),
             "usage" => Box::new(UsageReader::new(
                 config.root,
@@ -239,23 +215,15 @@ pub fn from_config_linked(
                         .with_media(client, Duration::from_millis(config.media_retry_ms)),
                 )
             }
-            "files" | "mac" => {
+            "files" => {
                 let client =
                     linked_client(config.facts.as_ref(), inherited)?.ok_or(Error::Invalid)?;
-                if source == "mac" {
-                    Box::new(MacReader::new(
-                        config.root,
-                        client,
-                        Duration::from_millis(config.facts_poll_ms.max(1)),
-                    ))
-                } else {
-                    Box::new(FilesReader::new(
-                        config.root,
-                        config.roots,
-                        config.home.as_deref(),
-                        client,
-                    )?)
-                }
+                Box::new(FilesReader::new(
+                    config.root,
+                    config.roots,
+                    config.home.as_deref(),
+                    client,
+                )?)
             }
             "calendar" | "contacts" | "reminders" => {
                 if config.store.is_some() && !["calendar", "reminders"].contains(&source.as_str()) {

@@ -132,7 +132,7 @@ class RunnerTests(unittest.TestCase):
     def test_registered_end_gates(self):
         inventory = json.loads((Path(__file__).parents[1] / 'test-selection.json').read_text())
         entries = {e['id']: e for e in inventory['scenarios']}
-        for identity in ['MAIL-IDLE', 'SAF-IDLE', 'CALL-IDLE', 'RELAY-STREAMS', 'MSG-WATCHER-REARM', 'CAL-STORE-READ', 'WEB-RM-THREAD', 'WEB-RM-CHATS', 'WEB-RM-REMINDERS-ITEMS']:
+        for identity in ['MAIL-IDLE', 'CALL-IDLE', 'RELAY-STREAMS', 'MSG-WATCHER-REARM', 'CAL-STORE-READ', 'WEB-RM-THREAD', 'WEB-RM-CHATS', 'WEB-RM-REMINDERS-ITEMS']:
             self.assertEqual(entries[identity]['recommendation'], 'run-at-end', identity)
 
     def test_success(self):

@@ -100,7 +100,6 @@ fn tcc() -> Result<Value, Box<dyn std::error::Error>> {
         "attachment": attachment,
         "notes": database(&home.join("Library/Group Containers/group.com.apple.notes/NoteStore.sqlite"), "ZICCLOUDSYNCINGOBJECT"),
         "biome": biome,
-        "safari": database(&home.join("Library/Safari/History.db"), "history_items"),
         "calendar_store": database(&home.join("Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb"), "CalendarItem"),
         "reminders_store": reminders_store(&home)
     }))

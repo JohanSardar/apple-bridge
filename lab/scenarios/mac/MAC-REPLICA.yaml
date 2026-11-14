@@ -1,5 +1,0 @@
-id: MAC-REPLICA
-feature: mac.commands
-levels: [replica]
-when:
-  - mac: {}

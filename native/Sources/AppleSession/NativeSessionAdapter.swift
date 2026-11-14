@@ -4,13 +4,11 @@ import SourceSupport
 import CalendarSource
 import ContactsSource
 import RemindersSource
-import MacSource
 import FilesSource
 import MessagesSource
 import MediaDerivatives
 import Contacts
 import FocusSource
-import SafariSource
 import ApplicationServices
 
 extension AppleSession: NativeAdapter {
@@ -23,15 +21,6 @@ extension AppleSession: NativeAdapter {
     private func nativeFacts(files paths: [String]) async throws -> NativeFacts {
         guard let source = additionalSources["files"] as? FilesSource else { throw SourceFailure.unavailable }
         return NativeFacts(items: source.ubiquity(paths), scope: .string("files"), generation: "native/1", complete: true)
-    }
-
-    private func nativeFacts(macState source: MacSource) async throws -> NativeFacts {
-        let state = try await MainActor.run { try source.state() }
-        let rows = state.sorted { $0.key < $1.key }.map { key, value -> JSON in
-            let parts = key.split(separator: "/", maxSplits: 1).map(String.init)
-            return .object(["kind": .string("upsert"), "collection": .string(parts[0]), "native_key": .string(parts[1]), "data": value])
-        }
-        return NativeFacts(items: rows, scope: .string("mac"), generation: "native/1", complete: true)
     }
 
     private func nativeFacts(messagesMedia args: JSON) async throws -> NativeFacts {
@@ -62,26 +51,13 @@ extension AppleSession: NativeAdapter {
         if operation == "contacts.derive_photo" {
             return nativeFacts(single: await sources.contacts.derivePhoto(args["digest"].string), scope: "contacts")
         }
-        if operation == "mac.pasteboard" {
-            guard args.object.isEmpty, let mac = additionalSources["mac"] as? MacSource else { throw SourceFailure.unsupported }
-            return nativeFacts(single: try await mac.primitive("mac.pasteboard_policy", args: .object([:])), scope: "mac")
-        }
         if operation == "accessibility.trusted" {
             guard args.object.isEmpty else { throw SourceFailure.unsupported }
             return nativeFacts(single: .object(["trusted": .bool(AXIsProcessTrusted())]), scope: "accessibility")
         }
-        if operation == "safari.tabs" {
-            guard args.object.isEmpty, let safari = additionalSources["safari"] as? SafariSource else { throw SourceFailure.unsupported }
-            return NativeFacts(items: try await safari.liveTabs(), scope: .string("safari.tab"), generation: "native/1", complete: true)
-        }
         if operation == "files.ubiquity" {
             guard Set(args.object.keys) == ["paths"], case .array(let paths) = args["paths"], paths.allSatisfy({ if case .string = $0 { return true } else { return false } }) else { throw SourceFailure.invalid }
             return try await nativeFacts(files: paths.map(\.string))
-        }
-        if operation == "mac.state" {
-            guard args.object.isEmpty else { throw SourceFailure.unsupported }
-            guard let source = additionalSources["mac"] as? MacSource else { throw SourceFailure.unavailable }
-            return try await nativeFacts(macState: source)
         }
         guard args.object.isEmpty else { throw SourceFailure.unsupported }
         let cache = sources.enumerations
@@ -113,7 +89,6 @@ extension AppleSession: NativeAdapter {
     public func forwardChanges(to server: NativeServer) async {
         let cache = sources.enumerations, agenda = sources.agenda
         let photos = await sources.contacts.photosReady()
-        let mac = additionalSources["mac"] as? MacSource
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 for await _ in await agenda.changes(calendar: true) { await cache.invalidate("calendar"); await server.changed(source: "calendar", generation: "native/1") }
@@ -131,11 +106,6 @@ extension AppleSession: NativeAdapter {
             }
             group.addTask {
                 for await _ in photos { await cache.invalidate("contacts"); await server.changed(source: "contacts", generation: "native/1") }
-            }
-            if let mac {
-                group.addTask {
-                    try? await mac.observe { live in if live { await server.changed(source: "mac", generation: "native/1") } }
-                }
             }
         }
     }

@@ -34,36 +34,9 @@ impl LocalGateway {
         }
         let args: Value = serde_json::from_str(query.args.get()).map_err(|_| Code::Invalid)?;
         super::photos::validate(&query, &args)?;
-        if matches!(
-            query.op.as_str(),
-            "helper.version"
-                | "mac.clipboard_read"
-                | "mac.network_check"
-                | "mac.bluetooth_devices"
-                | "mac.time_machine_status"
-        ) && !args.as_object().is_some_and(serde_json::Map::is_empty)
+        if query.op == "helper.version" && !args.as_object().is_some_and(serde_json::Map::is_empty)
         {
             return Err(Code::Invalid.into());
-        }
-        if query.op == "mac.recognize_song" {
-            use base64::Engine;
-            if !args
-                .as_object()
-                .is_some_and(|a| a.keys().all(|k| k == "audio_blob"))
-            {
-                return Err(Code::Invalid.into());
-            }
-            let data = base64::engine::general_purpose::STANDARD
-                .decode(
-                    args["audio_blob"]
-                        .as_str()
-                        .unwrap_or_default()
-                        .replace(['\r', '\n'], ""),
-                )
-                .map_err(|_| Code::Invalid)?;
-            if data.is_empty() || data.len() > 8 << 20 {
-                return Err(Code::Invalid.into());
-            }
         }
         if query.id.is_empty() {
             query.id = format!("qry_{}", ulid::Ulid::new());

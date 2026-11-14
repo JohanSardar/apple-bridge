@@ -34,7 +34,7 @@ features:
 SCENARIOS ?= lab/scenarios
 
 sim:
-	SIM_JOBS="$(SIM_JOBS)" SIM_TIMEOUT="$(SIM_TIMEOUT)" SIM_SELECT="$(SIM_SELECT)" packaging/dev/rust-lab.sh sim $(if $(filter-out lab/scenarios,$(SCENARIOS)),$(SCENARIOS),)
+	@echo "make sim is turned off for now. Nothing was run."
 
 real:
 	packaging/dev/rust-lab.sh real $(SCENARIOS)

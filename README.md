@@ -76,15 +76,12 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 | Contacts | Contacts, groups | Create, update, delete, manage groups |
 | Notes | Folders, notes | Create, update, delete, move, manage folders |
 | Files | Metadata, search, read (opt-in) | Create, write, move, rename, trash, tag |
-| Safari | History, bookmarks, tabs, Reading List | None |
 | Screen Time | Estimated use per app, per day | None |
 | Phone and voicemail | Call history, [voicemail transcripts and local audio](docs/reference/voicemail.md) | None |
 | Voice Memos | Recordings | None |
-| Mac | Battery, display, network, Bluetooth and more | Volume, appearance, apps, clipboard, notifications and more |
-| Shortcuts | Installed shortcuts and actions | Run a shortcut |
 | Photos (native qualification pending) | [Live PhotoKit search, details and temporary original downloads](docs/reference/photos.md), no synced library copy | Favorites and regular albums |
 
-An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. A connected app makes changes right away. To have one ask you first, run `bridge agents update <id> --level approve`. The [operations reference](docs/reference/operations.md) lists all 158 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
+An iPhone app adds health, location, alarms, Face ID approvals and more. It is in internal testing only. A connected app makes changes right away. To have one ask you first, run `bridge agents update <id> --level approve`. The [operations reference](docs/reference/operations.md) lists all 138 operations, and [feature status](features.yaml) has the known limits. What works depends on the permissions you allow.
 
 ## Commands
 

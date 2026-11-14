@@ -5,7 +5,6 @@ mod contacts;
 mod files;
 #[cfg(test)]
 mod golden;
-mod mac;
 mod maps;
 mod media;
 mod messages;
@@ -16,7 +15,6 @@ mod notes;
 mod photos;
 mod query;
 mod reminders;
-mod shortcuts;
 mod sources;
 mod stale;
 mod vision;
@@ -111,7 +109,6 @@ struct State {
     secret: Vec<u8>,
     calendar: calendar::Live,
     blob: blobs::Fixture,
-    clipboard: String,
     progress: Value,
     completed: BTreeMap<String, BTreeSet<u64>>,
 }
@@ -300,12 +297,6 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/messages" {
         return messages::control_messages(state, tx, &input);
     }
-    if route == "/mac" {
-        return mac::control_mac(state, tx, &input);
-    }
-    if route == "/mac-notifications" {
-        return mac::control_notifications(state, &input);
-    }
     if route == "/calendar" {
         return calendar::control_calendar(state, tx, &input);
     }
@@ -315,7 +306,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/readmodels" {
         return sources::readmodels(state, tx, &input);
     }
-    if matches!(route, "/phone" | "/recordings" | "/safari" | "/usage") {
+    if matches!(route, "/phone" | "/recordings" | "/usage") {
         return sources::control_source(state, tx, route, &input);
     }
     let mut s = lock(state)?;
@@ -1032,12 +1023,8 @@ impl Session<'_> {
             ("contacts", Some("Resolve")) => return self.contacts_resolve(state, &frame),
             ("files", Some("Prepare")) => return self.file_prepare(&frame),
             ("files", Some("Dispatch")) => return self.file_dispatch(state, &frame),
-            ("mac", Some("Prepare")) => return self.mac_prepare(state, &frame),
-            ("mac", Some("Dispatch")) => return self.mac_dispatch(state, &frame),
             ("maps", Some("Prepare")) => return self.maps_prepare(state, &frame),
             ("maps", Some("Dispatch")) => return self.maps_dispatch(state, &frame),
-            ("shortcuts", Some("Prepare")) => return self.shortcuts_prepare(&frame),
-            ("shortcuts", Some("Dispatch")) => return self.shortcuts_dispatch(state, &frame),
             ("reminders", Some("Prepare")) => return self.reminder_prepare(state, &frame),
             ("reminders", Some("Dispatch")) => return self.reminder_dispatch(state, &frame),
             (_, Some("Prepare")) => return self.reject(&frame, "unsupported"),
@@ -1097,9 +1084,7 @@ impl Session<'_> {
                     }
                     return Ok(());
                 }
-                let reply = if let Some(reply) = mac::query(state, &frame)? {
-                    reply
-                } else if let Some(reply) = files::query(state, &frame)? {
+                let reply = if let Some(reply) = files::query(state, &frame)? {
                     reply
                 } else if let Some(reply) = maps::query(&mut self.blobs, &frame) {
                     reply
@@ -1199,10 +1184,8 @@ fn session(
         "mail",
         "phone",
         "files",
-        "safari",
         "voicemail",
         "voice_memos",
-        "mac",
     ];
     let mut capabilities = json!({});
     let mut coverage = json!({});
@@ -1220,7 +1203,6 @@ fn session(
         "reminders.rename_list",
         "reminders.delete_list"
     ]);
-    capabilities["mac"] = json!(mac::CAPABILITIES);
     capabilities["messages"] = messages::operations();
     coverage["messages"] = messages::coverage(true, true);
     for (src, operations) in vision::capabilities() {
@@ -1468,7 +1450,6 @@ fn run() -> Result<()> {
         secret: secret.clone(),
         calendar: calendar::Live::default(),
         blob,
-        clipboard: String::new(),
         progress,
         completed: BTreeMap::new(),
     }));

@@ -20,7 +20,7 @@ HOME = os.path.expanduser("~")
 BRIDGE_TEST = HOME + "/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test"
 MAIL_INDEX = HOME + "/Library/Mail/V10/MailData/Envelope Index"
 REPORTS = HOME + "/Library/Application Support/AppleBridgeDev"
-SCOPES = ",".join(s + ":read," + s + ":write" for s in ("mail", "files", "mac", "focus", "shortcuts", "pdf", "capture", "speech", "maps", "calendar", "print")) + ",system:read"
+SCOPES = ",".join(s + ":read," + s + ":write" for s in ("mail", "files", "focus", "pdf", "capture", "speech", "maps", "calendar", "print")) + ",system:read"
 env = dict(os.environ, APPLE_BRIDGE_SECRET_STORE="file")
 runtime = json.load(open(options.home + "/runtime.json"))
 token = subprocess.check_output([options.bridge, "token", "create", "--scope", SCOPES, "--home", options.home], env=env, text=True).strip()
@@ -320,106 +320,6 @@ def running(name):
     return subprocess.run(["pgrep", "-x", name], stdout=subprocess.DEVNULL).returncode == 0
 
 
-def run_mac():
-    for name, op_name, args, codes in [
-        ("volume_high", "mac.set_volume", {"volume": 101}, ("invalid",)),
-        ("volume_negative", "mac.set_volume", {"volume": -1}, ("invalid",)),
-        ("appearance", "mac.set_appearance", {"appearance": "auto"}, ("invalid",)),
-        ("pane", "mac.open_settings", {"pane": "other"}, ("invalid",)),
-        ("notify_empty", "mac.notify", {"title": "", "body": "b"}, ("invalid",)),
-        ("notify_url", "mac.notify", {"title": tag, "body": "b", "action_url": "file:///etc/hosts"}, ("invalid",)),
-        ("keep_awake_long", "mac.keep_awake", {"on": True, "duration": 86401}, ("invalid",)),
-        ("lock_screen", "mac.lock_screen", {}, ("unsupported", "forbidden")),
-        ("restart", "mac.restart", {}, ("unsupported", "forbidden")),
-        ("shutdown", "mac.shutdown", {}, ("unsupported", "forbidden")),
-        ("sleep_display", "mac.sleep_display", {}, ("unsupported", "forbidden")),
-    ]:
-        reply = command(op_name, args)
-        check("mac_refused_%s" % name, refused(reply, *codes), brief(reply))
-    devices = [r for r in records("mac.audio_device", 100) if not r.get("deleted")]
-    output = next((r["data"] for r in devices if r["data"].get("default") and r["data"].get("output") and "volume" in r["data"]), None)
-    if output is not None:
-        before = round(output["volume"] * 100)
-        goal = before - 1 if before > 1 else before + 1
-        reply = command("mac.set_volume", {"volume": goal})
-        check("mac_set_volume_observed", observed(reply), brief(reply))
-        reply = command("mac.set_volume", {"volume": before})
-        check("mac_set_volume_restored", observed(reply), brief(reply))
-        muted = bool(output.get("muted"))
-        reply = command("mac.set_mute", {"muted": muted})
-        check("mac_set_mute_same_value_observed", observed(reply), brief(reply))
-    else:
-        print("INFO no default output with a volume; volume not run")
-    display = next((r["data"] for r in records("mac.display", 5)), {})
-    if display.get("appearance") in ("light", "dark"):
-        reply = command("mac.set_appearance", {"appearance": display["appearance"]})
-        check("mac_set_appearance_same_value_observed", observed(reply), brief(reply))
-    bundle = "com.apple.calculator"
-    had = running("Calculator")
-    reply = command("mac.launch_app", {"bundle_id": bundle})
-    check("mac_launch_app_observed", observed(reply) and running("Calculator"), brief(reply))
-    reply = command("mac.activate_app", {"bundle_id": bundle})
-    check("mac_activate_app_observed", observed(reply), brief(reply))
-    if not had:
-        reply = command("mac.quit_app", {"bundle_id": bundle})
-        check("mac_quit_app_observed", observed(reply) and not running("Calculator"), brief(reply))
-    reply = command("mac.keep_awake", {"on": True, "duration": 5})
-    check("mac_keep_awake_on_observed", observed(reply), brief(reply))
-    reply = command("mac.keep_awake", {"on": False})
-    check("mac_keep_awake_off_observed", observed(reply), brief(reply))
-    before = query("mac.clipboard_read", {})
-    saved = before.get("result_json", before.get("result", before)) if isinstance(before, dict) else {}
-    if isinstance(saved, dict) and isinstance(saved.get("text"), str):
-        reply = command("mac.clipboard_write", {"text": tag})
-        check("mac_clipboard_write_observed", observed(reply), brief(reply))
-        reply = command("mac.clipboard_write", {"text": saved["text"]})
-        check("mac_clipboard_restored", observed(reply), brief(reply))
-    elif isinstance(before, dict) and before.get("error"):
-        reply = command("mac.clipboard_write", {"text": tag})
-        check("mac_clipboard_write_refused_without_always_allow", isinstance(reply, dict) and reply.get("error"), brief(reply))
-    else:
-        print("INFO mac.clipboard_write not run: the clipboard could not be read back to restore it")
-    reply = command("mac.notify", {"title": tag, "body": "Apple Bridge test notification"})
-    print("INFO mac.notify", brief(reply))
-    had_settings = running("System Settings")
-    reply = command("mac.open_settings", {"pane": "general"})
-    check("mac_open_settings_observed", observed(reply), brief(reply))
-    if not had_settings:
-        subprocess.run(["pkill", "-TERM", "-x", "System Settings"])
-    for name in ("mac.time_machine_status", "mac.bluetooth_devices", "mac.network_check"):
-        reply = query(name, {})
-        check("mac_query_%s" % name.split(".")[1], isinstance(reply, dict) and not reply.get("error"), brief(reply))
-    reply = query("mac.recognize_song", {"audio_blob": encoded("x")})
-    check("mac_query_recognize_song_limited", "limited" in json.dumps(reply), brief(reply))
-    reply = query("mac.time_machine_status", {"extra": 1})
-    check("mac_query_extra_args_refused", isinstance(reply, dict) and reply.get("error"), brief(reply))
-    reply = command("mac.iwork_export", {"app": "pages", "format": "pdf", "document_blob": encoded("[ab-test] x")})
-    print("INFO mac.iwork_export", brief(reply))
-    print("INFO mac.set_wallpaper not run: the current wallpaper cannot be restored")
-
-
-def run_shortcuts():
-    for name, args in [
-        ("flag_short", {"shortcut": "-h"}),
-        ("flag_long", {"shortcut": "--output-path=/tmp/ab-test-x"}),
-        ("blank", {"shortcut": "   "}),
-        ("long_timeout", {"shortcut": "AB Echo", "timeout_ms": 300001}),
-        ("two_inputs", {"shortcut": "AB Echo", "input": "x", "input_base64": encoded("x")}),
-        ("big_input", {"shortcut": "AB Echo", "input": "x" * 16385}),
-    ]:
-        reply = command("shortcuts.run", args)
-        check("shortcuts_refused_%s" % name, refused(reply, "invalid"), brief(reply))
-    check("shortcuts_flag_wrote_nothing", not os.path.exists("/tmp/ab-test-x"))
-    words = tag + " echo"
-    reply = command("shortcuts.run", {"shortcut": "AB Echo", "input": words, "timeout_ms": 30000})
-    evidence = reply.get("evidence", {}) if isinstance(reply, dict) else {}
-    check("shortcuts_run_echo_observed", observed(reply), brief(reply))
-    output = base64.b64decode(evidence.get("output_base64", "") or "") if isinstance(evidence, dict) else b""
-    print("INFO echo output bytes", len(output), "contains input", words.encode() in output)
-    reply = command("shortcuts.run", {"shortcut": tag + " no such shortcut", "timeout_ms": 15000})
-    check("shortcuts_missing_is_not_observed", isinstance(reply, dict) and reply.get("disposition") != "locally_observed", brief(reply))
-
-
 def focus_status():
     rows = records("focus.status", 5)
     return rows[0]["data"] if rows else {}
@@ -585,7 +485,7 @@ def run_calendar():
     check("calendar_series_gone", wait_for(lambda: not calendar_events(series), 90), len(calendar_events(series)))
 
 
-RUNNERS = {"calendar": run_calendar, "mail": run_mail, "files": run_files, "mac": run_mac, "shortcuts": run_shortcuts, "focus": run_focus, "pdf": run_pdf, "playback": run_playback, "maps": run_maps, "capture": run_capture}
+RUNNERS = {"calendar": run_calendar, "mail": run_mail, "files": run_files, "focus": run_focus, "pdf": run_pdf, "playback": run_playback, "maps": run_maps, "capture": run_capture}
 
 
 def main():

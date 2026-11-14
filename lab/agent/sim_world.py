@@ -106,7 +106,7 @@ def main():
     control(sim, '/dataset', {'records': demo['records'] + fixtures()})
     catalog = json.loads((pathlib.Path(__file__).resolve().parents[2] / 'contracts/golden/catalog.json').read_text())
     operations = catalog['operations'] if isinstance(catalog, dict) else catalog
-    scopes = sorted({o['scope'] for o in operations if o['scope'] and not o['scope'].startswith('system')} | {f'{s}:read' for s in ('usage', 'safari', 'voicemail', 'phone', 'voice_memos')})
+    scopes = sorted({o['scope'] for o in operations if o['scope'] and not o['scope'].startswith('system')} | {f'{s}:read' for s in ('usage', 'voicemail', 'phone', 'voice_memos')})
     for level in ('full', 'approve', 'read'):
         (home / f'{level}.tok').write_text(agent(binaries / 'bridge', gateway, f'suite-{level}', level, scopes))
     (home / 'grader.tok').write_text(agent(binaries / 'bridge', gateway, 'suite-grader', 'full', scopes))

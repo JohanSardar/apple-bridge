@@ -201,7 +201,7 @@ impl LocalGateway {
         }
         record = self.transition(record, State::Dispatched, None, None, None)?;
         let result = tokio::time::timeout(
-            outcome_timeout(&record.command)?,
+            outcome_timeout(&record.command),
             self.peer.exchange(IpcFrame {
                 t: "Dispatch".into(),
                 origin: record.command.origin.clone(),

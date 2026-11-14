@@ -231,8 +231,7 @@ Examples:
 
 Notes:
   Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording,
-  speech_recognition, focus, bluetooth, notifications, automation_mail, automation_safari,
-  automation_shortcuts_events.
+  speech_recognition, focus, automation_mail.
 ```
 
 ## bridge stats

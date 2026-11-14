@@ -5,7 +5,6 @@ import NativeProtocol
 import SourceSupport
 import Contacts
 import EventKit
-import UserNotifications
 import ScreenCaptureKit
 import MapsSource
 
@@ -89,7 +88,6 @@ struct SessionChecks {
             ("contacts", CNErrorDomain, CNError.Code.authorizationDenied.rawValue),
             ("calendar", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
             ("reminders", EKErrorDomain, EKError.Code.eventStoreNotAuthorized.rawValue),
-            ("notifications", UNErrorDomain, UNError.Code.notificationsNotAllowed.rawValue),
             ("screen_recording", SCStreamErrorDomain, SCStreamError.Code.userDeclined.rawValue)
         ] {
             for attempt in 0..<2 {

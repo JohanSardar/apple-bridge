@@ -1,5 +1,0 @@
-id: MAC-IDLE
-feature: mac.capture
-levels: [sim, real]
-when:
-  - mac: {}

@@ -9,15 +9,13 @@ import CoreGraphics
 import ScreenCaptureKit
 import Speech
 import Intents
-import CoreBluetooth
-import UserNotifications
 import AppKit
 import Carbon
 
 @MainActor
 public enum NewPermissions {
-    public static let automation = ["automation_mail": "com.apple.mail", "automation_safari": "com.apple.Safari", "automation_shortcuts_events": "com.apple.shortcuts.events"]
-    public static let names = ["photos", "location", "camera", "microphone", "screen_recording", "speech_recognition", "focus", "bluetooth", "notifications"] + automation.keys.sorted()
+    public static let automation = ["automation_mail": "com.apple.mail"]
+    public static let names = ["photos", "location", "camera", "microphone", "screen_recording", "speech_recognition", "focus"] + automation.keys.sorted()
     public static let levelOne = ["contacts", "calendar", "reminders"]
     public static let requestable = names + levelOne
 
@@ -37,11 +35,8 @@ public enum NewPermissions {
         result["camera"] = state(AVCaptureDevice.authorizationStatus(for: .video).rawValue, authorized: [3])
         result["microphone"] = state(AVCaptureDevice.authorizationStatus(for: .audio).rawValue, authorized: [3])
         result["speech_recognition"] = state(SFSpeechRecognizer.authorizationStatus().rawValue, authorized: [3])
-        result["bluetooth"] = state(CBManager.authorization.rawValue, authorized: [3])
         result["focus"] = state(INFocusStatusCenter.default.authorizationStatus.rawValue, authorized: [3])
         result["screen_recording"] = CGPreflightScreenCaptureAccess() ? "authorized" : "unknown"
-        let notifications = await UNUserNotificationCenter.current().notificationSettings()
-        result["notifications"] = notifications.authorizationStatus == .notDetermined ? "not_determined" : notifications.authorizationStatus == .denied ? "denied" : [.authorized, .provisional].contains(notifications.authorizationStatus) ? "authorized" : "unknown"
         for (name, bundle) in automation {
             let code = await Task.detached {
                 let target = NSAppleEventDescriptor(bundleIdentifier: bundle)
@@ -99,7 +94,6 @@ public enum NewPermissions {
     public typealias RequestAdapter = @MainActor () async throws -> Void
     public private(set) static var requestAPICalls = 0
     private static var location: LocationRequest?
-    private static var bluetooth: CBCentralManager?
 
     @MainActor
     private final class LocationRequest: NSObject, @preconcurrency CLLocationManagerDelegate {
@@ -137,7 +131,6 @@ public enum NewPermissions {
         let error = error as NSError
         return (error.domain == CNErrorDomain && error.code == CNError.Code.authorizationDenied.rawValue)
             || (error.domain == EKErrorDomain && error.code == EKError.Code.eventStoreNotAuthorized.rawValue)
-            || (error.domain == UNErrorDomain && error.code == UNError.Code.notificationsNotAllowed.rawValue)
             || (error.domain == SCStreamErrorDomain && error.code == SCStreamError.Code.userDeclined.rawValue)
     }
     public static let requestDeadline: Duration = .seconds(150)
@@ -221,17 +214,6 @@ public enum NewPermissions {
             }
         case "focus":
             try await call("focus", adapters: adapters) { try requireAccess(await INFocusStatusCenter.default.requestAuthorization() == .authorized) }
-        case "bluetooth":
-            try await call("bluetooth", adapters: adapters) {
-                bluetooth = CBCentralManager(delegate: nil, queue: nil, options: [CBCentralManagerOptionShowPowerAlertKey: false])
-                for _ in 0..<240 {
-                    if CBManager.authorization != .notDetermined { break }
-                    try await Task.sleep(for: .milliseconds(250))
-                }
-                try requireAccess(![.denied, .restricted].contains(CBManager.authorization))
-            }
-        case "notifications":
-            try await call("notifications", adapters: adapters) { try requireAccess(try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) }
         default:
             guard let bundle = automation[name] else { throw HelperCommandFailure.unknownCommand }
             try await call(name, adapters: adapters) {

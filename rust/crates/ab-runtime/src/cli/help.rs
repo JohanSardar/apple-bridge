@@ -294,7 +294,7 @@ pub const LEAVES: &[Leaf] = &[
             "bridge permissions request camera",
         )],
         notes: &[
-            "Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording, speech_recognition, focus, bluetooth, notifications, automation_mail, automation_safari, automation_shortcuts_events.",
+            "Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording, speech_recognition, focus, automation_mail.",
         ],
         schema: &[
             ("permission", "string", false),

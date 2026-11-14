@@ -24,32 +24,28 @@ results = []
 latencies = []
 created = []
 externals = []
-safari_windows = []
 mail_subjects = []
 launched = []
 made = []
 EXTERNAL_BOUND = float(os.environ.get("REAL_EXTERNAL_BOUND", "45"))
 OPS_TIMEOUT = 60
 
-SCOPES = "reminders:read,reminders:write,calendar:read,calendar:write,contacts:read,contacts:write,notes:read,notes:write,system:read,safari:read,mail:read,phone:read,usage:read,files:read,mac:read,focus:read,shortcuts:read,voicemail:read,voice_memos:read"
+SCOPES = "reminders:read,reminders:write,calendar:read,calendar:write,contacts:read,contacts:write,notes:read,notes:write,system:read,mail:read,phone:read,usage:read,files:read,focus:read,voicemail:read,voice_memos:read"
 COLLECTIONS = {
     "reminders": ["reminders.list", "reminders.reminder"],
     "calendar": ["calendar.calendar", "calendar.event"],
     "contacts": ["contacts.contact"],
     "notes": ["notes.folder", "notes.note"],
-    "safari": ["safari.tab", "safari.bookmark", "safari.reading_list"],
     "mail": ["mail.account", "mail.mailbox"],
     "phone": ["phone.call"],
     "usage": ["usage.app_day", "usage.device"],
     "files": ["files.item"],
     "focus": ["focus.status"],
-    "shortcuts": ["shortcuts.shortcut", "shortcuts.folder"],
     "voicemail": ["voicemail.message"],
     "voice_memos": ["voice_memos.recording"],
-    "mac": ["mac.power", "mac.display"],
 }
-ANCHOR = {"reminders": "reminders.list", "calendar": "calendar.calendar", "contacts": "contacts.contact", "notes": "notes.folder", "safari": "safari.history", "mail": "mail.mailbox", "phone": "phone.call", "usage": "usage.app_day", "files": "files.item", "focus": "focus.status", "shortcuts": "shortcuts.shortcut", "mac": "mac.app"}
-APP = {"notes": "Notes", "safari": "Safari", "mail": "Mail"}
+ANCHOR = {"reminders": "reminders.list", "calendar": "calendar.calendar", "contacts": "contacts.contact", "notes": "notes.folder", "mail": "mail.mailbox", "phone": "phone.call", "usage": "usage.app_day", "files": "files.item", "focus": "focus.status"}
+APP = {"notes": "Notes", "mail": "Mail"}
 
 
 def check(name, ok, detail=""):
@@ -360,44 +356,6 @@ def run_notes_lifecycle(folder_title, tag):
     check("scripted_delete_reaches_gateway_once_written", timed("scripted_delete_visible", lambda: gone("notes.note", found["id"]), EXTERNAL_BOUND))
 
 
-def tab_with(token):
-    return next((r for r in records("safari.tab") if live(r) and token in blob(r)), None)
-
-
-def history_with(token):
-    return next((r for r in records("safari.history") if live(r) and token in blob(r)), None)
-
-
-def run_safari(tag):
-    started_app("Safari")
-    token = "abtest" + secrets.token_hex(4)
-    first = "https://example.com/?ab-test=%s-a" % token
-    second = "https://example.com/?ab-test=%s-b" % token
-    made = helper_change("create", url=first)
-    if not check("external_create_done", made.get("state") == "done", made.get("reason")):
-        return
-    key = made["key"]
-    safari_windows.append((key, token))
-    check("tab_create_reaches_gateway", timed("tab_create_visible", lambda: tab_with(token + "-a"), EXTERNAL_BOUND))
-    check("history_visit_reaches_gateway", timed("history_create_visible", lambda: history_with(token + "-a"), float(os.environ.get("REAL_HISTORY_BOUND", "120"))))
-    rounds = int(os.environ.get("REAL_TAB_ROUNDS", "3"))
-    for index in range(rounds):
-        marker = "%s-n%d" % (token, index)
-        moved = helper_change("update", key=key, marker=token, url="https://example.com/?ab-test=%s" % marker)
-        check("tab_update_done_%d" % index, moved.get("state") == "done", moved.get("reason"))
-        check("tab_update_reaches_gateway_%d" % index, timed("tab_update_%d" % index, lambda: tab_with(marker), EXTERNAL_BOUND))
-        check("tab_old_url_replaced_%d" % index, tab_with(token + "-a") is None)
-        time.sleep(float(os.environ.get("REAL_TAB_GAP", "30")))
-    moved = helper_change("update", key=key, marker=token, url=second)
-    check("external_update_done", moved.get("state") == "done", moved.get("reason"))
-    check("tab_update_reaches_gateway", timed("tab_update_visible", lambda: tab_with(token + "-b"), EXTERNAL_BOUND))
-    closed = helper_change("delete", key=key, marker=token)
-    if check("external_delete_done", closed.get("state") == "done", closed.get("reason")):
-        safari_windows.remove((key, token))
-        check("tab_close_reaches_gateway", timed("tab_close_visible", lambda: tab_with(token) is None, EXTERNAL_BOUND))
-    note("safari history visits stay in Safari, which offers no scripted removal: https://example.com/?ab-test=%s-*" % token)
-
-
 def mail_records(subject):
     return [r for r in records("mail.message") if subject in blob(r)]
 
@@ -481,25 +439,6 @@ def run_files(tag):
     check("external_delete_reached_gateway", timed("external_delete", lambda: gone("files.item", created_record["id"]), EXTERNAL_BOUND))
 
 
-def app_records(bundle):
-    return [r for r in records("mac.app") if live(r) and r.get("data", {}).get("bundle_id") == bundle]
-
-
-def run_mac(tag):
-    bundle, name = "com.apple.calculator", "Calculator"
-    if subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0:
-        note("Calculator already running; not touching it")
-        return
-    subprocess.run(["open", "-g", "-a", name], check=False, timeout=30)
-    launched.append(name)
-    found = timed("external_app_launch", lambda: app_records(bundle), EXTERNAL_BOUND)
-    if not check("external_app_launch_reached_gateway", found):
-        return
-    subprocess.run(["pkill", "-TERM", "-x", name], check=False, timeout=30)
-    launched.remove(name)
-    check("external_app_quit_reached_gateway", timed("external_app_quit", lambda: not app_records(bundle), EXTERNAL_BOUND))
-
-
 def focus_state():
     rows = [r for r in records("focus.status") if live(r)]
     return rows[0].get("data", {}) if rows else {}
@@ -526,14 +465,6 @@ def run_focus(tag):
     finally:
         turn(False)
     check("external_focus_off_reached_gateway", timed("external_focus_off", lambda: focus_state().get("focused") is False, EXTERNAL_BOUND))
-
-
-def run_shortcuts(tag):
-    listing = subprocess.run(["shortcuts", "list", "--show-identifiers"], capture_output=True, text=True, timeout=30).stdout.splitlines()
-    identifiers = {line.rsplit(" (", 1)[1].rstrip(")") for line in listing if " (" in line}
-    captured = {r["data"]["identifier"] for r in records("shortcuts.shortcut") if live(r)}
-    check("inventory_equals_the_cli", identifiers == captured, "%d cli, %d gateway" % (len(identifiers), len(captured)))
-    note("no outside change: the shortcuts CLI cannot create or delete one without the UI")
 
 
 def run_recordings(tag):
@@ -724,8 +655,6 @@ def cleanup_created():
     for key in list(externals):
         removed = external_delete(key)
         note("cleanup external by key: %s" % removed.get("state"))
-    for key, marker in list(safari_windows):
-        note("cleanup safari tab: %s" % helper_change("delete", key=key, marker=marker).get("state"))
     for subject in list(mail_subjects):
         note("cleanup mail draft: %s" % helper_change("delete", title=subject).get("state"))
     for name in launched:
@@ -767,7 +696,7 @@ try:
     if source == "notes":
         started_app("Notes")
         started_app("System Events")
-    {"reminders": run_reminders, "calendar": run_calendar, "contacts": run_contacts, "notes": run_notes, "safari": run_safari, "mail": run_mail, "files": run_files, "mac": run_mac, "focus": run_focus, "shortcuts": run_shortcuts, "voicemail": run_recordings, "voice_memos": run_recordings, "usage": run_usage, "phone": run_phone}[source](tag)
+    {"reminders": run_reminders, "calendar": run_calendar, "contacts": run_contacts, "notes": run_notes, "mail": run_mail, "files": run_files, "focus": run_focus, "voicemail": run_recordings, "voice_memos": run_recordings, "usage": run_usage, "phone": run_phone}[source](tag)
 except Exception as error:
     check("driver_exception", False, type(error).__name__ + ":" + str(error)[:120])
 finally:

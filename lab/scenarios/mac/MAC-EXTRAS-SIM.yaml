@@ -1,5 +1,0 @@
-id: MAC-EXTRAS-SIM
-feature: mac.extras
-levels: [sim]
-when:
-  - mac: {}

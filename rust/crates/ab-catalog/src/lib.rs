@@ -65,7 +65,7 @@ mod optional_source {
 pub fn operations() -> Result<Vec<OperationDescriptor>, serde_json::Error> {
     let schemas: Vec<Value> = serde_json::from_str(include_str!("schemas.json"))?;
     let mut operations = descriptors::descriptors(&schemas);
-    operations.extend(photos::descriptors(&schemas[47]));
+    operations.extend(photos::descriptors(&schemas[46]));
     Ok(operations)
 }
 

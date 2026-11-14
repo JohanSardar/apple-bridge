@@ -17,19 +17,6 @@ impl LocalGateway {
         if !valid_command_id(&command.id) || command.wait_ms > 15000 {
             return Err(Code::Invalid.into());
         }
-        if matches!(
-            command.op.as_str(),
-            "mac.lock_screen" | "mac.sleep_display" | "mac.restart" | "mac.shutdown"
-        ) && !principal.is_agent()
-        {
-            return Err(Code::Forbidden.into());
-        }
-        if command.op == "mac.clipboard_write"
-            && principal.is_agent()
-            && principal.level == "approve"
-        {
-            return Err(Code::Unsupported.into());
-        }
         let descriptor = descriptor_for(&command.op)?;
         if descriptor.kind != ab_catalog::OperationKind::Command {
             return Err(Code::Unsupported.into());

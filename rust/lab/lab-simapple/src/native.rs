@@ -26,13 +26,6 @@ const REVALIDATION: [(&str, &str); 7] = [
     ("contacts.contacts", "contacts.contact"),
 ];
 
-const MAC_SCOPE: [&str; 5] = [
-    "mac.audio_device",
-    "mac.display",
-    "mac.power",
-    "mac.network",
-    "mac.app",
-];
 const MAX_UBIQUITY: usize = 500;
 
 const FACTS: [(&str, &str, &str); 7] = [
@@ -82,7 +75,7 @@ fn read_frame(stream: &mut UnixStream) -> Result<Value> {
 }
 
 pub(super) fn changed(source: &str) {
-    if !matches!(source, "calendar" | "contacts" | "reminders" | "mac") {
+    if !matches!(source, "calendar" | "contacts" | "reminders") {
         return;
     }
     let links = LINKS.lock().map(|links| links.clone()).unwrap_or_default();
@@ -180,48 +173,31 @@ fn local_facts(
 ) -> std::result::Result<Snapshot, &'static str> {
     let s = lock(state).map_err(|_| "unavailable")?;
     let records = s.records();
-    let (items, scope) = if operation == "mac.state" {
-        let items = records
-            .iter()
-            .filter(|row| {
-                row["kind"] != "absent"
-                    && row["collection"]
-                        .as_str()
-                        .is_some_and(|collection| MAC_SCOPE.contains(&collection))
-            })
-            .map(|row| {
-                json!({"kind":"upsert","collection":row["collection"],"native_key":row["native_key"],"data":row["data"]})
-            })
-            .collect();
-        (items, json!("mac"))
-    } else {
-        let paths = args["paths"].as_array().cloned().unwrap_or_default();
-        let items = paths
-            .iter()
-            .map(|path| {
-                let status = records
-                    .iter()
-                    .find(|row| {
-                        row["collection"] == "files.item"
-                            && row["kind"] != "absent"
-                            && row["native_key"] == *path
-                    })
-                    .map_or("local", |row| {
-                        if row["data"]["downloaded"] == false {
-                            "NSURLUbiquitousItemDownloadingStatusNotDownloaded"
-                        } else {
-                            row["data"]["icloud_status"].as_str().unwrap_or("local")
-                        }
-                    });
-                json!({"path":path,"status":status})
-            })
-            .collect();
-        (items, json!("files"))
-    };
+    let paths = args["paths"].as_array().cloned().unwrap_or_default();
+    let items = paths
+        .iter()
+        .map(|path| {
+            let status = records
+                .iter()
+                .find(|row| {
+                    row["collection"] == "files.item"
+                        && row["kind"] != "absent"
+                        && row["native_key"] == *path
+                })
+                .map_or("local", |row| {
+                    if row["data"]["downloaded"] == false {
+                        "NSURLUbiquitousItemDownloadingStatusNotDownloaded"
+                    } else {
+                        row["data"]["icloud_status"].as_str().unwrap_or("local")
+                    }
+                });
+            json!({"path":path,"status":status})
+        })
+        .collect();
     Ok(Snapshot {
         operation: operation.to_owned(),
         items,
-        scope,
+        scope: json!("files"),
         generation: "native/1".into(),
         expires: Instant::now() + Duration::from_secs(60),
     })
@@ -233,7 +209,7 @@ fn facts_of(
     fence: u64,
     args: &Value,
 ) -> std::result::Result<Snapshot, &'static str> {
-    if matches!(operation, "mac.state" | "files.ubiquity") {
+    if operation == "files.ubiquity" {
         return local_facts(state, operation, args);
     }
     let Some((_, source, collection)) = FACTS.iter().find(|(name, _, _)| *name == operation) else {
@@ -433,7 +409,6 @@ mod tests {
             secret: Vec::new(),
             calendar: crate::calendar::Live::default(),
             blob: crate::blobs::Fixture::default(),
-            clipboard: String::new(),
             progress: Value::Null,
             completed: BTreeMap::new(),
         }))
@@ -468,38 +443,6 @@ mod tests {
         );
         assert_eq!(welcome["t"], "Welcome");
         stream
-    }
-
-    #[test]
-    fn mac_state_serves_only_the_five_mac_collections() {
-        let records = json!({
-            "mac.power/system": {"kind":"upsert","collection":"mac.power","native_key":"system","data":{"charging":true}},
-            "mac.app/1": {"kind":"upsert","collection":"mac.app","native_key":"1","data":{"name":"Mail"}},
-            "mac.bluetooth_device/x": {"kind":"upsert","collection":"mac.bluetooth_device","native_key":"x","data":{}},
-            "files.item/a": {"kind":"upsert","collection":"files.item","native_key":"/a","data":{}},
-        });
-        let mut stream = connect(&records, "mac");
-        let page = exchange(
-            &mut stream,
-            &json!({"t":"Facts","id":"m1","op":"mac.state","args":{},"snapshot":null,"cursor":null,"limit":100}),
-        );
-        assert_eq!(page["t"], "FactPage");
-        assert_eq!(page["complete"], true);
-        assert_eq!(page["scope"], "mac");
-        assert_eq!(page["generation"], "native/1");
-        let keys: Vec<&str> = page["items"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(|item| item["native_key"].as_str())
-            .collect();
-        assert_eq!(keys, ["1", "system"]);
-        assert_eq!(page["items"][0]["kind"], "upsert");
-        let refused = exchange(
-            &mut stream,
-            &json!({"t":"Facts","id":"m2","op":"mac.state","args":{"x":1},"snapshot":null,"cursor":null,"limit":100}),
-        );
-        assert_eq!(refused["code"], "invalid");
     }
 
     #[test]

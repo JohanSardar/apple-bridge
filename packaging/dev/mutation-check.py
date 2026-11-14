@@ -12,8 +12,6 @@ SESSION = "rust/crates/ab-session/src/session/"
 FILES = SESSION + "files.rs"
 MAIL = SESSION + "mail.rs"
 FOCUS = SESSION + "focus.rs"
-SHORTCUTS = SESSION + "shortcuts.rs"
-MAC = SESSION + "mac.rs"
 MEDIA = SESSION + "media.rs"
 LOOKUP = "rust/crates/ab-session/src/calendar_lookup.rs"
 COMMANDS = "rust/crates/ab-commands/src/sources.rs"
@@ -45,11 +43,6 @@ RULES = [
     ("focus: only Do Not Disturb", session + ("session::focus",), [(FOCUS, '|| text(args, "mode") != "Do Not Disturb"\n', '')]),
     ("focus: an end time needs on and the future", session + ("session::focus",), [(FOCUS, 'if !until.is_empty() && (args["on"] != true || !future(until)) {', 'if false {')]),
     ("focus: nothing runs without the grant", session + ("session::focus",), [(FOCUS, 'text(current, "authorization") == "authorized" && !current["focused"].is_null()', 'true')]),
-    ("shortcuts: a name cannot be a flag", session + ("session::shortcuts",), [(SHORTCUTS, "|| name.starts_with('-')\n", '')]),
-    ("shortcuts: a blank name refuses", session + ("session::shortcuts",), [(SHORTCUTS, 'if name.trim().is_empty()\n', 'if false\n')]),
-    ("shortcuts: timeout and input stay in bounds", session + ("session::shortcuts",), [(SHORTCUTS, '|| !(0.0..=MAX_TIMEOUT_MS).contains(&timeout)\n        || text(args, "input").len() > MAX_INPUT\n', '')]),
-    ("mac: power actions refuse", session + ("session::mac",), [(MAC, 'if !CAPABILITIES.contains(&operation) {', 'if false {'), (MAC, '_ => return Err("unsupported"),\n    };\n    if ok', '_ => true,\n    };\n    if ok')]),
-    ("mac: a notification link is http or https", session + ("session::mac",), [(MAC, 'matches!(scheme, "http" | "https")', 'true')]),
     ("sound: only named system sounds", session + ("session::media",), [(MEDIA, 'SOUNDS.contains(&text(args, "name")) && text(args, "text").is_empty()', 'text(args, "text").is_empty()')]),
     ("capture: an artifact must be in our directory", session + ("session::media",), [(MEDIA, 'if parent != directory.canonicalize().map_err(|_| corrupt())? {', 'if false {')]),
     ("calendar: another calendar is never the event", session + ("calendar_lookup",), [(LOOKUP, 'if text(candidate, "calendar") != text(identity, "calendar")\n        || text(candidate, "account") != text(identity, "account")\n    {', 'if false {')]),

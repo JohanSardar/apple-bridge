@@ -1,4 +1,3 @@
-use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::Value;
 fn s<'a>(v: &'a Value, k: &str) -> &'a str {
     v[k].as_str().unwrap_or_default()
@@ -17,10 +16,7 @@ pub fn playback(op: &str) -> bool {
     matches!(op, "speech.say" | "capture.play_sound")
 }
 pub(crate) fn requires_capture(op: &str) -> bool {
-    !capture(op)
-        && !playback(op)
-        && !op.starts_with("mac.")
-        && !matches!(op, "maps.open" | "shortcuts.run" | "focus.set")
+    !capture(op) && !playback(op) && !matches!(op, "maps.open" | "focus.set")
 }
 fn clean_path(parts: &[&str]) -> String {
     let joined = parts.join("/");
@@ -56,25 +52,12 @@ pub fn valid(op: &str, args: &Value, e: &Value, hash: &str) -> bool {
             && e["prepared"]["request_hash"] == hash
             && e["frontmost_bundle"] == "com.apple.Maps";
     }
-    if op == "shortcuts.run" {
-        return !hash.is_empty()
-            && e["prepared"]["request_hash"] == hash
-            && e["exit_status"].as_i64() == Some(0)
-            && e["timed_out"] != true
-            && e["effect_scope"] == "runner completion only"
-            && STANDARD
-                .decode(s(e, "output_base64").replace(['\r', '\n'], ""))
-                .is_ok_and(|v| v.len() <= 32 << 10);
-    }
     if op == "focus.set" {
         return bound
             && e["prepared"]["request_hash"] == hash
             && e["readback"]["authorization"] == "authorized"
             && args["on"].is_boolean()
             && e["readback"]["focused"] == args["on"];
-    }
-    if op.starts_with("mac.") {
-        return bound && !e["readback"].is_null();
     }
     if op.starts_with("files.") {
         if !bound {

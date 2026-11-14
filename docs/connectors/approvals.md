@@ -21,8 +21,7 @@ These commands use a Unix socket in a directory accessible only to the gateway's
 ## Reproduce A1
 
 ```
-make sim SCENARIOS=lab/scenarios/core/CONN-CLAUDE-AI.yaml
-make sim SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
+packaging/dev/rust-lab.sh sim lab/scenarios/core/CONN-CLAUDE-AI.yaml lab/scenarios/core/CONN-CHATGPT.yaml
 ssh air '~/bin/ab-real A1 ship/a1-approve connector CONN-CLAUDE-AI CONN-CHATGPT'
 ```
 

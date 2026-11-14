@@ -1,5 +1,7 @@
 # Signed shortcut builds (G0-6)
 
+The Shortcuts source was removed ([ADR 0033](../../docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)): agents can no longer list shortcuts, run one by name or discover App Intents actions (`shortcuts.run`, `shortcuts.actions` and inventory capture are gone). What remains is the signed pack: building, signing and installing it, and the Focus and Clock shortcuts the gateway runs internally.
+
 `cargo run --manifest-path rust/Cargo.toml -p ab-shortcuts -- build` compiles every `packaging/shortcuts/*.json` source into `.build/shortcuts/`, then signs each workflow using the system `/usr/bin/shortcuts sign`. Use `-source path.json` for one source, `-out directory` for another build directory, and `-unsigned` for portable compilation without signing. Signing defaults to `-mode auto`: try `anyone`, then `people-who-know-me`. Explicit modes disable fallback. The JSON stdout and `manifest.json` record the actual mode and unsigned SHA-256 for each file. A failed signer exits nonzero and never publishes its partial signed file.
 
 `cargo run --manifest-path rust/Cargo.toml -p ab-shortcuts -- open ".build/shortcuts/[ab-test noop] Apple Bridge Signing Test.shortcut"` opens the signed file with macOS `open` for the user's import review. Build never opens or imports a workflow. CORE-SHORTCUT-SIGN never opens, imports or runs it.
@@ -36,37 +38,9 @@ Runs accept input bytes (text, URL text or file content) and return output bytes
 
 `bridge shortcuts install-pack [-pack directory]` validates all three signed AEA files before opening them for user review. It never clicks Add Shortcut. The required files are `AB Echo.shortcut`, `AB Clock.shortcut` and `AB Focus.shortcut`; only the `AB Echo` source is supplied in this partial change. Missing Clock/Focus files cause the installer to reject before opening anything. Coverage publishes the bundled protocol version; imported pack version qualification remains pending.
 
-SC-CAPTURE sim tests inventory adapter changes and native capture, not replication. SC-RUN sim tests byte input/output, binary output, exit status, timeout, invalid shortcut names and input size. Complete pack sources, Clock, Focus, actions discovery and file transforms remain outstanding. No real shortcut has been run. The leader can import the signed Echo artifact for subsequent real qualification; that import alone does not complete T26.
-
-## Native capture and text dispatch continuation
-
-The Helper registers `ShortcutsSource`, polls inventory every 30 seconds, and emits complete replacement checkpoints only after all folder inventories succeed. Failed scans never assert absence. Shortcut input capability remains null because the CLI cannot establish it. `shortcuts:read` and `shortcuts:write` join the grant registry. Coverage carries `pack_version: "1"` through the gateway; this is the bundled protocol version, not proof of an imported pack version.
-
-`shortcuts.run` is registered as a command and follows the normal admission, approval, ticket and dispatch guard path. Its current input is shortcut name, UTF-8 input (16 KiB maximum) and timeout_ms (default 30 seconds, maximum five minutes). Native dispatch uses private temporary files and direct process arguments, starts the CLI in a dedicated process group, kills the whole group at its deadline or task cancellation, and reaps the CLI, and returns exit_status and output_base64 (32 KiB maximum output, keeping command evidence within IPC frame limits). A nonzero exit remains indeterminate because downstream effects may have occurred. Successful evidence establishes runner completion only. Its observed command has no capture commit sequence or observed record IDs; the ledger permits this result-only outcome specifically for shortcuts.run. File blob grants and blob output integration remain unimplemented, so T26 is still partial.
-
-SC-CAPTURE and SC-RUN additionally compile and exercise the native actor with the fake CLI. SC-RUN also submits through the public REST gateway against SimApple. These checks do not prove capture replication or real pack behavior. The idle qualification remains pending. No Clock or Focus identifiers have been inferred, and no placeholder pack workflows claim working operations.
-
-## Review safety fixes
-
-The Go adapter bounds stdout as it streams and monitors CLI output-file growth every 5 ms, killing the process group when either exceeds 16 MiB. Native output monitoring retains its 32 KiB run-result bound. These bounds cover CLI descendants in the group; effects already handed to independent applications remain outside runner cancellation.
-
-The gateway waits for the configured shortcuts execution timeout (default 30 seconds, maximum five minutes) plus five seconds for completion transport. Admission expiry still fences dispatch. Resolve accepts retained successful runner-completion evidence tied to the prepared request without requiring an Apple object capture.
-
-SC-RUN uses only synthetic executables: a forking timeout fixture checks descendant termination in Go and Swift; continuous file/stdout writers prove termination before their execution deadline; a native 16-second success proves retained Resolve evidence, and a separate 16-second SimApple success proves the public gateway waits beyond 15 seconds. Absolute times are not scaled.
-
-## App Intents discovery (T29 slice)
-
-`shortcuts.actions` is a read-only query under `shortcuts:read`, taking an empty argument object. It reads installed application metadata under /Applications, /System/Applications and the current user's Applications directory, including extension bundles. It never launches applications or invokes an action. Results contain bundle identifier, action identifier and title, plus completeness and `schema_guaranteed: false`. Metadata is an undocumented, version-dependent inventory; missing metadata does not prove an app has no actions.
-
-Traversal skips symlinks and hidden entries, caps depth at 12, visits at 50,000, time at ten seconds, each metadata file at 4 MiB, total metadata at 32 MiB, rows at 2,000 and serialized output conservatively below 900 KB. Malformed metadata and traversal failures mark the result incomplete. Hidden and assistant-only actions are excluded. SC-ACTIONS sim generates a synthetic bundle, tests malformed metadata and symlink exclusion, and exercises the public query against SimApple. Real reads only installed metadata and retains pass/fail evidence without action names or app identifiers.
-
-`files.transform` command integration and FILES-TRANSFORM remain pending in this partial T29 slice; no transform capability is advertised.
+## Pack qualification
 
 Installed pack qualification uses a unique `AB Pack v1` inventory marker and exactly one each of AB Echo, AB Clock and AB Focus from bounded `shortcuts list --show-identifiers`. Missing, duplicate or unavailable inventory omits `pack_version`; the bundled version alone never establishes installation. This marker establishes inventory presence, not workflow integrity. Import the marker alongside the signed pack.
-
-`shortcuts.run` accepts mutually exclusive UTF-8 `input` or inline file/blob bytes in `input_base64`, capped at 16 KiB decoded. Output remains base64 encoded, capped at 32 KiB, with `output_bytes` and SHA-256 evidence. No caller filesystem path is accepted. Large uploaded blobs remain unsupported.
-
-AB Echo uses a WFTextTokenString with an ExtensionInput attachment in its text field. The corrected signed workflow requires re-import as `AB Echo`; SC-RUN-REAL invokes only that exact installed name once with up to five minutes for an owner-handled dialog and retains counts, digests and status. SC-IDLE samples Helper CPU for five idle minutes after capture readiness; qualification is limited by decision 37 until T53 resolves the shared Messages reconcile CPU issue.
 
 ## Helper status intent (T52)
 
@@ -74,7 +48,7 @@ AB Echo uses a WFTextTokenString with an ExtensionInput attachment in its text f
 
 F9 probes use dedicated, previously approved shortcuts and never import a pack or request a permission during a run. `AB Bridge Status` contains the Helper's **Apple Bridge status** action followed by Stop and Output referencing its result. `packaging/shortcuts/ab-bridge-status.json` targets the services-signed Helper (`com.johansardar.applebridge.services`) installed on the test Mac. The signed `packaging/shortcuts/AB Bridge Status.shortcut` is supplied for import; signing does not establish installation, action discovery or permission approval. The Siri check validates the metadata against the intent source and requires an actual recognized status result; generated metadata alone does not pass the real check.
 
-`SC-RUN-REAL`, `CLK-ALARM-REAL`, `CLK-TIMER-REAL`, `SIRI-INTENTS`, and `USE-ACTION-PROBE` also support simulation. Simulation uses synthetic input and output and never invokes the owner's Shortcuts library. Real probe evidence contains only counts, digests, and assertion results. Missing or duplicate probe workflows fail closed without executing a shortcut.
+`CLK-ALARM-REAL`, `CLK-TIMER-REAL`, `SIRI-INTENTS`, and `USE-ACTION-PROBE` also support simulation. Simulation uses synthetic input and output and never invokes the owner's Shortcuts library. Real probe evidence contains only counts, digests, and assertion results. Missing or duplicate probe workflows fail closed without executing a shortcut.
 
 F9c qualifies the implementation as well as the static metadata: packaging rejects an executable whose symbol table lacks a declared intent type. Its real runner launches the freshly built signed Helper at an explicit path in `intent-host` mode. This mode registers that bundle and uses the AppKit application event loop without opening setup or checking unrelated permissions. It prevents a metadata-only or stale temporary app with the same bundle identifier from supplying the execution host. The qualified Helper replaces the metadata-only installation at its stable application path. The host exits when its runner exits; the runner also terminates its own host and removes staging files. SIRI-INTENTS then invokes the shortcut again with that host stopped and requires a successful cold launch.
 

@@ -54,7 +54,7 @@ The signed-app cache includes the normalized compilation condition in its source
 
 ## Native checks at sim level
 
-`make sim` builds the lab native targets before running scenarios. Simulation includes synthetic native media and usage decoder checks, so a gateway build alone does not prepare the suite. Before running one of these scenarios directly through `lab-families`, run `make native` through `packaging/dev/heavy.sh`. Native output pointers belong to the current worktree and build mode.
+`packaging/dev/rust-lab.sh sim` builds the lab native targets before running scenarios (`make sim` is turned off for now). Simulation includes synthetic native media and usage decoder checks, so a gateway build alone does not prepare the suite. Before running one of these scenarios directly through `lab-families`, run `make native` through `packaging/dev/heavy.sh`. Native output pointers belong to the current worktree and build mode.
 
 Run isolated timing checks through the sensitive heavy lane, including scenarios whose names do not contain `perf`: `APPLE_BRIDGE_HEAVY_NO_SIM_LANE=1 packaging/dev/heavy.sh packaging/dev/rust-lab.sh sim <scenario.yaml>`. Preserve the host conditions with the result; a failed timing budget under contention requires a quiet rerun with the same threshold.
 

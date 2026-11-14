@@ -44,7 +44,7 @@ fn lifecycle_prepare_preserves_go_codec_bytes() -> Result<(), Box<dyn std::error
         }
         count += 1;
     }
-    assert!(count >= 540, "compared only {count} Go actions");
+    assert!(count >= 400, "compared only {count} Go actions");
     Ok(())
 }
 #[test]

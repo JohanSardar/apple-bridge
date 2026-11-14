@@ -113,23 +113,6 @@
       "apple_command_status",
       "apple_guide"
     ],
-    "mac:read": [
-      "apple_status",
-      "apple_describe",
-      "apple_search",
-      "apple_read",
-      "apple_command_status",
-      "apple_guide"
-    ],
-    "mac:write": [
-      "apple_status",
-      "apple_describe",
-      "apple_search",
-      "apple_read",
-      "apple_change",
-      "apple_command_status",
-      "apple_guide"
-    ],
     "mail:read": [
       "apple_status",
       "apple_describe",
@@ -263,23 +246,6 @@
       "apple_command_status",
       "apple_guide",
       "reminders_add"
-    ],
-    "shortcuts:read": [
-      "apple_status",
-      "apple_describe",
-      "apple_search",
-      "apple_read",
-      "apple_command_status",
-      "apple_guide"
-    ],
-    "shortcuts:write": [
-      "apple_status",
-      "apple_describe",
-      "apple_search",
-      "apple_read",
-      "apple_change",
-      "apple_command_status",
-      "apple_guide"
     ],
     "speech:read": [
       "apple_status",
@@ -493,7 +459,7 @@
         "openWorldHint": false,
         "readOnlyHint": true
       },
-      "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, Safari, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
+      "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
       "inputSchema": {
         "properties": {
           "after": {

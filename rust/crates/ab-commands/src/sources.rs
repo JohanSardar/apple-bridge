@@ -19,8 +19,6 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
         messages(c, &a)?;
     } else if op.starts_with("mail.") {
         mail(c, &a)?;
-    } else if op.starts_with("mac.") && op != "mac.screen_record" {
-        mac(c, &a)?;
     } else if op.starts_with("files.") {
         files(c, &a)?;
     } else if op == "pdf.annotate" {
@@ -29,17 +27,6 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
         check(p(&a, "on") && s(&a, "mode") == "Do Not Disturb")?;
         if !s(&a, "until").is_empty() {
             check(b(&a, "on") && s(&a, "until").parse::<Timestamp>().is_ok_and(|t| t > now))?;
-        }
-    } else if op == "shortcuts.run" {
-        check(
-            !s(&a, "shortcut").trim().is_empty()
-                && s(&a, "shortcut").len() <= 1024
-                && !s(&a, "shortcut").starts_with('-')
-                && s(&a, "input").len() <= 16384
-                && (0.0..=300_000.0).contains(&n(&a, "timeout_ms")),
-        )?;
-        if !s(&a, "input_base64").is_empty() {
-            check(base64(s(&a, "input_base64"))?.len() <= 16384 && s(&a, "input").is_empty())?;
         }
     } else if op.starts_with("iphone.") {
         iphone(c, &a, now)?;
@@ -142,12 +129,8 @@ pub(crate) fn shape(op: &str) -> &'static str {
         || op == "print.document"
     {
         "CaptureArgs"
-    } else if op.starts_with("mac.") {
-        "MacArgs"
     } else if op == "focus.set" {
         "FocusSetArgs"
-    } else if op == "shortcuts.run" {
-        "ShortcutRunArgs"
     } else if matches!(op, "speech.say" | "capture.play_sound") {
         "PlaybackArgs"
     } else if op.starts_with("iphone.alarm.") || op.starts_with("iphone.timer.") {
@@ -538,69 +521,6 @@ fn files(c: &Command, a: &Args) -> Result<(), Error> {
     }
     check(arr(a, "tags").len() <= 64)
 }
-fn mac(c: &Command, a: &Args) -> Result<(), Error> {
-    let op = c.op.as_str();
-    if matches!(
-        op,
-        "mac.lock_screen"
-            | "mac.sleep_display"
-            | "mac.restart"
-            | "mac.shutdown"
-            | "mac.notify"
-            | "mac.open_settings"
-            | "mac.set_wallpaper"
-    ) {
-        allowed(
-            c,
-            match op {
-                "mac.notify" => &["title", "body", "action_url"],
-                "mac.open_settings" => &["pane"],
-                "mac.set_wallpaper" => &["image_blob"],
-                _ => &[],
-            },
-            false,
-        )?;
-    }
-    check(op == "mac.clipboard_write" || !p(a, "text"))?;
-    check(match op {
-        "mac.lock_screen" | "mac.sleep_display" | "mac.restart" | "mac.shutdown" => true,
-        "mac.open_settings" => [
-            "general",
-            "notifications",
-            "network",
-            "displays",
-            "wallpaper",
-            "privacy",
-        ]
-        .contains(&s(a, "pane")),
-        "mac.notify" => {
-            !s(a, "title").is_empty()
-                && s(a, "title").len() <= 256
-                && s(a, "body").len() <= 4096
-                && (s(a, "action_url").is_empty() || action_url(s(a, "action_url")))
-        }
-        "mac.set_wallpaper" => {
-            let v = base64(s(a, "image_blob"))?;
-            !v.is_empty() && v.len() <= 8 << 20
-        }
-        "mac.iwork_export" => {
-            let v = base64(s(a, "document_blob"))?;
-            !v.is_empty()
-                && v.len() <= 8 << 20
-                && ["pdf", "text"].contains(&s(a, "format"))
-                && ["pages", "numbers", "keynote"].contains(&s(a, "app"))
-        }
-        "mac.clipboard_write" => p(a, "text") && s(a, "text").len() <= 65536,
-        "mac.set_volume" => p(a, "volume") && (0.0..=100.0).contains(&n(a, "volume")),
-        "mac.set_mute" => p(a, "muted"),
-        "mac.set_appearance" => ["light", "dark"].contains(&s(a, "appearance")),
-        "mac.launch_app" | "mac.activate_app" | "mac.quit_app" => {
-            !s(a, "bundle_id").is_empty() && s(a, "bundle_id").len() <= 255
-        }
-        "mac.keep_awake" => p(a, "on") && (0.0..=86400.0).contains(&n(a, "duration")),
-        _ => false,
-    })
-}
 fn capture(op: &str, a: &Args) -> Result<(), Error> {
     if op == "print.document" {
         document_input(a)?;
@@ -891,82 +811,6 @@ fn iphone(c: &Command, a: &Args, now: Timestamp) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-fn action_url(raw: &str) -> bool {
-    if raw.bytes().any(|b| b < 32 || b == 127) {
-        return false;
-    }
-    let Some((scheme, rest)) = raw.split_once("://") else {
-        return false;
-    };
-    if !["http", "https"]
-        .iter()
-        .any(|value| scheme.eq_ignore_ascii_case(value))
-    {
-        return false;
-    }
-    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
-    let host = authority.rsplit('@').next().unwrap_or("");
-    if host.is_empty() {
-        return false;
-    }
-    let valid_escapes = |text: &str| {
-        let bytes = text.as_bytes();
-        let mut i = 0;
-        while i < bytes.len() {
-            if bytes[i] == b'%' {
-                if bytes.get(i + 1).is_none_or(|v| !v.is_ascii_hexdigit())
-                    || bytes.get(i + 2).is_none_or(|v| !v.is_ascii_hexdigit())
-                {
-                    return false;
-                }
-                i += 3;
-            } else {
-                i += 1;
-            }
-        }
-        true
-    };
-    let before_fragment = raw.split('#').next().unwrap_or("");
-    if !valid_escapes(before_fragment.split('?').next().unwrap_or(""))
-        || !valid_escapes(raw.split_once('#').map_or("", |(_, fragment)| fragment))
-    {
-        return false;
-    }
-    let port = if let Some(bracket) = host.strip_prefix('[') {
-        let Some((address, suffix)) = bracket.split_once(']') else {
-            return false;
-        };
-        let ip = address.split("%25").next().unwrap_or("");
-        if ip.parse::<std::net::Ipv6Addr>().is_err() {
-            return false;
-        }
-        suffix
-    } else {
-        host.find(':').map_or("", |i| &host[i..])
-    };
-    if !port.is_empty()
-        && (!port.starts_with(':') || !port[1..].bytes().all(|b| b.is_ascii_digit()))
-    {
-        return false;
-    }
-    if host
-        .bytes()
-        .any(|b| b.is_ascii() && !b.is_ascii_alphanumeric() && !b"-._~!$&'()*+,;=:[]%".contains(&b))
-    {
-        return false;
-    }
-    let bytes = host.as_bytes();
-    for (i, b) in bytes.iter().enumerate() {
-        if *b == b'%'
-            && bytes.get(i + 1).is_some_and(|v| *v < b'8')
-            && bytes.get(i..i + 3) != Some(b"%25")
-        {
-            return false;
-        }
-    }
-    true
 }
 
 #[cfg(test)]

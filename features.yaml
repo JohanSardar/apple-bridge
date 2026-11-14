@@ -653,43 +653,18 @@ features:
       - {id: PDF-ANNOTATE, levels: [sim]}
       - {id: VIS-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
     notes: Blob and explicit file inputs, PDF annotation artifact readback, doctor readiness and native framework queries pass; total Helper idle CPU remains limited.
-  - id: shortcuts.runner
-    title: Bounded Shortcuts CLI runner
-    requirements: [R-RW]
-    milestone: M0
-    modules: [rust/crates/ab-shortcuts, packaging/shortcuts, native/Sources/ShortcutsSource]
-    depends_on: [core.shortcuts]
-    status: done
-    notes: Native inventory and the bounded text runner are integrated. AB Echo returns its input on the Air. Installed pack version requires unique AB Pack v1, AB Echo, AB Clock and AB Focus inventory entries. Idle budgets were dropped by the owner.
-    scenarios:
-      - {id: SC-CAPTURE, levels: [sim]}
-      - {id: SC-RUN, levels: [sim]}
-      - {id: SC-RUN-REAL, levels: [sim, real]}
-      - {id: SC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
   - id: clock.pack
     title: Clock helper pack qualification
     requirements: [R-RW]
     milestone: M0
     modules: [rust/crates/ab-shortcuts, packaging/shortcuts/ab-clock.json]
-    depends_on: [shortcuts.runner]
+    depends_on: [core.shortcuts]
     status: done
     notes: Real alarm creation, field readback, toggling and deletion pass through AB Clock. Native timer creation, duration, label, running state, cancellation and Recents cleanup pass with complete baseline restoration. All tagged historical test entries were removed through Clock controls. Clock operations remain unadvertised.
     scenarios:
       - {id: CLK-SIM, levels: [sim]}
       - {id: CLK-ALARM-REAL, levels: [sim, real]}
       - {id: CLK-TIMER-REAL, levels: [sim, real]}
-  - id: mac.capture
-    title: Mac system state capture
-    requirements: [R-API, R-SCOPE]
-    milestone: G6
-    modules: [native/Sources/MacSource]
-    depends_on: []
-    status: done
-    scenarios:
-      - {id: MAC-CAPTURE, levels: [sim]}
-      - {id: MAC-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: MAC-POWER-REAL, levels: [real]}
-    notes: Night Shift omitted; SSID requires Location authorization. VPN uses interface heuristics.
   - id: mail.capture
     title: Mail Envelope Index capture foundation
     requirements: [R-RW]
@@ -758,7 +733,7 @@ features:
     requirements: [R-RW]
     milestone: G5
     modules: [rust/crates/ab-shortcuts, native/Sources/FocusSource]
-    depends_on: [shortcuts.runner]
+    depends_on: [core.shortcuts]
     status: done
     notes: focus.set runs AB Focus for Do Not Disturb on/off and optional RFC3339 expiry, with independent authorized status readback. Only an agent the owner set to ask first waits for approval. Named Focus identity remains unavailable. Tests require an inactive prior state and restore it after dispatch, including failures.
     scenarios:
@@ -780,16 +755,6 @@ features:
       - {id: VMEMO-LATE-ASSETS, levels: [sim]}
     notes: "Voicemail supports archived carrier/FaceTime transcripts and local AMR/M4A/audio-only MOV originals through MCP and bridge read voicemail. Original-head real snapshot proof (fbd6984) matched 98 messages, 74 transcripts and 98 audio files with one fetched SHA-256 match. Transcript byte/record/scan limits, deferred enrichment, chunk-local handles, staging retries and corrupt-cache recovery have synthetic regression coverage; the real snapshot was not repeated after hardening. Signed Helper/TCC attribution and real-data gateway/replica delivery remain unverified. See lab/evidence/voicemail-930.json. Voice Memos real/new-recording qualification was not repeated in this run."
 
-  - id: shortcuts.actions
-    title: Bounded installed App Intents discovery
-    requirements: [R-RW]
-    milestone: M0
-    modules: [native/Sources/ShortcutsSource, rust/lab/lab-simapple]
-    depends_on: [shortcuts.runner]
-    status: done
-    notes: Read-only metadata discovery; no stable executable schema promised. File transform command remains pending.
-    scenarios:
-      - {id: SC-ACTIONS, levels: [sim, real]}
   - id: files.commands
     title: Opt-in file commands with readback
     requirements: [R-API, R-SCOPE]
@@ -821,34 +786,6 @@ features:
       - {id: AUD-SIM, levels: [sim]}
       - {id: SPEECH-SAY, levels: [real]}
       - {id: AUD-TRANSCRIBE, levels: [real]}
-  - id: mac.commands
-    title: Mac system commands
-    requirements: [R-API, R-SCOPE]
-    milestone: G6
-    modules: [native/Sources/MacSource, rust/crates/ab-domain]
-    depends_on: [mac.capture]
-    status: done
-    scenarios:
-      - {id: MAC-COMMANDS, levels: [sim]}
-      - {id: MAC-AUDIO-REAL, levels: [real]}
-      - {id: MAC-APPEARANCE-REAL, levels: [real]}
-      - {id: MAC-APPS-REAL, levels: [real]}
-      - {id: MAC-KEEPAWAKE-REAL, levels: [real]}
-      - {id: MAC-CLIPBOARD-REAL, levels: [real]}
-      - {id: MAC-REPLICA, levels: [replica]}
-    notes: Audio, appearance, app lifecycle and IOPM assertions use native readback. Clipboard text uses transient reads and redacted writes; image payloads and approval-required writes are unavailable. MAC-LOCK remains unavailable and is never exercised.
-
-  - id: mac.actions
-    title: Mac notifications settings wallpaper power and network
-    requirements: [R-API, R-SCOPE]
-    milestone: G6
-    modules: [native/Sources/MacSource, rust/crates/ab-domain]
-    depends_on: [mac.capture]
-    status: done
-    scenarios:
-      - {id: MAC-ACTIONS, levels: [sim]}
-      - {id: MAC-NOTIFY-REAL, levels: [real]}
-    notes: Power actions are open to write-level agents (an ask-first agent waits for approval) and are disabled natively. Wallpaper accepts a bounded base64 image blob. Network ICMP ping is limited; reachability DNS and interface byte counters are available.
   - id: maps.queries
     title: Native Location and Maps transient queries
     requirements: [R-API, R-SCOPE]
@@ -868,19 +805,6 @@ features:
       - {id: MAP-DIRECTIONS-REAL, levels: [real]}
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
     notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53. QUERY-AGENT qualifies Codex and MCP against synthetic Maps results, not live traffic.
-  - id: safari.capture
-    title: Read-only Safari database capture
-    requirements: [R-FULL, R-NO-FALSE-DELETE, R-LIVE]
-    milestone: G11
-    modules: [native/Sources/SafariSource, rust/crates/ab-domain, rust/lab/lab-simapple]
-    depends_on: []
-    status: done
-    notes: Real history and bookmark Truth counts and digests match. CloudTabs.db is absent on this host; cloud schema coverage uses synthetic databases.
-    scenarios:
-      - {id: SAF-CAPTURE, levels: [sim]}
-      - {id: SAF-IDLE, levels: [sim, real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
-      - {id: SAF-HISTORY-REAL, levels: [real]}
-      - {id: SAF-BOOKMARKS-REAL, levels: [real]}
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]
@@ -914,19 +838,6 @@ features:
     notes: Signed metadata and action discovery are qualified. Session Helpers dispatch App Intents connection events through AppKit; real hosted AppKit execution and cold SwiftUI launch both return recognized status without foreground interaction.
     scenarios:
       - {id: SIRI-INTENTS, levels: [sim, real]}
-  - id: mac.extras
-    title: Mac Bluetooth iWork Time Machine and song recognition
-    requirements: [R-API, R-SCOPE]
-    milestone: G16
-    modules: [native/Sources/MacSource, rust/crates/ab-domain, rust/lab/lab-simapple]
-    depends_on: [mac.capture]
-    status: done
-    scenarios:
-      - {id: MAC-EXTRAS-SIM, levels: [sim]}
-      - {id: TM-STATUS, levels: [real]}
-      - {id: IWORK-REAL, levels: [sim, real], status: dropped, reason: "Dropped by the owner: iWork (Pages) export is out of scope."}
-      - {id: SHAZAM-REAL, levels: [real], status: dropped, reason: "Dropped because song recognition needs the ShazamKit entitlement."}
-      - {id: BT-REAL, levels: [real]}
   - id: iphone.health
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]

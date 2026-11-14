@@ -24,9 +24,6 @@ pub mod native_json;
 pub mod notes;
 pub mod plist;
 pub mod rich;
-pub mod safari;
-pub mod shortcut_actions;
-pub mod shortcuts;
 pub mod summary;
 pub mod usage;
 
@@ -42,7 +39,6 @@ pub mod reminders_projection;
 pub mod reminders_store;
 pub mod voice_memo;
 
-pub mod mac;
 pub mod mail;
 pub mod mail_body;
 pub mod mail_url;

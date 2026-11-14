@@ -1,5 +1,0 @@
-id: MAC-APPS-REAL
-feature: mac.commands
-levels: [real]
-when:
-  - mac: {}

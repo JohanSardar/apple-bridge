@@ -1,5 +1,0 @@
-id: MAC-NOTIFY-REAL
-feature: mac.actions
-levels: [real]
-when:
-  - mac: {}

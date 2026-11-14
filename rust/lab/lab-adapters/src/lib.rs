@@ -7,7 +7,9 @@ pub mod calls;
 pub mod capture_atomic;
 pub mod capture_observers;
 pub mod capture_staging;
+pub mod checks;
 pub mod cleanup;
+pub mod clock;
 pub mod commands;
 pub mod connectors;
 pub mod consent;
@@ -26,6 +28,8 @@ pub mod fastclient;
 pub mod filecmd;
 pub mod filerep;
 pub mod files_native;
+pub mod files_transform;
+pub mod focus;
 pub mod frame_proxy;
 pub mod frontdoor;
 pub mod helper_ipc;
@@ -44,8 +48,6 @@ pub mod journey;
 pub mod labcore;
 pub mod live;
 pub mod live_latency;
-pub mod mac;
-pub mod mac_real;
 pub mod mail;
 pub mod maps;
 pub mod media;
@@ -96,13 +98,10 @@ pub mod rm_chats;
 pub mod rm_core;
 pub mod rm_thread;
 pub mod robust;
-pub mod safari;
 pub mod search;
 pub mod security;
 pub mod setup_cli;
 pub mod shortcut_sign;
-pub mod shortcuts;
-pub mod shortcuts_run;
 pub mod sim_progress;
 pub mod siri;
 pub mod snapshot_pool;
@@ -239,11 +238,6 @@ pub fn registry() -> Registry {
     for id in filecmd::REAL {
         registry.register_standalone(id, filecmd::real);
     }
-    registry.register("safari", safari::sim);
-    for id in safari::REAL {
-        registry.register_standalone(id, safari::real_checks);
-    }
-    registry.register_real("SAF-IDLE", safari::idle_real);
     registry.register_real("FILE-REPLICA", filerep::real);
     for id in pkginstall::REAL {
         registry.register_standalone(id, pkginstall::real);
@@ -298,18 +292,15 @@ pub fn registry() -> Registry {
     });
     core::register(&mut registry);
     registry.register("command_journey", journey::command_journey);
-    registry.register("files_transform", shortcuts::files_transform);
-    registry.register("shortcuts_actions", shortcuts::shortcuts_actions);
+    registry.register("files_transform", files_transform::files_transform);
     registry.register("source_support", native_core::source_support);
     registry.register("CORE-SIM-PROGRESS-RECOVERY", sim_progress::run);
     registry.register("CORE-SNAPSHOT-POOL", snapshot_pool::run);
     registry.register("CORE-SHORTCUT-SIGN", shortcut_sign::sim);
     registry.register_standalone("CORE-SHORTCUT-SIGN", shortcut_sign::real);
-    registry.register("shortcuts_checks", shortcuts::shortcuts_checks);
-    registry.register("shortcuts_real_only", shortcuts::shortcuts_real_only);
-    registry.register("shortcuts_run", shortcuts_run::shortcuts_run);
-    registry.register("focus_sim", shortcuts_run::focus_sim);
-    registry.register("mac", mac::mac);
+    registry.register("clock_checks", clock::clock_checks);
+    registry.register("real_only", checks::real_only);
+    registry.register("focus_sim", focus::focus_sim);
     registry.register("capture_atomic", |world, input, evidence| {
         if capture_staging::SCENARIOS.contains(&evidence.scenario.as_str()) {
             capture_staging::capture_staging(world, evidence)
@@ -326,9 +317,6 @@ pub fn registry() -> Registry {
     registry.register("SIRI-INTENTS", siri::intents);
     registry.register("connector_approval", connectors::connector_approval);
     registry.register("consent_connector", consent::run);
-    for id in mac_real::SCENARIOS {
-        registry.register_real(id, mac_real::run);
-    }
     for id in ["AUD-TRANSCRIBE", "SPEECH-SAY", "VIS-IDLE"] {
         registry.register_real(id, vision::run);
     }
@@ -420,7 +408,7 @@ fn register_pim(registry: &mut Registry) {
 }
 
 pub fn prepare(scenario: &mut lab_runner::Scenario) {
-    shortcuts::inject(scenario);
+    checks::inject(scenario);
     connectors::inject(scenario);
     calendar::inject(scenario);
     consent::inject(scenario);
@@ -431,8 +419,6 @@ pub fn prepare(scenario: &mut lab_runner::Scenario) {
 pub fn implied_step(id: &str) -> Option<&'static str> {
     if filecmd::SIM.contains(&id) {
         Some("file_commands")
-    } else if safari::SIM.contains(&id) {
-        Some("safari")
     } else if id == "CON-RECIPIENT-LOOKUP" || id.starts_with("MAIL-") {
         Some("by_id")
     } else {

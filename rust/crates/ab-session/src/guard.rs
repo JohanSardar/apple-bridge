@@ -24,15 +24,6 @@ fn rejection_frame(entry: &Value) -> Value {
     frame
 }
 
-#[must_use]
-pub fn durable_action(action: &Value) -> Value {
-    let mut action = action.clone();
-    if action["op"] == "mac.clipboard_write" {
-        action["args"] = json!({});
-    }
-    action
-}
-
 #[derive(Debug, Serialize)]
 pub struct EffectPermit {
     command_id: String,

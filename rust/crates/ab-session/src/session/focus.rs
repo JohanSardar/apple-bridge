@@ -1,11 +1,10 @@
-use super::{
-    owned::{Driver, Probe, Refusal, Settled, native_failure, refuse, text},
-    shortcuts,
-};
+use super::owned::{Driver, Probe, Refusal, Settled, native_failure, refuse, text};
+use ab_shortcuts::cli::{Cli, Input};
 use serde_json::{Value, json};
 use std::{thread, time::Duration};
 
 const SHORTCUT: &str = "AB Focus";
+const MAX_OUTPUT: usize = 32 * 1024;
 const RUN_TIMEOUT: Duration = Duration::from_secs(15);
 const READBACK_TRIES: u32 = 50;
 const READBACK_GAP: Duration = Duration::from_millis(200);
@@ -61,6 +60,32 @@ fn validate(probe: &dyn Probe, action: &Value, _state: &Value) -> Result<(), Ref
     checked(probe, action)
 }
 
+struct Ran {
+    exit_status: i32,
+    timed_out: bool,
+}
+
+fn run(input: Vec<u8>) -> Result<Ran, String> {
+    let (output, failure) = Cli::default().run_detailed(&Input {
+        shortcut: SHORTCUT.to_owned(),
+        data: Some(input),
+        timeout: RUN_TIMEOUT,
+        output_limit: MAX_OUTPUT,
+        ..Input::default()
+    });
+    match failure {
+        None | Some(ab_shortcuts::Error::DeadlineExceeded) => Ok(Ran {
+            exit_status: output.exit_status,
+            timed_out: output.timed_out,
+        }),
+        Some(ab_shortcuts::Error::OutputExceeded) => Ok(Ran {
+            exit_status: -1,
+            timed_out: false,
+        }),
+        Some(_) => Err("unavailable".to_owned()),
+    }
+}
+
 fn write(
     probe: &dyn Probe,
     _command: &str,
@@ -69,7 +94,7 @@ fn write(
 ) -> Result<Value, String> {
     let args = &action["args"];
     let input = json!({"mode": args["mode"], "on": args["on"], "until": text(args, "until")});
-    let ran = shortcuts::run(SHORTCUT, input.to_string().into_bytes(), RUN_TIMEOUT)?;
+    let ran = run(input.to_string().into_bytes())?;
     if ran.exit_status != 0 || ran.timed_out {
         return Err("unavailable".to_owned());
     }

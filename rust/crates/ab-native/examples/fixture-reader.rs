@@ -56,7 +56,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     if ![
         "usage",
-        "safari",
         "calls",
         "voicemail",
         "voice-memos",
@@ -71,9 +70,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("unsupported fixture reader or option".into());
     }
     let root = Path::new(directory);
-    if source == "safari" {
-        return safari(root, options);
-    }
     if ["calls", "voicemail"].contains(&source.as_str()) {
         return telephony(root, options, source);
     }
@@ -99,100 +95,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else {
         scan(&mut reader, root, false, frames)?;
-    }
-    Ok(())
-}
-
-fn safari(root: &Path, options: &[String]) -> Result<(), Box<dyn std::error::Error>> {
-    use ab_native::safari::{Kind, ReadContext, Reader};
-    let cache_path = root.join("rust-cache.json");
-    let mut reader = match std::fs::read(&cache_path) {
-        Ok(bytes) => Reader::resume(serde_json::from_slice(&bytes)?)?,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Reader::default(),
-        Err(error) => return Err(error.into()),
-    };
-    let mut ordinal = 0;
-    let frames = options.iter().any(|o| o == "--frames");
-    let mut poll = |kinds: &[Kind]| -> Result<(), Box<dyn std::error::Error>> {
-        let mut emitted = false;
-        for kind in kinds {
-            loop {
-                let mut context: ReadContext =
-                    serde_json::from_slice(&std::fs::read(root.join("context.json"))?)?;
-                write!(context.capture.checkpoint, "-{ordinal}")?;
-                write!(context.capture.scan_id, "-{ordinal}")?;
-                let Ok(pending) = reader.poll(root, *kind, &context) else {
-                    let kind = match kind {
-                        Kind::History => "history",
-                        Kind::Bookmarks => "bookmarks",
-                        Kind::Cloud => "cloud",
-                        Kind::Tabs => "tabs",
-                    };
-                    let mut out = std::io::stdout().lock();
-                    write_json(
-                        &mut out,
-                        &serde_json::json!({"kind":"source_state","source":"safari","state":"degraded","coverage":{"fields":"partial"},"capabilities":[],"reason":format!("Safari capture unavailable: {kind}")}),
-                    )?;
-                    out.flush()?;
-                    emitted = true;
-                    break;
-                };
-                let Some(pending) = pending else {
-                    break;
-                };
-                let batch = &pending.batch;
-                let mut out = std::io::stdout().lock();
-                if frames {
-                    write_json(&mut out, &serde_json::to_value(batch)?)?;
-                } else {
-                    for row in &batch.observations {
-                        let mut value = serde_json::to_value(row)?;
-                        value["source"] = serde_json::json!(batch.source);
-                        value["generation"] = serde_json::json!(batch.generation);
-                        value["checkpoint"] = serde_json::json!(batch.checkpoint);
-                        write_json(&mut out, &value)?;
-                    }
-                    let mut value = serde_json::to_value(batch)?;
-                    value
-                        .as_object_mut()
-                        .ok_or("invalid frame")?
-                        .remove("observations");
-                    value["kind"] = serde_json::json!("checkpoint");
-                    write_json(&mut out, &value)?;
-                }
-                out.flush()?;
-                let again = pending.reconcile_again;
-                reader.commit(pending)?;
-                std::fs::write(
-                    &cache_path,
-                    serde_json::to_vec(&reader.cache(&context.generation))?,
-                )?;
-                ordinal += 1;
-                emitted = true;
-                if !again {
-                    break;
-                }
-            }
-        }
-        if !emitted {
-            let mut out = std::io::stdout().lock();
-            write_json(&mut out, &serde_json::json!({"kind":"idle"}))?;
-            out.flush()?;
-        }
-        Ok(())
-    };
-    if options.iter().any(|o| o == "--interactive") {
-        for line in std::io::stdin().lock().lines() {
-            match line?.as_str() {
-                "scan" => poll(&[Kind::History, Kind::Bookmarks, Kind::Cloud])?,
-                "history" => poll(&[Kind::History])?,
-                "bookmarks" => poll(&[Kind::Bookmarks])?,
-                "cloud" => poll(&[Kind::Cloud])?,
-                _ => return Err("expected scan, history, bookmarks or cloud".into()),
-            }
-        }
-    } else {
-        poll(&[Kind::History, Kind::Bookmarks, Kind::Cloud])?;
     }
     Ok(())
 }

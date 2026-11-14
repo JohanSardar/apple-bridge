@@ -75,8 +75,7 @@ pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
         || (level == "real"
             && matches!(
                 scenario.id.as_str(),
-                "MAC-REPLICA"
-                    | "FILE-REPLICA"
+                "FILE-REPLICA"
                     | "WEB-RELAY-COMMAND"
                     | "WEB-RELAY-CONNECT"
                     | "WEB-RELAY-NATIVE-AGENTS"

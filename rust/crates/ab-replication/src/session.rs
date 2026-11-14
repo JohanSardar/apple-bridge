@@ -336,8 +336,14 @@ impl<Install: Send> ReplicationProgress<Install> {
             .map(|value| {
                 value
                     .iter()
-                    .map(|reference| serde_json::from_str(reference.get()))
-                    .collect()
+                    .map(|reference| serde_json::from_str::<String>(reference.get()))
+                    .filter(|grant| {
+                        grant
+                            .as_ref()
+                            .map_or(true, |grant| !ab_trust::removed_grant(grant))
+                    })
+                    .map(|grant| serde_json::from_value(serde_json::Value::String(grant?)))
+                    .collect::<Result<Vec<Grant>, serde_json::Error>>()
             })
             .transpose()?
             .unwrap_or_default();

@@ -4,6 +4,11 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Removed
+
+- Safari, Shortcuts and Mac settings are gone: no agent, CLI command, MCP tool or REST route offers Safari history, bookmarks, tabs or Reading List, running or listing shortcuts, or reading and changing Mac settings (battery, display, network, Bluetooth, volume, appearance, apps, clipboard, notifications and the rest). Screen recording stays as part of Capture and now needs `capture:write` instead of `mac:write`, so an agent that can take screenshots can also record the screen. Focus still uses its bundled shortcut. Stored grants and records for these sources are ignored after the upgrade ([ADR 0033](docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)).
+- `make sim` is turned off for now and only prints a message.
+
 ## [0.1.7] - 2026-11-12
 
 ### Changed

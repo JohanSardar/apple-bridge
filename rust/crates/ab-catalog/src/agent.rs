@@ -56,6 +56,7 @@ pub fn domain_of(name: &str) -> &str {
     match name {
         "search" | "records.get" | "records.query" => "records",
         "sources.status" | "replica.status" => "status",
+        "mac.screen_record" => "capture",
         _ => name.split('.').next().unwrap_or(name),
     }
 }
@@ -136,8 +137,7 @@ fn build(
     let destructive = changes
         && !read_like
         && (name.contains("delete")
-            || matches!(name.rsplit('.').next(), Some("trash" | "unsend" | "send"))
-            || matches!(name, "mac.shutdown" | "mac.restart" | "mac.lock_screen"));
+            || matches!(name.rsplit('.').next(), Some("trash" | "unsend" | "send")));
     let annotations = if changes && !read_like {
         json!({"readOnlyHint":false,"destructiveHint":destructive,"idempotentHint":true,"openWorldHint":matches!(name, "messages.send" | "messages.reply" | "mail.send")})
     } else {

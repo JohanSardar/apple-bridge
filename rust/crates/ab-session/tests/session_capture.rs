@@ -14,138 +14,9 @@ use std::{
     os::unix::net::UnixStream,
     path::Path,
     sync::{Arc, Mutex},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
-use support::{Fallible, expect_silence, polling, receive, send, temporary, wait_for, wire};
-
-fn history(directory: &Path, visits: u32) -> Fallible<()> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64() - 978_307_200.0;
-    let staged = directory.join("History.db.staged");
-    let _ = std::fs::remove_file(&staged);
-    let connection = rusqlite::Connection::open(&staged)?;
-    connection.execute_batch(
-        "BEGIN;CREATE TABLE history_items(id INTEGER PRIMARY KEY,url TEXT,visit_count INTEGER);
-         CREATE TABLE history_visits(id INTEGER PRIMARY KEY,history_item INTEGER,visit_time REAL,title TEXT);
-         INSERT INTO history_items VALUES(1,'https://example.com/',2);",
-    )?;
-    for visit in 0..visits {
-        connection.execute(
-            "INSERT INTO history_visits VALUES(?1,1,?2,?3)",
-            rusqlite::params![visit + 1, now - f64::from(visit), format!("Visit {visit}")],
-        )?;
-    }
-    connection.execute_batch("COMMIT")?;
-    drop(connection);
-    std::fs::rename(&staged, directory.join("History.db"))?;
-    Ok(())
-}
-
-fn full_safari(directory: &Path) -> Fallible<()> {
-    let connection = rusqlite::Connection::open(directory.join("CloudTabs.db"))?;
-    connection.execute_batch(
-        "CREATE TABLE cloud_tab_devices(device_uuid TEXT,device_name TEXT);
-         CREATE TABLE cloud_tabs(tab_uuid TEXT,device_uuid TEXT,title TEXT,url TEXT);
-         INSERT INTO cloud_tab_devices VALUES('d','Synthetic');
-         INSERT INTO cloud_tabs VALUES('t','d','Synthetic','https://example.com/');",
-    )?;
-    std::fs::write(
-        directory.join("Bookmarks.plist"),
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict><key>Children</key><array><dict><key>WebBookmarkType</key><string>WebBookmarkTypeList</string><key>Title</key><string>Favorites</string><key>Children</key><array><dict><key>WebBookmarkType</key><string>WebBookmarkTypeLeaf</string><key>WebBookmarkUUID</key><string>a</string><key>URLString</key><string>https://example.com/</string><key>URIDictionary</key><dict><key>title</key><string>Synthetic</string></dict></dict></array></dict></array></dict></plist>",
-    )?;
-    Ok(())
-}
-
-#[test]
-fn a_reader_capture_reaches_the_gateway_and_the_helper_never_sees_it() -> Fallible<()> {
-    let directory = temporary("session-safari")?;
-    history(&directory, 2)?;
-    let sources = readers::from_config(&json!({"safari":{"root":directory}}).to_string())?;
-    let mut world = wire(
-        sources,
-        polling(None),
-        json!({"safari":{"generation":"old","checkpoint":"old-cp"}}),
-    )?;
-    let (size, first) = receive(&mut world.gateway)?;
-    assert_eq!(first["t"], "Capture");
-    assert_eq!(first["source"], "safari");
-    assert_eq!(first["predecessor"], "");
-    assert_eq!(first["completion_evidence"], "complete");
-    assert!(first.get("coverage").is_none());
-    assert!(
-        first["observations"]
-            .as_array()
-            .is_some_and(|o| !o.is_empty())
-    );
-    let checkpoint = first["checkpoint"].clone();
-    let generation = first["generation"].clone();
-
-    world.commit("safari", &first, size)?;
-    expect_silence(&mut world.link)?;
-
-    history(&directory, 3)?;
-    let (size, second) = receive(&mut world.gateway)?;
-    assert_eq!(second["predecessor"], checkpoint);
-    assert_eq!(second["generation"], generation);
-    assert_ne!(second["checkpoint"], checkpoint);
-    assert_eq!(second["live"], true);
-    world.commit("safari", &second, size)?;
-    expect_silence(&mut world.gateway)?;
-
-    world.finish()?;
-    std::fs::remove_dir_all(directory)?;
-    Ok(())
-}
-
-#[test]
-fn checkpoints_resume_after_a_restart_and_a_mismatch_costs_a_rescan() -> Fallible<()> {
-    let directory = temporary("session-resume")?;
-    let state = temporary("session-resume-state")?;
-    history(&directory, 2)?;
-    full_safari(&directory)?;
-    let config = json!({"safari":{"root":directory}}).to_string();
-
-    let mut first = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({}),
-    )?;
-    let (size, mut capture) = receive(&mut first.gateway)?;
-    first.commit("safari", &capture, size)?;
-    for _ in 0..2 {
-        let (size, other) = receive(&mut first.gateway)?;
-        first.commit("safari", &other, size)?;
-        capture = other;
-    }
-    wait_for(&state.join("safari.json"))?;
-    let saved: Value = serde_json::from_slice(&std::fs::read(state.join("safari.json"))?)?;
-    assert_eq!(saved["checkpoint"], capture["checkpoint"]);
-    assert_eq!(saved["generation"], capture["generation"]);
-    first.finish()?;
-
-    let mut second = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({"safari":{"generation":capture["generation"],"checkpoint":capture["checkpoint"]}}),
-    )?;
-    expect_silence(&mut second.gateway)?;
-    history(&directory, 3)?;
-    let (_, changed) = receive(&mut second.gateway)?;
-    assert_eq!(changed["predecessor"], capture["checkpoint"]);
-    second.finish()?;
-
-    let mut mismatch = wire(
-        readers::from_config(&config)?,
-        polling(Some(&state)),
-        json!({"safari":{"generation":capture["generation"],"checkpoint":"other-checkpoint"}}),
-    )?;
-    let (_, rescan) = receive(&mut mismatch.gateway)?;
-    assert_eq!(rescan["t"], "Capture");
-    assert_eq!(rescan["live"], false);
-    mismatch.finish()?;
-    std::fs::remove_dir_all(directory)?;
-    std::fs::remove_dir_all(state)?;
-    Ok(())
-}
+use support::{Fallible, expect_silence, receive, send, temporary, wire};
 
 #[derive(Default)]
 struct FactState {
@@ -317,47 +188,26 @@ fn mail_bodies_and_reader_blobs_never_reach_the_helper() -> Fallible<()> {
         poll: Duration::from_secs(3600),
         queries: NativeQueries {
             mail_bodies: Some(Arc::new(MailBodies::new(root.clone()))),
-            shortcut_roots: None,
             ..NativeQueries::default()
         },
         ..Options::default()
     };
-    let safari = temporary("session-mail-safari")?;
-    history(&safari, 1)?;
-    full_safari(&safari)?;
-    let sources = readers::from_config(&json!({"safari":{"root":safari}}).to_string())?;
-    let mut world = wire(sources, options, json!({}))?;
-    let (size, capture) = receive(&mut world.gateway)?;
-    world.commit("safari", &capture, size)?;
+    let mut world = wire(BTreeMap::new(), options, json!({}))?;
 
     send(
         &mut world.gateway,
         &json!({"t":"Query","id":"q1","op":"mail.body","args":{"message_id":"42"}}),
     )?;
-    loop {
-        let (size, frame) = receive(&mut world.gateway)?;
-        if frame["t"] == "Capture" {
-            world.commit("safari", &frame, size)?;
-            continue;
-        }
-        assert_eq!(frame["t"], "QueryResult");
-        assert_eq!(frame["id"], "q1");
-        break;
-    }
+    let (_, frame) = receive(&mut world.gateway)?;
+    assert_eq!(frame["t"], "QueryResult");
+    assert_eq!(frame["id"], "q1");
     send(
         &mut world.gateway,
         &json!({"t":"BlobRead","handle":"query-body:unknown","offset":0,"length":10}),
     )?;
-    loop {
-        let (size, frame) = receive(&mut world.gateway)?;
-        if frame["t"] == "Capture" {
-            world.commit("safari", &frame, size)?;
-            continue;
-        }
-        assert_eq!(frame["t"], "BlobUnavailable");
-        assert_eq!(frame["handle"], "query-body:unknown");
-        break;
-    }
+    let (_, frame) = receive(&mut world.gateway)?;
+    assert_eq!(frame["t"], "BlobUnavailable");
+    assert_eq!(frame["handle"], "query-body:unknown");
     send(
         &mut world.gateway,
         &json!({"t":"BlobRead","handle":"media:other","offset":0,"length":10}),
@@ -367,7 +217,6 @@ fn mail_bodies_and_reader_blobs_never_reach_the_helper() -> Fallible<()> {
     assert_eq!(forwarded["handle"], "media:other");
     world.finish()?;
     std::fs::remove_dir_all(root)?;
-    std::fs::remove_dir_all(safari)?;
     Ok(())
 }
 

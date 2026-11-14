@@ -1,7 +1,6 @@
 use crate::{
     assertions::await_until,
     http::{Client, random_id},
-    mac::command_call,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use lab_runner::Evidence;
@@ -20,9 +19,15 @@ pub const SIM_SCENARIOS: [&str; 5] = ["AUD-SIM", "PDF-ANNOTATE", "PDF-TEXT", "VI
 pub const REAL_SCENARIOS: [&str; 3] = ["AUD-TRANSCRIBE", "SPEECH-SAY", "VIS-IDLE"];
 const VISION_SCOPE: &str = "vision:read,pdf:read,system:read";
 const AUDIO_SCOPE: &str = "speech:read,speech:write,capture:write,audio:read,system:read";
-const CAPTURE_SCOPE: &str =
-    "calendar:read,reminders:read,system:read,capture:write,mac:write,print:write";
+const CAPTURE_SCOPE: &str = "calendar:read,reminders:read,system:read,capture:write,print:write";
 const FIXTURES: &str = "lab/fixtures/vision";
+
+fn command_call(client: &Client, op: &str, args: &Value) -> Option<Value> {
+    client
+        .call(op, &crate::journey::command(op, args).ok()?, 40)
+        .ok()
+        .flatten()
+}
 
 pub fn owns(id: &str) -> bool {
     SIM_SCENARIOS.contains(&id) || REAL_SCENARIOS.contains(&id)

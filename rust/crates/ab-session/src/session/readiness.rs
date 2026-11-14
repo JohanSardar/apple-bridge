@@ -57,7 +57,6 @@ const CONTACT_GROUPS: [&str; 5] = [
     "contacts.add_member",
     "contacts.remove_member",
 ];
-const AUTOMATION: &str = "Automation dev.applebridge.helper → com.apple.Safari";
 const CAPTURE: [&str; 6] = [
     "capture.screenshot",
     "capture.camera_photo",
@@ -239,35 +238,6 @@ fn vision(status: &Value) -> Readiness {
     }
 }
 
-fn safari(status: &Value) -> Readiness {
-    if status["directory"] != true {
-        return Readiness::not(
-            "unavailable",
-            json!({"fields": "partial"}),
-            "Safari data directory unavailable",
-        );
-    }
-    let permitted = status["automation"] == true;
-    let mut missing = vec!["CloudTabs schema availability varies"];
-    if !permitted {
-        missing.push(AUTOMATION);
-    }
-    let coverage = json!({"fields": "partial", "missing": missing});
-    if status["readable"] != true {
-        return Readiness::not("permission_missing", coverage, "Full Disk Access required");
-    }
-    Readiness {
-        state: "ready",
-        coverage,
-        capabilities: Vec::new(),
-        reason: if permitted {
-            String::new()
-        } else {
-            AUTOMATION.to_owned()
-        },
-    }
-}
-
 pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Readiness> {
     let mut told = BTreeMap::new();
     let Some(sources) = status.as_object() else {
@@ -295,7 +265,6 @@ pub(super) fn framework(status: &Value, os_build: &str) -> BTreeMap<String, Read
                 }
             }
             "vision" => vision(fields),
-            "safari" => safari(fields),
             "capture" => Readiness::ready(
                 json!({"fields": "partial", "permissions": fields["permissions"].as_object().cloned().unwrap_or_default()}),
                 &CAPTURE,
@@ -405,22 +374,6 @@ mod tests {
                 .capabilities
                 .contains(&"capture.record_audio".to_owned())
         );
-    }
-
-    #[test]
-    fn safari_says_which_grant_is_missing() {
-        let read = |directory, readable, automation| {
-            framework(
-                &json!({"safari": {"directory": directory, "readable": readable, "automation": automation}}),
-                "b",
-            )
-            .remove("safari")
-            .unwrap()
-        };
-        assert_eq!(read(false, false, false).state, "unavailable");
-        assert_eq!(read(true, false, true).reason, "Full Disk Access required");
-        assert!(read(true, true, false).reason.starts_with("Automation"));
-        assert_eq!(read(true, true, true).state, "ready");
     }
 
     #[test]

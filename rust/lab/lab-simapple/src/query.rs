@@ -94,13 +94,6 @@ pub fn query(blobs: &mut BTreeMap<String, Vec<u8>>, frame: &Value) -> Value {
         Some("helper.version") => {
             json!({"t":"QueryResult","id":id,"result_json":{"version":"sim","protocol":"ipc/1"},"blobs":[]})
         }
-        Some("shortcuts.actions") => {
-            if args.as_object().is_some_and(serde_json::Map::is_empty) {
-                json!({"t":"QueryResult","id":id,"result_json":{"items":[{"app":"com.example.synthetic","identifier":"Export","title":"Export"}],"complete":true,"schema_guaranteed":false},"blobs":[]})
-            } else {
-                failure(id, "invalid")
-            }
-        }
         Some("mail.body") => match args["message_id"].as_str().filter(|text| !text.is_empty()) {
             Some(_) => {
                 json!({"t":"QueryResult","id":id,"result_json":{"state":"downloaded","plain_text":"Hello fixture","html":""},"blobs":[]})

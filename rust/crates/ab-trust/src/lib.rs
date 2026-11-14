@@ -97,7 +97,6 @@ impl Grant {
         "focus",
         "health",
         "iphone",
-        "mac",
         "mail",
         "maps",
         "messages",
@@ -107,8 +106,6 @@ impl Grant {
         "photos",
         "print",
         "reminders",
-        "safari",
-        "shortcuts",
         "speech",
         "system",
         "usage",
@@ -183,6 +180,20 @@ pub struct Credentials {
     pub enrollment: Option<Enrollment>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
+}
+const REMOVED_SOURCES: &[&str] = &["mac", "safari", "shortcuts"];
+#[must_use]
+pub fn removed_grant(grant: &str) -> bool {
+    grant
+        .split_once(':')
+        .is_some_and(|(source, _)| REMOVED_SOURCES.contains(&source))
+}
+fn kept_grants<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Vec<Grant>, D::Error> {
+    Vec::<String>::deserialize(deserializer)?
+        .into_iter()
+        .filter(|grant| !removed_grant(grant))
+        .map(|grant| Grant::parse(&grant).map_err(serde::de::Error::custom))
+        .collect()
 }
 pub fn parse_grants(scope: &str) -> Result<Vec<Grant>, Error> {
     if scope.is_empty() {

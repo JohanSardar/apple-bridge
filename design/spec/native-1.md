@@ -165,7 +165,7 @@ fence. The ipc/1 byte format toward the gateway is unchanged; frames are built f
 
 Capture of a source named in `<home>/session/rust-capture.json` belongs to ab-session: its readers run in the
 session process, spend the same credit and checkpoints as Swift scans, and persist `capture-state/<source>.json`.
-Swift starts no capture for such a source (Safari keeps only its live tabs). A `Scan` of an owned source is a hint: its
+Swift starts no capture for such a source. A `Scan` of an owned source is a hint: its
 rows are not forwarded, it wakes the reader, and `ScanCommitted` follows once the reader's capture that came after it
 is committed (at once when the reader has nothing to do with it). `<source>.reconcile` is answered by ab-session when
 the reader can look again by itself, without a `Primitive`. Blob handles and `mail.body` of an owned source are answered
