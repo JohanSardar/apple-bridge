@@ -22,9 +22,8 @@ RECOVERY_SCENARIOS = ['CORE-RESTORE-EPOCH', 'CORE-RETENTION-RACE', 'CORE-SCOPE-C
 CORE_SCENARIOS = ['CORE-RESUME', 'CORE-STALE-FENCE', 'LAB-MALFORMED-SCENARIO', 'LAB-SSE',
                   'LAB-TRUTH-MULTIPLICITY', *RECOVERY_SCENARIOS]
 IMPORT_SCENARIOS = ['messages/MSG-HISTORY-IMPORT', 'contacts/CON-IMPORT', 'notes/NOTE-IMPORT', 'usage/USE-IMPORT']
-SHORTCUT_SCENARIOS = ['shortcuts/FILES-TRANSFORM', 'shortcuts/SC-ACTIONS', 'shortcuts/SC-CAPTURE', 'shortcuts/SC-RUN-REAL',
-                      'shortcuts/CLK-SIM', 'shortcuts/CLK-ALARM-REAL', 'shortcuts/CLK-TIMER-REAL',
-                      'shortcuts/SC-RUN', 'shortcuts/FOC-SIM', 'shortcuts/FOC-PHONE-SYNC']
+FOCUS_SCENARIOS = ['focus/FOC-SIM', 'focus/FOC-PHONE-SYNC']
+CLOCK_SCENARIOS = ['clock/CLK-SIM', 'clock/CLK-ALARM-REAL', 'clock/CLK-TIMER-REAL']
 CONTACTS_SCENARIOS = ['contacts/CON-CRUD', 'contacts/CON-CONFLICT', 'contacts/CON-DROP-EVERYTHING',
                       'contacts/CON-EXTERNAL', 'contacts/CON-GROUPS', 'contacts/CON-HANDLE-LINK',
                       'contacts/CON-IMAGE', 'contacts/CON-PERMISSION-LOSS',
@@ -42,7 +41,7 @@ WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB
                     'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO',
                     'web/WEB-RM-REMINDERS-HARDENING', 'web/WEB-RM-REMINDERS-LISTS']
 NATIVE_SCENARIOS = ['packaging/Q1-SETUP', 'packaging/R1-RELEASE-SIM', 'files/FILE-IDLE', 'files/FILE-CAPTURE',
-                    'safari/SAF-CAPTURE', 'safari/SAF-IDLE',
+                    'files/FILES-TRANSFORM',
                     'core/CORE-SOURCE-SUPPORT', 'core/CORE-SHORTCUT-SIGN']
 MESSAGES_A_SCENARIOS = ['messages/MSG-DB-REPLACED', 'messages/MSG-PERMISSION-LOSS', 'messages/MSG-INCOMING',
                         'messages/MSG-DECODE']
@@ -73,8 +72,6 @@ REMINDER_NATIVE_SCENARIOS = ['reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNA
                              'reminders/REM-PERMISSION-LOSS', 'reminders/REM-DST']
 REMINDER_MAC_SCENARIOS = ['reminders/REM-SECTIONS', 'reminders/REM-STORE-READ', 'reminders/REM-STORE-DECODE',
                           'reminders/REM-STORE-PERF']
-MAC_SCENARIOS = ['mac/MAC-ACTIONS', 'mac/MAC-COMMANDS', 'mac/MAC-CAPTURE', 'mac/MAC-IDLE',
-                 'mac/MAC-EXTRAS-SIM', 'mac/IWORK-REAL']
 WEB_SCENARIOS = ['web/WEB-CON-LIST', 'web/WEB-MEDIA-CAP']
 NATIVE_MEDIA_SCENARIOS = ['web/NATIVE-MEDIA-EXPORT-SAFETY', 'web/NATIVE-MEDIA-POSTERS', 'web/NATIVE-MEDIA-YIELD', 'web/WEB-REM-PARITY']
 MESSAGES_B_SCENARIOS = [f'messages/MSG-{name}' for name in [
@@ -112,20 +109,18 @@ SCENARIOS += ROBUST_SCENARIOS
 REAL_ONLY_COMPILED = ['CORE-PERMISSION-STATUS', 'CORE-QUERY-HELPER', 'APP-ALARM-REAL', 'APP-APPROVE-REAL', 'APP-CAPTURE-REAL', 'APP-CMD-REAL',
     'APP-DEVICE-REAL', 'APP-HEALTH-REAL', 'APP-HEALTH-WRITE-REAL', 'APP-INTENTS-REAL', 'APP-LIVE-REAL',
     'APP-LOC-REAL', 'APP-MOTION-REAL', 'APP-NOTIFY-REAL', 'APP-PAIR-REAL', 'APP-SCREENTIME-REAL',
-    'APP-SHELL-REAL', 'AUD-TRANSCRIBE', 'BT-REAL', 'CALL-READ-REAL', 'CALLS-REPLICA', 'CONN-CLAUDE-CODE',
+    'APP-SHELL-REAL', 'AUD-TRANSCRIBE', 'CALL-READ-REAL', 'CALLS-REPLICA', 'CONN-CLAUDE-CODE',
     'CONN-RELAY-CLAUDE', 'FILE-REPLICA', 'RELAY-REAL',
     'WEB-RELAY-COMMAND', 'WEB-RELAY-CONNECT', 'WEB-RELAY-NATIVE-AGENTS', 'WEB-RELAY-PUBLIC-AGENTS',
     'WEB-RELAY-REPLICA', 'WEB-RELAY-REPLICA-BLOBS', 'WEB-REMOTE-FUNNEL', 'FILE-SEARCH-REAL', 'HELPER-LIVE-BACKFILL',
     'HELPER-RELEASE-COMMANDS', 'HELPER-RESTART-REAL', 'HELPER-SESSION-SOAK', 'HELPER-SIGNED-APP-CACHE',
-    'HELPER-TCC-READY', 'LOC-CURRENT-REAL', 'LOC-GEOCODE-REAL', 'LOC-IDLE', 'MAC-APPEARANCE-REAL',
-    'MAC-APPS-REAL', 'MAC-AUDIO-REAL', 'MAC-CLIPBOARD-REAL', 'MAC-KEEPAWAKE-REAL', 'MAC-NOTIFY-REAL',
-    'MAC-POWER-REAL', 'MAC-REPLICA', 'MAIL-REPLICA', 'MAP-DIRECTIONS-REAL', 'MAP-IDLE', 'MAP-SEARCH-REAL',
+    'HELPER-TCC-READY', 'LOC-CURRENT-REAL', 'LOC-GEOCODE-REAL', 'LOC-IDLE', 'MAIL-REPLICA', 'MAP-DIRECTIONS-REAL', 'MAP-IDLE', 'MAP-SEARCH-REAL',
     'MAP-SNAPSHOT-REAL', 'PKG-BACKGROUND', 'PKG-INSTALL', 'R1-DMG-REAL', 'REM-LIST-LOST-ACK',
-    'RMT-STATUS-OFF', 'SAF-BOOKMARKS-REAL', 'SAF-HISTORY-REAL', 'SHAZAM-REAL', 'SPEECH-SAY', 'TM-STATUS',
+    'RMT-STATUS-OFF', 'SPEECH-SAY',
     'VIS-IDLE', 'WEB-REM-WRITE']
 REAL_ONLY_STUB = ['APP-BUILD-REAL', 'CON-ME', 'CON-NOTE', 'CON-RELAY', 'FOC-IDLE', 'FOC-SET-REAL',
     'FOC-STATUS-REAL', 'MAIL-AGENT', 'MAIL-BODY-REAL', 'MAIL-DRAFT-REAL', 'MAIL-ORGANIZE-REAL',
-    'MAIL-READ-REAL', 'MAIL-SEND-SELF-REAL', 'SC-IDLE']
+    'MAIL-READ-REAL', 'MAIL-SEND-SELF-REAL']
 SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
 MOVED_TO_RUST_TESTS = {
     'core/CORE-SEARCH-UPDATE-PERF': 'drives the Go state store in-process; the Rust runner has no store access. Ported to rust/crates/ab-state/tests/search_update_perf.rs (make rust-search-perf). Speed numbers are recorded, not enforced. The Go assertions search_unavailable_during_rebuild, search_rest_preparing_is_retryable_error_not_empty, search_mcp_preparing_is_retryable_error_not_empty and restart_resumes_pending_rebuild have no Rust equivalent because ab-state rebuilds the search index inside open() instead of in a background migration.',
@@ -153,15 +148,15 @@ SESSION_ENV = {
     'AB_LAB_SESSION_SOURCES': 'calendar,contacts,reminders',
     'AB_LAB_SESSION_NATIVE_FACTS': '1',
 }
-SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'shortcuts/SC-RUN-REAL', 'files/FILE-COMMANDS', 'mac/MAC-ACTIONS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
+SESSION_SAMPLE = ['notes/NOTE-CRUD', 'messages/MSG-EDIT', 'files/FILE-COMMANDS', 'maps/MAP-SIM', 'vision/PDF-TEXT', 'CORE-RESUME']
 SESSION_FIXTURE_SOURCES = {
     'linux': 'notes,usage',
-    'darwin': 'safari,phone,voicemail,voice_memos,mail',
+    'darwin': 'phone,voicemail,voice_memos,mail',
 }
 SESSION_FIXTURE_SCENARIOS = {
     'linux': ['notes/NOTE-CRUD', 'notes/NOTE-EXTERNAL', 'notes/NOTE-EXTRAS', 'notes/NOTE-IMPORT', 'notes/NOTE-EDIT-PARITY',
               'notes/NOTE-RICH-REJECT', 'usage/USE-IMPORT', 'usage/USE-LOCK-CLIP', 'usage/USE-READONLY', 'usage/USE-REMOTE-LAG'],
-    'darwin': ['safari/SAF-CAPTURE', 'phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'mail/MAIL-CAPTURE',
+    'darwin': ['phone/CALL-CAPTURE', 'phone/VM-CAPTURE', 'phone/VMEMO-CAPTURE', 'mail/MAIL-CAPTURE',
                'mail/MAIL-BODY', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE'],
 }
 SESSION_CONTROL_SCENARIOS = ['calendar/CAL-CRUD', 'contacts/CON-CRUD', 'reminders/REM-CRUD']
@@ -247,14 +242,14 @@ def main():
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
     parser.add_argument('--maps', dest='maps', action='store_true')
-    parser.add_argument('--shortcuts', dest='shortcuts', action='store_true')
+    parser.add_argument('--focus', action='store_true')
+    parser.add_argument('--clock', action='store_true')
     parser.add_argument('--relay', dest='relay', action='store_true')
     parser.add_argument('--relay-streams', dest='relay_streams', action='store_true')
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--consent', dest='consent', action='store_true')
     parser.add_argument('--security', dest='security', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
-    parser.add_argument('--mac', dest='mac', action='store_true')
     parser.add_argument('--reminders-mac', dest='reminders_mac', action='store_true')
     parser.add_argument('--usage', action='store_true')
     parser.add_argument('--darwin-usage', dest='darwin_usage', action='store_true')
@@ -305,8 +300,10 @@ def main():
     for flag, group in [(args.usage, USAGE_SCENARIOS), (args.darwin_usage, DARWIN_USAGE_SCENARIOS), (args.calls, CALLS_SCENARIOS), (args.helper, HELPER_SCENARIOS)]:
         if flag:
             args.scenario = (args.scenario or []) + group
-    if args.shortcuts:
-        args.scenario = (args.scenario or []) + SHORTCUT_SCENARIOS
+    if args.focus:
+        args.scenario = (args.scenario or []) + FOCUS_SCENARIOS
+    if args.clock:
+        args.scenario = (args.scenario or []) + CLOCK_SCENARIOS
     if args.messages_b:
         args.scenario = (args.scenario or []) + MESSAGES_B_SCENARIOS
     if args.messages_b_native:
@@ -345,8 +342,6 @@ def main():
         args.scenario = (args.scenario or []) + REMINDER_SCENARIOS + REMINDER_NATIVE_SCENARIOS
     if args.reminders_mac:
         args.scenario = (args.scenario or []) + REMINDER_MAC_SCENARIOS
-    if args.mac:
-        args.scenario = (args.scenario or []) + MAC_SCENARIOS
     if args.web:
         args.scenario = (args.scenario or []) + WEB_SCENARIOS
     if args.vision:

@@ -41,7 +41,6 @@ fn silent(socket: &mut UnixStream) -> Fallible<bool> {
 
 #[derive(Default)]
 struct World {
-    mac: Vec<Value>,
     statuses: BTreeMap<String, String>,
     requests: Vec<Value>,
 }
@@ -62,22 +61,22 @@ fn serve(mut stream: UnixStream, world: Shared) {
             let op = frame["op"].as_str().unwrap_or_default().to_owned();
             let Ok(mut guard) = world.lock() else { return };
             guard.requests.push(frame.clone());
-            let items: Vec<Value> = match op.as_str() {
-                "mac.state" => guard.mac.clone(),
-                "files.ubiquity" => frame["args"]["paths"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .map(|path| {
-                        let key = path.as_str().unwrap_or_default();
-                        json!({"path":key,"status":guard.statuses.get(key).map_or("local", String::as_str)})
-                    })
-                    .collect(),
-                _ => {
-                    let _ = send(&mut stream, &json!({"t":"Error","id":frame["id"],"code":"unsupported"}));
-                    continue;
-                }
-            };
+            if op != "files.ubiquity" {
+                let _ = send(
+                    &mut stream,
+                    &json!({"t":"Error","id":frame["id"],"code":"unsupported"}),
+                );
+                continue;
+            }
+            let items: Vec<Value> = frame["args"]["paths"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|path| {
+                    let key = path.as_str().unwrap_or_default();
+                    json!({"path":key,"status":guard.statuses.get(key).map_or("local", String::as_str)})
+                })
+                .collect();
             drop(guard);
             let token = format!("snap-{}", frame["id"].as_str().unwrap_or_default());
             snapshots.insert(token.clone(), items.clone());
@@ -92,7 +91,6 @@ fn serve(mut stream: UnixStream, world: Shared) {
 struct Wire {
     gateway: UnixStream,
     helper: UnixStream,
-    push: UnixStream,
     world: Shared,
 }
 
@@ -102,7 +100,6 @@ fn wire(config: &Value) -> Fallible<Wire> {
 
 fn wire_with(config: &Value, world: World) -> Fallible<Wire> {
     let (native, server) = UnixStream::pair()?;
-    let push = server.try_clone()?;
     let world: Shared = Arc::new(Mutex::new(world));
     serve(server, Arc::clone(&world));
     let client = Arc::new(Client::inherited(native)?);
@@ -120,7 +117,6 @@ fn wire_with(config: &Value, world: World) -> Fallible<Wire> {
     Ok(Wire {
         gateway,
         helper,
-        push,
         world,
     })
 }
@@ -145,82 +141,10 @@ fn keys(capture: &Value, kind: &str) -> Vec<String> {
 }
 
 fn scratch(name: &str) -> Fallible<PathBuf> {
-    let root = std::env::temp_dir().join(format!("ab-files-mac-{name}-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("ab-files-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root)?;
     Ok(root.canonicalize()?)
-}
-
-fn mac_row(collection: &str, key: &str, data: &Value) -> Value {
-    json!({"kind":"upsert","collection":collection,"native_key":key,"data":data})
-}
-
-#[test]
-fn mac_facts_are_diffed_in_rust_and_changed_wakes_the_pull() -> Fallible<()> {
-    let root = scratch("mac")?;
-    let mut w = wire_with(
-        &json!({"mac":{"root":root,"facts":"native","facts_poll_ms":600_000}}),
-        World {
-            mac: vec![
-                mac_row("mac.power", "system", &json!({"charging":false})),
-                mac_row("mac.app", "10", &json!({"name":"Mail"})),
-                mac_row("mac.app", "11", &json!({"name":"Notes"})),
-            ],
-            ..World::default()
-        },
-    )?;
-    let (size, first) = receive(&mut w.gateway)?;
-    assert_eq!(first["source"], "mac");
-    assert_eq!(first["generation"], "native/1");
-    assert_eq!(first["live"], false);
-    assert_eq!(keys(&first, "upsert"), ["10", "11", "system"]);
-    let alias = first["observations"]
-        .as_array()
-        .and_then(|rows| rows.iter().find(|row| row["native_key"] == "10"))
-        .map(|row| row["scoped_alias"].clone());
-    assert_eq!(alias, Some(json!("mac/mac.app/10")));
-    commit(&mut w, "mac", &first, size)?;
-    assert!(silent(&mut w.gateway)?);
-
-    w.world.lock().map_err(|_| "poisoned")?.mac = vec![
-        mac_row("mac.power", "system", &json!({"charging":true})),
-        mac_row("mac.app", "10", &json!({"name":"Mail"})),
-    ];
-    send(
-        &mut w.push,
-        &json!({"t":"Changed","source":"mac","generation":"native/1"}),
-    )?;
-    let (size, second) = receive(&mut w.gateway)?;
-    assert_eq!(second["predecessor"], first["checkpoint"]);
-    assert_eq!(second["live"], true);
-    assert_eq!(keys(&second, "upsert"), ["system"]);
-    assert_eq!(keys(&second, "absent"), ["11"]);
-    commit(&mut w, "mac", &second, size)?;
-
-    send(
-        &mut w.push,
-        &json!({"t":"Changed","source":"mac","generation":"native/1"}),
-    )?;
-    assert!(silent(&mut w.gateway)?);
-    drop(w.helper);
-    std::fs::remove_dir_all(&root)?;
-    Ok(())
-}
-
-#[test]
-fn a_mac_row_outside_the_scope_is_refused() -> Fallible<()> {
-    let root = scratch("macscope")?;
-    let mut w = wire_with(
-        &json!({"mac":{"root":root,"facts":"native","facts_poll_ms":20}}),
-        World {
-            mac: vec![mac_row("mac.bluetooth_device", "x", &json!({}))],
-            ..World::default()
-        },
-    )?;
-    assert!(silent(&mut w.gateway)?);
-    drop(w.helper);
-    std::fs::remove_dir_all(&root)?;
-    Ok(())
 }
 
 fn paths_of(world: &Shared) -> Fallible<Vec<String>> {
@@ -369,5 +293,4 @@ fn configured_roots_come_from_the_helper_roots_file() -> Fallible<()> {
 #[test]
 fn a_files_config_without_native_facts_is_refused() {
     assert!(readers::from_config(&json!({"files":{"root":"/tmp"}}).to_string()).is_err());
-    assert!(readers::from_config(&json!({"mac":{"root":"/tmp"}}).to_string()).is_err());
 }

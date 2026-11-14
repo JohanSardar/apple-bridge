@@ -554,7 +554,7 @@ fn guard_lines(home: &std::path::Path) -> Vec<Value> {
 #[test]
 fn a_command_is_prepared_dispatched_and_logged_before_the_helper_runs_it() {
     let mut world = start(4_194_304, &json!({}));
-    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c1", "reminders.write");
     ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
     let Ok(Frame::Dispatch(dispatch)) = native::read_frame(&mut world.link) else {
         panic!("no dispatch");
@@ -593,7 +593,7 @@ fn a_ticket_is_one_shot_and_bound_to_origin_and_fence() {
     let (refused, _) = ipc_read(&mut world.gateway).expect("refused");
     assert_eq!(refused["error"]["code"], "conflict");
 
-    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c1", "reminders.write");
     ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 8));
     let (refused, _) = ipc_read(&mut world.gateway).expect("refused");
     assert_eq!(refused["error"]["code"], "expired");
@@ -611,8 +611,8 @@ fn guard_lines_absent(home: &std::path::Path) -> bool {
 #[test]
 fn only_one_command_is_in_flight_and_a_started_id_is_never_prepared_again() {
     let mut world = start(4_194_304, &json!({}));
-    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
-    ipc_send(&mut world.gateway, &prepare_frame("c2", "mac.set_volume"));
+    let ticket = prepare_ticket(&mut world, "c1", "reminders.write");
+    ipc_send(&mut world.gateway, &prepare_frame("c2", "reminders.write"));
     let (refused, _) = ipc_read(&mut world.gateway).expect("refused");
     assert_eq!(
         (
@@ -650,7 +650,7 @@ fn only_one_command_is_in_flight_and_a_started_id_is_never_prepared_again() {
     );
     let swift = swift_loader_view(&lines);
     assert_eq!(swift["c1"], "failed_no_effect");
-    ipc_send(&mut world.gateway, &prepare_frame("c1", "mac.set_volume"));
+    ipc_send(&mut world.gateway, &prepare_frame("c1", "reminders.write"));
     let (refused, _) = ipc_read(&mut world.gateway).expect("refused");
     assert_eq!(refused["error"]["code"], "conflict");
     let _ = finish(world);
@@ -679,7 +679,7 @@ fn a_helper_rejection_at_prepare_reaches_the_gateway() {
     .expect("rejected");
     let (rejected, _) = ipc_read(&mut world.gateway).expect("rejected");
     assert_eq!(rejected["error"]["code"], "unsupported");
-    let ticket = prepare_ticket(&mut world, "c2", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c2", "reminders.write");
     assert_ne!(ticket, "");
     let _ = finish(world);
 }
@@ -688,7 +688,7 @@ fn a_helper_rejection_at_prepare_reaches_the_gateway() {
 fn an_unfinished_dispatch_is_reported_after_restart_and_resolved_through_the_helper() {
     let mut world = start(4_194_304, &json!({}));
     let home = world.home.clone();
-    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c1", "reminders.write");
     ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
     assert!(matches!(
         native::read_frame(&mut world.link),
@@ -701,7 +701,7 @@ fn an_unfinished_dispatch_is_reported_after_restart_and_resolved_through_the_hel
     assert_eq!(unresolved["t"], "Outcome");
     assert_eq!(unresolved["command_id"], "c1");
     assert_eq!(unresolved["disposition"], "indeterminate");
-    ipc_send(&mut again.gateway, &prepare_frame("c1", "mac.set_volume"));
+    ipc_send(&mut again.gateway, &prepare_frame("c1", "reminders.write"));
     let (refused, _) = ipc_read(&mut again.gateway).expect("refused");
     assert_eq!(refused["error"]["code"], "conflict");
 
@@ -1286,7 +1286,7 @@ fn a_rust_owned_resolve_stays_indeterminate_when_the_write_is_not_there() {
 #[test]
 fn a_recorded_outcome_is_offered_to_the_helper_and_a_failed_no_effect_one_is_not() {
     let mut world = start(4_194_304, &json!({}));
-    let ticket = prepare_ticket(&mut world, "c1", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c1", "reminders.write");
     ipc_send(&mut world.gateway, &dispatch_frame("c1", &ticket, 7));
     assert!(matches!(
         native::read_frame(&mut world.link),
@@ -1325,7 +1325,7 @@ fn a_recorded_outcome_is_offered_to_the_helper_and_a_failed_no_effect_one_is_not
     assert_eq!(strengthened["disposition"], "delivery_failed");
     assert_eq!(strengthened["evidence"]["error_code"], 100);
 
-    let ticket = prepare_ticket(&mut world, "c2", "mac.set_volume");
+    let ticket = prepare_ticket(&mut world, "c2", "reminders.write");
     ipc_send(&mut world.gateway, &dispatch_frame("c2", &ticket, 7));
     assert!(matches!(
         native::read_frame(&mut world.link),
@@ -1597,7 +1597,7 @@ fn a_rust_owned_resolve_whose_key_is_never_committed_stays_indeterminate() {
 }
 
 fn prepare_expiring_in(id: &str, millis: i64) -> IpcFrame {
-    let mut prepare = prepare_frame(id, "mac.set_volume");
+    let mut prepare = prepare_frame(id, "reminders.write");
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
@@ -1619,7 +1619,7 @@ fn a_short_lived_command_frees_the_ticket_slot() {
     let (prepared, _) = ipc_read(&mut world.gateway).expect("prepared");
     let ticket = prepared["ticket"].as_str().expect("ticket").to_owned();
     thread::sleep(Duration::from_millis(1200));
-    ipc_send(&mut world.gateway, &prepare_frame("c2", "mac.set_volume"));
+    ipc_send(&mut world.gateway, &prepare_frame("c2", "reminders.write"));
     assert!(matches!(
         native::read_frame(&mut world.link),
         Ok(Frame::Prepare(_))
@@ -1645,7 +1645,7 @@ fn a_command_expiry_far_from_the_clock_is_treated_as_skew_not_as_expired() {
         .link
         .set_read_timeout(Some(Duration::from_secs(5)))
         .expect("timeout");
-    let mut skewed = prepare_frame("c1", "mac.set_volume");
+    let mut skewed = prepare_frame("c1", "reminders.write");
     skewed.expires_at = GoTime::from_unix(3_600).expect("epoch");
     ipc_send(&mut world.gateway, &skewed);
     assert!(matches!(

@@ -565,12 +565,7 @@ fn plain_requests_find_the_right_operation_first() -> Check {
         ("listen to my voicemails", "records.query/voicemail.message"),
         ("who called me", "records.query/phone.call"),
         ("missed calls", "records.query/phone.call"),
-        ("safari browsing history", "records.query/safari.history"),
-        ("websites I visited", "records.query/safari.history"),
         ("voice memos", "records.query/voice_memos.recording"),
-        ("is the wifi working", "mac.network_check"),
-        ("am I online", "mac.network_check"),
-        ("internet connection", "mac.network_check"),
         ("where am I", "location.current"),
         ("find a document", "files.search"),
         ("search my files", "files.search"),
@@ -592,9 +587,7 @@ fn plain_requests_find_the_right_operation_first() -> Check {
         ("find a photo of a dog", "photos.search"),
         ("show me pictures from the beach", "photos.search"),
         ("look up a phone number", "contacts.lookup"),
-        ("turn the volume down", "mac.set_volume"),
         ("set an alarm", "iphone.alarm.create"),
-        ("what song is playing", "mac.recognize_song"),
     ];
     let mut misses = Vec::new();
     for (query, wanted) in cases {

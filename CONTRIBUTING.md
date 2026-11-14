@@ -16,12 +16,12 @@ make rust-ci
 `make build` builds the Rust workspace and, on macOS, the native Helper. Linux builds do not validate Apple integrations. `make rust-ci` includes tests, formatting, Clippy, cargo-deny, lab independence, native graph and golden checks; install cargo-deny separately. Use `make rust-golden` for descriptor/OpenAPI compatibility. The feature checker writes design/features.html; avoid committing incidental generated changes.
 
 ```sh
-make sim SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
+packaging/dev/rust-lab.sh sim lab/scenarios/core/CONN-CHATGPT.yaml
 make real SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
 make replica
 ```
 
-Run only relevant scenarios. Real and replica checks require configured hosts and explicit authorization for native data access. Do not run them against somebody's live home. See [lab interfaces](rust/interfaces/) and [release packaging](packaging/release/README.md).
+`make sim` is turned off for now: it prints a message and runs nothing. `packaging/dev/rust-lab.sh sim` still runs the named scenarios. Run only relevant scenarios. Real and replica checks require configured hosts and explicit authorization for native data access. Do not run them against somebody's live home. See [lab interfaces](rust/interfaces/) and [release packaging](packaging/release/README.md).
 
 On an existing development host, `~/bin/ab-local` may serialize checks. It is a private host utility, not included or required by this repository. `rust/check.sh` uses it if present; otherwise it invokes Cargo directly. Use a private CARGO_TARGET_DIR for remote builds and remove your scratch checkout afterwards. Never build on a low-memory host running the live gateway.
 
@@ -33,7 +33,7 @@ Only scenarios that compile phone models or drive the phone harness need it:
 
 ```sh
 git clone https://gitlab.com/johansardar/apple-bridge-iphone.git ../apple-bridge-iphone
-APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone make sim SCENARIOS=lab/scenarios/iphone/APP-SHELL-SIM.yaml
+APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone packaging/dev/rust-lab.sh sim lab/scenarios/iphone/APP-SHELL-SIM.yaml
 ```
 
 Gateway pairing and delivery checks run here without that checkout. The [feature graph](features.yaml) links app-owned modules to it.

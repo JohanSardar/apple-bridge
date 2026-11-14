@@ -4,6 +4,8 @@ The owner's rule: Swift makes Apple framework calls and holds the macOS permissi
 decision. This audit sorts `native/Sources` by that rule. A line count is a result of the sorting, not its
 goal.
 
+Safari, Shortcuts and Mac settings were removed later ([ADR 0033](../../docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)); rows below that name them are history.
+
 A bundled `ab-session` is a posix_spawn child of the Helper without disclaiming responsibility (spike S2), so
 it reads the same protected files under the Helper's TCC identity. "Needs TCC" alone is therefore not a reason
 to stay in Swift. Only "needs an Apple framework API, or a permission only a process with a bundle identity
@@ -17,7 +19,7 @@ can hold" is.
 | Permissions | `AppleSession/Permissions`, `NewPermissions`, `AppleBridgeHelper/SetupPermissions` | TCC status and request APIs. `SetupPermissions` opens protected SQLite files only to ask TCC whether Full Disk Access is held |
 | EventKit | enumerate, revalidate, write and change notifications in `CalendarSource`, `RemindersSource`, `AgendaGate` | `EKEventStore` is the only API that writes and the only one with live identifiers |
 | Contacts | enumerate, revalidate, write, change history in `ContactsSource`, `ContactsHistory` | `CNContactStore`, including the Objective-C history request |
-| AppleScript | `AppleScriptRunner`, `NotesScript`, `NotesFolderUI`, `SafariTabs` | `NSAppleScript` runs inside the identity that holds the Automation grant |
+| AppleScript | `AppleScriptRunner`, `NotesScript`, `NotesFolderUI` | `NSAppleScript` runs inside the identity that holds the Automation grant |
 | Accessibility | `MessagesAXPrimitives`, `MessagesAccessibility`, `MessagesNavigation`, `MessagesUISession`, `MessagesNativeSession`, `MessagesAppleScript` | AX APIs and the IMCore route |
 | Media | `MediaDerivatives`, `MediaExportGuard` | ImageIO, AVFoundation, QuickLook |
 | Files frameworks | `ubiquity`, coordinated read, `transform` in `FilesSource` | `URLResourceValues`, `NSFileCoordinator`, PDFKit, ImageIO |
@@ -33,12 +35,10 @@ can hold" is.
 | Session | `AppleSession` capture loops, `emit`, `sendScans`, `split`, `ScanCommitted` waiters, checkpoints, `Source.capture`, `ObservationSink`, `CaptureOwnership`, `CaptureRetry`, `SessionSources.rustStore` | Delete | ab-session already owns chunks, credit, checkpoints |
 | Store readers | `RemindersStore` (all), `CalendarStore*`, `*DatabaseHints`, `CaptureScope`, `CalendarScanScope` | Delete | `ab_native::reminders_store`, `calendar_store` |
 | Baselines | `MessagesBaseline`, `*-baseline.json`, `notes-identities.json`, Calendar event stamps, Reminders generation file | Delete | `capture::State`, `session/capture-state` |
-| Readers | `CallsSource`, `VoicemailSource`, `VoiceMemosSource`, `UsageSource`, `SafariSource` scans, `MailSource.snapshot`, `MessagesReader`, `MessagesWatcher`, `NotesDatabase`, `NotesChangeStore`, `NotesStore`, `NotesDeletion`, `FilesSource.snapshot`, `DatabaseWatcher`, `SQLiteSnapshot`, `CompleteScan`, `FileScanGuard` | Delete | `ab_native` readers, `ab_sys::watch` |
+| Readers | `CallsSource`, `VoicemailSource`, `VoiceMemosSource`, `UsageSource`, `MailSource.snapshot`, `MessagesReader`, `MessagesWatcher`, `NotesDatabase`, `NotesChangeStore`, `NotesStore`, `NotesDeletion`, `FilesSource.snapshot`, `DatabaseWatcher`, `SQLiteSnapshot`, `CompleteScan`, `FileScanGuard` | Delete | `ab_native` readers, `ab_sys::watch` |
 | Decoders | `Decoders` (typedstream, notes protobuf, message rich) | Delete with their last caller | `ab_native::typedstream`, `notes`, `rich` |
-| Shortcuts inventory | `shortcuts list` driving and its diff | Move | New reader `readers::shortcuts`; the CLI needs no framework |
 | Focus scan | `Assertions.json` decision and 30 s scan | Move | New reader `readers::focus`; Swift answers a `focus.status` fact with the framework values only |
-| Safari tabs | The 5 s loop and its diff; tabs sent as a `Scan` | Move | `SafariReader` pulls a `safari.tabs` fact; Swift only runs the script |
-| Readiness of file sources | `open()` doing schema checks for Phone, Voicemail, Voice Memos, Usage, Mail, Shortcuts | Move | `CaptureReader::readiness` |
+| Readiness of file sources | `open()` doing schema checks for Phone, Voicemail, Voice Memos, Usage, Mail | Move | `CaptureReader::readiness` |
 | Notes reads | `notes.read`, `notes.observe` primitives over SQLite | Move | Session reads through `ab_native::notes_store` |
 | Hint scans | `sendHint`, `captureCommand`, `reconcile(into:)` after a write | Delete | The session's `bind` already nudges and waits for the reader |
 
@@ -84,8 +84,8 @@ Swift captures nothing. `AppleSession` has no capture loop, no scan frames, no c
 `Source.capture`, the store readers, the decoders and the baselines are gone. ab-session reads every source, and
 the Helper answers facts and primitives.
 
-Facts Swift still answers, all framework values: `agenda.*`, `contacts.*`, `files.ubiquity`, `mac.state`,
-`focus.status`, `safari.tabs`, `messages.media`, `pdf.artifacts`, `accessibility.trusted`.
+Facts Swift still answers, all framework values: `agenda.*`, `contacts.*`, `files.ubiquity`,
+`focus.status`, `messages.media`, `pdf.artifacts`, `accessibility.trusted`.
 
 ### Commands (2026-11-04, after Swift stopped capturing)
 
@@ -98,8 +98,6 @@ simulated Helper.
 | --- | --- | --- |
 | Mail | argument and recipient rules, AppleScript text, read-back, error text | `NSAppleScript` run: the Automation grant belongs to the Helper |
 | Files | path confinement, create, write, move, rename, `mdfind`, read rules, staged blobs | tags (`URLResourceValues`), trash and iCloud calls (`FileManager`), coordinated read (`NSFileCoordinator`), transforms (ImageIO, PDFKit) |
-| Mac | bounds, read-backs, settings panes, iWork script and checks, `tmutil`, `system_profiler` | AppleScript run, `NSPasteboard`, `UNUserNotificationCenter`, `NSWorkspace`, the wallpaper call, the IOKit sleep assertion and its timer |
-| Shortcuts | the `shortcuts` CLI run, bounds, evidence | nothing |
 | Focus | `focus.set` rules, the AB Focus run, read-back through `Assertions.json` | `INFocusStatusCenter` status |
 | PDF | document rules, annotation bounds, artifacts, blobs | PDFKit inspect and annotate |
 | Capture | argument rules, artifact verification, `lp` | ScreenCaptureKit, AVFoundation, `NSPrinter` names, PDFKit |

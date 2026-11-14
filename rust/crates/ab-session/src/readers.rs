@@ -1,17 +1,13 @@
 use crate::{Error, native_facts};
 
 mod agenda;
-mod background;
 mod config;
 mod files;
 mod focus;
-mod mac;
 mod mail;
 mod messages;
 mod notes;
 mod pdf;
-mod safari;
-mod shortcuts;
 mod telephony;
 mod usage;
 mod voice_memos;
@@ -20,17 +16,14 @@ pub use agenda::AgendaReader;
 pub use config::{confine_staging, from_config, from_config_linked, wants_inherited_facts};
 pub use files::FilesReader;
 pub use focus::FocusReader;
-pub use mac::MacReader;
 pub use mail::MailReader;
 pub use messages::MessagesReader;
 pub use notes::NotesReader;
 pub use pdf::PdfReader;
-pub use safari::SafariReader;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-pub use shortcuts::ShortcutsReader;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     fmt::Debug,
     fs,
     path::{Path, PathBuf},

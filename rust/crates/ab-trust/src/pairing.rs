@@ -11,11 +11,12 @@ pub struct Enrollment {
     pub pairing_id: String,
     #[serde(default)]
     pub dial: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::kept_grants")]
     pub ceiling: Vec<Grant>,
     pub replica_id: String,
     pub address: String,
     pub fingerprint: String,
+    #[serde(deserialize_with = "crate::kept_grants")]
     pub grants: Vec<Grant>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]

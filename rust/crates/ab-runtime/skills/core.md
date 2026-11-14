@@ -1,6 +1,6 @@
 # Apple Bridge: core
 
-Apple Bridge gives you the owner's Apple data on this Mac: Messages, Mail, Contacts, Calendar, Reminders, Notes, Photos, Files, Safari, Screen Time and more. The data is private. Share only what the task needs.
+Apple Bridge gives you the owner's Apple data on this Mac: Messages, Mail, Contacts, Calendar, Reminders, Notes, Photos, Files, Screen Time and more. The data is private. Share only what the task needs.
 
 ## Start here
 

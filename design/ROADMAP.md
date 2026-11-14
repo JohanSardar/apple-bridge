@@ -74,7 +74,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | C5 | **OCR and PDF**: text from images, screenshots and scans; search and annotate PDFs | A07, X11 | Vision, PDFKit | S |
 | C6 | **Mac controls**: volume and audio devices, Wi-Fi state, network diagnostics, launch and quit apps, clipboard, battery and power, keep awake, lock and sleep, dark mode, Night Shift | D01–D02, D04–D08, D11, D19–D21 | CoreAudio, CoreWLAN, NSWorkspace, NSPasteboard, IOKit, `caffeinate` | S each |
 | C7 | **Bridge notifications** on the Mac (agent approvals, alerts) | D17 | UserNotifications | S |
-| C8 | **Safari**: open tabs, iCloud tabs from other devices, history, bookmarks, Reading List, page content | P11–P14, P16–P17 | Safari databases (`History.db`, `CloudTabs.db`, `Bookmarks.plist`) plus AppleScript | M |
+| C8 | **Safari** (removed, ADR 0033): open tabs, iCloud tabs from other devices, history, bookmarks, Reading List, page content | P11–P14, P16–P17 | Safari databases (`History.db`, `CloudTabs.db`, `Bookmarks.plist`) plus AppleScript | M |
 | C9 | **Mail actions**: send, reply, forward, organize | C06, P01 | Mail AppleScript; evidence = message appears in Sent or the target mailbox | M |
 | C10 | **Audio transcription and an on-device model** | M21, A03 | Speech and Foundation Models frameworks | S each |
 | C11 | **Screen Time app and website data** via Apple's new public action, to compare with Biome | F07 | Shortcuts action (macOS 26) | S probe |
@@ -139,7 +139,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 2. **R1-1:** a polished one-command built-in Tailscale default.
 3. **Shortcuts first:** B9 Shortcuts, then C1 Mac alarms and timers and C2 Focus, all cheap once B9 exists.
 4. **Big data sources:** B1 Mail, B3 Calls and voicemail, B2 Voice Memos.
-6. **Larger new sources:** C3 Files, C8 Safari, C9 Mail actions.
+6. **Larger new sources:** C3 Files, C9 Mail actions.
 7. **iPhone without an app:** Track 4A, if P0-1 passed.
 8. **Our relay and own domains:** R1-4, R1-5, then the R1-6 and R1-7 bring-your-own-account options.
 9. **iPhone app and Home:** E1, then Track 4B and B11 Home.

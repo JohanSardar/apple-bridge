@@ -93,8 +93,6 @@ pub(super) fn driver(source: &str) -> Option<&'static Driver> {
         "messages" => Some(&super::messages::DRIVER),
         "mail" => Some(&super::mail::DRIVER),
         "files" => Some(&super::files::DRIVER),
-        "mac" => Some(&super::mac::DRIVER),
-        "shortcuts" => Some(&super::shortcuts::DRIVER),
         "focus" => Some(&super::focus::DRIVER),
         "pdf" => Some(&super::media::PDF),
         "capture" | "print" => Some(&super::media::CAPTURE),

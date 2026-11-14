@@ -26,7 +26,6 @@ enum ExternalChange {
             case "calendar": return try calendar(action, request)
             case "contacts": return try contacts(action, request)
             case "notes": return try notes(action, request)
-            case "safari": return try safari(action, request)
             case "mail": return try mail(action, request)
             default: throw Failure(reason: "source")
             }
@@ -199,32 +198,6 @@ enum ExternalChange {
         let result = compiled.executeAndReturnError(&error)
         if let error { throw Failure(reason: "apple_event_\(error["NSAppleScriptErrorNumber"] as? Int ?? 0)") }
         return result.stringValue ?? ""
-    }
-
-    private static func safari(_ action: String, _ request: [String: Any]) throws -> [String: Any] {
-        func page() throws -> String {
-            let url = try text(request, "url")
-            guard url.hasPrefix("https://example.com/?ab-test=") else { throw Failure(reason: "untagged_url") }
-            return url
-        }
-        switch action {
-        case "create":
-            let id = try script("com.apple.Safari", "make new document with properties {URL:\(NotesScript.quote(try page()))}\nreturn (id of front window) as text")
-            guard !id.isEmpty else { throw Failure(reason: "no_id") }
-            return done(id)
-        case "update", "delete":
-            let key = try text(request, "key")
-            let marker = try text(request, "marker")
-            guard Int(key) != nil, marker.hasPrefix("abtest") else { throw Failure(reason: "argument_key") }
-            let tab = "first tab of window id \(key) whose URL contains \(NotesScript.quote(marker))"
-            if action == "update" {
-                _ = try script("com.apple.Safari", "set URL of (\(tab)) to \(NotesScript.quote(try page()))\nreturn \"ok\"")
-            } else {
-                _ = try script("com.apple.Safari", "close (\(tab))\nreturn \"ok\"")
-            }
-            return done(key)
-        default: throw Failure(reason: "action")
-        }
     }
 
     private static func mail(_ action: String, _ request: [String: Any]) throws -> [String: Any] {

@@ -14,17 +14,6 @@ pub(crate) fn completion(r: &CommandRecord) -> bool {
     let hash = !r.request_hash.is_empty();
     let prepared = hash && e["prepared"]["request_hash"].as_str() == Some(&r.request_hash);
     let observed = r.state == CommandState::Observed;
-    let runner = r.command.op == "shortcuts.run"
-        && r.source == Source::Shortcuts
-        && observed
-        && r.commit_seq == 0
-        && prepared
-        && e["exit_status"].as_i64() == Some(0)
-        && !e["timed_out"].as_bool().unwrap_or(false)
-        && e["effect_scope"] == "runner completion only"
-        && STANDARD
-            .decode(e["output_base64"].as_str().unwrap_or(""))
-            .is_ok_and(|b| b.len() <= 32 << 10);
     let maps = r.command.op == "maps.open"
         && r.source == Source::Maps
         && observed
@@ -41,12 +30,6 @@ pub(crate) fn completion(r: &CommandRecord) -> bool {
         && r.commit_seq == 0
         && prepared
         && e["finished_callback"] == true;
-    let mac = r.source == Source::Mac
-        && observed
-        && hash
-        && e["observed"] == true
-        && e["fingerprint"].as_str() == Some(&r.request_hash)
-        && e.get("readback").is_some_and(|v| !v.is_null());
     let capture = matches!(
         r.command.op.as_str(),
         "capture.screenshot"
@@ -83,7 +66,7 @@ pub(crate) fn completion(r: &CommandRecord) -> bool {
                 | "photos.album_remove"
                 | "photos.album_delete"
         );
-    runner || maps || playback || mac || capture || location || photos || iphone(r, &e)
+    maps || playback || capture || location || photos || iphone(r, &e)
 }
 fn iphone(r: &CommandRecord, e: &Value) -> bool {
     if r.source != Source::Iphone || r.state != CommandState::Observed {

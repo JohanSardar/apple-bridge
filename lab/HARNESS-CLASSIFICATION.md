@@ -1,4 +1,4 @@
-> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
+> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified. The Safari, Shortcuts and Mac sources were later removed; the rows for `lab/scenarios/mac*.go`, `lab/scenarios/safari_*.go`, `lab/scenarios/shortcuts_runner.go` and `lab/simapple/{mac,mac_commands,safari,shortcuts}.go` describe journeys that no longer exist in any form.
 
 # Harness classification
 

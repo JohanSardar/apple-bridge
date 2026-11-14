@@ -25,8 +25,6 @@ pub enum Source {
     Health,
     #[serde(rename = "iphone")]
     Iphone,
-    #[serde(rename = "mac")]
-    Mac,
     #[serde(rename = "mail")]
     Mail,
     #[serde(rename = "maps")]
@@ -45,10 +43,6 @@ pub enum Source {
     Print,
     #[serde(rename = "reminders")]
     Reminders,
-    #[serde(rename = "safari")]
-    Safari,
-    #[serde(rename = "shortcuts")]
-    Shortcuts,
     #[serde(rename = "speech")]
     Speech,
     #[serde(rename = "system")]
@@ -85,18 +79,6 @@ pub enum Collection {
     HealthSample,
     #[serde(rename = "iphone.location")]
     IphoneLocation,
-    #[serde(rename = "mac.app")]
-    MacApp,
-    #[serde(rename = "mac.audio_device")]
-    MacAudioDevice,
-    #[serde(rename = "mac.bluetooth_device")]
-    MacBluetoothDevice,
-    #[serde(rename = "mac.display")]
-    MacDisplay,
-    #[serde(rename = "mac.network")]
-    MacNetwork,
-    #[serde(rename = "mac.power")]
-    MacPower,
     #[serde(rename = "mail.account")]
     MailAccount,
     #[serde(rename = "mail.attachment")]
@@ -129,20 +111,6 @@ pub enum Collection {
     RemindersList,
     #[serde(rename = "reminders.reminder")]
     RemindersReminder,
-    #[serde(rename = "safari.bookmark")]
-    SafariBookmark,
-    #[serde(rename = "safari.cloud_tab")]
-    SafariCloudTab,
-    #[serde(rename = "safari.history")]
-    SafariHistory,
-    #[serde(rename = "safari.reading_list")]
-    SafariReadingList,
-    #[serde(rename = "safari.tab")]
-    SafariTab,
-    #[serde(rename = "shortcuts.folder")]
-    ShortcutsFolder,
-    #[serde(rename = "shortcuts.shortcut")]
-    ShortcutsShortcut,
     #[serde(rename = "system.command")]
     SystemCommand,
     #[serde(rename = "system.replica")]
@@ -173,12 +141,6 @@ impl Collection {
         Self::FocusStatus,
         Self::HealthSample,
         Self::IphoneLocation,
-        Self::MacApp,
-        Self::MacAudioDevice,
-        Self::MacBluetoothDevice,
-        Self::MacDisplay,
-        Self::MacNetwork,
-        Self::MacPower,
         Self::MailAccount,
         Self::MailAttachment,
         Self::MailMailbox,
@@ -195,13 +157,6 @@ impl Collection {
         Self::RemindersAttachment,
         Self::RemindersList,
         Self::RemindersReminder,
-        Self::SafariBookmark,
-        Self::SafariCloudTab,
-        Self::SafariHistory,
-        Self::SafariReadingList,
-        Self::SafariTab,
-        Self::ShortcutsFolder,
-        Self::ShortcutsShortcut,
         Self::SystemCommand,
         Self::SystemReplica,
         Self::SystemSource,
@@ -222,12 +177,6 @@ impl Collection {
             Self::FocusStatus => "fcs",
             Self::HealthSample => "hsm",
             Self::IphoneLocation => "ipl",
-            Self::MacApp => "map",
-            Self::MacAudioDevice => "mad",
-            Self::MacBluetoothDevice => "mbt",
-            Self::MacDisplay => "mdp",
-            Self::MacNetwork => "mnw",
-            Self::MacPower => "mpw",
             Self::MailAccount => "mac",
             Self::MailAttachment => "mat",
             Self::MailMailbox => "mbx",
@@ -244,13 +193,6 @@ impl Collection {
             Self::RemindersAttachment => "rat",
             Self::RemindersList => "lst",
             Self::RemindersReminder => "rmd",
-            Self::SafariBookmark => "sfb",
-            Self::SafariCloudTab => "sfc",
-            Self::SafariHistory => "sfh",
-            Self::SafariReadingList => "sfr",
-            Self::SafariTab => "sft",
-            Self::ShortcutsFolder => "scf",
-            Self::ShortcutsShortcut => "sct",
             Self::SystemCommand => "cmd",
             Self::SystemReplica => "rpl",
             Self::SystemSource => "src",
@@ -273,12 +215,6 @@ impl Collection {
             Self::FocusStatus => Source::Focus,
             Self::HealthSample => Source::Health,
             Self::IphoneLocation => Source::Iphone,
-            Self::MacApp
-            | Self::MacAudioDevice
-            | Self::MacBluetoothDevice
-            | Self::MacDisplay
-            | Self::MacNetwork
-            | Self::MacPower => Source::Mac,
             Self::MailAccount | Self::MailAttachment | Self::MailMailbox | Self::MailMessage => {
                 Source::Mail
             }
@@ -293,12 +229,6 @@ impl Collection {
             Self::RemindersAttachment | Self::RemindersList | Self::RemindersReminder => {
                 Source::Reminders
             }
-            Self::SafariBookmark
-            | Self::SafariCloudTab
-            | Self::SafariHistory
-            | Self::SafariReadingList
-            | Self::SafariTab => Source::Safari,
-            Self::ShortcutsFolder | Self::ShortcutsShortcut => Source::Shortcuts,
             Self::SystemCommand | Self::SystemReplica | Self::SystemSource => Source::System,
             Self::UsageAppDay | Self::UsageDevice => Source::Usage,
             Self::VoiceMemosFolder | Self::VoiceMemosRecording => Source::VoiceMemos,
@@ -372,12 +302,6 @@ typed_id!(FilesItemId, "fil");
 typed_id!(FocusStatusId, "fcs");
 typed_id!(HealthSampleId, "hsm");
 typed_id!(IphoneLocationId, "ipl");
-typed_id!(MacAppId, "map");
-typed_id!(MacAudioDeviceId, "mad");
-typed_id!(MacBluetoothDeviceId, "mbt");
-typed_id!(MacDisplayId, "mdp");
-typed_id!(MacNetworkId, "mnw");
-typed_id!(MacPowerId, "mpw");
 typed_id!(MailAccountId, "mac");
 typed_id!(MailAttachmentId, "mat");
 typed_id!(MailMailboxId, "mbx");
@@ -394,13 +318,6 @@ typed_id!(PhoneCallId, "call");
 typed_id!(RemindersAttachmentId, "rat");
 typed_id!(RemindersListId, "lst");
 typed_id!(RemindersReminderId, "rmd");
-typed_id!(SafariBookmarkId, "sfb");
-typed_id!(SafariCloudTabId, "sfc");
-typed_id!(SafariHistoryId, "sfh");
-typed_id!(SafariReadingListId, "sfr");
-typed_id!(SafariTabId, "sft");
-typed_id!(ShortcutsFolderId, "scf");
-typed_id!(ShortcutsShortcutId, "sct");
 typed_id!(SystemCommandId, "cmd");
 typed_id!(SystemReplicaId, "rpl");
 typed_id!(SystemSourceId, "src");

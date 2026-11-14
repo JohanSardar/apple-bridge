@@ -379,83 +379,6 @@ const MAILARGS: &[Field] = &[
         omit: true,
     },
 ];
-const MACARGS: &[Field] = &[
-    Field {
-        name: "document_blob",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "format",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "app",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "title",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "body",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "action_url",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "pane",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "image_blob",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "text",
-        kind: "*string",
-        omit: true,
-    },
-    Field {
-        name: "volume",
-        kind: "*float64",
-        omit: true,
-    },
-    Field {
-        name: "muted",
-        kind: "*bool",
-        omit: true,
-    },
-    Field {
-        name: "appearance",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "bundle_id",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "on",
-        kind: "*bool",
-        omit: true,
-    },
-    Field {
-        name: "duration",
-        kind: "float64",
-        omit: true,
-    },
-];
 const FILEARGS: &[Field] = &[
     Field {
         name: "root",
@@ -507,28 +430,6 @@ const FOCUSSETARGS: &[Field] = &[
     Field {
         name: "until",
         kind: "string",
-        omit: true,
-    },
-];
-const SHORTCUTRUNARGS: &[Field] = &[
-    Field {
-        name: "shortcut",
-        kind: "string",
-        omit: false,
-    },
-    Field {
-        name: "input",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "input_base64",
-        kind: "string",
-        omit: true,
-    },
-    Field {
-        name: "timeout_ms",
-        kind: "int",
         omit: true,
     },
 ];
@@ -905,11 +806,9 @@ pub fn fields(name: &str) -> &'static [Field] {
         "MessagesArgs" => MESSAGESARGS,
         "MessageFile" => MESSAGEFILE,
         "NativeMessageFile" => NATIVEMESSAGEFILE,
-        "MacArgs" => MACARGS,
         "MailArgs" => MAILARGS,
         "FileArgs" => FILEARGS,
         "FocusSetArgs" => FOCUSSETARGS,
-        "ShortcutRunArgs" => SHORTCUTRUNARGS,
         "CaptureArgs" => CAPTUREARGS,
         "PlaybackArgs" => PLAYBACKARGS,
         "ContactGroupArgs" => CONTACTGROUPARGS,

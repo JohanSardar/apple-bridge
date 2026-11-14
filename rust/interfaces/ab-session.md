@@ -30,7 +30,7 @@ on successful terminal exhaustive page, no missing rows, stable scope/generation
 Interrupted/truncated/expired scans never imply absence. Error: {t:Error,id,code}.
 Codes: invalid,unsupported,unavailable,permission_missing,expired,conflict,corrupt.
 Closed fact ops: agenda.calendars, agenda.events, agenda.reminder_lists, agenda.reminders,
-contacts.containers, contacts.groups, contacts.contacts, files.ubiquity, mac.state. No generic SQL/script selector. `Revalidate`
+contacts.containers, contacts.groups, contacts.contacts, files.ubiquity. No generic SQL/script selector. `Revalidate`
 (`id`,`op`,`args.identities`) answers `Revalidated` with one `state` (`present`/`missing`/`outside_scope`)
 per identity, and Swift pushes `Changed` (`source`,`generation`); both ride the facts stream.
 
@@ -57,7 +57,7 @@ in the same `flight::Flights` as Swift scans. A gateway `Committed` for a reader
 
 `<source>.reconcile` is answered by the session when `CaptureReader::refresh` returns true (agenda facts readers, Notes, Messages): it returns after a reader pass that began after the request has finished. `CaptureReader::answer` lets a reader serve a command's read from the store it owns (`notes.read`, `notes.observe`, `notes.trash_folder`). `bind` nudges the reader and waits up to 15 s for the capture of a key in an owned source, 0.5 s otherwise.
 
-Readiness: `CaptureReader::readiness` decides state, coverage, capabilities and reason for sources that are read from a store (phone, voicemail, voice memos, usage, mail, notes, messages, files, shortcuts). The session overrides those in `Ready` and sends `SourceState` when one changes, checked every 30 s. A reader that returns `None` (agenda, contacts, Mac, Focus, Safari, PDF) leaves it to the Helper.
+Readiness: `CaptureReader::readiness` decides state, coverage, capabilities and reason for sources that are read from a store (phone, voicemail, voice memos, usage, mail, notes, messages, files). The session overrides those in `Ready` and sends `SourceState` when one changes, checked every 30 s. A reader that returns `None` (agenda, contacts, Focus, PDF) leaves it to the Helper.
 
 Configuration in a lab world: `AB_LAB_SESSION_SOURCES=a,b` writes `session-home/session/rust-capture.json` from fixture directories, and `--lab-session-listen` loads it.
 
@@ -74,12 +74,12 @@ Rolling out another source (what to copy, in order):
 1. Implement `readers::CaptureReader` for the `ab_native` reader: `next` builds a pending scan
    from `ScanContext` (checkpoint, scan id, now) and returns the serialised batch with
    `coverage` removed; `commit` calls the reader's commit. Skip unchanged input cheaply
-   (Safari uses the reader's input signature, Usage a file-tree signature).
+   (Mail uses its input signature, Usage a file-tree signature).
 2. Register the source name in `readers::from_config` and `production::SUPPORTED`.
-3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=safari,usage,notes` make
+3. Lab world: `AB_LAB_SESSION=<ab-session>` and `AB_LAB_SESSION_SOURCES=mail,usage,notes` make
    `lab/world/session.go` start ab-session on `session.sock`, point simapple at it, and keep the
    gateway socket unchanged. Fixture roots default to `<world>/session-<source>`; a scenario that
-   already owns a fixture calls `world.WithSessionRoot(ctx, source, dir)` (Safari does). If the
+   already owns a fixture calls `world.WithSessionRoot(ctx, source, dir)`. If the
    scenario feeds the source through a simapple control route, add a hook in
    `World.ControlAction` that materialises the same data as files (`stageSessionUsage` writes
    SEGB segments and `sync/sync.db` atomically for `/usage`; `stageSessionMail` rewrites an
@@ -87,10 +87,8 @@ Rolling out another source (what to copy, in order):
    source is dropped, so assertions only see the Rust reader's rows.
 4. Prove: the source's sim scenarios must give the same assertions with the world option off and
    on (`--impl gateway=rust`), and a negative control must fail (proves the data comes from the
-   Rust reader): Screen Time with `AB_SESSION_RUST_POLL_MS=3600000`, Safari with
-   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory), Mail with
-   `AB_SESSION_RUST_POLL_MS=3600000`. Safari's
-   scenario runs a corruption check over its fixture, so the session reads a pristine copy. Add a socketpair test in
+   Rust reader): Screen Time and Mail with `AB_SESSION_RUST_POLL_MS=3600000`, or
+   `AB_LAB_SESSION_CONTROL=empty` (the session reads an empty fixture directory). Add a socketpair test in
    `tests/capture_producer.rs` for the frame rules.
 
 Calls, Voicemail and Voice Memos (`phone`, `voicemail`, `voice_memos`) follow the same pattern. Their
@@ -130,18 +128,17 @@ Open: NOTE-LIST asserts a note inside a recently-deleted folder and a fixed thum
 - **Checkpoint persistence.** With a state directory (`<home>/session/capture-state` in production) the session fsyncs `<source>.json` (`generation`, `checkpoint`, reader `token`) after the gateway commits a Rust capture and the reader has settled. The token is the committed input-tree signature. On `Open`, a record is trusted only when its generation and checkpoint equal `Open.checkpoints[source]`; the reader then resumes and an unchanged source emits nothing. A mismatch (or no record) means a normal first full scan under the gateway's predecessor, so a stale or crashed state file can only cause a rescan, never a skipped change.
 - **Blob handles.** A reader can own a handle prefix (`CaptureReader::owns`/`blob`). Gateway `BlobRead` frames for an owned handle are answered by the session with `BlobChunk` or `BlobUnavailable`, and are never forwarded to the Helper. Voice Memos and voicemail (config `root` and required `staging`) produce `voice-memo-blob:<digest>` and `voicemail-blob:<digest>` handles respectively; their asset stores re-adopt staged files on open, so handles keep resolving after a restart.
 - **Watcher scheduling.** `ab_sys::watch::Watcher` uses kqueue (`EVFILT_VNODE`, macOS) or inotify (Linux) on every directory and file under a reader's root and re-registers after each event. An event wakes the producer immediately (15 ms debounce). The poll interval is only the fallback; if the watcher cannot start, polling continues unchanged. `watch` in the config file (default true).
-- **Override file.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`), for example `{"sources":{"safari":{"root":"..."}},"watch":true,"poll_ms":5000}`. A source outside `production::SUPPORTED` fails startup.
+- **Override file.** `<helper home>/session/rust-capture.json` (the Helper home is `<gateway home>/helper`), for example `{"sources":{"mail":{"root":"..."}},"watch":true,"poll_ms":5000}`. A source outside `production::SUPPORTED` fails startup, except `safari`, `mac` and `shortcuts`, which were removed ([ADR 0033](../../docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)) and are ignored.
 
 Record ids across a flip. The gateway reuses a record id only for the same `(source, generation, collection, native_key)` or the
 same `scoped_alias`, and a Rust reader hashes its own generation, so a flipped source (Phone, Mail, Notes, Messages, Calendar, Contacts)
-used to write a second id per item beside the Swift ones and leave the old ones alive; Safari kept its ids only because its aliases carry no
-generation. The session therefore adopts the generation the gateway has committed for the source: on its first scan of a connection
+used to write a second id per item beside the Swift ones and leave the old ones alive. The session therefore adopts the generation the gateway has committed for the source: on its first scan of a connection
 the Rust reader's native generation is bound to `Open.checkpoints[source].generation` and every capture reports that generation
 (`reported_generation` in `session/capture.rs`; predecessor, flights and the committed checkpoint use the reported one). The binding is saved next to the
 checkpoint in `capture-state/<source>.json` (`native`) and restored on `Open` while the gateway's committed generation is still the saved
 one. A native generation change while Rust owns the source (a regenerated database) is reported as itself, i.e. a normal generation change.
 A reader whose scans legitimately
-carry several generations (`CaptureReader::adopts_generation` false: Safari) is not rewritten. `tests/generation_adoption.rs` fails on the
+carry several generations (`CaptureReader::adopts_generation` false; no current reader) is not rewritten. `tests/generation_adoption.rs` fails on the
 id doubling, on a rollback that duplicates or loses a record, and on a regenerated database being adopted.
 
 Files has no alias and the old Swift capture made a new generation per Helper start, so an existing home holds alive `files.item`
@@ -180,13 +177,11 @@ keeps accepting while the gateway is restarting.
 Fact paging: `{"calendar":{"root":"DIR","facts":"native"}}` makes the reader a native/1 client on the facts link
 (`AB_NATIVE_FACTS_FD`), a separate stream with a `NativeServer` that answers `Facts` and `Revalidate` and pushes `Changed`. The descriptor must
 differ from the gateway and session descriptors. `ipc/1` and `feed/1` are unchanged.
-Files and Mac are Rust captures built on facts (`"facts": "native"` or a socket in the switch file). `ab_native::files` walks the Files roots
+Files is a Rust capture built on facts (`"facts": "native"` or a socket in the switch file). `ab_native::files` walks the Files roots
 itself (the configured root, `roots`, and `Library/Application Support/AppleBridge/files-roots.json` under `home`; symlinks never followed,
 10000 items, depth 16, tags from the `com.apple.metadata:_kMDItemUserTags` attribute) and asks Swift only for `files.ubiquity`, 500 paths per
 request. The diff is `capture::State` per root: a complete walk reports deletions, an incomplete one (truncated, unreadable subtree) emits
-upserts with empty `completion_evidence` and no absence. `ab_native::mac` takes the `mac.state` rows, derives `scoped_alias`, and `capture::State`
-decides upserts and absences; Swift pushes `Changed` (`mac`) and ab-session pulls, so the Swift Helper keeps only the framework reads
-and the change listeners. Generation for both is `native/1`.
+upserts with empty `completion_evidence` and no absence. Generation is `native/1`.
 `facts: {"socket": "/abs/path"}` dials a native/1 server (lab: the second connection to the same simapple socket). `facts_poll_ms` (default
 15000) is the fallback pull interval. The client (`native_facts::Client`) sends `Hello` with the `Open` fence, then pages
 `agenda.calendars` + `agenda.events` (Calendar) or `contacts.containers` + `contacts.groups` + `contacts.contacts` (Contacts) with
@@ -220,10 +215,6 @@ generation emits nothing and deletes nothing (`tests/native_revalidation.rs`; si
 `AB_LAB_SESSION_REVALIDATE_CONTROL=refuse|partial`). The reader token carries the diff state, so a restart
 keeps its baseline (`resume`). `native_facts::Client` multiplexes frames by id on one stream with a reader
 thread; `Changed` marks the source due, `facts_poll_ms` is only the fallback.
-
-### Safari live tabs (facts)
-
-`safari.tab` comes from AppleScript. `SafariReader` pulls the `safari.tabs` fact every 5 s on its own thread, so a slow script never holds up the capture loop. The answer is the full current tab set; `safari::Reader::tabs` diffs it against the last committed tabs (upserts for changes, `absent` for closed tabs). A failed read changes nothing.
 
 ### Messages
 
@@ -279,7 +270,7 @@ changed digest, a `pending` blob, or a non-empty `media` / `derivatives` in the 
 tombstoned record is never revived with old fields. The rule is a no-op for the Swift producer, which always
 emits those keys. Derivatives for attachments first seen after a flip are built by `messages_media`: Rust decides which attachment, which digest, when to retry and how the row records the result; Swift answers one narrow `native/1` fact, `messages.media`, with ImageIO / AVFoundation and its digest-keyed cache.
 
-- **Link.** The messages source needs `"facts":"native"` (the inherited native/1 stream, as for `files` and `mac`); without it the reader behaves as before and attachments carry no `media` / `derivatives`. `media_retry_ms` (default 60000) is the retry delay.
+- **Link.** The messages source needs `"facts":"native"` (the inherited native/1 stream, as for `files`); without it the reader behaves as before and attachments carry no `media` / `derivatives`. `media_retry_ms` (default 60000) is the retry delay.
 - **Request.** Once a `present` attachment has its SHA-256, the reader asks `messages.media` with `{digest, file, uti, mime, sticker, companions}` (`file` and `companions` are absolute paths from the `chat.db` rows, confined by Swift to `<home>/Library/Messages/Attachments`; Swift never opens `chat.db`). One worker thread asks, one attachment at a time, with a ten minute patience that fails only that request: a late answer never closes the shared native/1 stream. The row is emitted first without `media` / `derivatives` (support is not known yet), so the message and the attachment never wait.
 - **Answer.** One item: `status` `ready` (with `root`, the Helper's derivative directory, and `result`, Swift's `MediaResult`: `media`, `derivatives` with `file` relative to `root`, optional `unavailable` and `awaitingLive`), `unsupported` (`MediaDerivatives.supports` is false: the row keeps no `media` / `derivatives`, as Swift leaves it), `paused` (thermal or battery pressure: asked again after five seconds, nothing recorded) or `failed`.
 - **Row.** `ready` re-emits the attachment with `media` = `result.media` and `derivatives` = each variant without `file` plus `"state":"present"`, then `{"state":"unavailable","reason"}` for each `unavailable` entry, the same shaping as `MediaResult.attachmentFields()` which Swift's own `attachMedia` now calls. `blob_handles` maps each variant digest to `media:<digest>`; Rust serves those through `BlobRead` straight from `root` (relative names without `..`, size checked). `failed` or an unreachable Helper re-emits with `media:{}` and `derivatives:{}` and asks again after the retry delay; `awaitingLive` (a Live Photo whose `.mov` has not arrived) records the partial result and asks again after the delay with up to 16 nearest `.mov` attachments as `companions`. A result whose digest no longer matches the attachment is dropped.

@@ -46,6 +46,7 @@ pub(super) fn capabilities() -> [(&'static str, Vec<&'static str>); 4] {
                 "capture.screenshot",
                 "capture.camera_photo",
                 "capture.record_audio",
+                "mac.screen_record",
             ],
         ),
     ]

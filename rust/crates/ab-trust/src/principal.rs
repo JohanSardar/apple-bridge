@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub struct Principal {
     pub id: String,
     pub kind: String,
+    #[serde(deserialize_with = "crate::kept_grants")]
     pub grants: Vec<Grant>,
     #[serde(default)]
     pub revision: u64,
@@ -117,7 +118,6 @@ impl Visibility {
                 "focus",
                 "health",
                 "iphone",
-                "mac",
                 "mail",
                 "maps",
                 "messages",
@@ -127,8 +127,6 @@ impl Visibility {
                 "photos",
                 "print",
                 "reminders",
-                "safari",
-                "shortcuts",
                 "speech",
                 "system",
                 "usage",
@@ -187,5 +185,24 @@ mod tests {
         assert!(visibility.sources.contains("messages"));
         assert!(!visibility.sources.contains("system"));
         assert!(visibility.principals.contains("replica:test"));
+    }
+
+    #[test]
+    fn a_stored_grant_for_a_removed_source_is_dropped_and_others_stay_strict()
+    -> Result<(), serde_json::Error> {
+        let stored = |grants: serde_json::Value| {
+            serde_json::from_value::<Principal>(
+                serde_json::json!({"id": "agent:test", "kind": "agent", "grants": grants}),
+            )
+        };
+        let principal = stored(serde_json::json!([
+            "safari:read",
+            "mac:write",
+            "messages:read"
+        ]))?;
+        assert_eq!(principal.grants, vec![Grant("messages:read".into())]);
+        assert!(stored(serde_json::json!(["unknown:read"])).is_err());
+        assert!(Grant::parse("safari:read").is_err());
+        Ok(())
     }
 }

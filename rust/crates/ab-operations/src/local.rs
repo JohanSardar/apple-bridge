@@ -50,23 +50,7 @@ pub struct LocalGateway {
     stopping: std::sync::atomic::AtomicBool,
 }
 fn raw<T: Serialize>(value: &T) -> Result<Box<RawValue>, Error> {
-    let direct = serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt)?;
-    if !direct.get().contains("mac.clipboard_write") {
-        return Ok(direct);
-    }
-    let mut value: Value = serde_json::from_str(direct.get()).map_err(|_| Code::Corrupt)?;
-    redact_clipboard(&mut value);
-    serde_json::value::to_raw_value(&value).map_err(|_| Code::Corrupt.into())
-}
-fn redact_clipboard(value: &mut serde_json::Value) {
-    if value["command"]["op"] == "mac.clipboard_write" {
-        value["command"]["args"] = serde_json::json!({});
-    }
-    if let Some(values) = value.as_array_mut() {
-        for value in values {
-            redact_clipboard(value);
-        }
-    }
+    serde_json::value::to_raw_value(value).map_err(|_| Code::Corrupt.into())
 }
 fn timestamp(value: &str) -> Result<jiff::Timestamp, Error> {
     value.parse().map_err(|_| Code::Invalid.into())
@@ -155,33 +139,23 @@ impl LocalGateway {
         }
     }
 }
-fn outcome_timeout(command: &Command) -> Result<Duration, Error> {
+fn outcome_timeout(command: &Command) -> Duration {
     if command.op == "focus.set" {
-        return Ok(Duration::from_secs(25));
+        return Duration::from_secs(25);
     }
     if crate::outcome::capture(&command.op) {
-        return Ok(Duration::from_secs(75));
+        return Duration::from_secs(75);
     }
     if command.op.starts_with("messages.") {
-        return Ok(Duration::from_secs(35));
+        return Duration::from_secs(35);
     }
     if command.op.starts_with("mail.") {
-        return Ok(Duration::from_secs(60));
+        return Duration::from_secs(60);
     }
     if matches!(command.op.as_str(), "files.evict" | "files.download") {
-        return Ok(Duration::from_secs(110));
+        return Duration::from_secs(110);
     }
-    if command.op == "shortcuts.run" {
-        let args: Value = serde_json::from_str(command.args.get()).map_err(|_| Code::Invalid)?;
-        let millis = args["timeout_ms"].as_u64().unwrap_or(0);
-        if millis > 300_000 {
-            return Err(Code::Invalid.into());
-        }
-        return Ok(Duration::from_millis(
-            if millis == 0 { 30_000 } else { millis } + 5_000,
-        ));
-    }
-    Ok(Duration::from_secs(15))
+    Duration::from_secs(15)
 }
 
 fn target_collection(op: &str) -> String {

@@ -6,7 +6,7 @@ This lists the catalog only: whether an operation is usable depends on its sourc
 
 `bridge permissions status --json` reads source readiness without prompting. Values are `granted`, `needs_permission` and `unknown`; `needs_permission` does not establish that a request was denied.
 
-161 operations.
+138 operations.
 
 ## audio
 
@@ -185,6 +185,24 @@ Capture an artifact delivered through the blob store
 ### capture.screenshot
 
 Capture an artifact delivered through the blob store
+
+- Kind: `command`
+- Scope: `capture:write`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `admission_era` | string | no |  |
+| `args` | object | yes |  |
+| `command_id` | string | no |  |
+| `expected_version` | integer | no |  |
+| `expires_at` | string | no |  |
+| `op` | string | no |  |
+| `origin` | string | no |  |
+| `wait_ms` | integer | no |  |
+
+### mac.screen_record
+
+Record up to 30 seconds of screen video as a blob
 
 - Kind: `command`
 - Scope: `capture:write`
@@ -588,7 +606,7 @@ Search visible local record text
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `after` | string | no |  |
-| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mac.app`, `mac.audio_device`, `mac.bluetooth_device`, `mac.display`, `mac.network`, `mac.power`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `safari.bookmark`, `safari.cloud_tab`, `safari.history`, `safari.reading_list`, `safari.tab`, `shortcuts.folder`, `shortcuts.shortcut`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
+| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
 | `id` | string | no |  |
 | `include_aliases` | boolean | no |  |
 | `include_deleted` | boolean | no |  |
@@ -605,7 +623,7 @@ Read one visible local bridge record
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `after` | string | no |  |
-| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mac.app`, `mac.audio_device`, `mac.bluetooth_device`, `mac.display`, `mac.network`, `mac.power`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `safari.bookmark`, `safari.cloud_tab`, `safari.history`, `safari.reading_list`, `safari.tab`, `shortcuts.folder`, `shortcuts.shortcut`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
+| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
 | `id` | string | no |  |
 | `include_aliases` | boolean | no |  |
 | `include_deleted` | boolean | no |  |
@@ -622,7 +640,7 @@ Page visible local bridge records in collection and ID order
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `after` | string | no |  |
-| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mac.app`, `mac.audio_device`, `mac.bluetooth_device`, `mac.display`, `mac.network`, `mac.power`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `safari.bookmark`, `safari.cloud_tab`, `safari.history`, `safari.reading_list`, `safari.tab`, `shortcuts.folder`, `shortcuts.shortcut`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
+| `collection` | string | yes | Collection name; use an empty string to query all visible collections. Follow next with after to read further pages. One of: ``, `calendar.calendar`, `calendar.event`, `contacts.contact`, `contacts.container`, `contacts.group`, `files.item`, `focus.status`, `health.sample`, `iphone.location`, `mail.account`, `mail.attachment`, `mail.mailbox`, `mail.message`, `messages.attachment`, `messages.chat`, `messages.handle`, `messages.message`, `messages.reaction`, `notes.folder`, `notes.note`, `pdf.artifact`, `phone.call`, `reminders.attachment`, `reminders.list`, `reminders.reminder`, `system.command`, `system.replica`, `system.source`, `usage.app_day`, `usage.device`, `voice_memos.folder`, `voice_memos.recording`, `voicemail.message` |
 | `id` | string | no |  |
 | `include_aliases` | boolean | no |  |
 | `include_deleted` | boolean | no |  |
@@ -1202,384 +1220,6 @@ Reverse geocode explicit coordinates; never requests or returns the device curre
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 | `op` | string | no | One of: `location.reverse_geocode` |
-
-## mac
-
-### mac.set_volume
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.set_mute
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.set_appearance
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.launch_app
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.activate_app
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.quit_app
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.keep_awake
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.clipboard_write
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.notify
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.open_settings
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.bluetooth_devices
-
-Read Mac extras; native availability is explicit
-
-- Kind: `query`
-- Scope: `mac:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | object | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `mac.bluetooth_devices` |
-
-### mac.clipboard_read
-
-Read transient clipboard text without capturing contents
-
-- Kind: `query`
-- Scope: `mac:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | object | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `mac.clipboard_read` |
-
-### mac.iwork_export
-
-Mac extras action with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.lock_screen
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.network_check
-
-Check default network reachability, DNS and interface counters
-
-- Kind: `query`
-- Scope: `mac:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | object | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `mac.network_check` |
-
-### mac.recognize_song
-
-Read Mac extras; native availability is explicit
-
-- Kind: `query`
-- Scope: `mac:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | object | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `mac.recognize_song` |
-
-### mac.restart
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.screen_record
-
-Record up to 30 seconds of screen video as a blob
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.set_wallpaper
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.shutdown
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.sleep_display
-
-Change Mac state with native readback
-
-- Kind: `command`
-- Scope: `mac:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### mac.time_machine_status
-
-Read Mac extras; native availability is explicit
-
-- Kind: `query`
-- Scope: `mac:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | object | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `mac.time_machine_status` |
 
 ## mail
 
@@ -2578,40 +2218,6 @@ Delete a Reminders list with expected_version
 | `op` | string | no |  |
 | `origin` | string | no |  |
 | `wait_ms` | integer | no |  |
-
-## shortcuts
-
-### shortcuts.run
-
-Run a shortcut with text input; evidence establishes CLI completion only
-
-- Kind: `command`
-- Scope: `shortcuts:write`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `admission_era` | string | no |  |
-| `args` | object | yes |  |
-| `command_id` | string | no |  |
-| `expected_version` | integer | no |  |
-| `expires_at` | string | no |  |
-| `op` | string | no |  |
-| `origin` | string | no |  |
-| `wait_ms` | integer | no |  |
-
-### shortcuts.actions
-
-Read bounded installed App Intents metadata; no executable schema guarantee
-
-- Kind: `query`
-- Scope: `shortcuts:read`
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `args` | value | yes |  |
-| `deadline_ms` | integer | no |  |
-| `id` | string | no |  |
-| `op` | string | no | One of: `shortcuts.actions` |
 
 ## speech
 

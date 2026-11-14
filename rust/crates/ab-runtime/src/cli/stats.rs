@@ -86,15 +86,6 @@ const DESCRIBED: &[Described] = &[
         ],
     },
     Described {
-        source: "safari",
-        label: "Safari",
-        nouns: &[
-            noun("safari.history", "history item", "history items"),
-            noun("safari.bookmark", "bookmark", "bookmarks"),
-            noun("safari.tab", "open tab", "open tabs"),
-        ],
-    },
-    Described {
         source: "phone",
         label: "Phone",
         nouns: &[noun("phone.call", "call", "calls")],
@@ -108,11 +99,6 @@ const DESCRIBED: &[Described] = &[
         source: "files",
         label: "Files",
         nouns: &[noun("files.item", "file", "files")],
-    },
-    Described {
-        source: "shortcuts",
-        label: "Shortcuts",
-        nouns: &[noun("shortcuts.shortcut", "shortcut", "shortcuts")],
     },
 ];
 
@@ -173,10 +159,10 @@ impl SourceStats {
         let owned = OWNED.load(std::sync::atomic::Ordering::Relaxed);
         match self.state.as_str() {
             "permission_missing" if owned => Some(
-                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes, Mail or Safari), then run bridge down and bridge up",
+                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes or Mail), then run bridge down and bridge up",
             ),
             "permission_missing" => Some(
-                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes, Mail or Safari), then quit and reopen the Apple Bridge app",
+                "needs a Mac permission: run bridge permissions guide; if declined, enable Apple Bridge in System Settings > Privacy & Security for this source (Full Disk Access for Messages, Notes or Mail), then quit and reopen the Apple Bridge app",
             ),
             "capture_failed" => Some("could not be read: run bridge doctor"),
             "unavailable" if self.source == "mail" => {

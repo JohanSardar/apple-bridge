@@ -191,7 +191,7 @@ fn maps_write(
 ) -> Result<Value, String> {
     probe.call("maps.show", &action["args"])?;
     for _ in 0..40 {
-        let front = probe.call("mac.frontmost", &json!({}))?;
+        let front = probe.call("maps.frontmost", &json!({}))?;
         if text(&front, "bundle_id") == MAPS {
             return Ok(json!({"frontmost_bundle": MAPS}));
         }
@@ -729,7 +729,7 @@ mod tests {
                 "capture.authorized" => Ok(json!({"authorized": self.authorized})),
                 "speech.say" | "capture.play_sound" => Ok(json!({"finished": true})),
                 "maps.show" => Ok(json!({})),
-                "mac.frontmost" => Ok(json!({"bundle_id": MAPS})),
+                "maps.frontmost" => Ok(json!({"bundle_id": MAPS})),
                 _ => Err("unsupported".into()),
             }
         }

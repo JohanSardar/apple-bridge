@@ -109,7 +109,7 @@ pub fn real(evidence: &mut Evidence) -> Result<()> {
     );
     evidence.check(
         "helper_report",
-        states.len() == 11,
+        states.len() == 8,
         &format!("{} permission states", states.len()),
     );
     for (key, state) in &states {
@@ -149,7 +149,7 @@ pub fn sim(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
     let states = states.unwrap_or_default();
     evidence.check(
         "helper_report",
-        states.len() == 15,
+        states.len() == 12,
         &format!("{} permission states", states.len()),
     );
     for (key, state) in &states {

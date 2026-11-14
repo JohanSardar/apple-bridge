@@ -37,7 +37,7 @@ pub fn stub(id: &str) -> bool {
     crate::contacts::STUB.contains(&id)
         || crate::mail::REAL_ONLY.contains(&id)
         || crate::iphone_real::STUB.contains(&id)
-        || crate::shortcuts::real_only_stub(id)
+        || crate::checks::real_only_stub(id)
 }
 
 pub fn classify(scenario: &Scenario, registry: &Registry) -> Result<&'static str, String> {

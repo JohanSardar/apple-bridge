@@ -8,7 +8,6 @@ let sourceTargets: [Target] = [
     .target(name: "SpeechSource", dependencies: ["SourceSupport"]),
     .target(name: "AudioSource", dependencies: ["SourceSupport"]),
     .target(name: "MapsSource", dependencies: ["SourceSupport"]),
-    .target(name: "MacSource", dependencies: ["SourceSupport"]),
     .target(name: "MailSource", dependencies: ["SourceSupport"]),
     .target(name: "FilesSource", dependencies: ["SourceSupport"]),
     .target(name: "VisionSource", dependencies: ["SourceSupport"]),
@@ -18,7 +17,6 @@ let sourceTargets: [Target] = [
     .target(name: "RemindersSource", dependencies: ["AgendaGate", "SourceSupport"]),
     .target(name: "NotesSource", dependencies: ["SourceSupport"]),
     .target(name: "MessagesSource", dependencies: ["SourceSupport"]),
-    .target(name: "SafariSource", dependencies: ["SourceSupport"]),
 ]
 
 let package = Package(
@@ -32,7 +30,6 @@ let package = Package(
         .executableTarget(name: "MessagesSafetyChecks", dependencies: ["MessagesSource", "SourceSupport"]),
         .executableTarget(name: "CaptureChecks", dependencies: ["CaptureSource", "SourceSupport"]),
         .executableTarget(name: "FilesChecks", dependencies: ["FilesSource", "SourceSupport"]),
-        .executableTarget(name: "MacChecks", dependencies: ["MacSource", "SourceSupport"]),
         .executableTarget(name: "SourceSupportChecks", dependencies: ["SourceSupport"]),
         .target(name: "ContactsHistory", publicHeadersPath: "include"),
         .target(name: "MediaExportGuard", publicHeadersPath: "include"),

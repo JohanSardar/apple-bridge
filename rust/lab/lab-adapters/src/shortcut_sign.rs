@@ -1,4 +1,4 @@
-use crate::shortcuts::scratch_directory;
+use crate::checks::scratch_directory;
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::Value;

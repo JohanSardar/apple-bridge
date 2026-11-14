@@ -2,7 +2,7 @@
 
 `sources.status` includes a `permissions` map for system readers on a gateway with a configured Helper. Values are `not_determined`, `denied`, `authorized`, or `unknown`. Each read launches the signed Helper status command; no request API is used. Screen Recording returns `unknown` when preflight fails because the API cannot distinguish denial from undecided access. Automation uses `AEDeterminePermissionToAutomateTarget` with `askUserIfNeeded=false`; unavailable targets return `unknown`.
 
-`bridge permissions request <name> [--helper-app <app>]` invokes one request API in the Helper. Names are location, camera, microphone, screen_recording, speech_recognition, focus, photos, bluetooth, notifications, automation_mail, automation_music, automation_safari, automation_shortcuts_events. macOS decides whether a prompt is shown, based on existing decisions, entitlements and target availability. No request is retried automatically. Location and Bluetooth keep their managers alive for up to a minute while awaiting authorization.
+`bridge permissions request <name> [--helper-app <app>]` invokes one request API in the Helper. Names are location, camera, microphone, screen_recording, speech_recognition, focus, photos, automation_mail, automation_music. macOS decides whether a prompt is shown, based on existing decisions, entitlements and target availability. No request is retried automatically. Location keeps its manager alive for up to a minute while awaiting authorization.
 
 Queries with external effects must remain commands; permission requests are explicit local CLI actions, never a side effect of a status read. See the query contracts in SPEC.
 

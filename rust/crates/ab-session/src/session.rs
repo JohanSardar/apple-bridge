@@ -26,7 +26,6 @@ mod files;
 mod focus;
 #[cfg(feature = "lab")]
 mod lab_scan;
-mod mac;
 mod mail;
 mod media;
 mod messages;
@@ -48,20 +47,16 @@ mod notes;
 mod owned;
 mod readiness;
 mod reminders;
-mod shortcuts;
 
 pub use capture::Attached;
-pub use mac::CAPABILITIES as MAC_CAPABILITIES;
 
-pub const RUST_COMMAND_SOURCES: [&str; 24] = [
+pub const RUST_COMMAND_SOURCES: [&str; 22] = [
     "reminders",
     "calendar",
     "contacts",
     "notes",
     "mail",
     "files",
-    "mac",
-    "shortcuts",
     "focus",
     "pdf",
     "capture",

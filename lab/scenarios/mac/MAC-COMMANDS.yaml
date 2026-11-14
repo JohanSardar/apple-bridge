@@ -1,5 +1,0 @@
-id: MAC-COMMANDS
-feature: mac.commands
-levels: [sim]
-when:
-  - mac: {}

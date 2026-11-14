@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     Error,
-    guard::{DispatchGuard, PreparedEffect, durable_action},
+    guard::{DispatchGuard, PreparedEffect},
 };
 #[cfg(feature = "lab")]
 use ab_wire::native::Resolve;
@@ -182,10 +182,6 @@ impl Probe for Hub {
             | "files.set_tags"
             | "files.stage"
             | "files.transform"
-            | "mac.script"
-            | "mac.keep_awake"
-            | "mac.app_launch"
-            | "mac.set_wallpaper"
             | "pdf.annotate"
             | "maps.show" => WRITE_WAIT,
             "capture.produce" => CAPTURE_WAIT,
@@ -216,13 +212,7 @@ impl Hub {
     }
 
     pub(super) fn owns_query(&self, operation: &str) -> bool {
-        (super::files::handles_query(operation) && self.capture_owns("files"))
-            || (super::mac::handles_query(operation) && self.owns_commands("mac"))
-    }
-
-    fn owns_commands(&self, source: &str) -> bool {
-        self.core()
-            .is_ok_and(|core| core.commands.owned.contains(source))
+        super::files::handles_query(operation) && self.capture_owns("files")
     }
 
     pub(super) fn owned_query(&self, frame: &IpcFrame) -> Result<(), Error> {
@@ -231,11 +221,7 @@ impl Hub {
             .as_deref()
             .map_or(Ok(Value::Null), |args| serde_json::from_str(args.get()))?;
         let request = json!({"id": frame.id, "op": frame.op, "args": args});
-        let reply = if super::files::handles_query(&frame.op) {
-            super::files::query(self, &request)
-        } else {
-            super::mac::query(&request)
-        };
+        let reply = super::files::query(self, &request);
         self.reply_query(&reply)
     }
 
@@ -546,7 +532,7 @@ impl Hub {
             )?);
         }
         let prepared = json!({
-            "action": durable_action(&action),
+            "action": action.clone(),
             "native_state": state,
             "request_hash": command.request_hash,
         });
@@ -609,7 +595,7 @@ impl Hub {
         }
         let action = parsed(&ticket.command.action);
         let prepared = json!({
-            "action": durable_action(&action),
+            "action": action.clone(),
             "native_state": parsed(&ticket.prepared.native_state),
             "fingerprint": ticket.prepared.fingerprint,
             "request_hash": ticket.command.request_hash,
@@ -857,7 +843,7 @@ impl Hub {
         }
         if evidence.get("prepared").is_none() {
             evidence["prepared"] = json!({
-                "action": durable_action(&parsed(&active.command.action)),
+                "action": parsed(&active.command.action),
                 "native_state": parsed(&active.prepared.native_state),
                 "request_hash": active.command.request_hash,
             });

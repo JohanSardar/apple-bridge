@@ -412,11 +412,9 @@ Contacts Me-card and notes entitlement contract: [spec/contacts.md](spec/contact
 Mail capture foundation and local body queries: [Mail](spec/mail.md).
 
 Files source details: [files](spec/files.md).
-Safari capture: [design/spec/safari.md](spec/safari.md).
 
 Permission status and explicit requests: [permissions](spec/permissions.md).
 
-Mac capture: [contract](spec/mac.md).
 Phone call capture: [source contract](spec/phone.md).
 
 Transient Helper queries and the query-with-effect rule: [query contract](spec/query.md).
@@ -433,7 +431,6 @@ OAuth client metadata: [fetch and lab contract](spec/oauth.md).
 Source registration: [append-friendly registries](spec/sources.md).
 Messages reconciliation: [incremental capture and audit bounds](spec/messages.md).
 Shortcut provisioning: [signed builds and source format](spec/shortcuts.md). Clock: [pack qualification and limits](spec/clock.md).
-Shortcut provisioning and read-only App Intents discovery: [signed builds, source format and bounded metadata inventory](spec/shortcuts.md). Clock: [pack qualification and limits](spec/clock.md).
 Remote onboarding and public readiness: [G1-3 / G1-4 / G1-6](spec/remote.md).
 
 Every source publishes `system.source` with state, coverage, freshness and capabilities, and exposes capabilities individually gated on OS build and proven behaviour. A capability is advertised only after its real-level scenario passed on this OS build (recorded in `features.yaml`); otherwise operations return `ErrUnsupported` with reason `capability_unproven`.

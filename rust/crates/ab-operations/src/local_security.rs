@@ -207,7 +207,7 @@ async fn capture_asks_only_an_ask_first_agent_and_a_full_agent_captures_at_once(
                 "capture:write",
                 json!({"seconds": 1}),
             ),
-            ("mac.screen_record", "mac:write", json!({"seconds": 1})),
+            ("mac.screen_record", "capture:write", json!({"seconds": 1})),
         ] {
             let f = fixture();
             let p = principal("agent:capture", "agent", level, &[scope]);
@@ -396,42 +396,6 @@ async fn current_location_asks_once_per_query_for_a_local_or_remote_ask_first_ag
             }
             assert_eq!(queries_reaching_native(&f), 3);
         }
-    }
-}
-
-#[tokio::test]
-async fn power_actions_run_for_a_full_agent_and_wait_for_an_ask_first_agent() {
-    for op in [
-        "mac.lock_screen",
-        "mac.sleep_display",
-        "mac.restart",
-        "mac.shutdown",
-    ] {
-        let f = fixture();
-        let full = principal("agent:power", "agent", "full", &["mac:write"]);
-        let answer = f
-            .gateway
-            .submit(&full, command("power_full", op, &json!({})))
-            .await;
-        if let Err(error) = &answer {
-            assert_ne!(error.code, Code::Forbidden, "{op}");
-        }
-        assert_eq!(f.gateway.approvals().expect("approvals").len(), 0);
-        let asks = principal("agent:careful", "agent", "approve", &["mac:write"]);
-        let pending = f
-            .gateway
-            .submit(&asks, command("power_asks", op, &json!({})))
-            .await
-            .expect("pending");
-        assert_eq!(state_of(&pending), "awaiting_approval", "{op}");
-        assert_eq!(
-            f.gateway
-                .submit(&owner(), command("power_owner", op, &json!({})))
-                .await
-                .expect_err("owner devices use the Mac itself")
-                .code,
-            Code::Forbidden
-        );
     }
 }
 

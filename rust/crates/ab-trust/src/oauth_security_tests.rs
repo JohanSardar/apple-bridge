@@ -385,3 +385,19 @@ fn registered_names_are_stored_normalized() {
         "Old name"
     );
 }
+
+#[test]
+fn a_refresh_naming_a_removed_source_still_works_and_others_stay_strict() {
+    let home = tempfile::tempdir().unwrap();
+    let authority = Authority::open(home.path()).unwrap();
+    let (_, first) = connected(&authority);
+    let asking = |token: &str, scope: &str| {
+        authority.exchange_oauth(&Exchange {
+            scope: scope.into(),
+            ..exchange("refresh_token", token, "")
+        })
+    };
+    assert!(asking(&first.refresh_token, "calendar:read messages:read").is_err());
+    let next = asking(&first.refresh_token, "calendar:read safari:read mac:write").unwrap();
+    assert_ne!(next.access_token, first.access_token);
+}

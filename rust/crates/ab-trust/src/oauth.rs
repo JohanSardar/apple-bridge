@@ -561,7 +561,7 @@ impl Authority {
             if !e
                 .scope
                 .split_whitespace()
-                .all(|s| s == OFFLINE_ACCESS || granted.contains(&s))
+                .all(|s| s == OFFLINE_ACCESS || granted.contains(&s) || crate::removed_grant(s))
             {
                 return Err(Error::Invalid);
             }

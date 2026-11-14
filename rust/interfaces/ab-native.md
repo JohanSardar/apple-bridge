@@ -55,7 +55,7 @@ transfer each responsibility after its separate shadow-comparison gate.
 
 ## Source scope
 
-Screen Time, Safari, Calls, Voicemail, Voice Memos, Mail and Notes have
+Screen Time, Calls, Voicemail, Voice Memos, Mail and Notes have
 synthetic stream evidence below. Messages remains the separate worker’s
 implementation. No 24-hour shadow evidence is claimed.
 
@@ -241,47 +241,13 @@ is a platform build fix; the separate Messages worker retains reader ownership.
 The probe performs no filesystem read or runtime launch.
 
 
-## Safari fixture reader
+## Capture snapshots
 
 `capture::Snapshot` opens only the supplied SQLite path, read-only, in a read
 transaction. Schema requirements, row/time limits, duplicate identities and
 file/schema replacement must all pass before complete evidence is available.
 Generation strings intentionally use a versioned Rust identity; a migration
 requires a complete rescan. It must not reuse an opaque Swift generation.
-
-`safari::Reader::poll(directory, kind, context)` reads History.db,
-Bookmarks.plist or CloudTabs.db. Context supplies source generation, checkpoint,
-scan ID, timestamp, clock and Automation coverage. `commit(pending)` is called
-only after Committed. Concurrent stale acknowledgements are rejected. Caller
-owns watcher scheduling; unchanged file/WAL inputs skip scans, and history is
-rescanned at its next window expiry. Missing or malformed inputs return errors
-and cannot establish absence. Database replacement carries prior candidates
-until a second complete scan revalidates absence. `cache` / `resume` use the
-same identity-only cache shape as Swift. XML and ASCII plists are parsed as
-bounded event streams before constructing recursive values.
-
-The lab-only `fixture-reader safari DIRECTORY [--interactive] [--frames]`
-requires context.json. Interactive commands are scan, history, bookmarks,
-cloud. It emits observation JSONL plus checkpoint records, or whole frames with
---frames, and persists fixture-only acknowledged identities in rust-cache.json.
-An unchanged poll reports `{"kind":"idle"}`; failed polls report source state.
-Production code never reads that lab cache. This does not register a source.
-
-Build the actual Swift oracle with
-`bash rust/crates/ab-native/parity/safari/build-swift.sh OUTPUT SOURCE_SUPPORT`.
-Each Swift compile is separately locked with ab-local. The oracle injects an
-empty SafariTabs provider: no app access, Automation request or live files.
-Run parity/safari/compare.py with that oracle and the remote fixture-reader
-binary. All databases are independently generated from the same synthetic
-script on both hosts. The harness pauses only its own oracle during mutations;
-repeated identical watcher error notices are coalesced for comparison.
-
-Verified: 19 identical capture/state frames and identical Go JSON Data hashes,
-including history title/window expiry, binary/XML bookmarks, reading-list
-metadata, cloud device fallback, complete deletions, schema/malformed failures,
-two-scan database replacement and identity-cache restart. An unchanged poll
-emits no capture. Separate race tests reject file replacement during a snapshot
-and stale Safari acknowledgements. Real-data comparison remains orchestrator work.
 
 ## Calls and Voicemail
 
@@ -504,8 +470,8 @@ still need native/1 adapters, followed by aggregate scope/capture integration.
 Neither source is enabled or qualified for a production flip.
 
 Fresh local synthetic source replays are recorded in
-`parity/p6-usage-safari-evidence.json` and `parity/p6-remaining/evidence.json`.
-Screen Time, Safari, Calls, Voicemail, Voice Memos, Mail and Notes each match
+`parity/p6-usage-evidence.json` and `parity/p6-remaining/evidence.json`.
+Screen Time, Calls, Voicemail, Voice Memos, Mail and Notes each match
 the actual Swift scan output and Go Data hashes with zero differences. Notes
 retains its already confined attachment watcher paths so lexical `/var` change
 notifications continue to match on Darwin instead of becoming `/private/var`

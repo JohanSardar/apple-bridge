@@ -11,7 +11,6 @@ Production timers and polling in `native/Sources` were inspected. Short sleeps i
 | Idle path | Scheduling and freshness |
 | --- | --- |
 | Usage | Recursive filesystem events and power notifications; unchanged fallback doubles from 500 ms to 30 seconds. See usage.md. |
-| Safari | Five-second tab cadence retained; denied Automation cached for 30 seconds, allowed status rechecked before AppleScript. Database/WAL events plus 30-second fallback skip unchanged inputs; rolling history expiry retained. |
 | Location / Maps | Status-only capture returns every 30 seconds; Location reuses a manager without starting updates. Queries still require a fresh fix. |
 | Additional source failures | Exponential retry capped at 30 seconds, including missing permission. |
 | EventKit authorization / session readiness | Exponential polling capped at 30 seconds; notifications and command checks remain independent. |

@@ -49,13 +49,12 @@ struct Session {
     root: PathBuf,
 }
 
-fn session(bodies: bool, shortcuts: bool) -> Fallible<Session> {
+fn session(bodies: bool) -> Fallible<Session> {
     let root = support::temporary("session-mail")?;
     let sources = BTreeMap::new();
     let options = Options {
         queries: NativeQueries {
             mail_bodies: bodies.then(|| Arc::new(MailBodies::new(root.clone()))),
-            shortcut_roots: shortcuts.then(|| vec![root.clone()]),
             ..NativeQueries::default()
         },
         ..Options::default()
@@ -79,7 +78,7 @@ fn query(id: &str, op: &str, args: &Value) -> Value {
 
 #[test]
 fn rust_answers_mail_body_and_the_helper_never_sees_it() -> Fallible<()> {
-    let mut s = session(true, false)?;
+    let mut s = session(true)?;
     emlx(&s.root, "42", "Content-Type: text/plain\n\nhello body\n")?;
     send(
         &mut s.gateway,
@@ -124,7 +123,7 @@ fn rust_answers_mail_body_and_the_helper_never_sees_it() -> Fallible<()> {
 
 #[test]
 fn without_a_mail_owner_the_query_goes_to_the_helper() -> Fallible<()> {
-    let mut s = session(false, false)?;
+    let mut s = session(false)?;
     send(
         &mut s.gateway,
         &query("q1", "mail.body", &json!({"message_id":"42"})),
@@ -137,7 +136,7 @@ fn without_a_mail_owner_the_query_goes_to_the_helper() -> Fallible<()> {
 
 #[test]
 fn a_body_over_one_megabyte_travels_as_a_session_blob() -> Fallible<()> {
-    let mut s = session(true, false)?;
+    let mut s = session(true)?;
     let message = format!("Content-Type: text/plain\n\n{}\n", "a".repeat(1_300_000));
     emlx(&s.root, "99", &message)?;
     send(
@@ -188,62 +187,6 @@ fn a_body_over_one_megabyte_travels_as_a_session_blob() -> Fallible<()> {
             .is_ok_and(|frame| frame["t"] == "BlobUnavailable"),
         "{gone:?}"
     );
-    std::fs::remove_dir_all(&s.root)?;
-    Ok(())
-}
-
-#[test]
-fn rust_answers_shortcut_actions_and_the_helper_never_sees_them() -> Fallible<()> {
-    let mut s = session(false, true)?;
-    let metadata = s
-        .root
-        .join("Synthetic.app/Contents/Resources/Metadata.appintents");
-    std::fs::create_dir_all(&metadata)?;
-    std::fs::write(
-        s.root.join("Synthetic.app/Contents/Info.plist"),
-        r#"<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.synthetic</string></dict></plist>"#,
-    )?;
-    std::fs::write(
-        metadata.join("extract.actionsdata"),
-        r#"{"actions":{"Export":{"identifier":"Export","title":{"key":"Export"}}}}"#,
-    )?;
-    send(
-        &mut s.gateway,
-        &query("a1", "shortcuts.actions", &json!({})),
-    )?;
-    let reply = receive(&mut s.gateway)?;
-    assert_eq!(reply["t"], "QueryResult");
-    assert_eq!(reply["result_json"]["complete"], true);
-    assert_eq!(
-        reply["result_json"]["items"],
-        json!([{"app":"com.example.synthetic","identifier":"Export","title":"Export"}])
-    );
-    send(
-        &mut s.gateway,
-        &query("a2", "shortcuts.actions", &json!({"x":1})),
-    )?;
-    let invalid = receive(&mut s.gateway)?;
-    assert_eq!(invalid["t"], "QueryError");
-    assert_eq!(invalid["code"], "invalid");
-    send(
-        &mut s.gateway,
-        &query("m1", "mail.body", &json!({"message_id":"1"})),
-    )?;
-    let forwarded = receive(&mut s.helper)?;
-    assert_eq!(forwarded["id"], "m1");
-    std::fs::remove_dir_all(&s.root)?;
-    Ok(())
-}
-
-#[test]
-fn unrouted_shortcut_actions_go_to_the_helper() -> Fallible<()> {
-    let mut s = session(false, false)?;
-    send(
-        &mut s.gateway,
-        &query("a1", "shortcuts.actions", &json!({})),
-    )?;
-    let forwarded = receive(&mut s.helper)?;
-    assert_eq!(forwarded["op"], "shortcuts.actions");
     std::fs::remove_dir_all(&s.root)?;
     Ok(())
 }

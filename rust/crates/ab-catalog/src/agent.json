@@ -12,7 +12,6 @@
     "helper": "Version of the Apple Bridge helper app.",
     "iphone": "The owner's paired iPhone: alarms, timers, notifications, location, motion, Health logging, Screen Time.",
     "location": "The Mac's current location and address lookups.",
-    "mac": "Mac settings, apps, clipboard, notifications and system actions.",
     "mail": "Mail messages: read bodies, send, draft, move, flag, delete.",
     "maps": "Places, directions, travel times and map images.",
     "messages": "iMessage, SMS and RCS chats and messages.",
@@ -22,7 +21,6 @@
     "print": "Print a PDF.",
     "records": "Any synced collection: list, fetch one record, full-text search.",
     "reminders": "Reminders and reminder lists.",
-    "shortcuts": "Run Shortcuts and list app actions.",
     "speech": "Text to speech.",
     "status": "Which sources are ready and how fresh the synced copy is.",
     "vision": "Read text in images."
@@ -54,7 +52,6 @@
     "include_hidden": "Also include photos the owner hid. Default false.",
     "network_access": "Let Photos download the original from iCloud when the Mac only keeps a thumbnail.",
     "volume": "Playback volume from 0 (silent) to 1 (full). Defaults to the current volume.",
-    "bundle_id": "The app's bundle identifier, such as com.apple.Safari.",
     "root": "An opted-in folder as an absolute path, from files.search results or the owner.",
     "path": "Path of the item inside root, relative, without a leading slash.",
     "parent": "Folder inside root that holds the item, relative. Omit for root itself.",
@@ -412,10 +409,10 @@
       ]
     },
     "records.query": {
-      "s": "Page through any synced collection, such as phone calls, Safari history or voicemail.",
+      "s": "Page through any synced collection, such as phone calls, Screen Time or voicemail.",
       "r": "records with id, version and data, in ID order, plus next for paging.",
       "p": {
-        "collection": "Collection to read, such as phone.call or safari.history. Empty string reads all collections.",
+        "collection": "Collection to read, such as phone.call or usage.app_day. Empty string reads all collections.",
         "id": "Only the record with this ID.",
         "text": "Only records containing this text.",
         "include_aliases": "Also return older IDs that now point to these records.",
@@ -1002,20 +999,6 @@
         }
       },
       "d": "Unlocked PDFs up to 1000 pages and 200000 bytes of text."
-    },
-    "shortcuts.run": {
-      "s": "Run a Shortcut by name with optional text input.",
-      "r": "The shortcut's output, base64 encoded, and its exit status. It shows the shortcut finished, not what it changed.",
-      "p": {
-        "shortcut": "The shortcut's exact name, from records.query on shortcuts.shortcut.",
-        "input": "Text passed to the shortcut, up to 16384 bytes.",
-        "input_base64": "Binary input, base64 encoded, up to 16 KiB. Use instead of input.",
-        "timeout_ms": "Give up after this many milliseconds, up to 300000."
-      },
-      "x": {
-        "shortcut": "Log Water",
-        "input": "250"
-      }
     },
     "pdf.search": {
       "s": "Find text in a PDF and get the pages and positions of each match.",
@@ -1701,12 +1684,6 @@
         "body": "Are we still on for Saturday?"
       }
     },
-    "shortcuts.actions": {
-      "s": "List the App Intents actions installed apps offer to Shortcuts.",
-      "r": "Apps and their actions with titles; for discovery only.",
-      "a": {},
-      "x": {}
-    },
     "mail.send": {
       "s": "Send a new email from the default account.",
       "r": "Confirmation that Mail accepted it, read back from the Sent mailbox. That is not proof of delivery.",
@@ -1776,26 +1753,6 @@
         "id": "mml_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"
       }
     },
-    "mac.set_volume": {
-      "s": "Set the Mac's output volume.",
-      "r": "The volume read back from the Mac.",
-      "p": {
-        "volume": "Volume from 0 to 100."
-      },
-      "x": {
-        "volume": 30
-      }
-    },
-    "mac.set_mute": {
-      "s": "Mute or unmute the Mac's sound.",
-      "r": "The mute state read back from the Mac.",
-      "p": {
-        "muted": "True to mute, false to unmute."
-      },
-      "x": {
-        "muted": true
-      }
-    },
     "pdf.annotate": {
       "s": "Add notes or highlights to a PDF and get the annotated copy.",
       "r": "The annotated PDF as a blob to fetch with blobs.read. The original is unchanged.",
@@ -1824,82 +1781,6 @@
         ]
       },
       "d": "Rules: give data_base64 or blob, not both."
-    },
-    "mac.set_appearance": {
-      "s": "Switch the Mac between light and dark mode.",
-      "r": "The appearance read back from the Mac.",
-      "p": {
-        "appearance": "light or dark."
-      },
-      "x": {
-        "appearance": "dark"
-      }
-    },
-    "mac.launch_app": {
-      "s": "Open an app on the Mac.",
-      "r": "Confirmation that the app is running.",
-      "x": {
-        "bundle_id": "com.apple.Safari"
-      }
-    },
-    "mac.activate_app": {
-      "s": "Bring a running app to the front.",
-      "r": "Confirmation that the app is frontmost.",
-      "x": {
-        "bundle_id": "com.apple.Notes"
-      }
-    },
-    "mac.quit_app": {
-      "s": "Quit an app on the Mac.",
-      "r": "Confirmation that the app is no longer running.",
-      "x": {
-        "bundle_id": "com.apple.Music"
-      }
-    },
-    "mac.keep_awake": {
-      "s": "Keep the Mac from sleeping, for a while or until turned off.",
-      "r": "Whether keep-awake is now on.",
-      "p": {
-        "on": "True to keep awake, false to allow sleep again.",
-        "duration": "Seconds to stay awake, up to 86400. 0 or omitted means until turned off."
-      },
-      "x": {
-        "on": true,
-        "duration": 3600
-      }
-    },
-    "mac.clipboard_write": {
-      "s": "Put text on the Mac's clipboard.",
-      "r": "Confirmation the clipboard holds the text. The text is not kept in history.",
-      "p": {
-        "text": "Text to copy, up to 65536 bytes."
-      },
-      "x": {
-        "text": "Order 4471"
-      }
-    },
-    "mac.notify": {
-      "s": "Show a notification on the Mac.",
-      "r": "Confirmation the notification was posted.",
-      "p": {
-        "title": "Notification title, up to 256 bytes.",
-        "body": "Body text, up to 4096 bytes.",
-        "action_url": "Link opened when the owner clicks it, https only."
-      },
-      "x": {
-        "title": "Build finished",
-        "body": "All tests passed."
-      }
-    },
-    "mac.open_settings": {
-      "s": "Open a System Settings pane.",
-      "r": "Confirmation that the pane opened.",
-      "p": {
-        "pane": "general, notifications, network, displays, wallpaper or privacy."
-      },
-      "x": {
-        "pane": "displays"
-      }
     },
     "files.transform": {
       "s": "Convert or resize an image or PDF in an opted-in folder (not available yet).",
@@ -2256,58 +2137,6 @@
         "title": "Tea"
       }
     },
-    "mac.bluetooth_devices": {
-      "s": "List paired Bluetooth devices and whether they are connected.",
-      "r": "Devices with name, address and connected state.",
-      "a": {},
-      "x": {}
-    },
-    "mac.clipboard_read": {
-      "s": "Read the text on the Mac's clipboard right now.",
-      "r": "The clipboard text. It is not stored.",
-      "a": {},
-      "x": {}
-    },
-    "mac.iwork_export": {
-      "s": "Convert a Pages, Numbers or Keynote document to PDF or text.",
-      "r": "The converted file as a blob to fetch with blobs.read.",
-      "p": {
-        "app": "pages, numbers or keynote.",
-        "document_blob": "The document's bytes, base64 encoded, 8 MiB at most.",
-        "format": "pdf or text."
-      },
-      "x": {
-        "app": "pages",
-        "document_blob": "UEsDBBQAAAAIAA==",
-        "format": "pdf"
-      }
-    },
-    "mac.lock_screen": {
-      "s": "Lock the Mac's screen.",
-      "r": "Confirmation that the screen locked.",
-      "x": {}
-    },
-    "mac.network_check": {
-      "s": "Check internet reachability, DNS and network interface counters.",
-      "r": "Reachability, DNS result and interface statistics.",
-      "a": {},
-      "x": {}
-    },
-    "mac.recognize_song": {
-      "s": "Identify a song from a short audio recording with Shazam.",
-      "r": "The song's title and artist, if found.",
-      "p": {
-        "audio_blob": "The audio's bytes, base64 encoded, up to about 8 MiB."
-      },
-      "x": {
-        "audio_blob": "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
-      }
-    },
-    "mac.restart": {
-      "s": "Restart the Mac.",
-      "r": "Confirmation that restart began.",
-      "x": {}
-    },
     "mac.screen_record": {
       "s": "Record the Mac's screen as a video.",
       "r": "The video as a blob to fetch with blobs.read.",
@@ -2317,32 +2146,6 @@
       "x": {
         "seconds": 10
       }
-    },
-    "mac.set_wallpaper": {
-      "s": "Set the Mac's desktop picture.",
-      "r": "Confirmation that the wallpaper changed.",
-      "p": {
-        "image_blob": "The image's bytes, base64 encoded, 8 MiB at most."
-      },
-      "x": {
-        "image_blob": "iVBORw0KGgo="
-      }
-    },
-    "mac.shutdown": {
-      "s": "Shut down the Mac.",
-      "r": "Confirmation that shutdown began.",
-      "x": {}
-    },
-    "mac.sleep_display": {
-      "s": "Turn off the Mac's display now.",
-      "r": "Confirmation that the display slept.",
-      "x": {}
-    },
-    "mac.time_machine_status": {
-      "s": "Show Time Machine backup status and the last backup time.",
-      "r": "Whether a backup is running and when the last one finished.",
-      "a": {},
-      "x": {}
     },
     "print.document": {
       "s": "Print a PDF to a named printer, or save it as PDF.",

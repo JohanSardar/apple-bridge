@@ -124,7 +124,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
     for (index, path) in paths.iter().enumerate() {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         lab_adapters::prepare(&mut scenario);
-        lab_adapters::shortcuts::inject(&mut scenario);
+        lab_adapters::checks::inject(&mut scenario);
         lab_adapters::connectors::inject(&mut scenario);
         lab_adapters::native_core::inject(&mut scenario);
         if scenario.when.is_empty()
@@ -150,7 +150,8 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
                     simapple: simapple.clone(),
                     helper_app: helper.clone(),
                     directory: output.join(format!("world-{index}")),
-                    scope: "location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read".into(),
+                    scope: "location:read,maps:read,maps:write,files:read,files:write,system:read"
+                        .into(),
                 },
             )?;
             passed &= evidence.passed;

@@ -21,72 +21,44 @@ pub(super) fn control_source(
     if route == "/usage" {
         return usage(state, tx, input);
     }
-    let mut records = if route == "/safari" {
-        input
-            .as_array()
-            .cloned()
-            .ok_or_else(|| invalid("safari rows"))?
+    let collection = if route == "/phone" {
+        "phone.call".to_owned()
     } else {
-        let collection = if route == "/phone" {
-            "phone.call".to_owned()
-        } else {
-            string(input, "collection")
-        };
-        if route == "/recordings"
-            && ![
-                "voice_memos.folder",
-                "voice_memos.recording",
-                "voicemail.message",
-            ]
-            .contains(&collection.as_str())
-        {
-            return Err(invalid("recording collection"));
-        }
-        validate_recording(&collection, &input["data"])?;
-        vec![observation(
-            &collection,
-            &string(input, "key"),
-            input["data"].clone(),
-        )]
+        string(input, "collection")
     };
-    for record in &mut records {
-        let collection = string(record, "collection");
-        let key = string(record, "native_key");
-        if key.is_empty()
-            || (route == "/safari" && !collection.starts_with("safari."))
-            || (route != "/safari" && !record["data"].is_object())
-        {
-            return Err(invalid("source observation"));
-        }
-        record["observed_at"] = json!(now());
-        record["scoped_alias"] = json!(match route {
-            "/phone" => format!("phone/fixture/{key}"),
-            "/recordings" => format!("{collection}/fixture/{key}"),
-            _ => format!("safari/{collection}/{key}"),
-        });
+    if route == "/recordings"
+        && ![
+            "voice_memos.folder",
+            "voice_memos.recording",
+            "voicemail.message",
+        ]
+        .contains(&collection.as_str())
+    {
+        return Err(invalid("recording collection"));
     }
-    let src = records.first().map_or("safari".to_owned(), |r| {
-        source(r["collection"].as_str().unwrap_or_default()).to_owned()
+    validate_recording(&collection, &input["data"])?;
+    let key = string(input, "key");
+    if key.is_empty() || !input["data"].is_object() {
+        return Err(invalid("source observation"));
+    }
+    let mut record = observation(&collection, &key, input["data"].clone());
+    record["scoped_alias"] = json!(if route == "/phone" {
+        format!("phone/fixture/{key}")
+    } else {
+        format!("{collection}/fixture/{key}")
     });
+    let storage_key = if route == "/phone" {
+        key
+    } else {
+        format!("{collection}/{key}")
+    };
     let mut s = lock(state)?;
-    for record in &records {
-        let key = format!(
-            "{}/{}",
-            string(record, "collection"),
-            string(record, "native_key")
-        );
-        let storage_key = if route == "/phone" {
-            string(record, "native_key")
-        } else {
-            key
-        };
-        s.data["records"][storage_key] = record.clone();
-    }
+    s.data["records"][storage_key] = record.clone();
     s.save()?;
     drop(s);
     enqueue(
         tx,
-        json!({"t":"Capture","source":src,"observations":records}),
+        json!({"t":"Capture","source":source(&collection),"observations":[record]}),
         true,
     )?;
     Ok(json!({"effect_done":true}))

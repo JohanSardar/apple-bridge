@@ -239,7 +239,8 @@ impl State<Gateway> {
                 r.get(0)
             })
             .optional()?;
-        Ok(serde_json::from_slice(&raw.ok_or(ErrorCode::NotFound)?)?)
+        crate::stored_row(&raw.ok_or(ErrorCode::NotFound)?, |row| row)?
+            .ok_or_else(|| ErrorCode::NotFound.into())
     }
     pub fn commands(&self) -> Result<Vec<CommandRecord>> {
         let mut stmt = self
@@ -248,7 +249,11 @@ impl State<Gateway> {
             .ok_or(ErrorCode::Unavailable)?
             .prepare("SELECT payload FROM commands ORDER BY id")?;
         let rows = stmt.query_map([], |r| r.get::<_, Vec<u8>>(0))?;
-        rows.map(|r| Ok(serde_json::from_slice(&r?)?)).collect()
+        let mut out = Vec::new();
+        for row in rows {
+            out.extend(crate::stored_row(&row?, |row| row)?);
+        }
+        Ok(out)
     }
     pub fn pending_approvals(&self) -> Result<Vec<CommandRecord>> {
         Ok(self
@@ -295,10 +300,14 @@ impl State<Gateway> {
                 |r| r.get(0),
             )
             .optional()?;
-        let old: Option<CommandRecord> = old
-            .map(|raw| serde_json::from_slice(&raw))
-            .transpose()
-            .map_err(|_| ErrorCode::Corrupt)?;
+        let old: Option<CommandRecord> = match old {
+            Some(raw) => Some(
+                crate::stored_row(&raw, |row| row)
+                    .map_err(|_| ErrorCode::Corrupt)?
+                    .ok_or(Error::IdReused)?,
+            ),
+            None => None,
+        };
         if let Some(old) = &old {
             if old.principal != r.principal || old.request_hash != r.request_hash {
                 return Err(Error::IdReused);
@@ -359,10 +368,6 @@ impl State<Gateway> {
             .as_str()
             .unwrap_or("")
             .to_owned();
-        let original_args = r.command.args.clone();
-        if r.command.op == "mac.clipboard_write" {
-            r.command.args = serde_json::from_str("{}")?;
-        }
         tx.execute("INSERT INTO commands VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload",params![r.command.id.as_str(),r.principal,r.request_hash,state,encoded(&r)?])?;
         if from.is_none() {
             tx.execute(
@@ -379,7 +384,6 @@ impl State<Gateway> {
         }
         tx.commit()?;
         self.publish_command(&r)?;
-        r.command.args = original_args;
         Ok(r)
     }
     fn publish_command(&mut self, r: &CommandRecord) -> Result<()> {

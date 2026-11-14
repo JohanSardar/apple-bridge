@@ -1,5 +1,0 @@
-id: MAC-CAPTURE
-feature: mac.capture
-levels: [sim]
-when:
-  - mac: {}

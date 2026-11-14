@@ -33,7 +33,7 @@ const LEVEL_ONE: &[Permission] = &[
     Permission {
         id: "full_disk_access",
         title: "Full Disk Access",
-        why: "Read Messages, Notes, Mail and Safari",
+        why: "Read Messages, Notes and Mail",
         source: "messages",
         pane: "Privacy_AllFiles",
         asks: false,
@@ -317,11 +317,7 @@ pub(super) fn declined(name: &str) -> String {
             },
             |permission| permission.title.to_owned(),
         );
-    let settings = if name == "notifications" {
-        "System Settings > Notifications".to_owned()
-    } else {
-        format!("System Settings > Privacy & Security > {title}")
-    };
+    let settings = format!("System Settings > Privacy & Security > {title}");
     format!(
         "{title} permission was declined. Other sources still work. To turn it on, open {settings}, enable Apple Bridge, then run bridge down and bridge up."
     )
@@ -1048,14 +1044,14 @@ mod tests {
             assert!(product_cli::PERMISSIONS.contains(&name), "{name}");
             assert_eq!(guided(name).map(|permission| permission.id), Some(name));
         }
-        assert!(guided("bluetooth").is_none());
+        assert!(guided("focus").is_none());
     }
 
     #[tokio::test]
     async fn a_request_with_nothing_running_restarts_nothing() -> Outcome {
         let directory = tempfile::tempdir()?;
         after_request(directory.path(), "photos", Some("Fixture.app")).await?;
-        after_request(directory.path(), "bluetooth", Some("Fixture.app")).await?;
+        after_request(directory.path(), "focus", Some("Fixture.app")).await?;
         assert!(!directory.path().join("run").exists());
         Ok(())
     }

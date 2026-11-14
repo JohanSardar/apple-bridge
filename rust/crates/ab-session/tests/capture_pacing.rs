@@ -23,7 +23,7 @@ struct Probe {
 
 impl readers::CaptureReader for Probe {
     fn source(&self) -> &'static str {
-        "safari"
+        "mail"
     }
 
     fn root(&self) -> &Path {
@@ -64,7 +64,7 @@ fn constant_churn_is_paced_and_the_last_change_is_still_captured() -> Fallible<(
     let seen = Arc::new(Mutex::new(String::new()));
     let mut sources: BTreeMap<String, Box<dyn readers::CaptureReader>> = BTreeMap::new();
     sources.insert(
-        "safari".into(),
+        "mail".into(),
         Box::new(Probe {
             root: directory.clone(),
             scans: scans.clone(),

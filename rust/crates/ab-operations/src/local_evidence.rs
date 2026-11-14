@@ -9,11 +9,3 @@ fn prepared_evidence_uses_go_struct_order() -> Result<(), Box<dyn std::error::Er
     assert_eq!(raw(&prepared)?.get(), GO_PREPARED_EVIDENCE);
     Ok(())
 }
-
-#[test]
-fn clipboard_arguments_are_still_redacted() -> Result<(), Box<dyn std::error::Error>> {
-    let record =
-        serde_json::json!({"command": {"op": "mac.clipboard_write", "args": {"text": "secret"}}});
-    assert!(!raw(&record)?.get().contains("secret"));
-    Ok(())
-}

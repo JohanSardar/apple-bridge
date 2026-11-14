@@ -17,12 +17,11 @@ parse_common "$@"
 [ ${#ARGS[@]} -eq 1 ] || { usage; exit 2; }
 SOURCES="$(expand_sources "${ARGS[0]}")" || exit 1
 preflight_binary
-case " $SOURCES " in *" safari "*) echo "note: Safari live tabs stay in the Swift Helper (AppleScript); the Rust reader covers History, Bookmarks, Reading List and iCloud tabs" ;; esac
 PLAN="$(mktemp)"
 for s in $SOURCES; do
   root="$(source_root "$s")"; probe="$(root_probe "$s")"
   case "$s" in
-    calendar|contacts|reminders|mac|focus|shortcuts|pdf) mkdir -p "$root" ;;
+    calendar|contacts|reminders|focus|pdf) mkdir -p "$root" ;;
     *) [ -d "$root" ] || die "$s: root not found: $root"
        [ -z "$probe" ] || [ -e "$root/$probe" ] || die "$s: $probe not found under $root" ;;
   esac
@@ -41,7 +40,7 @@ cfg.setdefault("poll_ms", 5000)
 for line in open(plan):
     name, root = line.rstrip("\n").split("\t", 1)
     entry = {"root": root}
-    if name in ("calendar", "contacts", "reminders", "files", "mac", "messages", "focus", "pdf"):
+    if name in ("calendar", "contacts", "reminders", "files", "messages", "focus", "pdf"):
         entry["facts"] = "native"
     if name in ("files", "focus"):
         entry["home"] = base

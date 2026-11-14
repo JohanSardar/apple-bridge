@@ -112,7 +112,7 @@ fn tcc_ready(_: &mut World, evidence: &mut Evidence) -> Result<()> {
         return Ok(());
     };
     for mode in ["open", "resigned", "control"] {
-        for source in ["chat", "wal", "attachment", "notes", "biome", "safari"] {
+        for source in ["chat", "wal", "attachment", "notes", "biome"] {
             let read = results[mode][source].as_object().map(|o| o.get("pass"));
             let valid = read.is_some();
             let pass = read.flatten().and_then(Value::as_bool).unwrap_or(false);

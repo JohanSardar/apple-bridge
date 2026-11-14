@@ -6,7 +6,7 @@ pub fn violations(
 ) -> Result<(Value, bool), Error> {
     let shapes: Value = serde_json::from_str(include_str!("record_shapes.json"))?;
     let mut out = serde_json::Map::new();
-    let mut stmt=db.prepare("SELECT payload FROM records WHERE deleted=0 AND ((collection>='messages.' AND collection<'messages/') OR collection='phone.call' OR (collection>='mac.' AND collection<'mac/') OR (collection>='safari.' AND collection<'safari/'))").map_err(|_| Error::Invalid)?;
+    let mut stmt=db.prepare("SELECT payload FROM records WHERE deleted=0 AND ((collection>='messages.' AND collection<'messages/') OR collection='phone.call')").map_err(|_| Error::Invalid)?;
     let rows = stmt
         .query_map([], |r| r.get::<_, Vec<u8>>(0))
         .map_err(|_| Error::Invalid)?;

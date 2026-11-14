@@ -1,4 +1,4 @@
-> Historical: written while the gateway and lab were Go. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
+> Historical: written while the gateway and lab were Go. The Safari, Shortcuts and Mac sources and their scenarios were later removed, so their rows and list entries are gone; the counts and measurements below predate that removal. The Go code was deleted; the Rust gateway is `rust/crates/ab-runtime` and the lab runner is `rust/lab`. Go file and package names below are kept as the record of what was verified.
 
 # Test inventory and migration selection proposal
 
@@ -36,14 +36,13 @@ All classifications require owner approval. P-class and package maps are conserv
 
 ## Proposed real smoke set
 
-HELPER-TCC-READY, MSG-INCOMING, REM-CRUD, CAL-CRUD, CON-CRUD, NOTE-CRUD, USE-IMPORT, SAF-HISTORY-REAL, CALL-READ-REAL, MAIL-READ-REAL, MAIL-SEND-SELF-REAL, FILE-CRUD-REAL, MAC-POWER-REAL, CAP-SIM, BT-REAL, FOC-STATUS-REAL, SC-RUN-REAL, CLK-TIMER-REAL, MAP-SEARCH-REAL, AUD-TRANSCRIBE, VIS-OCR, PDF-TEXT, MSG-SELFTEST, MSG-READSTATE-REAL, MSG-DELETE-REAL.
+HELPER-TCC-READY, MSG-INCOMING, REM-CRUD, CAL-CRUD, CON-CRUD, NOTE-CRUD, USE-IMPORT, CALL-READ-REAL, MAIL-READ-REAL, MAIL-SEND-SELF-REAL, FILE-CRUD-REAL, CAP-SIM, FOC-STATUS-REAL, CLK-TIMER-REAL, MAP-SEARCH-REAL, AUD-TRANSCRIBE, VIS-OCR, PDF-TEXT, MSG-SELFTEST, MSG-READSTATE-REAL, MSG-DELETE-REAL.
 
 This is a milestone proposal only. Effectful commands require the owner’s normal real-run authorization and fixture cleanup. Voicemail and Voice Memos have no declared real-level scenarios in this baseline; propose dedicated fixture-safe real journeys before claiming those sources covered. Any other unrepresented source needs its own declared real acceptance; SIM-only sources cannot qualify a real smoke set. Run TCC readiness first, then each source serially, then risky message commands. This task authorizes none of these executions.
 
 ## Per-source real sets for the Swift shrink
 
 - Focused usage: USE-IMPORT
-- Focused safari: SAF-HISTORY-REAL, SAF-BOOKMARKS-REAL
 - Focused calls: CALL-READ-REAL
 - Focused mail: MAIL-READ-REAL, MAIL-BODY-REAL, MAIL-DRAFT-REAL, MAIL-ORGANIZE-REAL
 - Focused notes: NOTE-CRUD, NOTE-EXTERNAL, NOTE-EDIT-PARITY, NOTE-RICH-REJECT
@@ -68,7 +67,6 @@ Full declared real catalog by feature family:
 - focus: FOC-IDLE, FOC-PHONE-SYNC, FOC-SET-REAL, FOC-STATUS-REAL
 - helper: HELPER-LIVE-BACKFILL, HELPER-RELEASE-COMMANDS, HELPER-RESTART-REAL, HELPER-SESSION-SOAK, HELPER-SIGNED-APP-CACHE, HELPER-TCC-READY, SIRI-INTENTS
 - iphone: APP-ALARM-REAL, APP-APPROVE-REAL, APP-BUILD-REAL, APP-CAPTURE-REAL, APP-CMD-REAL, APP-DEVICE-REAL, APP-HEALTH-REAL, APP-HEALTH-WRITE-REAL, APP-INTENTS-REAL, APP-LIVE-REAL, APP-LOC-REAL, APP-MOTION-REAL, APP-NOTIFY-REAL, APP-PAIR-REAL, APP-SCREENTIME-REAL, APP-SHELL-REAL
-- mac: BT-REAL, IWORK-REAL, MAC-APPEARANCE-REAL, MAC-APPS-REAL, MAC-AUDIO-REAL, MAC-CLIPBOARD-REAL, MAC-IDLE, MAC-KEEPAWAKE-REAL, MAC-NOTIFY-REAL, MAC-POWER-REAL, SHAZAM-REAL, TM-STATUS
 - mail: MAIL-BODY-REAL, MAIL-DRAFT-REAL, MAIL-IDLE, MAIL-ORGANIZE-REAL, MAIL-READ-REAL, MAIL-SEND-SELF-REAL
 - maps: LOC-CURRENT-REAL, LOC-GEOCODE-REAL, LOC-IDLE, MAP-DIRECTIONS-REAL, MAP-IDLE, MAP-SEARCH-REAL, MAP-SNAPSHOT-REAL, QUERY-AGENT
 - messages: MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-DELETE-REAL, MSG-DELETE-VISIBILITY, MSG-EDIT, MSG-HISTORY-IMPORT, MSG-INCOMING, MSG-REACT, MSG-READ-RICH-FIELDS, MSG-READSTATE-REAL, MSG-RECEIPTS, MSG-REPLY, MSG-RESEND, MSG-SELFTEST, MSG-SEND-FILES, MSG-SEND-SELF-TEXT, MSG-UNSEND, MSG-WATCHER-REARM
@@ -77,13 +75,11 @@ Full declared real catalog by feature family:
 - phone: CALL-IDLE, CALL-READ-REAL
 - reminders: REM-CREATE-EXTERNAL, REM-CRUD, REM-LIST-CREATE, REM-LIST-LOST-ACK, REM-LIST-MANAGE, REM-RECURRING, REM-SECTIONS, REM-STORE-PERF, REM-STORE-READ, WEB-REM-PARITY, WEB-REM-WRITE
 - remote: CONN-RELAY-CLAUDE, RELAY-REAL
-- safari: SAF-BOOKMARKS-REAL, SAF-HISTORY-REAL, SAF-IDLE
-- shortcuts: SC-ACTIONS, SC-IDLE, SC-RUN-REAL
 - usage: USE-ACTION-PROBE, USE-IMPORT
 - vision: PDF-TEXT, VIS-IDLE, VIS-OCR
 - web: CONN-CHATGPT, CONN-CLAUDE-AI, CONN-CLAUDE-CODE, NATIVE-MEDIA-EXPORT-SAFETY, RMT-STATUS-OFF, RMT-TS-EMBEDDED, SEC-REMOTE-ACCESS, WEB-MEDIA-VARIANTS, WEB-REMOTE-FUNNEL
 
-Swift shrink order: usage → safari → phone/recordings → mail → notes → messages → calendar/contacts. Add HELPER-TCC-READY, source restart/permission-loss and no-false-delete journeys to every relevant milestone. Source sets below are grouped by feature ownership; cross-source core/relay journeys remain final integration gates.
+Swift shrink order: usage → phone/recordings → mail → notes → messages → calendar/contacts. Add HELPER-TCC-READY, source restart/permission-loss and no-false-delete journeys to every relevant milestone. Source sets below are grouped by feature ownership; cross-source core/relay journeys remain final integration gates.
 
 ## Slowest measured scenarios
 
@@ -91,7 +87,6 @@ Swift shrink order: usage → safari → phone/recordings → mail → notes →
 |---|---:|---|
 | RELAY-STREAMS | 601.502 | pass |
 | CALL-IDLE | 319.491 | pass |
-| SAF-IDLE | 307.336 | pass |
 | CORE-BENCH | 90.018 | pass |
 | CORE-GATEWAY-DIALS | 71.034 | pass |
 | REM-SECTIONS | 54.706 | pass |
@@ -296,23 +291,6 @@ SIM seconds are end-to-end process wall time, including harness telemetry and cl
 | APP-SCREENTIME-SIM | sim | 1.821/pass | — | internal/contracts | iPhone:ios/Capabilities/ScreenTime, iPhone:ios/Extensions, iPhone:ios/ScreenTimeShared | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
 | APP-SHELL-REAL | real | — | unknown/pass (2026-10-31) | internal/contracts | iPhone:ios/App, iPhone:ios/Capabilities | unresolved | keep: Distinct journey; retain its behavioral assertions. |
 | APP-SHELL-SIM | sim | 2.667/pass | — | internal/contracts | iPhone:ios/App, iPhone:ios/Capabilities | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| BT-REAL | real | — | unknown/pass (2026-10-30) | internal/contracts, lab/simapple | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| IWORK-REAL | sim, real | 1.317/pass | unknown/limited (2026-10-31) | internal/contracts, lab/simapple | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-ACTIONS | sim | 1.469/pass | — | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-APPEARANCE-REAL | real | — | unknown/pass (2026-10-29) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-APPS-REAL | real | — | unknown/pass (2026-10-29) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-AUDIO-REAL | real | — | unknown/pass (2026-10-29) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-CAPTURE | sim | 1.468/pass | — | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-CLIPBOARD-REAL | real | — | unknown/pass (2026-10-30) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-COMMANDS | sim | 1.518/pass | — | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-EXTRAS-SIM | sim | 1.468/pass | — | internal/contracts, internal/trust, lab/simapple | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-IDLE | sim, real | 2.470/pass | unknown/fail (2026-10-30) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | run-at-end: Timing or resource budget needs an isolated final gate; contention can change verdicts. |
-| MAC-KEEPAWAKE-REAL | real | — | unknown/pass (2026-10-29) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-NOTIFY-REAL | real | — | unknown/pass (2026-11-01) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-POWER-REAL | real | — | unknown/pass (2026-10-28) | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| MAC-REPLICA | replica | — | — | internal/contracts, internal/trust | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| SHAZAM-REAL | real | — | unknown/fail (2026-10-29) | internal/contracts, lab/simapple | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| TM-STATUS | real | — | unknown/pass (2026-10-30) | internal/contracts, lab/simapple | MacSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | MAIL-AGENT | agent | — | — | internal/contracts | MailSource, SourceSupport | unresolved | keep: Distinct journey; retain its behavioral assertions. |
 | MAIL-BODY-REAL | real | — | unknown/pass (2026-11-01) | internal/contracts | MailSource, SourceSupport | unresolved | keep: Distinct journey; retain its behavioral assertions. |
 | MAIL-BODY | sim | 6.409/pass | — | internal/contracts | MailSource, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
@@ -402,10 +380,6 @@ SIM seconds are end-to-end process wall time, including harness telemetry and cl
 | REM-STORE-DECODE | sim | 24.707/pass | — | internal/contracts | AgendaGate, RemindersSource, RemindersStore, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
 | REM-STORE-PERF | sim, real | 3.255/pass | unknown/pass (2026-10-21) | internal/contracts | AgendaGate, RemindersSource, RemindersStore, SourceSupport | yes | run-at-end: Timing or resource budget needs an isolated final gate; contention can change verdicts. |
 | REM-STORE-READ | sim, real | 2.666/pass | unknown/limited (2026-10-21) | internal/contracts | AgendaGate, RemindersSource, RemindersStore, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| SAF-BOOKMARKS-REAL | real | — | unknown/pass (2026-10-28) | internal/contracts, lab/simapple | SafariSource, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| SAF-CAPTURE | sim | 15.485/pass | — | internal/contracts, lab/simapple | SafariSource, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| SAF-HISTORY-REAL | real | — | unknown/pass (2026-10-28) | internal/contracts, lab/simapple | SafariSource, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| SAF-IDLE | sim, real | 307.336/pass | unknown/fail (2026-10-29) | internal/contracts, lab/simapple | SafariSource, SourceSupport | yes | run-at-end: Timing or resource budget needs an isolated final gate; contention can change verdicts. |
 | CLK-ALARM-REAL | sim, real | 1.832/pass | unknown/pass (undated) | internal/clockpack, internal/contracts, internal/shortcut | — | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | CLK-SIM | sim | 1.605/pass | — | internal/clockpack, internal/contracts, internal/shortcut | — | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | CLK-TIMER-REAL | sim, real | 5.882/pass | unknown/pass (2026-11-01) | internal/clockpack, internal/contracts, internal/shortcut | — | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
@@ -415,11 +389,6 @@ SIM seconds are end-to-end process wall time, including harness telemetry and cl
 | FOC-SET-REAL | real | — | unknown/pass (2026-11-01) | internal/contracts, internal/focuspack, internal/shortcut, internal/trust | FocusSource, ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | FOC-SIM | sim | 36.170/pass | — | internal/contracts, internal/focuspack, internal/shortcut, internal/trust | FocusSource, ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | FOC-STATUS-REAL | real | — | unknown/pass (2026-11-01) | internal/contracts, internal/focuspack, internal/shortcut, internal/trust | FocusSource, ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| SC-ACTIONS | sim, real | 2.542/pass | unknown/pass (2026-10-29) | internal/contracts, lab/simapple | ShortcutsSource, SourceSupport | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
-| SC-CAPTURE | sim | 2.138/pass | — | internal/contracts, internal/shortcut | ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| SC-IDLE | real | — | unknown/fail (2026-10-29) | internal/contracts, internal/shortcut | ShortcutsSource, SourceSupport | yes | run-at-end: Timing or resource budget needs an isolated final gate; contention can change verdicts. |
-| SC-RUN-REAL | sim, real | 1.117/pass | unknown/pass (undated) | internal/contracts, internal/shortcut | ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
-| SC-RUN | sim | 35.355/pass | — | internal/contracts, internal/shortcut | ShortcutsSource, SourceSupport | yes | convert: Reachable harness file imports product implementation; drive the binary before Rust qualification. |
 | USE-ACTION-PROBE | sim, real | 4.921/pass | unknown/pass (2026-11-02) | internal/contracts, lab/scenarios | — | yes | convert: Native fixture check compiles or links product modules; drive the binary protocol before Rust qualification. |
 | USE-IMPORT | sim, real | 1.469/pass | unknown/pass (2026-11-02) | internal/contracts | Decoders, SourceSupport, UsageSource | unresolved | keep: Distinct journey; retain its behavioral assertions. |
 | USE-LOCK-CLIP | sim | 1.367/pass | — | internal/contracts | Decoders, SourceSupport, UsageSource | unresolved | keep: Distinct journey; retain its behavioral assertions. |
@@ -471,6 +440,6 @@ SIM seconds are end-to-end process wall time, including harness telemetry and cl
 
 ## Air SIM candidates (native fixtures or missing Linux tooling)
 
-CAL-FUTURE-COUNT-MATH, CAL-HINT-COVERAGE, CAL-INVALIDATED-EVENT, CORE-DISK-FULL, CORE-PERMISSION-STATUS, CORE-SHORTCUT-SIGN, CORE-SOURCE-SUPPORT, RELAY-ACME, RELAY-OWN-DOMAIN, FILE-CAPTURE, FILE-IDLE, SIRI-INTENTS, APP-ALARM-SIM, APP-CAPTURE-SIM, APP-DEVICE-SIM, APP-HEALTH-SIM, APP-HEALTH-WRITE-SIM, APP-LOC-SIM, APP-MOTION-SIM, APP-NOTIFY-SIM, APP-SCREENTIME-SIM, APP-SHELL-SIM, MAIL-BODY, MAIL-CAPTURE, MAIL-COMMANDS, MAIL-IDLE, MAIL-LIVE, MAIL-NO-FALSE-DELETE, MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-DECODE, MSG-DELETE-VISIBILITY, MSG-MEDIA-CLEANUP, MSG-READ-RICH-FIELDS, MSG-WATCHER-REARM, NOTE-DECODE-FULL, NOTE-DECODE, Q1-SETUP, R1-RELEASE-SIM, CALL-CAPTURE, CALL-IDLE, VM-CAPTURE, VMEMO-CAPTURE, VMEMO-LATE-ASSETS, REM-DST, REM-SECTIONS, REM-STORE-DECODE, REM-STORE-PERF, REM-STORE-READ, SAF-CAPTURE, SAF-IDLE, CLK-ALARM-REAL, CLK-SIM, CLK-TIMER-REAL, FILES-TRANSFORM, FOC-PHONE-SYNC, FOC-SIM, SC-ACTIONS, SC-CAPTURE, SC-RUN, USE-ACTION-PROBE, USE-SEGB-DECODE, CAP-SIM, NATIVE-MEDIA-EXPORT-SAFETY, NATIVE-MEDIA-POSTERS, NATIVE-MEDIA-YIELD, WEB-MEDIA-VARIANTS.
+CAL-FUTURE-COUNT-MATH, CAL-HINT-COVERAGE, CAL-INVALIDATED-EVENT, CORE-DISK-FULL, CORE-PERMISSION-STATUS, CORE-SHORTCUT-SIGN, CORE-SOURCE-SUPPORT, RELAY-ACME, RELAY-OWN-DOMAIN, FILE-CAPTURE, FILE-IDLE, SIRI-INTENTS, APP-ALARM-SIM, APP-CAPTURE-SIM, APP-DEVICE-SIM, APP-HEALTH-SIM, APP-HEALTH-WRITE-SIM, APP-LOC-SIM, APP-MOTION-SIM, APP-NOTIFY-SIM, APP-SCREENTIME-SIM, APP-SHELL-SIM, MAIL-BODY, MAIL-CAPTURE, MAIL-COMMANDS, MAIL-IDLE, MAIL-LIVE, MAIL-NO-FALSE-DELETE, MSG-DECODE-BALLOON, MSG-DECODE-FORMATTING, MSG-DECODE, MSG-DELETE-VISIBILITY, MSG-MEDIA-CLEANUP, MSG-READ-RICH-FIELDS, MSG-WATCHER-REARM, NOTE-DECODE-FULL, NOTE-DECODE, Q1-SETUP, R1-RELEASE-SIM, CALL-CAPTURE, CALL-IDLE, VM-CAPTURE, VMEMO-CAPTURE, VMEMO-LATE-ASSETS, REM-DST, REM-SECTIONS, REM-STORE-DECODE, REM-STORE-PERF, REM-STORE-READ, CLK-ALARM-REAL, CLK-SIM, CLK-TIMER-REAL, FILES-TRANSFORM, FOC-PHONE-SYNC, FOC-SIM, USE-ACTION-PROBE, USE-SEGB-DECODE, CAP-SIM, NATIVE-MEDIA-EXPORT-SAFETY, NATIVE-MEDIA-POSTERS, NATIVE-MEDIA-YIELD, WEB-MEDIA-VARIANTS.
 
 Host routing is an audited starting list, updated when a Linux run reveals a native dependency. A failure due to missing xcrun, hdiutil, Swift modules, sibling iPhone checkout or legacy binary is a prerequisite failure, not a product regression. Full-suite verdict equivalence is not established while such failures or timeouts remain.

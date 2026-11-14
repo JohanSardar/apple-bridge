@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 @preconcurrency import MapKit
 import CoreLocation
 import SourceSupport
@@ -8,8 +9,14 @@ public actor MapsCommands: Source {
     public init() {}
     public func status() async -> JSON? { .object([:]) }
     public func primitive(_ operation: String, args: JSON) async throws -> JSON {
-        guard operation == "maps.show" else { throw SourceFailure.unsupported }
-        return try await Self.show(args)
+        switch operation {
+        case "maps.show": return try await Self.show(args)
+        case "maps.frontmost": return await Self.frontmost()
+        default: throw SourceFailure.unsupported
+        }
+    }
+    @MainActor private static func frontmost() -> JSON {
+        .object(["bundle_id": .string(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "")])
     }
     @MainActor private static func show(_ args: JSON) async throws -> JSON {
         let items: [MKMapItem]

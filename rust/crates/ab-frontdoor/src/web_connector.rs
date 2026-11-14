@@ -104,7 +104,7 @@ pub(crate) fn decision(
     ));
     Ok(dest.into())
 }
-pub const AGENT_SERVICES: [&str; 12] = [
+pub const AGENT_SERVICES: [&str; 11] = [
     "calendar",
     "reminders",
     "notes",
@@ -113,7 +113,6 @@ pub const AGENT_SERVICES: [&str; 12] = [
     "mail",
     "photos",
     "files",
-    "safari",
     "usage",
     "location",
     "maps",

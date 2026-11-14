@@ -117,7 +117,7 @@ def main():
     parser.add_argument("--quiet-rounds", type=int, default=8)
     parser.add_argument("--no-switch", action="store_true", help="remove rust-capture.json from the copy")
     parser.add_argument("--fresh", action="store_true", help="start from an empty home")
-    parser.add_argument("--sources", default="safari,usage,notes,voice_memos,mail,phone,voicemail,calendar,contacts,reminders,messages,files,mac,focus,shortcuts,pdf")
+    parser.add_argument("--sources", default="usage,notes,voice_memos,mail,phone,voicemail,calendar,contacts,reminders,messages,files,focus,pdf")
     parser.add_argument("--hold", action="store_true", help="leave the gateway running and write hold.json")
     parser.add_argument("--exclusive", action="store_true", help="read only --sources in the copy, to keep a command run light")
     options = parser.parse_args()
@@ -156,7 +156,7 @@ def main():
             if found:
                 result = "PERMISSION PROMPT, stopped: %s" % found[:2]
                 break
-            counts = state_counts(home, [name for name in sources if name != "mac"])
+            counts = state_counts(home, sources)
             states = os.listdir(home + "/helper/session/capture-state") if os.path.isdir(home + "/helper/session/capture-state") else []
             quiet = quiet + 1 if counts == previous else 0
             previous = counts

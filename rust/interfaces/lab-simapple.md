@@ -134,11 +134,7 @@ Gate: `python3 rust/lab/families-parity.py ... --web-rm` runs both scenarios aga
 
 ## Mac scenarios
 
-`lab-adapters` registers the `mac` step (`mac.rs` for sim, `mac_real.rs` for real-level adapters). The Rust SimApple peer gained a `mac` source (`mac.rs`): `/mac` upserts one `mac.*` record and emits a full-scan capture for the source, `/mac-notifications` sets the notification permission fixture (`mac.notify` is rejected `forbidden` unless authorized), `mac.*` commands answer with `{observed, fingerprint, readback}` evidence, and `mac.clipboard_read`, `mac.network_check`, `mac.bluetooth_devices`, `mac.time_machine_status` and `mac.recognize_song` answer the Go fixtures. The clipboard text lives in memory only so it never reaches a durable file.
-
-Gate: `python3 rust/lab/families-parity.py ... --mac` runs MAC-ACTIONS, MAC-COMMANDS, MAC-CAPTURE, MAC-IDLE, MAC-EXTRAS-SIM and IWORK-REAL (sim level) in one run against both harnesses.
-
-Real-level only (adapters compiled, never run at real level): BT-REAL, MAC-APPEARANCE-REAL, MAC-APPS-REAL, MAC-AUDIO-REAL, MAC-CLIPBOARD-REAL, MAC-KEEPAWAKE-REAL, MAC-NOTIFY-REAL, MAC-POWER-REAL, MAC-REPLICA, SHAZAM-REAL, TM-STATUS. The real halves of MAC-IDLE (`mac_real::idle`) and IWORK-REAL (`mac_real::iwork`) are also compiled only. The native-helper adapters read the helper app from `APPLE_BRIDGE_HELPER_APP`.
+Removed with the Mac source ([ADR 0033](../../docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)): the `mac` step, the SimApple `mac` source and the `--mac` parity gate are gone. `mac.screen_record` is part of the `capture` source and CAP-SIM.
 
 ## Web, media and native scenarios (Phase 8)
 
@@ -160,8 +156,8 @@ The real level mirrors Go's `world.NewReal` protections and is compile-only in C
 
 - `--level real` refuses to start unless `--helper-app` names a bundle with `Contents/MacOS/AppleBridgeHelper` that passes `codesign --verify --strict` and carries a `TeamIdentifier` (ad-hoc signatures are rejected). The refusal happens before any output directory or gateway exists.
 - `World::start_real(RealConfig)` creates a fresh `0700` directory, refuses to run when it is inside, equal to or above the live home (`~/Library/Application Support/AppleBridge`, `$XDG_DATA_HOME/apple-bridge`, `~/.local/share/apple-bridge`), starts the gateway with `--home <directory>/gateway --helper-app APP --helper-lab-commands`, and waits for `helper/helper.pid`. There is no SimApple peer and no `sim.sock`, so `World::control` is unavailable.
-- `Registry::register_real(id, handler)` registers a handler `fn(&mut World, &mut Evidence) -> Result<()>` for a scenario ID. `Registry::run_real(scenario, RealConfig)` fails the scenario with `real_adapter` (no world started) when the scenario does not list `real` (MAC-REPLICA and FILE-REPLICA list `replica` and count as `real`, as in Go) or has no registered handler.
-- Real-only scenarios are reachable by adding one `register_real` line in `lab-adapters/src/lib.rs`. Handlers mint scoped tokens with `Client::new(world, scope)`; the world token scope is `location:read,maps:read,maps:write,files:read,files:write,safari:read,system:read`.
+- `Registry::register_real(id, handler)` registers a handler `fn(&mut World, &mut Evidence) -> Result<()>` for a scenario ID. `Registry::run_real(scenario, RealConfig)` fails the scenario with `real_adapter` (no world started) when the scenario does not list `real` (FILE-REPLICA lists `replica` and counts as `real`, as in Go) or has no registered handler.
+- Real-only scenarios are reachable by adding one `register_real` line in `lab-adapters/src/lib.rs`. Handlers mint scoped tokens with `Client::new(world, scope)`; the world token scope is `location:read,maps:read,maps:write,files:read,files:write,system:read`.
 
 Unit tests cover the refusals (no Helper, unsigned Helper, live home) and an unrelated directory.
 
@@ -189,11 +185,9 @@ Real-level runner additions: `Registry::register_standalone(id, handler)` regist
 
 Gate: `python3 rust/lab/families-parity.py ... --maps` runs MAP-SIM, LOC-SIM, FILE-COMMANDS, FILE-CRUD-REAL and FILE-OFFLOAD-REAL (sim level) in one run against both harnesses; verdicts are identical with the Rust gateway (`lab-queries`).
 
-## Safari, FILE-REPLICA and packaging adapters (Phase 8)
+## FILE-REPLICA and packaging adapters (Phase 8)
 
-`safari.rs` ports SAF-CAPTURE and SAF-IDLE (sim): the adapter writes the synthetic Safari databases with the same Python fixture as the Go harness, builds and runs the native `SafariChecks`, checks the six observations against the registered collection shapes, posts them to the peer `/safari` route, and compares gateway and replica records. Both are in the `--native` parity set and need macOS.
-
-Compile-only real adapters: SAF-IDLE (`idle_real`), SAF-BOOKMARKS-REAL and SAF-HISTORY-REAL (standalone; native checks against an independent Python truth), FILE-REPLICA (`filerep.rs`, local replica instead of the Ubuntu replica) and PKG-INSTALL/PKG-BACKGROUND (`pkginstall.rs`, standalone). None of these has been run.
+Compile-only real adapters: FILE-REPLICA (`filerep.rs`, local replica instead of the Ubuntu replica) and PKG-INSTALL/PKG-BACKGROUND (`pkginstall.rs`, standalone). None of these has been run.
 
 QUERY-AGENT and AGENT-SUITE are not ported: they drive a Codex agent over MCP (`lab/agent/codex.py`) and need an LLM, its credentials and the agent task suite.
 
@@ -329,11 +323,9 @@ Gate: `families-parity.py ... --security` gives identical per-assertion verdicts
 ### lab-probe (Linux replacement for the Funnel probes)
 
 `rust/lab/lab-probe` is an `ab-*`-free Linux binary that replaces two of the Go probes used by the Funnel-level scenarios, without the Go product packages. `lab-probe remote` reads the same stdin JSON as `lab/remoteprobe` (`URL`, `IP`, `Remote`, `Local`, `Off`), dials the public IP with the URL's host as SNI and verifies the certificate against the webpki roots, and prints `{"checks":{...},"latency":{...}}` with the same check names (`html_valid_certificate` through `read_19`, `mcp_*` over the streamable HTTP JSON-RPC wire protocol instead of the Go SDK). `lab-probe proxy --host https://H --ip IP --ready FILE` replaces `relayprobe proxy`: a loopback CONNECT proxy that tunnels only to the pinned `host:port` through the pinned public IP and rewrites the ready file with the connection count; private, loopback and unspecified IPs are refused. `remote_real.rs` (RELAY-REAL, CONN-RELAY-CLAUDE) now drives the probe host over `ssh ubuntu`: public DNS through `dig @1.1.1.1`, two `curl --resolve` checks, then it copies the Linux `lab-probe` named by `AB_LAB_PROBE` (build it on `ssh build`), runs it with the same stdin JSON and reports each check as an assertion, replacing the old `unverified` placeholder. Without `AB_LAB_PROBE` the `external_probe_build` assertion fails with that instruction. Both probes are compile- and test-only so far: the tests run `remote` against a local TLS server with a lab CA and `proxy` against a local echo upstream. They have not been run against a Funnel. The remaining `relayprobe` actions (query, command, agents, live, blob, replay, revocation, postburst, contacts-crud) still need the Go product packages and are not replaced.
-## Shortcuts runner and Focus (Phase 8)
+## Focus and Clock (Phase 8)
 
-The Rust SimApple peer handles `shortcuts.run` (`lab-simapple/src/shortcuts.rs`) like the Go peer: Prepare answers route `shortcuts_cli`, Dispatch checks ticket, fence and expiry, writes the dispatch guard, echoes the input bytes (text or base64) and returns `locally_observed` evidence with `output_sha256`, `output_bytes`, `exit_status`, `output_base64`, `effect_scope` and the prepared request hash. The shortcut `[ab-test slow runner]` sends four `Pong` frames over 16 seconds before the outcome. Other `shortcuts.*` operations are rejected `unsupported`.
-
-`lab-adapters/src/shortcuts_run.rs` ports SC-RUN (fake CLI and native `ShortcutsChecks` fixture, the public `shortcuts.run` command through the gateway including blob validation, the long-runner wait beyond 15 seconds, then the CLI checks of `ab-shortcuts-checks`) and FOC-SIM / FOC-PHONE-SYNC (the Focus pack and compiled-pack checks of `ab-shortcuts-checks`, `focus.set` contract through the gateway, `full` and `approve` agents created with `bridge agent create` both stopping at `awaiting_approval`, and the native `FocusChecks` run). No owner session is needed: approval is not granted, only required. All three need macOS (`ShortcutsChecks`, `FocusChecks`, `plutil`). Gate: `families-parity.py --shortcuts`.
+`lab-adapters/src/focus.rs` ports FOC-SIM / FOC-PHONE-SYNC (the Focus pack and compiled-pack checks of `ab-shortcuts-checks`, `focus.set` contract through the gateway, `full` and `approve` agents created with `bridge agent create` both stopping at `awaiting_approval`, and the native `FocusChecks` run). No owner session is needed: approval is not granted, only required. All three need macOS (`ShortcutsChecks`, `FocusChecks`, `plutil`). Gate: `families-parity.py --shortcuts`.
 
 ## Core bulk port A (Phase 8)
 
@@ -360,7 +352,7 @@ Gate: `python3 rust/lab/families-parity.py ... --web-rm-latency`. Run it with re
 
 `lab-families check YAML...` loads each YAML through the runner's own `Scenario` type and reports `compiled`, `stub` or an error. `python3 rust/lab/families-parity.py --check-real-only --families BIN` fails when a listed YAML does not load, a compiled scenario has no registered adapter at its level, a stub is listed as compiled, or a compiled scenario is listed as a stub. It never runs a scenario. Stubs are recognised from the constants next to the stub code (`contacts::STUB`, `mail::REAL_ONLY`, `iphone_real::STUB`, `shortcuts::real_only_stub`), so porting a stub means removing it from that constant and moving its ID between the two lists.
 
-The check found real-level adapters that existed only as sim-step handlers and were unreachable from `--level real`; they are now registered: the `mac_real` set (`MAC-*-REAL`, `MAC-REPLICA`, `TM-STATUS`, `BT-REAL`, `SHAZAM-REAL`), `CALL-READ-REAL`, `REM-LIST-LOST-ACK`, `AUD-TRANSCRIBE`, `SPEECH-SAY`, `VIS-IDLE` and `R1-DMG-REAL`. A scenario that declares only a `replica` level now also runs at the runner's sim level.
+The check found real-level adapters that existed only as sim-step handlers and were unreachable from `--level real`; they are now registered: `CALL-READ-REAL`, `REM-LIST-LOST-ACK`, `AUD-TRANSCRIBE`, `SPEECH-SAY`, `VIS-IDLE` and `R1-DMG-REAL`. A scenario that declares only a `replica` level now also runs at the runner's sim level.
 
 `MSG-DELETE-VISIBILITY` (`messages_visibility.rs`) and `MSG-READ-RICH-FIELDS` (`messages_rich.rs`) are in `MESSAGES_B_NATIVE` (`--messages-b-native`) because their native checks need macOS. The retained-delete real proof (`messages_visibility::real`) is compile-only. `WEB-RM-REMINDERS-ITEMS` is run with `--web-rm-items`: the Rust gateway read model p95 for 1000 items is about 40 ms against the 10 ms budget the Go gateway meets.
 ## Core tail: progress, snapshot pool, shortcut signing, search update (Phase 8)
@@ -386,7 +378,7 @@ Stable additions: `core_frames.rs` is a TLS and WebSocket frame proxy between re
 `lab-simapple --native-socket PATH` serves native/1 (4-byte big-endian length plus JSON, 1 MiB read limit) next to its ipc/1 session, so the Rust lab can prove the Swift boundary without Go. `native.rs` answers `Hello` with `Welcome`, and then:
 
 - `Facts` pages `agenda.calendars`, `agenda.events`, `agenda.reminder_lists`, `agenda.reminders`, `contacts.containers`, `contacts.groups` and `contacts.contacts` from the same records the ipc/1 scan uses (`State::scan`, `contacts::snapshot`). Snapshots live 60 seconds, tokens are `sim-snapshot-N`, cursors `<token>:<n>`, pages are halved until they fit 262144 bytes, `absent` and `evict` rows are never items, contact pages end with `blob_handle` items (`<fence>:<digest>`), a denied source answers `permission_missing`. The first `Facts` request subscribes the connection to `Changed`.
-- `Facts` also pages `mac.state` (the five mac collections from the same records, scope `mac`, generation `native/1`; `mac.bluetooth_device` is never an item) and `files.ubiquity` (`args.paths` only, 1 to 500 strings; status `notDownloaded` when the record has `downloaded: false`, else its `icloud_status`, `local` for unknown paths). `Changed` is pushed for `mac` too.
+- `Facts` also pages `files.ubiquity` (`args.paths` only, 1 to 500 strings; status `notDownloaded` when the record has `downloaded: false`, else its `icloud_status`, `local` for unknown paths). `Changed` is pushed for `mac` too.
 - `Revalidate` answers `present`, `missing` or `outside_scope` (calendar window) per identity for calendars, events, reminder lists, reminders, groups and contacts; more than 500 identities, a foreign collection or an empty key is `invalid`.
 - `Changed` is pushed to every subscribed connection when a control route enqueues a calendar, contacts or reminders capture.
 
@@ -394,4 +386,4 @@ Switches (same names as the Go lab): `AB_LAB_SESSION_REVALIDATE_CONTROL=refuse|p
 
 Session proof notes. `CORE-HELPER-RESTART` with a fact source routed through the session (`AB_LAB_SESSION_SOURCES` containing `contacts` or `reminders`) fails `helper_checkpoint_resume_without_rescan` in both the Go harness and the Rust runner, by design: simapple resumes without a rescan only when the checkpoint the gateway offers in `Open` equals the one it committed itself, and with the session producing the gateway checkpoints (`rs-...`) the offered value is never simapple's, so it rescans that source (calendar always rescans). The session diffs the pulled facts and emits nothing for an unchanged source, so the gateway sees no change.
 
-`SC-RUN-REAL` has a sim level and runs under the Rust runner. It needs `ab-shortcuts-checks` (`AB_LAB_SHORTCUTS_CHECKS`, or next to the gateway binary); `packaging/dev/rust-lab.sh` now builds it.
+The Clock and Focus scenarios need `ab-shortcuts-checks` (`AB_LAB_SHORTCUTS_CHECKS`, or next to the gateway binary); `packaging/dev/rust-lab.sh` builds it.

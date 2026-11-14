@@ -1,4 +1,4 @@
-ALL_SOURCES="safari usage notes voice_memos mail phone voicemail calendar contacts reminders messages files mac focus shortcuts pdf"
+ALL_SOURCES="usage notes voice_memos mail phone voicemail calendar contacts reminders messages files focus pdf"
 LIVE_HOME="$HOME/Library/Application Support/AppleBridgeLive"
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -67,7 +67,6 @@ expand_sources() {
 
 source_root() {
   case "$1" in
-    safari) echo "$SOURCE_BASE/Library/Safari" ;;
     usage) echo "$SOURCE_BASE/Library/Biome" ;;
     notes) echo "$SOURCE_BASE/Library/Group Containers/group.com.apple.notes" ;;
     messages) echo "$SOURCE_BASE/Library/Messages" ;;
@@ -76,13 +75,12 @@ source_root() {
     phone) echo "$SOURCE_BASE/Library/Application Support/CallHistoryDB" ;;
     voicemail) echo "$SOURCE_BASE/Library/Group Containers/group.com.apple.FaceTime/com.apple.facetimemessagestored/Data Store" ;;
     files) echo "$SOURCE_BASE/Library/Mobile Documents/com~apple~CloudDocs/Bridge Test" ;;
-    calendar|contacts|reminders|mac|focus|shortcuts|pdf) echo "$HELPER_HOME/session/facts/$1" ;;
+    calendar|contacts|reminders|focus|pdf) echo "$HELPER_HOME/session/facts/$1" ;;
   esac
 }
 
 root_probe() {
   case "$1" in
-    safari) echo "History.db" ;;
     usage) echo "streams" ;;
     notes) echo "NoteStore.sqlite" ;;
     voice_memos) echo "CloudRecordings.db" ;;

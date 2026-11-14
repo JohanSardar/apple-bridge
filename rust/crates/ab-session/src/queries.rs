@@ -13,7 +13,6 @@ use std::{
 };
 
 pub const MAIL_BODY: &str = "mail.body";
-pub const SHORTCUT_ACTIONS: &str = "shortcuts.actions";
 const INLINE_LIMIT: usize = 1 << 20;
 const HELD_LIMIT: usize = 64 << 20;
 const HOLD: Duration = Duration::from_secs(60);
@@ -22,7 +21,6 @@ const HANDLE: &str = "query-body:";
 #[derive(Clone, Debug, Default)]
 pub struct NativeQueries {
     pub mail_bodies: Option<Arc<MailBodies>>,
-    pub shortcut_roots: Option<Vec<PathBuf>>,
     pub staged: Vec<(&'static str, Arc<StagedBlobs>)>,
 }
 
@@ -31,20 +29,14 @@ impl NativeQueries {
     pub fn handles_operation(&self, operation: &str) -> bool {
         match operation {
             MAIL_BODY => self.mail_bodies.is_some(),
-            SHORTCUT_ACTIONS => self.shortcut_roots.is_some(),
             _ => false,
         }
     }
 
     #[must_use]
     pub fn answer(&self, frame: &Value) -> Value {
-        match (
-            frame["op"].as_str(),
-            &self.mail_bodies,
-            &self.shortcut_roots,
-        ) {
-            (Some(MAIL_BODY), Some(bodies), _) => bodies.answer(frame),
-            (Some(SHORTCUT_ACTIONS), _, Some(roots)) => shortcut_actions(frame, roots),
+        match (frame["op"].as_str(), &self.mail_bodies) {
+            (Some(MAIL_BODY), Some(bodies)) => bodies.answer(frame),
             _ => failure(&frame["id"], "unsupported"),
         }
     }
@@ -69,20 +61,6 @@ impl NativeQueries {
             .find(|(name, _)| *name == prefix)
             .map(|(_, blobs)| Arc::clone(blobs))
     }
-}
-
-fn shortcut_actions(frame: &Value, roots: &[PathBuf]) -> Value {
-    let id = &frame["id"];
-    if frame["args"]
-        .as_object()
-        .is_none_or(|args| !args.is_empty())
-    {
-        return failure(id, "invalid");
-    }
-    json!({
-        "t":"QueryResult","id":id,
-        "result_json":ab_native::shortcut_actions::discover(roots),"blobs":[]
-    })
 }
 
 #[derive(Debug)]

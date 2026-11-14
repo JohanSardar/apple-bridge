@@ -1,5 +1,0 @@
-id: MAC-ACTIONS
-feature: mac.actions
-levels: [sim]
-when:
-  - mac: {}

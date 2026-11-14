@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const PERMISSIONS: [&str; 15] = [
+pub const PERMISSIONS: [&str; 11] = [
     "contacts",
     "calendar",
     "reminders",
@@ -19,11 +19,7 @@ pub const PERMISSIONS: [&str; 15] = [
     "screen_recording",
     "speech_recognition",
     "focus",
-    "bluetooth",
-    "notifications",
     "automation_mail",
-    "automation_safari",
-    "automation_shortcuts_events",
 ];
 const PERMISSION_TIMEOUT: Duration = Duration::from_secs(180);
 const SELFTEST_TIMEOUT: Duration = Duration::from_secs(600);

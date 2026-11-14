@@ -19,6 +19,7 @@ struct Pairing {
     expires_at: String,
     attempts: u64,
     used: bool,
+    #[serde(deserialize_with = "crate::kept_grants")]
     grants: Vec<Grant>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     result: Option<Principal>,
@@ -35,6 +36,7 @@ pub struct VerifiedDelegation {
     pub challenge: String,
     pub replica_id: String,
     pub local_principal: String,
+    #[serde(deserialize_with = "crate::kept_grants")]
     pub local_grants: Vec<Grant>,
     pub command_id: String,
     pub request_hash: String,
@@ -646,13 +648,10 @@ pub fn agent_source(source: &str) -> bool {
         "focus",
         "health",
         "iphone",
-        "mac",
         "mail",
         "maps",
         "pdf",
         "print",
-        "safari",
-        "shortcuts",
         "speech",
         "vision",
         "voice_memos",

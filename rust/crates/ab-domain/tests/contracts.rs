@@ -16,7 +16,7 @@ fn ids_validate_prefix_alphabet_and_ulid_overflow() {
         assert!(invalid.parse::<MessagesMessageId>().is_err());
         assert!(serde_json::from_str::<MessagesMessageId>(&format!("\"{invalid}\"")).is_err());
     }
-    assert_eq!(Collection::ALL.len(), 46);
+    assert_eq!(Collection::ALL.len(), 33);
 }
 
 #[test]
