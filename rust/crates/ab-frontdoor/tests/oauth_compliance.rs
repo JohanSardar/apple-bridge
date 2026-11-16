@@ -178,6 +178,7 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
         .send(
             s.request("POST", request.path())
                 .header(header::CONTENT_TYPE, "application/json")
+                .header("x-forwarded-device", "my-vps")
                 .body(Body::from(json!({"name": "Grok Bot"}).to_string()))
                 .unwrap(),
         )
@@ -186,6 +187,7 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
     let ticket = body_json(response).await;
     assert_eq!(status, StatusCode::CREATED, "{ticket}");
     let pending = s.connectors.pending().unwrap();
+    assert_eq!(pending[0].client_name, "Grok Bot on my-vps");
     s.connectors
         .decide(&pending[0].id, &pending[0].code, true)
         .unwrap();
@@ -202,7 +204,10 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
     assert_eq!(response.status(), StatusCode::OK);
     let answer = body_json(response).await;
     assert_eq!(answer["state"], "allowed");
-    assert!(answer["token"].as_str().unwrap().starts_with("aba-"));
+    let token = answer["token"].as_str().unwrap();
+    assert!(token.starts_with("aba-"));
+    assert_eq!(answer["mcp"], discovery["mcp"]);
+    assert_eq!(answer["header"], format!("Authorization: Bearer {token}"));
 }
 
 #[tokio::test]

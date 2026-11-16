@@ -1,0 +1,61 @@
+{
+  "impl": "rust",
+  "scenario": "REMOTE-AGENT-PRIVATE",
+  "level": "real",
+  "passed": true,
+  "git_sha": "5fc69c26 plus the uncommitted tree of this change",
+  "at": "2026-11-16T10:45:00Z",
+  "hosts": [
+    "pro (the owner's MacBook Pro): agent side, and an isolated test gateway with no Helper for the rules check",
+    "air (a second Mac on the same tailnet): one isolated synthetic-world gateway with SimApple, no Helper, release build copied from pro"
+  ],
+  "assertions": [
+    {
+      "name": "headless_agent_connects_over_tailscale_without_a_browser",
+      "passed": true,
+      "detail": "claude -p on pro, with no MCP servers, user settings or browser, was told only 'Connect to Apple Bridge at https://<air>.<tailnet>.ts.net:8443/connect and use it from now on' and to save the server for its project. It requested, the ask reached the air gateway as 'Claude Code on <pro>' (source tailnet, device named from Tailscale whois), and bridge connectors allow on air stood in for the Allow click. The agent collected its key and wrote an http MCP entry with the Authorization header in 44 s"
+    },
+    {
+      "name": "the_key_works_from_then_on",
+      "passed": true,
+      "detail": "a second claude -p with only that saved config read the last message in a synthetic chat and texted a synthetic contact '[ab-test pr] running late' in 24 s; a grader token found exactly one outgoing message with that text in the world"
+    },
+    {
+      "name": "allowed_agent_can_read_and_change",
+      "passed": true,
+      "detail": "the agent was created full, valid one year, with read and write scopes for every agent source; before this change an allowed agent got write scopes only and every read was refused with 'lacks messages:read'"
+    },
+    {
+      "name": "plain_ssh_path",
+      "passed": true,
+      "detail": "claude -p on pro with the MCP command 'ssh -T <air> <bridge> mcp --home <home>' asked once as 'Claude Code over SSH from <pro>', read a synthetic group chat after the allow, and a second start read again without asking. No Tailscale route was used"
+    },
+    {
+      "name": "rules_block_is_explained_on_the_owners_mac",
+      "passed": true,
+      "detail": "on pro, whose real Tailscale rules accept only SSH from <air>, bridge tailscale turned the route on at 8443 and said that its rules don't let iphone, <air>, <vps> (offline) and three others reach port 8443, printed the policy URL and one acls rule naming their addresses and pro:8443, and said <air> can already reach the Mac over SSH with the exact MCP command. --json gives the same as reach.allowed, reach.blocked and reach.rule"
+    },
+    {
+      "name": "blocked_connection_waits_as_explained",
+      "passed": true,
+      "detail": "from <air>, curl to the pro route timed out after 15 s with no answer, while SSH from <air> to pro worked"
+    },
+    {
+      "name": "allowed_devices_listed",
+      "passed": true,
+      "detail": "on air, bridge tailscale listed <pro> and the iPhone as allowed and four devices, <vps> among them, as blocked with the rule"
+    },
+    {
+      "name": "shared_tailscale_left_unchanged",
+      "passed": true,
+      "detail": "tailscale serve status --json was recorded before and compared after every run on both Macs: byte-identical ('{}', no serve config)"
+    }
+  ],
+  "limits": [
+    "The VPS (<vps>) was offline on the tailnet and over SSH for the whole run, so no agent on it was run. Its address is in the printed rule, and the owner's rules block it on both Macs anyway",
+    "Grok Bot was not run: its app had no open window, a test bot would have needed a window on the owner's screen, and the owner's rules accept no new tailnet device on either Mac. Grok Bot uses the same /connect flow proven here with Claude Code",
+    "The Allow click was stood in for by bridge connectors allow; no Helper panel was shown",
+    "The air test gateway used SimApple synthetic data; nothing read or sent real Messages",
+    "Binaries were built on pro with the lab-queries feature, needed for SimApple"
+  ]
+}

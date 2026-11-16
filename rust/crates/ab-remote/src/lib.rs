@@ -2,6 +2,7 @@
 
 pub mod localapi;
 pub mod onboarding;
+pub mod reach;
 pub mod state;
 pub mod tailscale;
 

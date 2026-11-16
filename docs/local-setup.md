@@ -40,7 +40,8 @@ Local is the default. The Tailscale route is off until you turn it on with one c
 | Way | Who connects | How | Needs |
 |---|---|---|---|
 | On this Mac, the default | Agents on this Mac: Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode, the Claude app and any other MCP agent | `bridge link <agent>`. For anything else, `bridge link other` prints the config | Nothing else. The Mac asks you to Allow each new agent once |
-| Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge tailscale` | A Tailscale account; it installs and starts Tailscale on this Mac |
+| Tailscale, for anything not on this Mac | Agents on a server or another computer, and Grok Bot through its Tailscale plugin | `bridge tailscale`, then give the agent the sentence it prints | A Tailscale account; it installs and starts Tailscale on this Mac |
+| Plain SSH | An agent on a server that can SSH into this Mac | Its MCP command is `ssh -T you@your-mac ~/.applebridge/bin/bridge mcp` | Remote Login on this Mac and the server's key |
 
 The Tailscale route serves this Mac on your Tailscale network only, never on the public internet. See [connecting other devices](connectors/devices.md). Nothing leaves this Mac until you turn it on, and `bridge tailscale --off` turns it off again.
 
@@ -94,7 +95,7 @@ When you allow an agent you choose nothing else: it can read and change Apple da
 
 ### Grok Bot
 
-Grok Bot can't use Apple Bridge through a custom connector on this Mac. Grok Bot starts a Command connector on Grok's own cloud computer, not on your Mac, and it calls a Remote HTTPS connector from Grok's servers, which can't reach `127.0.0.1`. On 2026-11-16 a Command connector added in Grok Bot on this Mac never started here; the bot reported that its script "doesn't exist on my computer". `bridge link grok-bot` explains this and changes nothing. Grok Bot's built-in Messages connector does run on the Mac.
+Grok Bot can't use Apple Bridge through a custom connector on this Mac. Grok Bot starts a Command connector on Grok's own cloud computer, not on your Mac, and it calls a Remote HTTPS connector from Grok's servers, which can't reach `127.0.0.1`. On 2026-11-16 a Command connector added in Grok Bot on this Mac never started here; the bot reported that its script "doesn't exist on my computer". Grok Bot connects over your Tailscale network instead: connect its Tailscale plugin, run `bridge tailscale` and give your bot the sentence it prints ([use Apple Bridge from another computer](connectors/devices.md)). `bridge link grok-bot` says this and changes nothing.
 
 ## Other apps and bots
 

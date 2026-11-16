@@ -132,6 +132,10 @@ pub struct AgentAnswer {
     pub state: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mcp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub header: Option<String>,
 }
 pub struct Connectors {
     authority: Arc<Authority>,
@@ -337,14 +341,23 @@ impl Connectors {
             None => AgentAnswer {
                 state: "waiting",
                 token: None,
+                mcp: None,
+                header: None,
             },
             Some(Ok(token)) => AgentAnswer {
                 state: "allowed",
                 token: Some(token.clone()),
+                mcp: ask.resource.clone(),
+                header: ask
+                    .resource
+                    .as_ref()
+                    .map(|_| format!("Authorization: Bearer {token}")),
             },
             Some(Err(())) => AgentAnswer {
                 state: "denied",
                 token: None,
+                mcp: None,
+                header: None,
             },
         };
         if answer.state != "waiting" {
@@ -431,7 +444,8 @@ fn agent_scopes() -> Vec<Grant> {
     AGENT_SERVICES
         .iter()
         .filter(|service| ab_trust::agent_source(service))
-        .filter_map(|service| Grant::parse(&format!("{service}:write")).ok())
+        .flat_map(|service| [format!("{service}:read"), format!("{service}:write")])
+        .filter_map(|scope| Grant::parse(&scope).ok())
         .collect()
 }
 
@@ -585,6 +599,30 @@ mod tests {
                 "{code}"
             );
             queue.decide(&ticket.id, code, false).expect("deny");
+        }
+    }
+
+    #[test]
+    fn an_agent_allowed_on_the_mac_can_read_as_well_as_change() {
+        let (_home, queue) = queue();
+        queue.on_waiting(Arc::new(|| {}));
+        let ticket = queue
+            .ask_for_agent(
+                "Grok Bot",
+                "tailnet",
+                Some("https://mac.example.ts.net:8443/mcp".into()),
+            )
+            .expect("ask");
+        queue.decide(&ticket.id, "", true).expect("allow");
+        let agents = queue.authority.agents().expect("agents");
+        let grants: Vec<&str> = agents[0].grants.iter().map(Grant::as_str).collect();
+        for scope in [
+            "messages:read",
+            "messages:write",
+            "reminders:read",
+            "calendar:read",
+        ] {
+            assert!(grants.contains(&scope), "{scope} missing from {grants:?}");
         }
     }
 

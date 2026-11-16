@@ -262,10 +262,10 @@ fn print_other(name: &str, launch: &Launch) {
 fn grok_bot() -> Failure {
     Failure::new(
         Reason::Unproven,
-        "Can't connect Grok Bot to this Mac. Grok Bot runs custom connectors on Grok's own cloud computer, not on your Mac.",
+        "Grok Bot can't start Apple Bridge on this Mac. Its connectors run on Grok's own cloud computer, not on your Mac.",
     )
-    .sentence("A Command connector starts on Grok's computer, where Apple Bridge isn't installed, and a Remote HTTPS connector is called from Grok's servers, which can't reach this Mac. Grok Bot's built-in Messages connector still works, and agents that run on this Mac, such as Claude Code, Codex or Cursor, connect with bridge link.")
-    .then("See what else can connect", ["bridge", "link", "--help"])
+    .sentence("Grok Bot connects over your Tailscale network instead. Connect Grok Bot's Tailscale plugin once, run bridge tailscale, and give your bot the sentence it prints. Your Mac asks you to click Allow once.")
+    .then("Turn on the Tailscale route", ["bridge", "tailscale"])
 }
 
 #[derive(Debug, Clone, Copy)]

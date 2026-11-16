@@ -154,7 +154,7 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
             "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
-            "Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach this Mac; bridge link grok-bot explains this and changes nothing.",
+            "Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.",
             "Piped, stdout holds only the server name; bridge link other prints only the config.",
         ],
         schema: LINK_FIELDS,
@@ -165,6 +165,7 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "Agents launch this; you don't run it yourself. It speaks MCP as JSON lines on stdin and stdout and forwards to the Apple Bridge running on this Mac.",
             "The first time an agent connects, the Mac asks you to Allow it once. The approval is remembered for that agent, and bridge agents revoke ends it.",
+            "An agent on another computer can start it over SSH, for example ssh -T you@this-mac ~/.applebridge/bin/bridge mcp. The Mac asks once, naming where the SSH connection came from.",
         ],
         schema: &[],
     },
@@ -172,19 +173,23 @@ pub const LEAVES: &[Leaf] = &[
         path: "tailscale",
         examples: &[
             (
-                "Let your devices and Grok Bot reach this Mac",
+                "Let agents on your other computers, servers and Grok Bot reach this Mac",
                 "bridge tailscale",
             ),
             ("Turn it off", "bridge tailscale --off"),
         ],
         notes: &[
             "Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your Tailscale network can reach it.",
-            "Cloud agents ask at the printed /connect address, and you click Allow on this Mac.",
+            "It prints one sentence to give an agent on another computer, a server or Grok Bot. The agent asks at the /connect address, you click Allow on this Mac once, and the agent gets its own key. Nothing on its side needs a browser.",
+            "It also reads this Mac's Tailscale access rules. When they stop a device from reaching the route, it names the device and prints the exact rule to add. Run it again to check.",
         ],
         schema: &[
             ("outcome", "string", false),
             ("mcp", "string", false),
             ("connect", "string", false),
+            ("ask", "string", false),
+            ("reach", "object", false),
+            ("ssh", "string", false),
         ],
     },
     Leaf {

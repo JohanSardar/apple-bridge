@@ -132,8 +132,8 @@ Notes:
   Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed,
   OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its
   install link, and Goose opens its install link.
-  Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach this Mac; bridge link
-  grok-bot explains this and changes nothing.
+  Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over
+  your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.
   Piped, stdout holds only the server name; bridge link other prints only the config.
 ```
 
@@ -183,6 +183,8 @@ Notes:
   forwards to the Apple Bridge running on this Mac.
   The first time an agent connects, the Mac asks you to Allow it once. The approval is remembered
   for that agent, and bridge agents revoke ends it.
+  An agent on another computer can start it over SSH, for example ssh -T you@this-mac
+  ~/.applebridge/bin/bridge mcp. The Mac asks once, naming where the SSH connection came from.
 ```
 
 ## bridge permissions
@@ -929,7 +931,7 @@ Options:
 Global options: see bridge --help
 
 Examples:
-  Let your devices and Grok Bot reach this Mac
+  Let agents on your other computers, servers and Grok Bot reach this Mac
     bridge tailscale
 
   Turn it off
@@ -938,7 +940,11 @@ Examples:
 Notes:
   Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your
   Tailscale network can reach it.
-  Cloud agents ask at the printed /connect address, and you click Allow on this Mac.
+  It prints one sentence to give an agent on another computer, a server or Grok Bot. The agent asks
+  at the /connect address, you click Allow on this Mac once, and the agent gets its own key. Nothing
+  on its side needs a browser.
+  It also reads this Mac's Tailscale access rules. When they stop a device from reaching the route,
+  it names the device and prints the exact rule to add. Run it again to check.
 ```
 
 ## bridge pair

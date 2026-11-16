@@ -127,7 +127,7 @@ impl Bridge {
             .as_str()
             .or_else(|| client["name"].as_str())
             .unwrap_or("An agent");
-        let agent = identify(name, launcher().as_ref());
+        let agent = identify(name, launcher().as_ref(), ssh_source());
         let cached = self.cached_token(&agent.key);
         if let Ok(mut slot) = self.agent.lock() {
             *slot = Some(agent);
@@ -268,6 +268,20 @@ impl Bridge {
             .ok()
             .and_then(|agent| agent.as_ref().map(|agent| agent.label.clone()))
             .unwrap_or_else(|| "An agent".to_owned());
+        let label = match ssh_source() {
+            Some(source) if ab_remote::tailscale::tailnet_address(source) => {
+                match ab_remote::reach::device_name(
+                    &ab_remote::localapi::LocalApi::Discover,
+                    source,
+                )
+                .await
+                {
+                    Some(device) => label.replace(&source.to_string(), &device),
+                    None => label,
+                }
+            }
+            _ => label,
+        };
         if self.address().await.is_none() {
             return Access::Unreachable(NOT_RUNNING);
         }
@@ -445,7 +459,20 @@ fn refusal(message: &Value, method: &str, text: &str) -> Value {
     json!({"jsonrpc":"2.0","id":message["id"],"error":{"code":-32001,"message":text}})
 }
 
-fn identify(client: &str, launcher: Option<&(String, String)>) -> Agent {
+fn ssh_source() -> Option<std::net::IpAddr> {
+    std::env::var("SSH_CONNECTION")
+        .ok()?
+        .split_whitespace()
+        .next()?
+        .parse()
+        .ok()
+}
+
+fn identify(
+    client: &str,
+    launcher: Option<&(String, String)>,
+    ssh: Option<std::net::IpAddr>,
+) -> Agent {
     let client: String = client
         .chars()
         .filter(|c| !c.is_control())
@@ -457,8 +484,9 @@ fn identify(client: &str, launcher: Option<&(String, String)>) -> Agent {
     } else {
         client
     };
-    let label = match launcher {
-        Some((_, app))
+    let label = match (ssh, launcher) {
+        (Some(source), _) => format!("{client} over SSH from {source}"),
+        (None, Some((_, app)))
             if !app.to_lowercase().contains(&client.to_lowercase())
                 && !client.to_lowercase().contains(&app.to_lowercase()) =>
         {
@@ -467,7 +495,10 @@ fn identify(client: &str, launcher: Option<&(String, String)>) -> Agent {
         _ => client.clone(),
     };
     let label: String = label.chars().take(60).collect();
-    let bundle = launcher.map_or("", |(bundle, _)| bundle.as_str());
+    let bundle = match ssh {
+        Some(source) => format!("ssh:{source}"),
+        None => launcher.map_or_else(String::new, |(bundle, _)| bundle.clone()),
+    };
     let digest = Sha256::digest(format!("{client}\0{bundle}").as_bytes());
     Agent {
         label,

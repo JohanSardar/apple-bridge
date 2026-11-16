@@ -525,13 +525,25 @@ fn connect_request(
         return StatusCode::NOT_FOUND.into_response();
     }
     if path == "/connect" {
+        let mcp = format!("{origin}/mcp");
         return respond(
             200,
             &json!({
                 "apple_bridge": true,
-                "mcp": format!("{origin}/mcp"),
+                "mcp": mcp,
                 "request": format!("{origin}/connect/request"),
-                "how": "POST {\"name\": \"Your app\"} to request, then POST {\"id\", \"secret\"} to /connect/answer every few seconds until the owner allows it on the Mac. Send the token as Authorization: Bearer <token> to the mcp address.",
+                "answer": format!("{origin}/connect/answer"),
+                "how": [
+                    "POST {\"name\": \"<your app>\"} as application/json to request. You get an id and a secret.",
+                    "Tell the owner: \"Click Allow on your Mac.\" Nothing else is needed: no browser, account or code.",
+                    "POST {\"id\": ..., \"secret\": ...} as application/json to answer every 3 seconds, for up to 5 minutes, until state is allowed or denied.",
+                    "When allowed, add the mcp address as a streamable HTTP MCP server that sends the returned header on every request. The token is shown only once; keep it private.",
+                ],
+                "examples": {
+                    "claude_code": format!("claude mcp add --transport http apple-bridge {mcp} --header \"Authorization: Bearer <token>\""),
+                    "codex": format!("export APPLE_BRIDGE_TOKEN=<token>; codex mcp add apple-bridge --url {mcp} --bearer-token-env-var APPLE_BRIDGE_TOKEN"),
+                    "config": {"mcpServers": {"apple-bridge": {"type": "http", "url": mcp, "headers": {"Authorization": "Bearer <token>"}}}},
+                },
             }),
         );
     }
@@ -550,13 +562,30 @@ fn connect_request(
         if !w.allow(&format!("connect-create:{ip}"), true, 10) {
             return reject(429, "Too many requests. Wait a minute and try again.");
         }
+        let name = input["name"].as_str().unwrap_or_default().trim();
+        let device = r
+            .headers
+            .get("x-forwarded-device")
+            .and_then(|value| value.to_str().ok())
+            .filter(|device| {
+                !device.is_empty()
+                    && !name.is_empty()
+                    && !name.to_lowercase().contains(&device.to_lowercase())
+            });
+        let named = device.map_or_else(
+            || name.to_owned(),
+            |device| {
+                let suffix = format!(" on {device}");
+                let room = 60usize.saturating_sub(suffix.chars().count());
+                format!(
+                    "{}{suffix}",
+                    name.chars().take(room).collect::<String>().trim_end()
+                )
+            },
+        );
         return w
             .connectors
-            .ask_for_agent(
-                input["name"].as_str().unwrap_or_default(),
-                "tailnet",
-                Some(format!("{origin}/mcp")),
-            )
+            .ask_for_agent(&named, "tailnet", Some(format!("{origin}/mcp")))
             .map_or_else(
                 |_| reject(400, "Send a short name, such as {\"name\": \"Grok Bot\"}, and try again in a minute."),
                 |ticket| respond(201, &ticket),
