@@ -404,12 +404,9 @@ async fn status(
 }
 pub async fn run(
     phone: Arc<ab_iphone::delivery::Delivery<PhoneGateway>>,
-    wake: Arc<tokio::sync::Notify>,
-    home: std::path::PathBuf,
     mut stop: tokio::sync::watch::Receiver<bool>,
 ) -> Result<(), crate::Error> {
     let mut sweep = tokio::time::interval(std::time::Duration::from_secs(1));
-    let mut push = tokio::time::interval(std::time::Duration::from_secs(30));
     loop {
         tokio::select! {
             _ = stop.changed() => return Ok(()),
@@ -417,47 +414,6 @@ pub async fn run(
                 let phone = phone.clone();
                 tokio::task::spawn_blocking(move || phone.sweep(ab_trust::decision_now().as_second())).await.map_err(|_| crate::Error::Invalid)?.map_err(|_| crate::Error::Invalid)?;
             },
-            _ = push.tick() => push_once(&phone, &home).await,
-            () = wake.notified() => push_once(&phone, &home).await,
-            () = phone.notified() => push_once(&phone, &home).await,
         }
     }
-}
-async fn push_once(
-    phone: &Arc<ab_iphone::delivery::Delivery<PhoneGateway>>,
-    home: &std::path::Path,
-) {
-    let Ok(identity) = ab_remote::state::read::<ab_remote::relay::Identity>(home, "relay") else {
-        return;
-    };
-    let builder = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .redirect(reqwest::redirect::Policy::none());
-    #[cfg(feature = "lab-harness")]
-    let builder = match std::env::var("APPLE_BRIDGE_LAB_TLS_ROOT")
-        .ok()
-        .and_then(|path| std::fs::read(path).ok())
-    {
-        Some(bytes) => match reqwest::Certificate::from_pem_bundle(&bytes) {
-            Ok(certs) => certs
-                .into_iter()
-                .fold(builder, |builder, cert| builder.add_root_certificate(cert)),
-            Err(_) => return,
-        },
-        None => builder,
-    };
-    let Ok(http) = builder.build() else {
-        return;
-    };
-    let Ok(client) = ab_iphone::PushClient::with_client(
-        &identity.endpoint,
-        identity.credential.hostname,
-        identity.credential.credential,
-        http,
-    ) else {
-        return;
-    };
-    let _ = phone
-        .push_once(&client, ab_trust::decision_now().as_second())
-        .await;
 }

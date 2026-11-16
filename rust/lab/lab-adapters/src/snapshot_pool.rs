@@ -1,5 +1,5 @@
 use crate::{assertions::await_until, http::Client, replicas};
-use lab_relay::{FeedLink, Identity};
+use lab_feed::{FeedLink, Identity};
 use lab_runner::Evidence;
 use lab_world::{Error, Result, World};
 use serde_json::{Value, json};

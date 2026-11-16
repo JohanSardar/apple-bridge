@@ -33,18 +33,12 @@ prepare() {
   if [[ -z "${AB_SESSION_BINARY:-}" ]]; then
     AB_SESSION_BINARY=$(artifact ab-session -p ab-session --features lab --bin ab-session)
   fi
-  if [[ -z "${AB_RELAY_FIXTURE:-}" ]]; then
-    AB_RELAY_FIXTURE=$(artifact lab_fixture -p ab-relay --examples)
-    cargo build --manifest-path "$manifest" --locked -p ab-replication --example relay2_fixture
-    [[ -x "$(dirname "$AB_RELAY_FIXTURE")/relay2_fixture" ]] || { echo "relay2_fixture missing next to $AB_RELAY_FIXTURE" >&2; exit 1; }
-  fi
   if [[ -z "${AB_LAB_SHORTCUTS_CHECKS:-}" ]]; then
     AB_LAB_SHORTCUTS_CHECKS=$(artifact ab-shortcuts-checks -p ab-shortcuts --features lab-harness --bin ab-shortcuts-checks)
   fi
   require ab-session "$AB_SESSION_BINARY"
   require ab-shortcuts-checks "$AB_LAB_SHORTCUTS_CHECKS"
-  require lab_fixture "$AB_RELAY_FIXTURE"
-  export AB_SESSION_BINARY AB_RELAY_FIXTURE AB_LAB_SHORTCUTS_CHECKS
+  export AB_SESSION_BINARY AB_LAB_SHORTCUTS_CHECKS
 }
 
 scenario_files() {
@@ -101,7 +95,7 @@ command=${1:-}
 case "$command" in
   binaries)
     prepare
-    printf 'bridge=%s\nlab-families=%s\nlab-simapple=%s\nab-session=%s\nlab_fixture=%s\n' "$BRIDGE" "$FAMILIES" "$SIMAPPLE" "$AB_SESSION_BINARY" "$AB_RELAY_FIXTURE"
+    printf 'bridge=%s\nlab-families=%s\nlab-simapple=%s\nab-session=%s\n' "$BRIDGE" "$FAMILIES" "$SIMAPPLE" "$AB_SESSION_BINARY"
     ;;
   sim)
     prepare

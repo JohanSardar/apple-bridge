@@ -46,14 +46,8 @@ class BuildBridgeTests(unittest.TestCase):
         self.assertEqual(arguments[arguments.index("--bin") + 1], "bridge")
         self.assertEqual(arguments[arguments.index("--target") + 1], "aarch64-apple-darwin")
 
-    def test_relay_builds_statically_for_linux(self):
-        arguments = self.run_script("x86_64-unknown-linux-musl", "ab-relay", "ab-relay")
-        self.assertEqual(arguments[arguments.index("-p") + 1], "ab-relay")
-        self.assertEqual(arguments[arguments.index("--bin") + 1], "ab-relay")
-        self.assertEqual(arguments[arguments.index("--target") + 1], "x86_64-unknown-linux-musl")
-
     def test_packaging_entry_points_no_longer_build_go(self):
-        for name in ["packaging/build-app.sh", "packaging/release/release.py", "Makefile", "deploy/relay/README.md"]:
+        for name in ["packaging/build-app.sh", "packaging/release/release.py", "Makefile"]:
             text = (ROOT / name).read_text()
             self.assertNotIn("go build", text, name)
             self.assertNotIn("./cmd/bridge\n", text, name)

@@ -33,7 +33,6 @@ pub(crate) struct Site {
     pub origin: String,
     pub host: String,
     pub home: PathBuf,
-    pub directory: PathBuf,
 }
 impl Site {
     pub(crate) fn new(world: &World) -> Result<Self> {
@@ -50,7 +49,6 @@ impl Site {
             host: format!("localhost:{port}"),
             address,
             home: world.gateway_home.clone(),
-            directory: world.directory.clone(),
         })
     }
 

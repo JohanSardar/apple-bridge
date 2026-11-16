@@ -1,7 +1,0 @@
-id: SEC-REMOTE-ACCESS
-feature: web.agents
-levels: [sim, real]
-given: []
-when: []
-then: []
-cleanup: []

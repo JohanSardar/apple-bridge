@@ -6,8 +6,6 @@ use sha2::{Digest, Sha256};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Enrollment {
     #[serde(default)]
-    pub remote: bool,
-    #[serde(default)]
     pub pairing_id: String,
     #[serde(default)]
     pub dial: String,
@@ -23,8 +21,6 @@ pub struct Enrollment {
 pub struct PairCode {
     #[serde(default)]
     pub purpose: String,
-    #[serde(default)]
-    pub remote: bool,
     #[serde(default)]
     pub dial: String,
     pub id: String,
@@ -75,7 +71,7 @@ pub fn pair_proof(secret: &[u8], cert: &[u8]) -> Result<Vec<u8>, Error> {
 impl Authority {
     pub async fn join(&self, code: &str) -> Result<Enrollment, Error> {
         let c = PairCode::decode(code)?;
-        if c.remote || !c.dial.is_empty() {
+        if !c.dial.is_empty() {
             return Err(Error::Invalid);
         }
         let client = reqwest::Client::builder()
@@ -94,7 +90,6 @@ impl Authority {
             return Err(Error::Unauthorized);
         }
         let e = Enrollment {
-            remote: false,
             pairing_id: c.id,
             dial: c.dial,
             replica_id: p.id,
@@ -117,7 +112,7 @@ impl Authority {
         if self.enrollment()?.is_some_and(|e| e.pairing_id == c.id) {
             return Err(Error::Unauthorized);
         }
-        if c.remote || c.dial.is_empty() {
+        if c.dial.is_empty() {
             return Err(Error::Invalid);
         }
         let acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(self.server_tls(&c.fingerprint)?));
@@ -178,7 +173,6 @@ impl Authority {
                                 return Err(Error::Unauthorized);
                             }
                             let e = Enrollment {
-                                remote: false,
                                 pairing_id: code.id.clone(),
                                 dial: code.dial.clone(),
                                 replica_id: p.id,

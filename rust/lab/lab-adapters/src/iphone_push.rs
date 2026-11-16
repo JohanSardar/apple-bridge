@@ -1,5 +1,4 @@
 #![allow(clippy::too_many_lines)]
-use crate::live::LiveSink;
 use crate::phone::{Gateway, Phone, pair};
 use crate::replicas;
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -7,7 +6,7 @@ use lab_runner::Evidence;
 use serde_json::{Value, json};
 use std::fs;
 
-pub const SCENARIOS: [&str; 2] = ["APP-LIVE-SIM", "APP-APPROVE-SIM"];
+pub const SCENARIOS: [&str; 1] = ["APP-APPROVE-SIM"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Kind {
@@ -18,7 +17,6 @@ pub(crate) enum Kind {
 
 pub fn run(id: &str, evidence: &mut Evidence) -> bool {
     match id {
-        "APP-LIVE-SIM" => live(evidence),
         "APP-APPROVE-SIM" => command_flow(evidence, Kind::Approve),
         _ => return false,
     }
@@ -30,98 +28,6 @@ fn start() -> Result<(Gateway, Phone, String), String> {
     let gateway = Gateway::start(binary).map_err(|e| e.to_string())?;
     let (phone, token) = pair(&gateway).map_err(|e| e.to_string())?;
     Ok((gateway, phone, token))
-}
-
-fn live(evidence: &mut Evidence) {
-    let fixture = start();
-    evidence.check(
-        "pair",
-        fixture.is_ok(),
-        fixture.as_ref().err().map_or("", String::as_str),
-    );
-    let Ok((mut gateway, phone, token)) = fixture else {
-        return;
-    };
-    let register = |task: &str, value: &str| {
-        phone
-            .post(
-                &gateway,
-                "/v1/iphone/live-token",
-                &json!({"task_id": task, "token": value}),
-            )
-            .is_ok_and(|r| r.0 == 200)
-    };
-    let registered = register("_start", &"a".repeat(64)) && register("ab-test", &"b".repeat(64));
-    evidence.check("signed_start_and_task_token_registration", registered, "");
-    if !registered {
-        return;
-    }
-    let sink = LiveSink::start(&mut gateway);
-    let Ok(sink) = sink else {
-        evidence.check(
-            "relay_sink",
-            false,
-            &sink.err().map_or_else(String::new, |e| e.to_string()),
-        );
-        return;
-    };
-    for (index, action) in ["start", "update", "end"].iter().enumerate() {
-        let id = ["cmd_live_z", "cmd_live_m", "cmd_live_a"][index];
-        let op = format!("iphone.live.{action}");
-        let args = json!({"device_id": phone.id, "task_id": "ab-test", "title": "[ab-test] task", "status": action, "progress": 0.5});
-        let admitted = gateway.invoke(
-            &op,
-            &json!({"command_id": id, "op": op, "args": args}),
-            &token,
-        );
-        let ok = admitted.is_ok_and(|v| v["state"] == "admitted");
-        evidence.check(&format!("{action}_admitted"), ok, "");
-        if !ok {
-            return;
-        }
-    }
-    for _ in 0..2 {
-        if phone.request(&gateway, "/v1/iphone/pending", None).is_err() {
-            return;
-        }
-    }
-    let ok = sink.wait("start,update,end");
-    let detail = if ok {
-        String::new()
-    } else {
-        format!("{} {}", sink.detail(), gateway.log())
-    };
-    evidence.check(
-        "three_apns_lifecycle_events_without_duplicate_start",
-        ok,
-        &detail,
-    );
-    if !ok {
-        return;
-    }
-    if phone
-        .request(&gateway, "/v1/iphone/live-disable", None)
-        .is_err()
-    {
-        return;
-    }
-    let credentials: Option<Value> = fs::read(gateway.home.join("credentials.json"))
-        .ok()
-        .and_then(|raw| serde_json::from_slice(&raw).ok());
-    let mut found = false;
-    let mut valid = credentials.is_some();
-    if let Some(list) = credentials
-        .as_ref()
-        .and_then(|c| c["principals"].as_array())
-    {
-        for principal in list.iter().filter(|p| p["id"] == phone.id.as_str()) {
-            found = true;
-            valid &= principal["iphone_live_tokens"]
-                .as_object()
-                .is_none_or(serde_json::Map::is_empty);
-        }
-    }
-    evidence.check("disable_revokes_live_tokens", valid && found, "");
 }
 
 fn status(reply: &lab_world::Result<(u16, Vec<u8>)>) -> u16 {
@@ -177,34 +83,33 @@ pub(crate) fn command_flow(evidence: &mut Evidence, kind: Kind) {
     evidence.check("recover_preserves_queue", queued_ok, "");
     evidence.check("durable_offline_queue", queued_ok, "");
     let queued = queued.unwrap_or(Value::Null);
-    let sink = LiveSink::start(&mut gateway);
-    evidence.check(
-        "relay_store",
-        sink.is_ok(),
-        &sink
-            .as_ref()
-            .err()
-            .map_or_else(String::new, ToString::to_string),
-    );
-    let Ok(sink) = sink else { return };
-    evidence.check("relay_enrollment", true, "");
     let registration = phone.post(
         &gateway,
         "/v1/iphone/push-token",
         &json!({"token": "a".repeat(64)}),
     );
     evidence.check("signed_push_registration", status(&registration) == 200, "");
-    let packet = sink.next();
+    let packet = phone.pending(&gateway).ok().and_then(|(code, packets)| {
+        (code == 200)
+            .then(|| {
+                packets.into_iter().find(|packet| {
+                    phone
+                        .open(packet)
+                        .is_ok_and(|job| job["command"]["command_id"] == "cmd_iphone_roundtrip")
+                })
+            })
+            .flatten()
+    });
     evidence.check(
-        "encrypted_relay_push",
-        packet.is_ok(),
-        &if packet.is_ok() {
+        "encrypted_packet_polled",
+        packet.is_some(),
+        &if packet.is_some() {
             String::new()
         } else {
             gateway.log()
         },
     );
-    let Ok(packet) = packet else { return };
+    let Some(packet) = packet else { return };
     let plain = phone.open(&packet);
     evidence.check("gateway_signature_and_decryption", plain.is_ok(), "");
     let Ok(job) = plain else { return };

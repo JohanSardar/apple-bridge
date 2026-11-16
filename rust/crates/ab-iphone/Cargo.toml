@@ -14,7 +14,6 @@ ab-trust = { path = "../ab-trust" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 jiff.workspace = true
 sha2.workspace = true
 axum.workspace = true

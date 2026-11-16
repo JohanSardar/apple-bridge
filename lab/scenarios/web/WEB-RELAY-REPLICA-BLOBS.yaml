@@ -1,7 +1,0 @@
-id: WEB-RELAY-REPLICA-BLOBS
-feature: web.relay
-levels: [replica]
-given: []
-when: [{web: {}}]
-then: []
-cleanup: []

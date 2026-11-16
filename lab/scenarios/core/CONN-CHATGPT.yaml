@@ -1,7 +1,0 @@
-id: CONN-CHATGPT
-feature: web.remote
-levels: [sim, real]
-given: []
-when: []
-then: []
-cleanup: []

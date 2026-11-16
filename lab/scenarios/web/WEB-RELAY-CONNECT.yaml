@@ -1,7 +1,0 @@
-id: WEB-RELAY-CONNECT
-feature: web.relay
-levels: [replica]
-given: []
-when: [{web: {}}]
-then: []
-cleanup: []

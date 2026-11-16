@@ -16,8 +16,8 @@ make rust-ci
 `make build` builds the Rust workspace and, on macOS, the native Helper. Linux builds do not validate Apple integrations. `make rust-ci` includes tests, formatting, Clippy, cargo-deny, lab independence, native graph and golden checks; install cargo-deny separately. Use `make rust-golden` for descriptor/OpenAPI compatibility. The feature checker writes design/features.html; avoid committing incidental generated changes.
 
 ```sh
-packaging/dev/rust-lab.sh sim lab/scenarios/core/CONN-CHATGPT.yaml
-make real SCENARIOS=lab/scenarios/core/CONN-CHATGPT.yaml
+packaging/dev/rust-lab.sh sim lab/scenarios/core/CORE-PERMISSION-STATUS.yaml
+make real SCENARIOS=lab/scenarios/core/CORE-PERMISSION-STATUS.yaml
 make replica
 ```
 
@@ -27,7 +27,7 @@ On an existing development host, `~/bin/ab-local` may serialize checks. It is a 
 
 ## iPhone integration
 
-The gateway owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and relay/APNs delivery. The separate [iPhone repository](https://eilmer.si/applebridge/iphone) owns device execution, permissions, keys and receipts. Mac builds need neither its checkout nor the iOS SDK.
+The gateway owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and command delivery. The separate [iPhone repository](https://gitlab.com/johansardar/apple-bridge-iphone) owns device execution, permissions, keys and receipts. Mac builds need neither its checkout nor the iOS SDK.
 
 Only scenarios that compile phone models or drive the phone harness need it:
 

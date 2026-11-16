@@ -1,12 +1,10 @@
 use crate::{Error, Result};
 
 pub(super) const INGRESS_MAGIC: &[u8] = b"ab-ingress/1\0";
-pub(super) const INGRESS_HAS_BINDING: u8 = 1;
 pub(super) const INGRESS_HAS_SOURCE: u8 = 2;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct IngressPreamble {
-    pub binding: Option<[u8; 32]>,
     pub source: Option<std::net::IpAddr>,
 }
 
@@ -24,15 +22,10 @@ where
         return Err(Error::Contract("ingress proof"));
     }
     let flags = socket.read_u8().await?;
-    if flags & !(INGRESS_HAS_BINDING | INGRESS_HAS_SOURCE) != 0 {
+    if flags & !INGRESS_HAS_SOURCE != 0 {
         return Err(Error::Contract("ingress flags"));
     }
     let mut preamble = IngressPreamble::default();
-    if flags & INGRESS_HAS_BINDING != 0 {
-        let mut binding = [0; 32];
-        socket.read_exact(&mut binding).await?;
-        preamble.binding = Some(binding);
-    }
     if flags & INGRESS_HAS_SOURCE != 0 {
         let length = usize::from(socket.read_u8().await?);
         if length != 4 && length != 16 {
@@ -40,7 +33,14 @@ where
         }
         let mut address = vec![0; length];
         socket.read_exact(&mut address).await?;
-        preamble.source = ab_wire::framing::decode_tunnel_source(&address);
+        preamble.source = <[u8; 4]>::try_from(address.as_slice())
+            .map(std::net::IpAddr::from)
+            .ok()
+            .or_else(|| {
+                <[u8; 16]>::try_from(address.as_slice())
+                    .ok()
+                    .map(std::net::IpAddr::from)
+            });
     }
     Ok(preamble)
 }

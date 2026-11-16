@@ -25,7 +25,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{cell::Cell, collections::BTreeSet, time::Instant};
 
-pub const SCENARIOS: [&str; 16] = [
+pub const SCENARIOS: [&str; 15] = [
     "CON-CONFLICT",
     "CON-CRUD",
     "CON-DROP-EVERYTHING",
@@ -40,7 +40,6 @@ pub const SCENARIOS: [&str; 16] = [
     "CON-TOKEN-CRASH",
     "CON-ME",
     "CON-NOTE",
-    "CON-RELAY",
     "CON-RECIPIENT-LOOKUP",
 ];
 const PNG: &str =
@@ -225,14 +224,14 @@ fn percentile95(samples: &mut [f64]) -> f64 {
     let rank = ((samples.len() as f64) * 0.95).ceil() as usize;
     samples[rank.saturating_sub(1).min(samples.len() - 1)]
 }
-pub const STUB: [&str; 3] = ["CON-ME", "CON-NOTE", "CON-RELAY"];
+pub const STUB: [&str; 2] = ["CON-ME", "CON-NOTE"];
 pub fn run(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result<()> {
     let id = evidence.scenario.clone();
     match id.as_str() {
         "CON-IMPORT" => crate::imports::contacts(world, input, evidence),
         "CON-RECIPIENT-LOOKUP" => recipient_lookup(world, evidence),
         _ if STUB.contains(&id.as_str()) => Err(Error::Invalid(format!(
-            "{id} needs a real or relay world, not ported to the sim-only Rust runner"
+            "{id} needs a real world, not ported to the sim-only Rust runner"
         ))),
         "CON-GROUPS" => groups(world, evidence),
         _ if SCENARIOS.contains(&id.as_str()) => scenario(world, &id, evidence),

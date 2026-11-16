@@ -11,7 +11,6 @@ pub mod checks;
 pub mod cleanup;
 pub mod clock;
 pub mod commands;
-pub mod connectors;
 pub mod consent;
 pub mod contacts;
 pub mod contacts_list;
@@ -46,7 +45,6 @@ pub mod iphone_push;
 pub mod iphone_real;
 pub mod journey;
 pub mod labcore;
-pub mod live;
 pub mod live_latency;
 pub mod mail;
 pub mod maps;
@@ -67,7 +65,6 @@ pub mod phone;
 pub mod photos;
 pub mod pkginstall;
 pub mod poster;
-pub mod private;
 pub mod queries;
 pub mod query_helper;
 pub mod query_replica;
@@ -76,17 +73,6 @@ pub mod readmodel_perf;
 pub mod readmodels;
 pub mod recovery_cases;
 pub mod registration;
-pub mod relay;
-pub mod relay_acme;
-pub mod relay_certs;
-pub mod relay_gated;
-pub mod relay_host;
-pub mod relay_more;
-pub mod relay_replica;
-pub mod relay_service;
-pub mod relay_splice;
-pub mod relay_streams;
-pub mod relay_tls;
 pub mod reminders;
 pub mod reminders_dates;
 pub mod reminders_demo;
@@ -99,7 +85,6 @@ pub mod rm_core;
 pub mod rm_thread;
 pub mod robust;
 pub mod search;
-pub mod security;
 pub mod setup_cli;
 pub mod shortcut_sign;
 pub mod sim_progress;
@@ -115,8 +100,6 @@ pub mod web_agent_cimd;
 pub mod web_agent_levels;
 pub mod web_agent_oauth;
 pub mod web_agents;
-pub mod web_relay;
-pub mod web_relay_agents;
 pub mod web_rem_write;
 pub mod web_reminders;
 pub mod webauthn;
@@ -279,7 +262,6 @@ pub fn registry() -> Registry {
     registry.register("stale_frame", labcore::stale_frame);
     registry.register("stale_fence_rejected", labcore::stale_fence_rejected);
     registry.register("load_rejected", labcore::load_rejected);
-    registry.register("relay_service", relay::relay_service);
     registry.register("media_variants", media::media_variants);
     registry.register("messages_commands", messages_b::dispatch);
     registry.register("files_native", files_native::files_native);
@@ -315,7 +297,6 @@ pub fn registry() -> Registry {
     helper_real::register(&mut registry);
     web_rem_write::register(&mut registry);
     registry.register("SIRI-INTENTS", siri::intents);
-    registry.register("connector_approval", connectors::connector_approval);
     registry.register("consent_connector", consent::run);
     for id in ["AUD-TRANSCRIBE", "SPEECH-SAY", "VIS-IDLE"] {
         registry.register_real(id, vision::run);
@@ -332,20 +313,8 @@ pub fn registry() -> Registry {
     registry.register_real("REM-LIST-LOST-ACK", |world, evidence| {
         native_runner::run(world, &serde_json::Value::Null, evidence)
     });
-    registry.register("security_remote", security::run);
-    registry.register_real("RELAY-REAL", remote_real::relay_real);
     registry.register_real("CONN-CLAUDE-CODE", remote_real::claude_code);
-    registry.register_real("CONN-RELAY-CLAUDE", remote_real::relay_claude);
     registry.register_real("RMT-STATUS-OFF", remote_real::status_off);
-    registry.register_real("RELAY-REAL", remote_real::relay_real);
-    for id in relay_replica::SIM_BACKED {
-        registry.register_real_simulated(id, relay_replica::run);
-    }
-    registry.register_real_simulated(relay_replica::FUNNEL, relay_replica::run);
-    for id in relay_replica::NATIVE {
-        registry.register_real(id, relay_replica::run);
-    }
-    registry.register_real("SEC-REMOTE-ACCESS", security::real);
     registry
 }
 
@@ -390,15 +359,6 @@ fn register_pim(registry: &mut Registry) {
             capture_observers::capture_observers(world, evidence)
         } else if web_agents::SCENARIOS.contains(&evidence.scenario.as_str()) {
             web_agents::web(world, input, evidence)
-        } else if web_relay::SCENARIOS.contains(&evidence.scenario.as_str()) {
-            web_relay::web_relay(world, input, evidence)
-        } else if relay_replica::handles(&evidence.scenario) {
-            evidence.check(
-                "replica_level_only",
-                false,
-                "needs --level real with Tailscale and ubuntu; never run at the sim level",
-            );
-            Ok(())
         } else {
             notes::run(world, input, evidence)
         }
@@ -409,10 +369,8 @@ fn register_pim(registry: &mut Registry) {
 
 pub fn prepare(scenario: &mut lab_runner::Scenario) {
     checks::inject(scenario);
-    connectors::inject(scenario);
     calendar::inject(scenario);
     consent::inject(scenario);
-    security::inject(scenario);
 }
 
 #[must_use]

@@ -272,7 +272,7 @@ fn a_corrupt_remote_config_is_reported_and_creates_no_keys() -> Check {
     let home = short_home()?;
     std::fs::create_dir_all(home.path().join("remote"))?;
     std::fs::write(home.path().join("remote/config.json"), "{broken")?;
-    let output = run(home.path(), &["remote", "key", "--json"])?;
+    let output = run(home.path(), &["tailscale", "--off", "--json"])?;
     assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
     let document = error_document(&output)?;
     assert_eq!(document["reason"], "invalid_config");
@@ -286,7 +286,7 @@ fn a_corrupt_remote_config_is_reported_and_creates_no_keys() -> Check {
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
         .collect();
     assert_eq!(names, ["config.json"]);
-    let plain = run(home.path(), &["remote", "key"])?;
+    let plain = run(home.path(), &["tailscale", "--off"])?;
     let stderr = text(&plain.stderr);
     assert!(stderr.contains("line 1"), "{stderr}");
     Ok(())
@@ -767,83 +767,6 @@ fn result_schemas_name_the_fields_commands_return() -> Check {
 }
 
 #[test]
-fn remote_on_and_enable_open_the_sign_in_link_without_a_terminal() -> Check {
-    let home = short_home()?;
-    seeded_home(home.path())?;
-    let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
-    let bin = short_home()?;
-    let opened = bin.path().join("opened");
-    for launcher in ["open", "xdg-open"] {
-        fake_program(
-            bin.path(),
-            launcher,
-            &format!("echo \"$1\" >> {}", opened.display()),
-        )?;
-    }
-    answer_remote_requests(
-        home.path().to_path_buf(),
-        "https://relay.example.test/sign-in",
-        "https://mac.example.test",
-    );
-    let output = bridge()
-        .env("PATH", with_path(bin.path()))
-        .env_remove("SSH_CONNECTION")
-        .env_remove("SSH_TTY")
-        .args(["remote", "on", "--home"])
-        .arg(home.path())
-        .stderr(Stdio::null())
-        .output()?;
-    assert!(output.status.success());
-    let lines: Vec<String> = text(&output.stdout).lines().map(str::to_owned).collect();
-    assert_eq!(
-        lines,
-        [
-            "https://relay.example.test/sign-in",
-            "https://mac.example.test",
-            "https://mac.example.test/mcp"
-        ]
-    );
-    assert_eq!(
-        std::fs::read_to_string(&opened)?,
-        "https://relay.example.test/sign-in\n"
-    );
-    std::fs::remove_file(home.path().join("remote/status.json"))?;
-    let output = bridge()
-        .env("PATH", with_path(bin.path()))
-        .env_remove("SSH_CONNECTION")
-        .env_remove("SSH_TTY")
-        .args(["remote", "enable", "--open", "--home"])
-        .arg(home.path())
-        .stderr(Stdio::null())
-        .output()?;
-    assert!(output.status.success());
-    let lines: Vec<String> = text(&output.stdout).lines().map(str::to_owned).collect();
-    assert_eq!(
-        lines,
-        [
-            "https://relay.example.test/sign-in",
-            "https://mac.example.test"
-        ]
-    );
-    assert_eq!(std::fs::read_to_string(&opened)?.lines().count(), 2);
-    std::fs::remove_file(home.path().join("remote/status.json"))?;
-    let output = bridge()
-        .env("PATH", with_path(bin.path()))
-        .env("SSH_CONNECTION", "10.0.0.1 1 10.0.0.2 22")
-        .args(["remote", "enable", "--open", "--home"])
-        .arg(home.path())
-        .output()?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert_eq!(
-        std::fs::read_to_string(&opened)?.lines().count(),
-        2,
-        "opened over SSH"
-    );
-    assert!(text(&output.stderr).contains("Open the link above"));
-    Ok(())
-}
-
-#[test]
 fn array_results_from_old_spellings_still_warn_on_stderr() -> Check {
     let home = short_home()?;
     let output = run(home.path(), &["web", "devices", "--json"])?;
@@ -852,25 +775,6 @@ fn array_results_from_old_spellings_still_warn_on_stderr() -> Check {
     let warning = error_document(&output)?;
     assert_eq!(warning["status"], "warning");
     assert_eq!(warning["reason"], "deprecated");
-    Ok(())
-}
-
-#[test]
-fn the_system_route_is_accepted_again() -> Check {
-    let home = short_home()?;
-    for spelling in [
-        &["remote", "off", "--via", "system"][..],
-        &["remote", "disable", "--via", "system"][..],
-    ] {
-        let output = run(home.path(), spelling)?;
-        assert!(
-            output.status.success(),
-            "{spelling:?}: {}",
-            text(&output.stderr)
-        );
-    }
-    let output = run(home.path(), &["remote", "off", "--via", "system"])?;
-    assert_eq!(text(&output.stdout), "off\n");
     Ok(())
 }
 

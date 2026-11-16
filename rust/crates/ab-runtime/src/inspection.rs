@@ -213,12 +213,6 @@ fn doctor_report(home: &Path) -> Result<Value, Error> {
     document_checks(&db, &mut result)?;
     encryption(home, &mut result);
     encryption_warning(&mut result)?;
-    for warning in ab_remote::ct::doctor(home, ab_remote::ct::now()) {
-        result["warnings"]
-            .as_array_mut()
-            .ok_or(Error::Invalid)?
-            .push(json!(warning));
-    }
     clock(home, &mut result)?;
     Ok(result)
 }

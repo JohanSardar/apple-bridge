@@ -128,32 +128,9 @@ fn listener(home: &Path, id: &str) -> Result<(UnixListener, PathBuf)> {
 
 pub type Opener = std::sync::Arc<dyn Fn(&str) -> bool + Send + Sync>;
 
-pub async fn command(
-    home: &Path,
-    action: &str,
-    via: &str,
-    out: &mut (dyn Write + Send),
-    opener: Opener,
-    recheck: Duration,
-) -> Result<()> {
-    if action == "status" {
-        writeln!(out, "{}", serde_json::to_string(&state::status(home)?)?)?;
-        return Ok(());
-    }
-    let status = settle(home, action, via, out, opener, recheck).await?;
-    if status.url.is_empty() {
-        writeln!(out, "{}", status.state)?;
-    } else {
-        writeln!(out, "{}", status.url)?;
-        writeln!(out, "{}/mcp", status.url)?;
-    }
-    Ok(())
-}
-
 pub async fn settle(
     home: &Path,
     action: &str,
-    via: &str,
     out: &mut (dyn Write + Send),
     opener: Opener,
     recheck: Duration,
@@ -180,7 +157,7 @@ pub async fn settle(
         }
     });
     let cleanup = Cleanup(socket);
-    let result = wait(home, action, via, &id, out, &opener, recheck, &mut received).await;
+    let result = wait(home, action, &id, out, &opener, recheck, &mut received).await;
     accepting.abort();
     drop(cleanup);
     result
@@ -194,38 +171,18 @@ impl Drop for Cleanup {
     }
 }
 
-fn focus(mut status: state::Status, via: &str, action: &str) -> state::Status {
-    let names = state::entries(via);
-    let routes: Vec<_> = names
-        .iter()
-        .filter_map(|name| status.routes.get(*name).map(|route| (*name, route.clone())))
-        .collect();
-    if status.routes.is_empty() {
+fn focus(mut status: state::Status, action: &str) -> state::Status {
+    let Some(route) = status.routes.get(state::ROUTE).cloned() else {
         return status;
-    }
-    let on = routes.iter().find(|(_, route)| route.state == "on");
-    let failed = routes.iter().find(|(_, route)| route.state == "error");
-    let waiting = routes
-        .iter()
-        .find(|(_, route)| !matches!(route.state.as_str(), "on" | "off" | "error"));
-    let (state, chosen) = if action == "on" {
-        if let Some(found) = on {
-            ("on", Some(found))
-        } else if let Some(found) = failed {
-            ("error", Some(found))
-        } else if let Some(found) = waiting {
-            (found.1.state.as_str(), Some(found))
-        } else {
-            ("starting", None)
-        }
-    } else if routes.iter().all(|(_, route)| route.state == "off") {
-        ("off", None)
-    } else {
-        ("stopping", None)
+    };
+    let state = match (action, route.state.as_str()) {
+        ("on", "off") => "starting",
+        ("on", other) => other,
+        (_, "off") => "off",
+        _ => "stopping",
     };
     state.clone_into(&mut status.state);
-    if let Some((name, route)) = chosen {
-        (*name).clone_into(&mut status.backend);
+    if action == "on" && route.state != "off" {
         status.url.clone_from(&route.url);
         status.message.clone_from(&route.message);
         status.last_error.clone_from(&route.last_error);
@@ -245,14 +202,13 @@ fn focus(mut status: state::Status, via: &str, action: &str) -> state::Status {
 async fn wait(
     home: &Path,
     action: &str,
-    via: &str,
     id: &str,
     out: &mut (dyn Write + Send),
     opener: &Opener,
     recheck: Duration,
     links: &mut tokio::sync::mpsc::Receiver<String>,
 ) -> Result<state::Status> {
-    state::select(home, action, via, id)?;
+    state::select(home, action, id)?;
     let mut ticker = tokio::time::interval(recheck);
     let mut notice = String::new();
     let mut seen = BTreeSet::new();
@@ -260,7 +216,7 @@ async fn wait(
         if let Ok(status) = state::read::<state::Status>(home, "status")
             && status.id == id
         {
-            let status = focus(status, via, action);
+            let status = focus(status, action);
             if !status.message.is_empty() && status.message != notice {
                 writeln!(out, "{}", status.message)?;
                 notice.clone_from(&status.message);
@@ -290,7 +246,7 @@ async fn wait(
                 }
             }
             _ = tokio::signal::ctrl_c() => {
-                state::cancel(home, id, via)?;
+                state::cancel(home, id)?;
                 return Err(Error::Remote("interrupted".into()));
             }
             _ = ticker.tick() => {}

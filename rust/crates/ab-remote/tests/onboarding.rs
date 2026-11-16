@@ -54,7 +54,7 @@ async fn publish_after(home: &Path, steps: Vec<Status>) -> ab_remote::Result<()>
 }
 
 #[tokio::test]
-async fn remote_on_waits_for_on_then_prints_the_url_and_mcp() -> Check {
+async fn turning_on_waits_for_on_and_returns_the_url() -> Check {
     let home = tempfile::tempdir()?;
     let publisher = tokio::spawn({
         let home = home.path().to_owned();
@@ -83,25 +83,22 @@ async fn remote_on_waits_for_on_then_prints_the_url_and_mcp() -> Check {
     });
     let mut out = Buffer::default();
     let observed = out.clone();
-    onboarding::command(
+    let status = onboarding::settle(
         home.path(),
         "on",
-        "relay",
         &mut out,
         opener(),
         Duration::from_millis(20),
     )
     .await?;
     publisher.await??;
-    assert_eq!(
-        observed.text(),
-        "Waiting for approval\nhttps://h.example\nhttps://h.example/mcp\n"
-    );
+    assert_eq!(observed.text(), "Waiting for approval\n");
+    assert_eq!(status.url, "https://h.example");
     Ok(())
 }
 
 #[tokio::test]
-async fn remote_on_fails_with_the_remote_error() -> Check {
+async fn turning_on_fails_with_the_route_error() -> Check {
     let home = tempfile::tempdir()?;
     let publisher = tokio::spawn({
         let home = home.path().to_owned();
@@ -110,7 +107,7 @@ async fn remote_on_fails_with_the_remote_error() -> Check {
                 &home,
                 vec![Status {
                     state: "error".into(),
-                    last_error: "relay refused".into(),
+                    last_error: "Tailscale refused".into(),
                     ..Status::default()
                 }],
             )
@@ -118,10 +115,9 @@ async fn remote_on_fails_with_the_remote_error() -> Check {
         }
     });
     let mut out = Buffer::default();
-    let result = onboarding::command(
+    let result = onboarding::settle(
         home.path(),
         "on",
-        "relay",
         &mut out,
         opener(),
         Duration::from_millis(20),
@@ -129,14 +125,14 @@ async fn remote_on_fails_with_the_remote_error() -> Check {
     .await;
     publisher.await??;
     let Err(error) = result else {
-        return Err("remote on must fail on an error state".into());
+        return Err("turning on must fail on an error state".into());
     };
-    assert_eq!(error.to_string(), "remote: relay refused");
+    assert_eq!(error.to_string(), "remote: Tailscale refused");
     Ok(())
 }
 
 #[tokio::test]
-async fn remote_off_prints_the_state_without_a_url() -> Check {
+async fn turning_off_returns_the_off_state_without_a_url() -> Check {
     let home = tempfile::tempdir()?;
     let publisher = tokio::spawn({
         let home = home.path().to_owned();
@@ -152,17 +148,15 @@ async fn remote_off_prints_the_state_without_a_url() -> Check {
         }
     });
     let mut out = Buffer::default();
-    let observed = out.clone();
-    onboarding::command(
+    let status = onboarding::settle(
         home.path(),
         "off",
-        "relay",
         &mut out,
         opener(),
         Duration::from_millis(20),
     )
     .await?;
     publisher.await??;
-    assert_eq!(observed.text(), "off\n");
+    assert_eq!((status.state.as_str(), status.url.as_str()), ("off", ""));
     Ok(())
 }

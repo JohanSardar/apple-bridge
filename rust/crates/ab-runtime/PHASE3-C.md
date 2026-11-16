@@ -20,7 +20,7 @@ The exit gate passed at implementation commit `4ce8f25efc7ce2002cc7d8a770e5aa43e
 - The real product-adapter frontdoor passes **30 checks**, including all four unchanged golden MCP exchanges through JSON and SSE, public authorization/limits, legacy initialization and cancellation notifications. Its unauthenticated golden route is a lab-only internal-handler seam matching the Go golden fixture. Production routes remain authenticated.
 - `make rust-ci`, lab-feature workspace Clippy and `go vet ./lab/replica-parity` passed. The full matrix's maximum echo-query latency was 59.18 ms against the unchanged 200 ms budget.
 - The harness retains ten optional `replica_application_exactly_once` assertions as `unverified` because those journeys do not run kill-during-apply. These are preserved in the receipts, not counted as passed assertions. MAIL-REPLICA leaves its per-scenario git SHA empty; its run is bound to the same frozen artifact by the matrix invocation, and that metadata gap is preserved.
-- The requested **13 native scenarios are pending Air real run**, unrun. Nine additional remote/relay harness blockers are also unrun. Their exact IDs are listed in the receipt.
+- The requested **13 native scenarios are pending Air real run**, unrun. Nine additional remote harness blockers are also unrun. Their exact IDs are listed in the receipt.
 
 [Exit-gate receipt](evidence/phase3/exit-gate.json), [matrix log](evidence/phase3/matrix.log), [read-parity log](evidence/phase3/read-parity.log), [mixed convergence](evidence/phase3/mixed-convergence.json), [scenario hashes](evidence/phase3/scenario-selection.json), [MCP receipt](evidence/phase3/mcp.json).
 

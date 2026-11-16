@@ -93,7 +93,7 @@ fn help_and_version_work_and_say_how_to_start() -> Check {
         let output = bridge().arg(flag).output()?;
         assert!(output.status.success(), "{flag}");
         let help = text(&output.stdout);
-        for word in ["bridge up", "bridge link claude", "remote", "--home"] {
+        for word in ["bridge up", "bridge link claude", "tailscale", "--home"] {
             assert!(help.contains(word), "{flag} lacks {word}: {help}");
         }
         assert!(!text(&output.stderr).contains("invalid replica configuration"));
@@ -106,12 +106,9 @@ fn help_and_version_work_and_say_how_to_start() -> Check {
             format!("bridge {}", env!("CARGO_PKG_VERSION"))
         );
     }
-    let output = bridge().args(["remote", "enable", "--help"]).output()?;
+    let output = bridge().args(["tailscale", "--help"]).output()?;
     assert!(output.status.success());
-    assert!(text(&output.stdout).contains("--relay-url"));
-    let output = bridge().args(["remote"]).output()?;
-    assert!(output.status.success());
-    assert!(text(&output.stdout).contains("enable"));
+    assert!(text(&output.stdout).contains("--off"));
     let output = bridge().args(["down", "--help"]).output()?;
     assert!(output.status.success());
     let help = text(&output.stdout);
@@ -1252,9 +1249,7 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "/h",
         ],
         &["pair", "--iphone", "--via-remote", "--home", "/h"],
-        &["pair", "--via-remote", "--home", "/h"],
         &["join", "CODE", "--listen", "127.0.0.1:0", "--home", "/h"],
-        &["connect", "CODE", "--listen", "127.0.0.1:0", "--home", "/h"],
         &["connector", "pending", "--home", "/h"],
         &[
             "connector",
@@ -1276,31 +1271,6 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "--home",
             "/h",
         ],
-        &["remote", "on", "--home", "/h"],
-        &[
-            "remote",
-            "on",
-            "--relay-url",
-            "https://r.example",
-            "--home",
-            "/h",
-        ],
-        &["remote", "on", "--via", "tailscale-app", "--home", "/h"],
-        &["remote", "on", "--private", "--home", "/h"],
-        &[
-            "remote",
-            "on",
-            "--domain",
-            "d.example",
-            "--name",
-            "m",
-            "--home",
-            "/h",
-        ],
-        &["remote", "off", "--home", "/h"],
-        &["remote", "status", "--snippets", "--home", "/h"],
-        &["remote", "key", "--relay-url", "https://r.example"],
-        &["remote", "certificate-accept", "abc", "--home", "/h"],
         &[
             "web",
             "enroll",

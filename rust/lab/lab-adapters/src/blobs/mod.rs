@@ -557,7 +557,7 @@ fn concurrent_transfer(
     let size: u64 = if same { 172_032 } else { 4 << 20 };
     let mut input = json!({"size":size,"slow_ms":1000});
     if same {
-        input["relay_fixture"] = json!(true);
+        input["replica_fixture"] = json!(true);
     }
     let sent = world.control("/blob-fixture", &input).is_ok();
     evidence.check("slow_native_blob_fixture", sent, "slow fixture");
@@ -585,8 +585,8 @@ pub(crate) fn native_stage(world: &mut World, evidence: &mut Evidence, gateway: 
     if id != "CORE-BLOB-NATIVE-STAGE" && !concurrent_transfer(world, evidence, gateway, same) {
         return;
     }
-    let staged = world.blob_control(&json!({"action":"relay-fixture"}));
-    evidence.check("synthetic_blob_staged", staged.is_ok(), "relay fixture");
+    let staged = world.blob_control(&json!({"action":"replica-fixture"}));
+    evidence.check("synthetic_blob_staged", staged.is_ok(), "replica fixture");
     let Ok(fixture) = staged else {
         return;
     };

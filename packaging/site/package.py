@@ -6,8 +6,6 @@ parser = argparse.ArgumentParser(description="Stage the public Eilmer website an
 parser.add_argument("output", type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
-shutil.copytree(root / "deploy/site", args.output, ignore=shutil.ignore_patterns("README.md"))
+shutil.copytree(root / "deploy/site", args.output, ignore=shutil.ignore_patterns("README.md", "serve.py", "__pycache__"))
 shutil.copyfile(root / "docs/install", args.output / "applebridge/install")
-(args.output / "applebridge/selfhost").mkdir()
-shutil.copyfile(root / "deploy/selfhost/install.sh", args.output / "applebridge/selfhost/install.sh")
 print(f"Staged website in {args.output}")

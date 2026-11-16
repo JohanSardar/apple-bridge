@@ -194,20 +194,20 @@ async fn action(app: &App, request: Request) -> Result<Value, Error> {
                 app.state.with(|state| state.close_snapshot(&id))?;
             }
         }
-        "relay-fixture" => {
-            let bytes = b"[ab-test] relay blob\n".repeat(8192);
+        "replica-fixture" => {
+            let bytes = b"[ab-test] replica blob\n".repeat(8192);
             let size = bytes.len();
             let (digest, pin) = stage(app, bytes).await?;
             let capture = ab_wire::messages::Capture {
                 source: Some(ab_trust::domain::Source::System),
-                generation: format!("relay-{}", jiff::Timestamp::now()),
+                generation: format!("replica-{}", jiff::Timestamp::now()),
                 checkpoint: "1".into(),
                 observations: Some(vec![ab_wire::messages::Observation {
                     kind: "upsert".into(),
                     collection: "system.source".into(),
-                    native_key: "relay-blob".into(),
+                    native_key: "replica-blob".into(),
                     data: Some(serde_json::value::to_raw_value(
-                        &json!({"title":"[ab-test] relay blob","blob":{"digest":digest,"size":size,"state":"available"}}),
+                        &json!({"title":"[ab-test] replica blob","blob":{"digest":digest,"size":size,"state":"available"}}),
                     )?),
                     observed_at: ab_wire::gojson::GoTime::parse(
                         &jiff::Timestamp::now().to_string(),
@@ -224,7 +224,7 @@ async fn action(app: &App, request: Request) -> Result<Value, Error> {
                 .release_pin(&pin)
                 .map_err(|_| Error::Invalid)?;
             committed?;
-            return Ok(json!({"digest":digest,"size":size,"title":"[ab-test] relay blob"}));
+            return Ok(json!({"digest":digest,"size":size,"title":"[ab-test] replica blob"}));
         }
         _ => return Err(Error::Invalid),
     }

@@ -51,31 +51,6 @@ pub struct AuditEntry {
 pub trait Audit: Debug + Send + Sync {
     fn record(&self, entry: AuditEntry) -> Result<(), Error>;
 }
-pub type SourceLimit = Arc<dyn Fn() -> Option<std::collections::BTreeSet<String>> + Send + Sync>;
-#[derive(Clone, Default)]
-pub struct SourceCeiling(std::sync::Arc<std::sync::OnceLock<SourceLimit>>);
-impl std::fmt::Debug for SourceCeiling {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("SourceCeiling")
-    }
-}
-impl SourceCeiling {
-    pub fn set(&self, limit: SourceLimit) {
-        let _ = self.0.set(limit);
-    }
-    #[must_use]
-    pub fn current(&self) -> Option<std::collections::BTreeSet<String>> {
-        self.0.get().and_then(|limit| limit())
-    }
-    #[must_use]
-    pub fn allows(&self, scope: &str) -> bool {
-        self.current().is_none_or(|sources| {
-            scope
-                .split_once(':')
-                .is_some_and(|(source, _)| sources.contains(source))
-        })
-    }
-}
 #[derive(Debug, Clone)]
 pub struct Config {
     pub hosts: Vec<String>,
@@ -90,7 +65,6 @@ pub struct Frontdoor {
     pub audit: Arc<dyn Audit>,
     rates: Mutex<HashMap<String, (Instant, u32)>>,
     mcp_failures: Mutex<HashMap<(String, String), Instant>>,
-    ceiling: SourceCeiling,
 }
 impl Frontdoor {
     pub fn new(service: Arc<Service>, config: Config, audit: Arc<dyn Audit>) -> Arc<Self> {
@@ -100,14 +74,7 @@ impl Frontdoor {
             audit,
             rates: Mutex::new(HashMap::new()),
             mcp_failures: Mutex::new(HashMap::new()),
-            ceiling: SourceCeiling::default(),
         })
-    }
-    pub fn limit_sources(&self, limit: SourceLimit) {
-        self.ceiling.set(limit);
-    }
-    fn exceeds_sources(&self, grants: &[String]) -> bool {
-        grants.iter().any(|grant| !self.ceiling.allows(grant))
     }
     pub fn router(self: Arc<Self>) -> Router {
         Router::new()
@@ -255,7 +222,6 @@ async fn guard(
         "http"
     };
     if (frontdoor.config.public && !principal.remote)
-        || frontdoor.exceeds_sources(&principal.grants)
         || (!principal.resource.is_empty()
             && principal.resource != format!("{scheme}://{}/mcp", host.unwrap_or_default()))
     {
@@ -293,11 +259,7 @@ async fn guard(
     let Ok(bytes) = to_bytes(body, limit).await else {
         return problem(Code::Invalid.into());
     };
-    let still_allowed = frontdoor
-        .service
-        .identity
-        .current(&checked)
-        .is_ok_and(|current| !frontdoor.exceeds_sources(&current.grants));
+    let still_allowed = frontdoor.service.identity.current(&checked).is_ok();
     if !still_allowed {
         return authentication_problem(
             Code::Unauthorized.into(),
@@ -433,9 +395,6 @@ async fn changes(
                     .identity
                     .current(&principal)
                     .and_then(|current| {
-                        if frontdoor.exceeds_sources(&current.grants) {
-                            return Err(Error::from(Code::Unauthorized));
-                        }
                         frontdoor
                             .service
                             .store

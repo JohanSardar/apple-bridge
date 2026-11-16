@@ -21,10 +21,6 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | CALL-DIAL-REAL | missing | missing | skipped | skipped: prohibited call placement |
 | CLK-ALARM-REAL | missing | failed | exit 1 | Import .build/shortcuts/AB Clock.shortcut after building/signing packaging/shortcuts/ab-clock.json; runner currently disables all real Clock dispatch, so implementation/readback qualification is also required |
 | CLK-TIMER-REAL | missing | failed | exit 1 | Import .build/shortcuts/AB Clock.shortcut after building/signing packaging/shortcuts/ab-clock.json; runner currently disables all real Clock dispatch, so implementation/readback qualification is also required |
-| CONN-CHATGPT | missing | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
-| CONN-CLAUDE-AI | missing | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
-| CONN-CLAUDE-CODE | missing | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
-| CONN-RELAY-CLAUDE | missing | failed | exit 1 | NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup |
 | FOC-IDLE | missing | failed | exit 1 | Five-minute Helper CPU qualification remains pending; no idle CPU measurement claimed. |
 | FOC-PHONE-SYNC | missing | failed | exit 1 | the owner must have the paired iPhone available and qualify Focus sync after a safe AB Focus set/readback/restore implementation |
 | FOC-SET-REAL | missing | failed | exit 1 | AB Focus pack is not supplied: verify Set Focus identifiers/parameters and provide/import packaging/shortcuts/AB Focus.shortcut; then qualify set/readback/restore (syncs to iPhone) |
@@ -44,8 +40,6 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | MUS-CONTROL-REAL | missing | failed | exit 1 | Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested |
 | MUS-PLAYLIST-REAL | missing | failed | exit 1 | Automation: dev.applebridge.helper → com.apple.Music missing; consent not requested |
 | NOTE-EDIT-PARITY | missing | missing | skipped | skipped: NotesParityProbe executes Apple Events without a non-prompting authorization preflight; cleanup qualification is unproven |
-| RELAY-REAL | missing | failed | exit 1 | NS delegation absent; trusted control TLS and VM DNS scopes/IAM require operator setup |
-| RMT-TS-EMBEDDED | missing | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
 | SAF-READINGLIST-REAL | missing | missing | skipped | skipped: runner creates a Reading List entry without cleanup; after cleanup is implemented, System Settings > Privacy & Security > Automation > AppleBridgeHelper > Safari must be enabled |
 | SAF-TABS-REAL | missing | missing | skipped | skipped: runner creates a tab and Reading List entries without cleanup; Safari close_tab is deliberately rejected; after cleanup is implemented, System Settings > Privacy & Security > Automation > AppleBridgeHelper > Safari must be enabled |
 | SC-ACTIONS | missing | passed | exit 0 | Passed current real runner assertions |
@@ -90,7 +84,6 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 | PHO-ORIGINAL-REAL | failed | failed | exit 1 | Photos readWrite authorization is not_determined; prompt forbidden |
 | PHO-READ-REAL | failed | failed | exit 1 | Photos readWrite authorization is not_determined; prompt forbidden |
 | REM-LIST-MANAGE | failed | failed | exit 1 | Code bug: delete_owned_list failed after rename. AppleTruth cleanup guard rejected renamed lists; fixed the one-line guard and verified this run-created list removed (lab/evidence/real-qualification-cleanup.json). Scenario was not retried. |
-| RMT-STATUS-OFF | failed | failed | exit 1 | Requires an authorized public embedded node and Ubuntu curl; unattended login and system Serve changes are forbidden |
 | SAF-IDLE | failed | failed | exit 1 | Failed assertions: helper_cpu_under_two_percent_for_five_minutes |
 | SC-RUN-REAL | failed | failed | exit 1 | Failed assertions: bounded_runner_completed, echo_output_matches |
 | SIRI-INTENTS | failed | failed | exit 1 | App Intents metadata missing from Helper bundle; full Xcode metadata toolchain required. the owner must verify Apple Bridge status appears in Shortcuts and runs. |
@@ -103,7 +96,7 @@ Unique scenario invocations: 70. AI-LOCAL retried once after native-build conten
 
 - Five previously dangling feature references now have explicit failing acceptance placeholders: MSG-AUDIO-MESSAGE, MSG-FORMATTING-SEND, MSG-SEND-EFFECT, MSG-SEND-LATER, WEB-MSG-REAL-READ.
 - Web write/parity YAMLs declare only web, despite real feature references. A real harness must be implemented before those levels can qualify.
-- Clock, Focus, Weather, Mac extras and remote connector real runners return disabled/limited without exercising their advertised behavior. Imports alone cannot make these pass.
+- Clock, Focus, Weather and Mac extras real runners return disabled/limited without exercising their advertised behavior. Imports alone cannot make these pass.
 - Messages parity selftest can reuse MessagesParity.ownedFixture() from an existing run and cached proofs; this batch did not enable it against existing self-chat residue. Fresh isolated fixtures and run-only cleanup are required.
 - Safari real writes have no cleanup. Notes parity invokes Apple Events without a non-prompting preflight. Existing Notes CRUD and Messages media/selftest cleanup failures make new writes unsafe in this batch.
 - Photos real import/original routes only run PHO-READ-REAL authorization reporting in PhotosChecks; actual import/original assertions are absent. PhotosChecks has a different executable identity from the signed Helper.
@@ -126,8 +119,6 @@ The AI and audio scenario contracts accept explicit capability/authorization una
 | MUS-CONTROL-REAL, MUS-PLAYLIST-REAL | System Settings > Privacy & Security > Automation > AppleBridgeHelper > Music; provide a synthetic test playlist and qualify restoration of playback/Recently Played before mutations. |
 | MSG-PINS, MSG-MUTE, MSG-READ-RECEIPTS, MSG-RECENTLY-DELETED | Current-source immutable signed Helper via APPLE_BRIDGE_PARITY_HELPER_APP and an unlocked Mac with Messages available; System Settings > Privacy & Security > Accessibility > AppleBridgeHelper; Automation > AppleBridgeHelper > Messages and System Events. Preserve existing self-chat residue. |
 | MSG-DELETE-REAL, MSG-READSTATE-REAL, MSG-SELFTEST, WEB-UPLOAD-NATIVE-STAGING, WEB-MEDIA-VARIANTS | Unlock Mac, provide an unused own self-chat handle and prove cleanup of only newly tagged fixtures. Accessibility and Automation grants as above; fix cleanup first. |
-| RELAY-REAL, CONN-RELAY-CLAUDE | Delegate the relay DNS zone; provision trusted control TLS and VM DNS scopes/IAM. No production servers were contacted. |
-| RMT-TS-EMBEDDED, RMT-STATUS-OFF, CONN-CHATGPT, CONN-CLAUDE-AI, CONN-CLAUDE-CODE | Authorize a dedicated embedded Tailscale node and Funnel interactively; provide the corresponding signed-in connector account and an approved non-production external probe machine. Real runners remain disabled. |
 
 skipped: disruptive — mac.lock_screen, mac.sleep_display, mac.restart, mac.shutdown, mac.set_wallpaper, mac.set_output_device. No separate non-passed real scenario IDs map exclusively to these operations in the target inventory. CALL-DIAL-REAL was never invoked.
 

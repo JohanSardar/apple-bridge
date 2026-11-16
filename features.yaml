@@ -29,7 +29,7 @@ requirements:
   R-USAGE: Screen Time per app, per device, per day estimates, read-only
   R-PKG: Developer ID signed and notarized app, signed updates, onboarding, background service and clean uninstall
   R-AGENT: A remote agent can do real tasks through MCP only
-  R-WEB-REACH: Any browser or agent anywhere reaches the bridge through the embedded Funnel with nothing installed and nothing paid
+  R-WEB-REACH: The owner's own devices and agents on the owner's Tailscale network reach the bridge, with nothing on the public internet and nothing paid
   R-WEB-SECURE: Passkey device sessions, public-computer mode, revocation, origin and CSP protection, rate limits, agent levels with owner approval
 
 features:
@@ -392,7 +392,6 @@ features:
       - {id: CON-IMPORT, levels: [sim, real]}
       - {id: CON-SEARCH, levels: [sim]}
       - {id: CON-EXTERNAL, levels: [sim, real, replica]}
-      - {id: CON-RELAY, levels: [replica], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
       - {id: CON-DROP-EVERYTHING, levels: [sim]}
       - {id: CON-TOKEN-CRASH, levels: [sim]}
       - {id: CON-PERMISSION-LOSS, levels: [sim]}
@@ -403,7 +402,7 @@ features:
       - {id: CON-GROUPS, levels: [sim]}
     notes: >-
       Thirty-second recovery polls skip history enumeration when the committed token and Me identity are unchanged; notifications retain 50 ms coalescing and commands reconcile immediately.
-      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free. The isolated 2026-10-23 public CON-RELAY rerun proves scope, subscription and live-feed delivery with 20/20 replica samples; the earlier 0/20 observation is superseded. Gateway/replica p95 was 1453.922/1481.835 ms against the unchanged 1000 ms budget, with a TCC activity surge during the run after a quiet precheck. Tagged contact cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
+      Direct external Contacts R-LIVE passes on candidate 165ea123 based on main b99d876b: 20 native changes, gateway p95 454.953 ms and Ubuntu replica p95 507.510 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. Media backfill is enabled, bulk capture peak is one, and the fresh signed Helper is crash-free.
 
   - id: contacts.write
     title: Contacts create, update, delete
@@ -419,7 +418,7 @@ features:
       - {id: CON-RESOLVE-RESTART, levels: [sim]}
 
     notes: >-
-      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget. The isolated 2026-10-23 public CON-RELAY rerun delivered all 20 native changes and six public commands; command replica p95 was 1788.080 ms against the unchanged 1000 ms budget. TCC activity surged during the run after a quiet precheck, so public write latency remains limited. Tagged cleanup passed. The immediate Serve byte comparison failed, but a later canonical configuration read matched the saved baseline.
+      Leader-accepted cold native Contacts CRUD on source 6f548790 based on main c2dcb28c: six native saves, gateway p95 528.632 ms and Ubuntu replica p95 563.151 ms over the LAN SSH tunnel, below the unchanged 1000 ms budget.
 
   - id: notes.read
     title: Notes folders and notes, protobuf decoding, locked notes
@@ -549,21 +548,16 @@ features:
       - {id: NATIVE-MEDIA-POSTERS, levels: [sim]}
     notes: Sim, cap, yield, posters and native export-safety levels pass. The native self-chat multipart send is observed for real. HEIC, MOV and CAF native variant qualification and complete run-owned cleanup are tracked by the remaining limits below.
   - id: web.remote
-    title: Reach from anywhere through embedded Tailscale Funnel
+    title: Reach this Mac from your own devices through Tailscale
     requirements: [R-WEB-REACH, R-SECURE]
     milestone: W1
     modules: [remote, web, frontdoor, runtime]
     depends_on: [web.frontdoor]
-    status: done
+    status: in_progress
     scenarios:
-      - {id: WEB-REMOTE-FUNNEL, levels: [real]}
-      - {id: RMT-ONECOMMAND-FLOW, levels: [sim]}
       - {id: RMT-STATUS-OFF, levels: [real]}
-      - {id: RMT-TS-EMBEDDED, levels: [real]}
       - {id: CONN-CLAUDE-CODE, levels: [real]}
-      - {id: CONN-CLAUDE-AI, levels: [sim, real]}
-      - {id: CONN-CHATGPT, levels: [sim, real], status: dropped, reason: "Dropped by the owner on 2026-11-01: the owner ChatGPT plan has no Developer mode for custom connectors."}
-    notes: A1 connector sim checks now prove five-minute code matching, owner-local approval, denial, expiry, replay refusal, request isolation, OAuth token exchange and records_query. RMT-ONECOMMAND-FLOW sim covers ephemeral approval-link delivery, token-free status and logs, redacted client failures, and cancellation before Funnel approval. System Funnel passes the public Ubuntu path with a valid certificate, REST and MCP SSE, spoofed-forwarding rejection and Serve-config preservation (real evidence 2026-10-21). T76 live private embedded runners validate on/private status and invitation shape through the Air system tailnet path; remote off and private restoration pass. With the tailnet grant tcp:7780 to the bridge node in place, invitation redemption and the session-gated bridge challenge pass for real (2026-10-30). On 2026-11-11 a fresh macOS 26.6.2 VM with the branch build proved the Setup Connect step for real. Setup installed Tailscale from its signed pkg; the tailnet route (Serve on 8443, no Funnel) was unreachable from the public internet and reached from another tailnet device, where Claude Code signed in through the Mac approval window and read; Grok Bot joined the tailnet through its Tailscale plugin and read with a tailnet-bound key; claude.ai connected through the cloud route (Funnel on 443) limited to Calendar, Reminders and Notes and saw only those; Disconnect closed the public address and revoked only cloud-route agents. remote_onboarding.py adds 13 sim checks for both routes. ChatGPT through the cloud route is unverified.
+    notes: On 2026-11-11 a fresh macOS 26.6.2 VM with the branch build proved the Setup Connect step for real. Setup installed Tailscale from its signed pkg; the tailnet route (Serve on 8443) was unreachable from the public internet and reached from another tailnet device, where Claude Code signed in through the Mac approval window and read; Grok Bot joined the tailnet through its Tailscale plugin and read with a tailnet-bound key. RMT-STATUS-OFF and CONN-CLAUDE-CODE drive `bridge tailscale` and `bridge tailscale --off` at the real level and have no evidence yet.
   - id: web.agents
     title: Agent tokens with read, approve-first and full levels; MCP OAuth for connectors
     requirements: [R-WEB-SECURE, R-AGENT]
@@ -572,75 +566,12 @@ features:
     depends_on: [web.frontdoor, web.remote]
     status: done
     scenarios:
-      - {id: SEC-REMOTE-ACCESS, levels: [sim, real]}
       - {id: WEB-AGENT-CREDENTIALS, levels: [sim]}
       - {id: WEB-AGENT-ACTIVITY, levels: [sim]}
       - {id: WEB-AGENT-LEVELS, levels: [sim]}
       - {id: WEB-AGENT-OAUTH, levels: [sim]}
       - {id: WEB-AGENT-OAUTH-CIMD, levels: [sim]}
-    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity and public-client OAuth are retained. Go-rendered consent and approval forms replace the SolidJS settings screens. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections. Replica agent delegation is covered by web.relay. SEC-REMOTE-ACCESS passes sim and Air real (2026-11-01), proving public relay endpoint denial, OAuth binding and replay defenses, connector revocation within three seconds, token redaction and test tunnel credential cleanup.
-  - id: web.relay
-    title: Replicas connect through the Remote relay with device-key auth
-    requirements: [R-WEB-REACH, R-FULL, R-LIVE, R-SECURE]
-    milestone: W1
-    modules: [replication, remote, trust, runtime]
-    depends_on: [web.remote, core.replication, core.trust]
-    status: done
-    scenarios:
-      - {id: WEB-RELAY-AUTH, levels: [sim]}
-      - {id: WEB-RELAY-AGENTS, levels: [sim]}
-      - {id: WEB-RELAY-PAIRING, levels: [sim]}
-      - {id: WEB-RELAY-CONNECT, levels: [replica]}
-      - {id: WEB-RELAY-COMMAND, levels: [replica]}
-      - {id: WEB-RELAY-PUBLIC-AGENTS, levels: [replica]}
-      - {id: WEB-RELAY-REPLICA, levels: [replica]}
-      - {id: WEB-RELAY-REPLICA-BLOBS, levels: [replica]}
-      - {id: WEB-RELAY-NATIVE-AGENTS, levels: [replica]}
-    notes: >-
-      Native public relay functional proof is complete. The Reminders R-LIVE dependency
-      is certified by merged PR75 (bcb5708b): 200 effects at 5/s, direct replica p95
-      463.385 ms and public Ubuntu p95 720.340 ms plus 28.045 ms clock uncertainty.
-      The unchanged public scenario passed 59 assertions, including post-burst commands
-      and blob staging. Feed pipelining PR76 and native staging PR90 are merged.
-      All nine relay scenario levels (sim and replica) pass. Per-app R-LIVE was
-      certified at each app milestone (design/MILESTONE-GATES.md): Contacts, Calendar,
-      Reminders and Notes pass; Messages R-LIVE is limited on messages entries because
-      no unused own-handle alias exists. App-specific public-path limits stay recorded on
-      each app's own entry. No thresholds were changed.
-  - id: remote.relay
-    title: SNI passthrough relay, stable device enrollment and persistent budgets
-    requirements: [R-SECURE, R-WEB-REACH]
-    milestone: M0
-    modules: [relay]
-    depends_on: []
-    status: done
-    notes: Device-signed outbound smux TLS tunnel, reconnect and health pings; Mac ACME DNS-01, custom-domain checks, CT warnings and VM service deployment. Public apex control TLS and the live Mac health endpoint are reachable through ab-relay. ACME control renewal, public TXT propagation, explicit device addressing and startup retries are implemented. Ubuntu REST/MCP checks and the isolated Claude Code HTTP connector pass. CONN-RELAY-CLAUDE real transport evidence (2026-10-29) is complemented by CONN-CLAUDE-AI real (2026-10-31, PR https://github.com/JohanSardar/apple-bridge/pull/476), which proves interactive Claude.ai OAuth through the public relay, owner-local Mac approval and an authorized tool call.
-    scenarios:
-      - {id: RELAY-PASSTHROUGH, levels: [sim]}
-      - {id: RELAY-ENROLL, levels: [sim]}
-      - {id: RELAY-ROTATE-GATED, levels: [sim]}
-      - {id: RELAY-TLS-SPLICE, levels: [sim]}
-      - {id: RELAY-DOWNGRADE, levels: [sim]}
-      - {id: RELAY-LEGACY-COMPAT, levels: [sim]}
-      - {id: RELAY-CT-INDEPENDENT, levels: [sim]}
-      - {id: RELAY-CAA-ACCOUNT, levels: [sim]}
-      - {id: RELAY-LIMITS, levels: [sim]}
-      - {id: RELAY-STREAMS, levels: [sim]}
-      - {id: RELAY-ACME, levels: [sim]}
-      - {id: RELAY-OWN-DOMAIN, levels: [sim]}
-      - {id: RELAY-REAL, levels: [real]}
-      - {id: CONN-RELAY-CLAUDE, levels: [real]}
-  - id: remote.private
-    title: Private userspace Tailscale access through localhost
-    requirements: [R-SECURE, R-WEB-REACH]
-    milestone: W1
-    modules: [remote, web]
-    depends_on: [web.remote]
-    status: done
-    scenarios:
-      - {id: RMT-PRIVATE-CONNECT, levels: [sim, replica]}
-    notes: Five-minute single-use invitations, ephemeral in-memory connecting identities, private approval IPC and shared web/API/feed dispatch pass sim regression coverage; localhost origin retained; hosted connectors unsupported. T76 replica uses the Air system tailnet path against the live private node without a new client login; private status, invitation redemption, session gating and restoration pass with the tailnet grant (2026-10-30).
-
+    notes: Agent credentials and levels, durable gateway approvals, redacted 90-day activity and public-client OAuth are retained. Go-rendered consent and approval forms replace the SolidJS settings screens. CIMD rejects malformed redirects and client URLs, oversized metadata, private redirects and DNS rebinding before connections.
   - id: vision.queries
     title: Vision OCR and PDF document operations
     requirements: [R-API, R-SCOPE, R-RW]
@@ -843,7 +774,7 @@ features:
     title: Incremental HealthKit samples and day or week summaries
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/HealthRead, rust/crates/ab-domain, rust/crates/ab-state, rust/crates/ab-iphone]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/HealthRead, rust/crates/ab-domain, rust/crates/ab-state, rust/crates/ab-iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -853,7 +784,7 @@ features:
     title: Log water, weight, mindful minutes and workouts
     requirements: [R-API, R-SECURE]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/HealthWrite, rust/crates/ab-domain]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/HealthWrite, rust/crates/ab-domain]
     depends_on: [iphone.health]
     status: done
     scenarios:
@@ -863,7 +794,7 @@ features:
     title: Signed iPhone build and USB install
     requirements: [R-PKG]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios, https://eilmer.si/applebridge/iphone/packaging/dev/build-ios.sh, https://eilmer.si/applebridge/iphone/packaging/dev/install-ios.sh]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios, https://gitlab.com/johansardar/apple-bridge-iphone/-/blob/main/packaging/dev/build-ios.sh, https://gitlab.com/johansardar/apple-bridge-iphone/-/blob/main/packaging/dev/install-ios.sh]
     depends_on: []
     status: done
     scenarios:
@@ -872,7 +803,7 @@ features:
     title: iPhone capability settings and diagnostics
     requirements: [R-PKG]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/App, https://eilmer.si/applebridge/iphone/ios/Capabilities]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/App, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities]
     depends_on: [iphone.build]
     status: done
     scenarios:
@@ -882,17 +813,17 @@ features:
     title: iPhone device keys and one-time gateway pairing
     requirements: [R-SECURE, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Pairing, rust/crates/ab-trust, rust/crates/ab-domain, rust/crates/ab-operations, rust/lab/lab-simapple]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Pairing, rust/crates/ab-trust, rust/crates/ab-domain, rust/crates/ab-operations, rust/lab/lab-simapple]
     depends_on: [iphone.shell]
     status: done
     scenarios:
       - {id: APP-PAIR-SIM, levels: [sim]}
       - {id: APP-PAIR-REAL, levels: [real]}
   - id: iphone.delivery
-    title: Encrypted iPhone push commands and signed results
+    title: Encrypted iPhone commands and signed results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [rust/crates/ab-iphone, rust/crates/ab-relay, https://eilmer.si/applebridge/iphone/ios/Delivery, rust/lab/lab-simapple]
+    modules: [rust/crates/ab-iphone, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Delivery, rust/lab/lab-simapple]
     depends_on: [iphone.pairing]
     status: done
     scenarios:
@@ -902,7 +833,7 @@ features:
     title: iPhone notifications and interactive button results
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Notifications, https://eilmer.si/applebridge/iphone/ios/Delivery, rust/crates/ab-domain, rust/lab/lab-adapters]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Notifications, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Delivery, rust/crates/ab-domain, rust/lab/lab-adapters]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -912,7 +843,7 @@ features:
     title: iPhone activity, pedometer, floors and seven-day history
     requirements: [R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Motion, rust/crates/ab-domain]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Motion, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -922,7 +853,7 @@ features:
     title: iPhone AlarmKit alarms and timers
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Alarms, rust/crates/ab-domain]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Alarms, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -932,7 +863,7 @@ features:
     title: iPhone battery, charging, Wi-Fi, name and Focus filter
     requirements: [R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/DeviceContext, rust/crates/ab-domain]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/DeviceContext, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -943,7 +874,7 @@ features:
     title: Bridge-owned Screen Time shields, downtime and usage report
     requirements: [R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/ScreenTime, https://eilmer.si/applebridge/iphone/ios/ScreenTimeShared, https://eilmer.si/applebridge/iphone/ios/Extensions, rust/crates/ab-domain]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/ScreenTime, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/ScreenTimeShared, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Extensions, rust/crates/ab-domain]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -953,7 +884,7 @@ features:
     title: iPhone precise location and named geofence event records
     requirements: [R-API, R-SAFE-CMD]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Location, rust/crates/ab-domain, rust/crates/ab-iphone]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Location, rust/crates/ab-domain, rust/crates/ab-iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -964,7 +895,7 @@ features:
     title: Siri, Shortcuts and Action button for iPhone commands
     requirements: [R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities, https://eilmer.si/applebridge/iphone/lab/iphoneintents]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/lab/iphoneintents]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
@@ -973,30 +904,29 @@ features:
     title: Face ID command approvals
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Approvals, rust/crates/ab-iphone, rust/crates/ab-operations]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Approvals, rust/crates/ab-iphone, rust/crates/ab-operations]
     depends_on: [iphone.notifications]
     status: done
     scenarios:
       - {id: APP-APPROVE-SIM, levels: [sim]}
       - {id: APP-APPROVE-REAL, levels: [real], status: dropped, reason: "Dropped by the owner on 2026-11-01: needs a live Face ID match."}
   - id: iphone.widgets
-    title: Agent task Live Activities and bridge status widgets
+    title: Local Live Activities and bridge status widgets
     requirements: [R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Widgets, https://eilmer.si/applebridge/iphone/ios/BridgeWidgets, https://eilmer.si/applebridge/iphone/ios/WidgetShared, rust/crates/ab-iphone, rust/crates/ab-relay]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Widgets, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/BridgeWidgets, https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/WidgetShared, rust/crates/ab-iphone]
     depends_on: [iphone.delivery]
     status: done
     scenarios:
-      - {id: APP-LIVE-SIM, levels: [sim]}
       - {id: APP-LIVE-REAL, levels: [real]}
-    notes: Physical qualification observed the local tagged Live Activity and signed widget preview, then verified activity termination and widget baseline restoration. Remote ActivityKit push delivery is outside this local lifecycle check.
+    notes: Physical qualification observed the local tagged Live Activity and signed widget preview, then verified activity termination and widget baseline restoration. Gateway commands can't start or update a Live Activity; iphone.live operations stay queued until they expire.
 
 
   - id: iphone.capture
     title: Face ID gated photo and microphone capture
     requirements: [R-SECURE, R-SAFE-CMD, R-API]
     milestone: G13
-    modules: [https://eilmer.si/applebridge/iphone/ios/Capabilities/Capture, rust/crates/ab-iphone]
+    modules: [https://gitlab.com/johansardar/apple-bridge-iphone/-/tree/main/ios/Capabilities/Capture, rust/crates/ab-iphone]
     depends_on: [iphone.approvals]
     status: done
     scenarios:

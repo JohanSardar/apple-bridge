@@ -73,16 +73,7 @@ pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
     scenario.levels.iter().any(|s| s == level)
         || (level == "sim" && scenario.levels.iter().any(|s| s == "replica"))
         || (level == "real"
-            && matches!(
-                scenario.id.as_str(),
-                "FILE-REPLICA"
-                    | "WEB-RELAY-COMMAND"
-                    | "WEB-RELAY-CONNECT"
-                    | "WEB-RELAY-NATIVE-AGENTS"
-                    | "WEB-RELAY-PUBLIC-AGENTS"
-                    | "WEB-RELAY-REPLICA"
-                    | "WEB-RELAY-REPLICA-BLOBS"
-            )
+            && matches!(scenario.id.as_str(), "FILE-REPLICA")
             && scenario.levels.iter().any(|s| s == "replica"))
 }
 impl Registry {

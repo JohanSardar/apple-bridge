@@ -1,6 +1,6 @@
 # Independent OAuth clients
 
-`rust/crates/ab-frontdoor/tests/oauth_compliance.rs` checks the gateway against what Claude and ChatGPT require. It is written by us, so this directory also runs clients we did not write against the same server:
+`rust/crates/ab-frontdoor/tests/oauth_compliance.rs` checks the gateway against what MCP OAuth clients require. It is written by us, so this directory also runs clients we did not write against the same server:
 
 - `oauth4webapi`, a strict client library that rejects non-conforming metadata and responses.
 - `@modelcontextprotocol/sdk`, whose `auth()` does the discovery and registration most MCP clients use.

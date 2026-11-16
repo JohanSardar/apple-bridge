@@ -34,8 +34,6 @@ pub mod inspection;
 mod iphone;
 #[cfg(all(feature = "lab-harness", feature = "replica-feed"))]
 mod lab_gateway;
-#[cfg(all(feature = "lab-harness", feature = "replica-feed"))]
-mod lab_relay;
 pub mod maintenance;
 #[cfg(feature = "replica-feed")]
 mod message_actions;
@@ -299,13 +297,13 @@ pub async fn start(
     let client = Arc::new(client);
     let identity = Arc::new(ab_operations::TrustIdentity(authority.clone()));
     let codec = Arc::new(GoJson);
-    let route = if enrollment.remote || !enrollment.dial.is_empty() {
-        ab_operations::GatewayRoute::Feed
-    } else {
+    let route = if enrollment.dial.is_empty() {
         ab_operations::GatewayRoute::Direct {
             address: enrollment.address,
             fingerprint: enrollment.fingerprint,
         }
+    } else {
+        ab_operations::GatewayRoute::Feed
     };
     let remote = Arc::new(ab_operations::RemoteGateway {
         route,

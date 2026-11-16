@@ -14,7 +14,7 @@ child without disclaiming responsibility (S2):
 The child owns the inherited descriptors, and the parent closes its ends and its copy of the gateway descriptor. fd 199 carries the
 native/1 session (`design/spec/native-1.md`); fd 200 carries the facts link. EOF or an error ends the session, and the parent reaps the
 child before reconnecting. `AB_SESSION_BINARY` overrides the bundled executable in a lab build only; a release Helper verifies the bundled binary's code identity before running it. There is no other mode: the verbatim
-proxy, the routed relay, the effects layer and the flags and variables that selected them were removed with the Swift ipc/1 peer.
+proxy, the routed forwarder, the effects layer and the flags and variables that selected them were removed with the Swift ipc/1 peer.
 
 ## Facts link
 
@@ -156,7 +156,7 @@ Open items: watcher-driven scheduling and persistence are proven for Screen Time
 `calendar` and `contacts` are sources whose Rust reader is `readers::AgendaReader`. Framework
 enumeration stays Swift (EventKit, Contacts). The Helper's `Capture` frame for the source is taken as
 the raw fact set (upserts are the complete current records, `absent` and `evict` are revalidation
-results). `CaptureReader::ingest` stores it, the relay holds the Helper `Committed`, and the session
+results). `CaptureReader::ingest` stores it, the session holds the Helper `Committed`, and the session
 poll runs `ab_native::agenda::Reader::prepare` (diff, alias replacement, candidate retention, window
 eviction) to build the gateway `Capture` with the session's predecessor, checkpoint and credit. When
 the gateway commits that capture the reader commits and the held Helper `Committed` frames are released,

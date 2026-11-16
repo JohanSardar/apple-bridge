@@ -51,17 +51,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self.reply(500, {})
                 elif phase['value'] == 'login':
                     self.reply(200, {'BackendState': 'NeedsLogin', 'AuthURL': 'https://login.fixture.test/a/login-1'})
-                elif phase['value'] == 'funnel':
-                    self.reply(200, {'BackendState': 'Running', 'Self': {'DNSName': 'node.fixture.test.', 'CapMap': {}}})
                 else:
-                    self.reply(200, {'BackendState': 'Running', 'Self': {'DNSName': 'node.fixture.test.', 'CapMap': {'https': None, 'funnel': None, 'https://tailscale.com/cap/funnel-ports?ports=443,8443,10000': None}}})
+                    self.reply(200, {'BackendState': 'Running', 'Self': {'DNSName': 'node.fixture.test.', 'CapMap': {'https': None}}})
             else:
                 self.reply(200, configuration)
     def do_POST(self):
         global configuration
-        if 'query-feature' in self.path:
-            self.rfile.read(int(self.headers.get('Content-Length') or 0))
-            return self.reply(200, {'Complete': False, 'URL': 'https://login.tailscale.com/f/funnel?node=fixture'})
         value = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         with lock:
             if self.headers.get('If-Match') != str(etag['value']):
@@ -89,56 +84,22 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
         script = fake / launcher
         script.write_text('#!/bin/sh\nprintf "%s\\n" "$1" >> "' + str(opened) + '"\n')
         script.chmod(0o755)
-    env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'], APPLE_BRIDGE_SECRET_STORE='file', APPLE_BRIDGE_TAILSCALE_SOCKET=socket_path, APPLE_BRIDGE_REMOTE_RECHECK_MS='200')
+    env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'], APPLE_BRIDGE_SECRET_STORE='file', SSH_CONNECTION='1', APPLE_BRIDGE_TAILSCALE_SOCKET=socket_path, APPLE_BRIDGE_REMOTE_RECHECK_MS='200')
 
     def status_file():
         return json.loads((home / 'remote/status.json').read_text())
 
-    fresh = json.loads(subprocess.check_output([binary, 'remote', 'status', '--home', str(home)], env=env, text=True))
-    assert sorted(fresh) == sorted(['id', 'state', 'backend', 'url', 'last_error', 'pending_link', 'tls_termination', 'certificate_expiry']), fresh
-    assert fresh['state'] == 'off' and fresh['certificate_expiry'] == ZERO and fresh['url'] == ''
-    checks.append('remote_status_returns_the_status_document')
+    fresh = json.loads(subprocess.check_output([binary, 'tailscale', '--off', '--json', '--home', str(home)], env=env, text=True))
+    assert fresh == {'outcome': 'unchanged'}, fresh
+    checks.append('tailscale_off_on_a_fresh_home_is_unchanged')
+
+    def turn_on():
+        return subprocess.Popen([binary, 'tailscale', '--home', str(home)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     with (root / 'gateway.log').open('wb') as log:
         gateway = subprocess.Popen([binary, 'start', '--role', 'gateway', '--home', str(home), '--api-addr', '127.0.0.1:0', '--peer-addr', '127.0.0.1:0'], env=env, stdout=log, stderr=log)
         try:
             wait(lambda: (home / 'runtime.json').exists())
-            client = subprocess.Popen([binary, 'remote', 'on', '--via', 'tailscale-app', '--home', str(home)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            pending = wait(lambda: status_file() if status_file()['state'] == 'login_pending' else None)
-            assert pending['message'] == 'Waiting for Tailscale login' and pending['pending_link'] == 'login pending' and pending['last_error'] == '' and pending['url'] == '', pending
-            wait(lambda: 'https://login.fixture.test/a/login-1' in opened.read_text())
-            checks.append('login_pending_state_and_link_opened')
-            with lock:
-                phase['value'] = 'funnel'
-            pending = wait(lambda: status_file() if status_file()['state'] == 'funnel_pending' else None)
-            assert pending['message'] == 'Waiting for Funnel approval' and pending['pending_link'] == 'Funnel approval pending', pending
-            wait(lambda: 'https://login.tailscale.com/f/funnel?node=fixture' in opened.read_text())
-            checks.append('funnel_pending_state_and_link_opened')
-            assert client.poll() is None
-            with lock:
-                phase['value'] = 'ready'
-            output, errors = client.communicate(timeout=30)
-            assert client.returncode == 0, errors
-            lines = output.splitlines()
-            assert 'Waiting for Tailscale login' in lines and 'https://login.fixture.test/a/login-1' in lines, lines
-            assert 'Waiting for Funnel approval' in lines and 'https://login.tailscale.com/f/funnel?node=fixture' in lines, lines
-            assert lines[-2:] == ['https://node.fixture.test', 'https://node.fixture.test/mcp'], lines
-            document = json.loads(subprocess.check_output([binary, 'remote', 'status', '--home', str(home)], env=env, text=True))
-            assert document['state'] == 'on' and document['url'] == 'https://node.fixture.test' and document['backend'] == 'system' and document['last_error'] == '' and document['pending_link'] == '', document
-            checks.append('remote_on_waits_and_prints_url_and_mcp')
-            off = subprocess.run([binary, 'remote', 'off', '--via', 'tailscale-app', '--home', str(home)], env=env, capture_output=True, text=True, timeout=30)
-            assert off.returncode == 0 and off.stdout.strip() == 'off', off
-            checks.append('remote_off_waits_for_off')
-            with lock:
-                phase['value'] = 'broken'
-            failed = subprocess.run([binary, 'remote', 'on', '--via', 'tailscale-app', '--home', str(home)], env=env, capture_output=True, text=True, timeout=30)
-            assert failed.returncode != 0 and "Couldn't turn remote access on" in failed.stderr, failed
-            document = status_file()
-            assert document['state'] == 'error' and document['last_error'].startswith('Remote setup failed') and document['last_error'].endswith('Turn Remote off and try again.'), document
-            checks.append('adapter_failure_reports_error_state_and_fails_remote_on')
-            subprocess.run([binary, 'remote', 'off', '--via', 'tailscale-app', '--home', str(home)], env=env, capture_output=True, text=True, timeout=30)
-            with lock:
-                phase['value'] = 'ready'
 
             def bridge(*arguments, check=True):
                 result = subprocess.run([binary, *arguments, '--home', str(home)], env=env, capture_output=True, text=True, timeout=60)
@@ -149,7 +110,7 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
                 with lock:
                     target = configuration['Web'][f'node.fixture.test:{port}']['Handlers']['/']['Proxy']
                 address, prefix = target.removeprefix('http://').split('/', 1)
-                host = 'node.fixture.test' if port == 443 else f'node.fixture.test:{port}'
+                host = f'node.fixture.test:{port}'
                 head = {'Host': host, 'X-Forwarded-Host': host, 'X-Forwarded-Proto': 'https', 'X-Forwarded-For': source, **(extra or {})}
                 connection = http.client.HTTPConnection(*address.split(':'), timeout=10)
                 try:
@@ -161,15 +122,27 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
                 finally:
                     connection.close()
 
-            on = json.loads(bridge('remote', 'enable', '--via', 'tailnet', '--json').stdout)
-            assert on['remote']['url'] == 'https://node.fixture.test:8443', on
+            client = turn_on()
+            pending = wait(lambda: status_file() if status_file()['state'] == 'login_pending' else None)
+            assert pending['message'] == 'Waiting for Tailscale login' and pending['pending_link'] == 'login pending' and pending['last_error'] == '' and pending['url'] == '', pending
+            assert client.poll() is None
+            checks.append('login_pending_state')
+            with lock:
+                phase['value'] = 'ready'
+            output, errors = client.communicate(timeout=30)
+            assert client.returncode == 0, errors
+            assert 'Waiting for Tailscale login' in errors and 'https://login.fixture.test/a/login-1' in errors, errors
+            assert 'https://login.fixture.test/a/login-1' in output.splitlines(), output
+            assert output.splitlines()[-1:] == ['https://node.fixture.test:8443/mcp'], output
+            assert not opened.exists(), opened.read_text()
+            document = wait(lambda: status_file() if status_file()['state'] == 'on' else None)
+            assert document['url'] == 'https://node.fixture.test:8443' and document['last_error'] == '' and document['pending_link'] == '', document
             with lock:
                 assert configuration['TCP']['8443'] == {'HTTPS': True}, configuration
                 assert 'node.fixture.test:8443' in configuration['Web'], configuration
                 assert not configuration.get('AllowFunnel'), configuration
-            document = status_file()
             assert document['routes']['tailnet'] == {'state': 'on', 'url': 'https://node.fixture.test:8443'}, document
-            checks.append('tailnet_route_serves_https_without_funnel')
+            checks.append('tailscale_waits_for_login_then_serves_https_on_the_tailnet')
 
             status, _ = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
             assert status == 200, status
@@ -181,37 +154,23 @@ with tempfile.TemporaryDirectory(prefix='ab-remote-onboarding-') as temp:
             assert created['address'] == 'https://node.fixture.test:8443/mcp', created
             checks.append('tailnet_key_is_bound_to_the_tailnet_address')
 
-            cloud = json.loads(bridge('remote', 'enable', '--via', 'cloud', '--sources', 'calendar,reminders', '--json').stdout)
-            assert cloud['remote']['url'] == 'https://node.fixture.test' and cloud['remote']['backend'] == 'system', cloud
-            with lock:
-                assert configuration['AllowFunnel'] == {'node.fixture.test:443': True}, configuration
-                assert 'node.fixture.test:8443' in configuration['Web'], configuration
-            routes = status_file()['routes']
-            assert routes['tailnet']['state'] == 'on' and routes['system'] == {'state': 'on', 'url': 'https://node.fixture.test', 'sources': ['calendar', 'reminders']}, routes
-            checks.append('cloud_route_opens_funnel_beside_the_tailnet_route')
-
-            status, body = proxied(443, '/.well-known/oauth-protected-resource/mcp', '203.0.113.9')
-            scopes = json.loads(body)['scopes_supported']
-            assert status == 200 and scopes == ['calendar:read', 'calendar:write', 'reminders:read', 'reminders:write'], (status, scopes)
-            status, body = proxied(8443, '/.well-known/oauth-protected-resource/mcp', '100.101.102.103')
-            assert len(json.loads(body)['scopes_supported']) > 4
-            checks.append('cloud_chats_are_offered_only_the_chosen_services')
-
-            off = json.loads(bridge('remote', 'disable', '--via', 'cloud', '--json').stdout)
-            assert off['outcome'] == 'disabled', off
-            with lock:
-                assert not configuration.get('AllowFunnel') and 'node.fixture.test:443' not in configuration.get('Web', {}), configuration
-                assert 'node.fixture.test:8443' in configuration['Web'], configuration
-            routes = status_file()['routes']
-            assert routes['system']['state'] == 'off' and routes['tailnet']['state'] == 'on', routes
-            checks.append('disconnecting_cloud_chats_closes_only_the_public_address')
-
-            bridge('remote', 'disable', '--via', 'tailnet', '--json')
+            off = json.loads(bridge('tailscale', '--off', '--json').stdout)
+            assert off == {'outcome': 'off'}, off
             with lock:
                 assert not configuration.get('Web'), configuration
             refused = bridge('agents', 'create', '--name', 'Other', '--tailnet', '--expires-in', '1d', '--json', check=False)
             assert refused.returncode != 0 and 'Tailscale route' in refused.stdout + refused.stderr, refused
-            checks.append('tailnet_route_turns_off')
+            checks.append('tailscale_off_removes_the_route')
+
+            with lock:
+                phase['value'] = 'broken'
+            client = turn_on()
+            output, errors = client.communicate(timeout=30)
+            assert client.returncode != 0 and "Couldn't turn Tailscale access on" in errors, errors
+            document = wait(lambda: status_file() if status_file()['state'] == 'error' else None)
+            assert document['last_error'].startswith('Tailscale setup failed') and document['last_error'].endswith('Run bridge tailscale --off, then try again.'), document
+            checks.append('adapter_failure_reports_error_state')
+            bridge('tailscale', '--off')
         finally:
             gateway.terminate()
             gateway.wait(timeout=15)

@@ -67,7 +67,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         with lock:
             if '/status' in self.path:
-                self.reply(200, {'BackendState':'Running','Self':{'DNSName':'node.fixture.test.','CapMap':{'https':None,'funnel':None,'https://tailscale.com/cap/funnel-ports?ports=443,8443,10000':None}}})
+                self.reply(200, {'BackendState':'Running','Self':{'DNSName':'node.fixture.test.','CapMap':{'https':None}}})
             else:
                 self.reply(200, configuration)
     def do_POST(self):
@@ -96,9 +96,9 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
         def log_message(self, *args):
             pass
         def do_GET(self):
-            target = urlsplit(json.loads((home / 'remote/lease.json').read_text())['target'])
+            target = urlsplit(json.loads((home / 'tailnet/remote/lease.json').read_text())['target'])
             upstream = http.client.HTTPConnection(target.hostname, target.port, timeout=90)
-            upstream.request('GET',target.path + self.path,headers={'Host':'node.fixture.test','X-Forwarded-Host':'node.fixture.test','X-Forwarded-Proto':'https','X-Forwarded-For':'198.51.100.4','Accept':self.headers.get('Accept','*/*')})
+            upstream.request('GET',target.path + self.path,headers={'Host':'node.fixture.test:8443','X-Forwarded-Host':'node.fixture.test:8443','X-Forwarded-Proto':'https','X-Forwarded-For':'100.101.102.103','Accept':self.headers.get('Accept','*/*')})
             response = upstream.getresponse()
             trace.append(('PUBLIC',self.path,response.status))
             self.send_response(response.status)
@@ -126,35 +126,27 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
     tls.load_cert_chain(cert_path,key_path)
     public_server.socket = tls.wrap_socket(public_server.socket,server_side=True)
     threading.Thread(target=public_server.serve_forever,daemon=True).start()
-    env = dict(os.environ, SSL_CERT_FILE=str(cert_path), APPLE_BRIDGE_REMOTE_PROBE_ADDRESS='127.0.0.1:' + str(public_server.server_port), APPLE_BRIDGE_SECRET_STORE='file', APPLE_BRIDGE_TAILSCALE_SOCKET=socket_path, APPLE_BRIDGE_RELAY_URL='https://127.0.0.1:1')
+    env = dict(os.environ, SSL_CERT_FILE=str(cert_path), APPLE_BRIDGE_REMOTE_PROBE_ADDRESS='127.0.0.1:' + str(public_server.server_port), APPLE_BRIDGE_SECRET_STORE='file', SSH_CONNECTION='1', APPLE_BRIDGE_TAILSCALE_SOCKET=socket_path)
     def command(*args):
         return subprocess.check_output([binary, *args, '--home', str(home)], env=env, text=True, timeout=100).strip()
     with (Path(temp) / 'gateway.log').open('wb') as output:
         process = subprocess.Popen([binary,'start','--role','gateway','--home',str(home),'--api-addr','127.0.0.1:0','--peer-addr','127.0.0.1:0','--blob-grace-ms','100'], env=env, stdout=output, stderr=output)
         try:
             wait(lambda: (home / 'runtime.json').exists())
-            command('remote','on','--via','tailscale-app')
+            command('tailscale')
             def ready():
                 assert process.poll() is None, (Path(temp) / 'gateway.log').read_text()
                 value = json.loads((home / 'remote/status.json').read_text())
                 return value if value['state'] == 'on' else None
             status = wait(ready)
-            assert status['url'] == 'https://node.fixture.test'
-            lease = json.loads((home / 'remote/lease.json').read_text())
+            assert status['url'] == 'https://node.fixture.test:8443'
+            lease = json.loads((home / 'tailnet/remote/lease.json').read_text())
             target = urlsplit(lease['target'])
             config = json.loads((home / 'runtime.json').read_text())
             checks.append('tailscale_ingress_becomes_ready')
-            if '--go' not in sys.argv:
-                command('remote','on','--via','relay')
-                time.sleep(1.5)
-                assert json.loads((home / 'remote/lease.json').read_text())['target'] == lease['target']
-                command('remote','off','--via','relay')
-                time.sleep(1.5)
-                assert json.loads((home / 'remote/lease.json').read_text())['target'] == lease['target']
-                checks.append('relay_selection_preserves_running_tailscale_adapter')
             def public(path, payload, extra=None):
                 connection = http.client.HTTPConnection(target.hostname, target.port, timeout=10)
-                headers = {'Host':'node.fixture.test','X-Forwarded-Host':'node.fixture.test','X-Forwarded-Proto':'https','X-Forwarded-For':'198.51.100.4','Content-Type':'application/json'}
+                headers = {'Host':'node.fixture.test:8443','X-Forwarded-Host':'node.fixture.test:8443','X-Forwarded-Proto':'https','X-Forwarded-For':'100.101.102.103','Content-Type':'application/json'}
                 headers.update(extra or {})
                 connection.request('POST', target.path + path, raw(payload), headers)
                 response = connection.getresponse()
@@ -188,7 +180,7 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
             result, phone = public('/v1/iphone/pair', pair)
             assert result == 200, (result, phone)
             assert public('/v1/iphone/pair', pair)[0] == 401
-            checks.append('one_use_pairing_through_public_ingress')
+            checks.append('one_use_pairing_through_tailscale')
             def phone_request(path, payload=None):
                 body = raw(payload if payload is not None else {})
                 at = int(time.time())
@@ -297,10 +289,10 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
             command('revoke',phone['id'])
             assert signed('/v1/iphone/status')[0] == 401
             checks.append('revoked_phone_is_rejected')
-            command('remote','off','--via','tailscale-app')
-            wait(lambda: not (home / 'remote/lease.json').exists())
+            command('tailscale','--off')
+            wait(lambda: not (home / 'tailnet/remote/lease.json').exists())
             assert configuration == {'unrelated':'preserved'}, configuration
-            checks.append('remote_off_preserves_unrelated_serve_configuration')
+            checks.append('tailscale_off_preserves_unrelated_serve_configuration')
         finally:
             if sys.exc_info()[0] is not None:
                 print(json.dumps({'localapi_trace':trace}),file=sys.stderr)

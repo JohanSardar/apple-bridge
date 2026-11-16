@@ -2,7 +2,7 @@
 use crate::{
     http::Client,
     iphone::{Scratch, project},
-    phone::{Gateway, proxy, read_request, tls_server},
+    phone::{Gateway, proxy, tls_server},
     replicas,
     webauthn::Owner,
 };
@@ -11,10 +11,6 @@ use base64::{
     engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
 };
 use lab_runner::{Evidence, Scenario};
-use p256::{
-    ecdsa::{Signature, SigningKey, signature::Signer},
-    pkcs8::DecodePrivateKey,
-};
 use rustls::{ServerConnection, StreamOwned};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -27,7 +23,7 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicI64, Ordering},
+        atomic::{AtomicBool, Ordering},
     },
     thread,
     time::{Duration, Instant},
@@ -124,12 +120,7 @@ pub fn requirements(id: &str) -> &'static [&'static str] {
     match id {
         "APP-SHELL-REAL" => &["capability_fields_observed", "diagnostics_observed"],
         "APP-PAIR-REAL" => &["signed_pair_status", "identity_restored"],
-        "APP-CMD-REAL" => &[
-            "ready",
-            "signed_result_uploaded",
-            "apns_wake",
-            "identity_restored",
-        ],
+        "APP-CMD-REAL" => &["ready", "signed_result_uploaded", "identity_restored"],
         "APP-NOTIFY-REAL" => &[
             "notification_authorized",
             "ready",
@@ -319,190 +310,6 @@ impl Device {
             return None;
         }
         Receipt::parse(&fs::read(destination).ok()?)
-    }
-}
-
-#[derive(Debug)]
-struct Apns {
-    key: SigningKey,
-    key_id: String,
-    team: String,
-}
-
-impl Apns {
-    fn load() -> Result<Self, String> {
-        let path = env::var("AB_REAL_APNS_KEY").map_err(|_| "set AB_REAL_APNS_KEY")?;
-        let key_id = env::var("AB_REAL_APNS_KEY_ID").map_err(|_| "set AB_REAL_APNS_KEY_ID")?;
-        let team = env::var("AB_REAL_APNS_TEAM_ID").map_err(|_| "set AB_REAL_APNS_TEAM_ID")?;
-        let pem = fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let body: String = pem.lines().filter(|l| !l.starts_with("-----")).collect();
-        let der = STANDARD.decode(body).map_err(|e| e.to_string())?;
-        let key = SigningKey::from_pkcs8_der(&der).map_err(|e| e.to_string())?;
-        Ok(Self { key, key_id, team })
-    }
-
-    fn token(&self) -> String {
-        let header = URL_SAFE_NO_PAD.encode(
-            json!({"alg": "ES256", "kid": self.key_id})
-                .to_string()
-                .as_bytes(),
-        );
-        let claims = URL_SAFE_NO_PAD.encode(
-            json!({"iss": self.team, "iat": jiff::Timestamp::now().as_second()})
-                .to_string()
-                .as_bytes(),
-        );
-        let message = format!("{header}.{claims}");
-        let signature: Signature = self.key.sign(message.as_bytes());
-        format!("{message}.{}", URL_SAFE_NO_PAD.encode(signature.to_bytes()))
-    }
-
-    fn send(&self, device: &str, packet: &Value, expires: i64) -> bool {
-        if !(32..=512).contains(&device.len()) || !device.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return false;
-        }
-        let live = packet.get("live_activity").filter(|v| v.is_object());
-        let body = live.map_or_else(
-            || json!({"aps": {"content-available": 1}, "bridge": packet}),
-            |live| json!({"aps": live}),
-        );
-        let (topic, kind, priority) = if live.is_some() {
-            (
-                format!("{BUNDLE}.push-type.liveactivity"),
-                "liveactivity",
-                "10",
-            )
-        } else {
-            (BUNDLE.to_owned(), "background", "5")
-        };
-        let Ok(mut child) = Command::new("curl")
-            .args(["--silent", "--http2", "--max-time", "20", "-o", "/dev/null"])
-            .args(["-w", "%{http_code}", "-X", "POST"])
-            .args(["-H", &format!("authorization: bearer {}", self.token())])
-            .args(["-H", &format!("apns-topic: {topic}")])
-            .args(["-H", &format!("apns-push-type: {kind}")])
-            .args(["-H", &format!("apns-priority: {priority}")])
-            .args(["-H", &format!("apns-expiration: {expires}")])
-            .args(["--data-binary", "@-"])
-            .arg(format!(
-                "https://api.sandbox.push.apple.com/3/device/{device}"
-            ))
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-        else {
-            return false;
-        };
-        if let Some(mut stdin) = child.stdin.take() {
-            let _ = stdin.write_all(body.to_string().as_bytes());
-        }
-        child.wait_with_output().is_ok_and(|o| o.stdout == b"200")
-    }
-}
-
-const RELAY_CREDENTIAL: &str = "ab-test-real-relay-credential";
-
-#[derive(Debug)]
-struct ApnsRelay {
-    stop: Arc<AtomicBool>,
-    address: String,
-    accepted: Arc<AtomicI64>,
-    failed: Arc<AtomicI64>,
-}
-
-impl ApnsRelay {
-    fn start(gateway: &mut Gateway, apns: Apns) -> Result<Self, String> {
-        let (config, pem) = tls_server(&["127.0.0.1"], false).map_err(|e| e.to_string())?;
-        let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
-        let address = listener
-            .local_addr()
-            .map_err(|e| e.to_string())?
-            .to_string();
-        let stop = Arc::new(AtomicBool::new(false));
-        let accepted = Arc::new(AtomicI64::new(0));
-        let failed = Arc::new(AtomicI64::new(0));
-        let apns = Arc::new(apns);
-        {
-            let (stop, accepted, failed) = (stop.clone(), accepted.clone(), failed.clone());
-            thread::spawn(move || {
-                for stream in listener.incoming() {
-                    if stop.load(Ordering::SeqCst) {
-                        break;
-                    }
-                    let Ok(stream) = stream else { continue };
-                    let Ok(connection) = ServerConnection::new(config.clone()) else {
-                        continue;
-                    };
-                    let (apns, accepted, failed) = (apns.clone(), accepted.clone(), failed.clone());
-                    thread::spawn(move || {
-                        let mut stream = StreamOwned::new(connection, stream);
-                        let Some((method, path, headers, body)) = read_request(&mut stream) else {
-                            return;
-                        };
-                        let bearer = headers
-                            .iter()
-                            .find(|(k, _)| k.eq_ignore_ascii_case("authorization"))
-                            .map(|(_, v)| v.trim_start_matches("Bearer ").to_owned());
-                        let status = if method != "POST" || path != "/iphone/push" {
-                            404
-                        } else if bearer.as_deref() != Some(RELAY_CREDENTIAL) {
-                            403
-                        } else if let Ok(push) = serde_json::from_slice::<Value>(&body) {
-                            let token = push["token"].as_str().unwrap_or_default();
-                            let expires = push["expires"].as_i64().unwrap_or(0);
-                            if apns.send(token, &push["packet"], expires) {
-                                accepted.fetch_add(1, Ordering::SeqCst);
-                                204
-                            } else {
-                                failed.fetch_add(1, Ordering::SeqCst);
-                                502
-                            }
-                        } else {
-                            400
-                        };
-                        let _ = stream.write_all(
-                            format!("HTTP/1.1 {status} X\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-                                .as_bytes(),
-                        );
-                        stream.conn.send_close_notify();
-                        let _ = stream.flush();
-                    });
-                }
-            });
-        }
-        let seed = crate::phone::random::<32>().map_err(|e| e.to_string())?;
-        let signing = ed25519_dalek::SigningKey::from_bytes(&seed);
-        fs::OpenOptions::new()
-            .append(true)
-            .open(gateway.certificate_path())
-            .and_then(|mut file| file.write_all(pem.as_bytes()))
-            .map_err(|e| e.to_string())?;
-        fs::create_dir_all(gateway.home.join("remote")).map_err(|e| e.to_string())?;
-        let relay = json!({
-            "key": STANDARD.encode(signing.to_keypair_bytes()),
-            "endpoint": format!("https://{address}"),
-            "credential": {"hostname": "example.test", "credential": RELAY_CREDENTIAL},
-        });
-        fs::write(
-            gateway.home.join("remote/relay.json"),
-            serde_json::to_vec(&relay).map_err(|e| e.to_string())?,
-        )
-        .map_err(|e| e.to_string())?;
-        gateway.restart().map_err(|e| e.to_string())?;
-        Ok(Self {
-            stop,
-            address,
-            accepted,
-            failed,
-        })
-    }
-}
-
-impl Drop for ApnsRelay {
-    fn drop(&mut self) {
-        if !self.stop.swap(true, Ordering::SeqCst) {
-            let _ = std::net::TcpStream::connect(&self.address);
-        }
     }
 }
 
@@ -835,7 +642,6 @@ fn drive(id: &str, evidence: &mut Evidence) {
     let command_id = format!("cmd_ab_test_{run}");
     let mut request = json!({"run": run, "scenario": id, "command": command_id});
     let mut gateway: Option<Gateway> = None;
-    let mut relay: Option<ApnsRelay> = None;
     let mut lan: Option<Lan> = None;
     if paired(id) {
         let binary = match replicas::binary() {
@@ -845,7 +651,7 @@ fn drive(id: &str, evidence: &mut Evidence) {
                 return;
             }
         };
-        let mut started = match Gateway::start(binary) {
+        let started = match Gateway::start(binary) {
             Ok(started) => started,
             Err(error) => {
                 evidence.check("authority", false, &error.to_string());
@@ -869,15 +675,6 @@ fn drive(id: &str, evidence: &mut Evidence) {
             Err(error) => {
                 evidence.check("pair_code", false, &error);
                 return;
-            }
-        }
-        if id != "APP-PAIR-REAL" {
-            match Apns::load().and_then(|apns| ApnsRelay::start(&mut started, apns)) {
-                Ok(started_relay) => relay = Some(started_relay),
-                Err(error) => {
-                    evidence.check("apns_credentials", false, &error);
-                    return;
-                }
             }
         }
         gateway = Some(started);
@@ -1026,15 +823,6 @@ fn drive(id: &str, evidence: &mut Evidence) {
             );
             evidence.check("face_id_succeeded", check("face_id_succeeded"), "");
         }
-        let accepted = relay
-            .as_ref()
-            .map_or(0, |r| r.accepted.load(Ordering::SeqCst));
-        let failed = relay
-            .as_ref()
-            .map_or(0, |r| r.failed.load(Ordering::SeqCst));
-        evidence.check("apns_accepted", accepted > 0, "");
-        metrics["apns_accepted_count"] = json!(accepted);
-        metrics["apns_failure_count"] = json!(failed);
     }
     evidence.check("run_metrics", true, &metrics.to_string());
     restore(&mut phone, &run, dir.path(), evidence);

@@ -1,4 +1,0 @@
-id: RELAY-STREAMS
-feature: remote.relay
-levels: [sim]
-when: [{relay_service: {}}]

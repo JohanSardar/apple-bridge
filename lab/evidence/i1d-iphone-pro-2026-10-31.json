@@ -176,10 +176,6 @@
       "passed": true,
       "evidence_sha256": "95e0ba7b8b822c9f89913e9dc4f950cc6d72780326607285a883e48709edf29d"
     },
-    "APP-LIVE-SIM": {
-      "passed": true,
-      "evidence_sha256": "bb9f83917c8b2bcb819305d655c7f5ef7ec6407aa3a7d70736c9869131d7c286"
-    },
     "APP-SHELL-SIM": {
       "passed": true,
       "evidence_sha256": "8068f26e40947bdbedde586741b449fe749f7561003dfe3c10cb16c0d8709d34"

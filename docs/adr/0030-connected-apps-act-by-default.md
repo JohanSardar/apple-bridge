@@ -6,6 +6,6 @@ An app connected through the Mac's Allow window, `bridge connector allow`, the p
 
 `approve` stays as the owner's opt-in. `bridge agent level <id> approve|full` switches an existing agent, and the passkey consent page offers it. An `approve` agent behaves as before, including asking for every capture, location read and Photos write.
 
-Connecting stays gated: a new app still needs Allow with the four-digit matching code, so finding the Mac's remote address alone gives no access.
+Connecting stays gated: a new app still needs Allow with the four-digit matching code, so finding the Mac's Tailscale address alone gives no access.
 
 The owner accepted the cost on 2026-11-10. An app that is tricked by something it reads, such as a prompt injection in a message or web page, can send a message, delete a note or take a screenshot with nothing to stop it, and this applies to everyone who installs the release. The reason was that a cloud app working away from the Mac could not complete an approval at all, so the default made connected apps unable to write.

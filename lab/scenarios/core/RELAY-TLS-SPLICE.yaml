@@ -1,4 +1,0 @@
-id: RELAY-TLS-SPLICE
-feature: remote.relay
-levels: [sim]
-when: [{relay_service: {}}]

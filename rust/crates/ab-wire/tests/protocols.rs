@@ -4,8 +4,7 @@ use ab_wire::{
     framing::{self, BlobChunk, Frame, Protocol},
     gojson::EscapeMode,
 };
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use ed25519_dalek::{Signer, SigningKey};
+use ed25519_dalek::SigningKey;
 use serde_json::Value;
 
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
@@ -53,24 +52,8 @@ fn feed_golden_snapshots_batches_and_partial() -> Result {
     Ok(())
 }
 #[test]
-fn relay_and_delegation_golden_signatures() -> Result {
-    let relay = fixture(include_str!("../../../../contracts/golden/relay.json"))?;
-    let proof: framing::RelayProof = serde_json::from_str(text(&relay, "proof_json")?)?;
-    assert_eq!(
-        proof.signature_input("tunnel"),
-        text(&relay, "proof_message")?.as_bytes()
-    );
+fn delegation_golden_signature() -> Result {
     let key = SigningKey::from_bytes(&[42; 32]);
-    assert_eq!(
-        URL_SAFE_NO_PAD.encode(key.sign(&proof.signature_input("tunnel")).to_bytes()),
-        proof.signature
-    );
-    let raw = framing::legacy_json(&proof, EscapeMode::Html)?;
-    assert_eq!(raw, text(&relay, "proof_json")?.as_bytes());
-    assert_eq!(
-        URL_SAFE_NO_PAD.encode(&raw),
-        text(&relay, "X-Bridge-Proof")?
-    );
     let delegation = fixture(include_str!("../../../../contracts/golden/delegation.json"))?;
     let raw = text(&delegation, "raw")?.as_bytes();
     let typed: crypto::Delegation = serde_json::from_slice(raw)?;

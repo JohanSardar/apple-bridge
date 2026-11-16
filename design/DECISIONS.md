@@ -33,15 +33,15 @@
 - **Do not start building until the owner explicitly says so.**
 
 ## 2026-10-20, web app grilling (locked)
-- **What:** an open-source web UI on top of the bridge covering Messages, Reminders, Calendar, Contacts and Notes. It copies Apple's layout and behavior closely, with polish beyond it. Each user self-hosts on their own Mac or macOS VM. Order: Messages (with Contacts read for names and avatars), then Reminders, Calendar, Contacts, Notes. Screen Time, Photos, Mail and FaceTime are out for now.
+- **What:** an open-source web UI on top of the bridge covering Messages, Reminders, Calendar, Contacts and Notes. It copies Apple's layout and behavior closely, with polish beyond it. Each user runs it on their own Mac or macOS VM. Order: Messages (with Contacts read for names and avatars), then Reminders, Calendar, Contacts, Notes. Screen Time, Photos, Mail and FaceTime are out for now.
 - **Shipping:** the frontend lives in this repo and is embedded in the `bridge` binary. Any bridge instance can serve it; users never need Node.
-- **Reach from anywhere, free, no client setup:** Tailscale Funnel is embedded through tsnet. `bridge remote on` signs into a free account once and enables Funnel, then prints a stable `https://….ts.net` URL and a QR code. TLS ends on the Mac, so the relay cannot read traffic. Nothing is installed on other devices or agents. A Cloudflare named tunnel is documented as the alternative for people who own a domain. Full copies (replicas) also connect through the relay.
+- **Reach from your own devices, free:** the installed Tailscale app serves the Mac on the owner's tailnet with Tailscale Serve, never on the public internet. `bridge tailscale` signs into a free Tailscale account once, then prints a stable `https://….ts.net` URL. TLS ends on the Mac. Full copies (replicas) connect directly over the local network.
 - **Sign-in:** register the first passkey during `bridge setup`. On any computer, sign in by scanning a cross-device passkey QR with your phone.
   - Trusted computer: 30-day session plus the limited cache.
   - Public computer: stores nothing and signs out on close or idle.
   - Every new sign-in alerts your other devices. All sessions are visible and revocable.
-  - Strict rate limits, plus one switch in the Mac app that turns remote access off.
-- **Agents:** the same URL serves REST and MCP. **Connect an agent** in the web UI issues a scoped token at one of three levels: read-only, approve-first (drafts approved in the UI; preselected) or full. Every agent action goes to an activity log. Copy-paste snippets cover Grok (`mcp(server_url, authorization)`), Claude, Codex, ChatGPT and curl, and OAuth with passkey approval covers connector UIs. The existing localhost token API is unchanged.
+  - Strict rate limits, plus one switch in the Mac app that turns the Tailscale route off.
+- **Agents:** the same URL serves REST and MCP. **Connect an agent** in the web UI issues a scoped token at one of three levels: read-only, approve-first (drafts approved in the UI; preselected) or full. Every agent action goes to an activity log. Copy-paste snippets cover Grok (`mcp(server_url, authorization)`), Claude Code, Codex and curl, and OAuth with passkey approval covers apps that sign in. The existing localhost token API is unchanged.
 - **Writes:**
   - A new "person at the keyboard" path: paired web sessions send to anyone without the test tag, each command tied to a real click or tap.
   - Agent tokens keep their own levels, and today's lab gates stay for tests.
@@ -88,7 +88,7 @@
   - A new `web` level and `R-WEB-*` requirements in `features.yaml`, and TypeScript added to `make lint`.
 - **Process:**
   - Build on the test Mac.
-  - Milestones: W0 Messages study and spec plus design tokens; W1 foundations (front door, Funnel, passkeys, agent connect, shell, demo mode, read models, live path, media pipeline); W2 Messages read; W3 Messages write plus the self-test; W4 Messages parity; then each other app through spec, read, write and parity.
+  - Milestones: W0 Messages study and spec plus design tokens; W1 foundations (front door, Tailscale route, passkeys, agent connect, shell, demo mode, read models, live path, media pipeline); W2 Messages read; W3 Messages write plus the self-test; W4 Messages parity; then each other app through spec, read, write and parity.
   - Merge on green, following the 2026-10-17 no-review rule.
   - Never ask the owner anything except his spec skims.
-- **Install:** a notarized build signed with the owner’s Developer ID (Homebrew cask), then `bridge setup` and `bridge remote on`. Setup checks iMessage activation, which is unreliable in macOS VMs (needs macOS 15+ on both host and guest), and says plainly when Messages can't work there.
+- **Install:** a notarized build signed with the owner’s Developer ID (Homebrew cask), then `bridge setup` and `bridge tailscale`. Setup checks iMessage activation, which is unreliable in macOS VMs (needs macOS 15+ on both host and guest), and says plainly when Messages can't work there.

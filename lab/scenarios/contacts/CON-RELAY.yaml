@@ -1,7 +1,0 @@
-id: CON-RELAY
-feature: contacts.read
-levels: [replica]
-given: [{world: {replicas: 1}}]
-when: [{contacts: {}}]
-then: [{converge: {}}]
-cleanup: [{world: {}}]

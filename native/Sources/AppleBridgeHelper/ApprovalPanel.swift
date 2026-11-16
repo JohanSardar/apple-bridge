@@ -26,7 +26,6 @@ struct ConnectorRequest: Decodable, Sendable, Equatable {
 @MainActor
 final class ApprovalModel: ObservableObject {
     @Published var request: ConnectorRequest?
-    @Published var warning = ""
     @Published var outcome = ""
     @Published var decided = ""
     var decide: (ConnectorRequest, Bool) -> Void = { _, _ in }
@@ -48,9 +47,6 @@ struct ApprovalView: View {
                 if request.show_code == true {
                     Text("Allow only if your browser shows").font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 12)
                     Text(request.code).font(.system(size: 22, weight: .semibold)).monospacedDigit().tracking(3).padding(.top, 2)
-                }
-                if !model.warning.isEmpty {
-                    Text(model.warning).font(.system(size: 11)).foregroundStyle(Color(nsColor: .systemOrange)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
                 }
                 HStack(spacing: 8) {
                     Button("Don\u{2019}t Allow") { model.decide(request, false) }.buttonStyle(AlertButtonStyle())

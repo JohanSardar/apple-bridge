@@ -121,11 +121,7 @@ pub(crate) async fn start(
         connectors.clone(),
     );
     let window = crate::connector::approval_window(config.helper_app.clone(), config.home.clone());
-    let notify_phone = Arc::downgrade(&phone);
     connectors.on_waiting(Arc::new(move || {
-        if let Some(phone) = notify_phone.upgrade() {
-            phone.wake();
-        }
         if let Some(window) = &window {
             window();
         }
@@ -160,10 +156,6 @@ pub(crate) async fn start(
         let blobs = blobs.clone();
         let stop = receiver.clone();
         tasks.spawn(async move { crate::lab_gateway::serve(&home, state, blobs, stop).await });
-        let home = config.home.clone();
-        let stop = receiver.clone();
-        let relay_feed = feed.clone();
-        tasks.spawn(async move { crate::lab_relay::serve(&home, relay_feed, stop).await });
     }
 
     let ingress_stop = receiver.clone();
@@ -176,16 +168,10 @@ pub(crate) async fn start(
         approvals,
         connectors,
         phone_router,
-        feed.clone(),
     ));
     tasks.spawn(crate::ingress::run(ingress, ingress_stop));
     let phone_stop = receiver.clone();
-    tasks.spawn(crate::iphone::run(
-        phone,
-        phone_notify,
-        config.home.clone(),
-        phone_stop,
-    ));
+    tasks.spawn(crate::iphone::run(phone, phone_stop));
     let hydrate_stop = receiver.clone();
     let status_stop = receiver.clone();
     tasks.spawn(crate::gateway_status::run(

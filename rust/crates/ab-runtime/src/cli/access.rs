@@ -694,11 +694,8 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
 
 fn tailnet_mcp(home: &Path) -> Outcome<String> {
     let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(
-            Reason::InvalidConfig,
-            "Couldn't read the remote access state.",
-        )
-        .remote("Remote", error.to_string())
+        Failure::new(Reason::InvalidConfig, "Couldn't read the Tailscale state.")
+            .remote("Remote", error.to_string())
     })?;
     status
         .routes
@@ -710,10 +707,7 @@ fn tailnet_mcp(home: &Path) -> Outcome<String> {
                 Reason::Conflict,
                 "Can't make a Tailscale token. The Tailscale route isn't on.",
             )
-            .then(
-                "Turn it on",
-                ["bridge", "remote", "enable", "--via", "tailnet"],
-            )
+            .then("Turn it on", ["bridge", "tailscale"])
         })
 }
 
@@ -1499,9 +1493,9 @@ fn remote_url(home: &Path) -> Outcome<String> {
     let off = || {
         Failure::new(
             Reason::Conflict,
-            "Can't use the remote address. Remote access is off.",
+            "Can't use the Tailscale address. Tailscale access is off.",
         )
-        .then("Turn it on", ["bridge", "remote", "enable"])
+        .then("Turn it on", ["bridge", "tailscale"])
     };
     let status: Value = ab_remote::state::read(home, "status").map_err(|_| off())?;
     if status["state"] != "on" {
@@ -1549,9 +1543,9 @@ pub fn web_enroll(home: &Path, host: Option<&str>, public: bool) -> Outcome {
         if !url.starts_with("https://") {
             return Err(Failure::new(
                 Reason::Conflict,
-                "Can't use the remote address. It isn't HTTPS yet.",
+                "Can't use the Tailscale address. It isn't HTTPS yet.",
             )
-            .then("Check remote access", ["bridge", "remote", "status"]));
+            .then("Check it", ["bridge", "status"]));
         }
         url
     } else if let Some(host) = host {

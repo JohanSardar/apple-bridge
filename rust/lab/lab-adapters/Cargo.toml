@@ -13,8 +13,7 @@ lab-world = { path = "../lab-world" }
 lab-runner = { path = "../lab-runner" }
 lab-wire = { path = "../lab-wire" }
 lab-demo = { path = "../lab-demo" }
-lab-relay = { path = "../lab-relay" }
-lab-probe = { path = "../lab-probe" }
+lab-feed = { path = "../lab-feed" }
 jiff.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -37,4 +36,3 @@ rcgen = "0.14"
 rustls.workspace = true
 p256 = { version = "0.14", features = ["ecdsa", "pkcs8"] }
 tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
-x509-parser = "0.18"

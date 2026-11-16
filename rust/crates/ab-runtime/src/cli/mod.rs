@@ -34,8 +34,8 @@ use std::{
     time::Duration,
 };
 use tree::{
-    AgentAction, CertificatesAction, ConnectorAction, PermissionsAction, RemoteAction,
-    SelftestAction, SessionsAction, ShortcutsAction, SkillsAction, TokenAction, WebAction,
+    AgentAction, ConnectorAction, PermissionsAction, SelftestAction, SessionsAction,
+    ShortcutsAction, SkillsAction, TokenAction, WebAction,
 };
 
 #[cfg(target_os = "macos")]
@@ -313,18 +313,10 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
         Command::Tokens(group) if group.action.is_none() => "tokens",
         Command::Connectors(group) if group.action.is_none() => "connectors",
         Command::Web(group) if group.action.is_none() => "web",
-        Command::Remote(group) if group.action.is_none() => "remote",
-        Command::Relay(group) if group.action.is_none() => "relay",
         Command::Selftest(group) if group.action.is_none() => "selftest",
         Command::Shortcuts(group) if group.action.is_none() => "shortcuts",
         Command::Web(group) => match &group.action {
             Some(WebAction::Sessions(sessions)) if sessions.action.is_none() => "web sessions",
-            _ => return None,
-        },
-        Command::Remote(group) => match &group.action {
-            Some(RemoteAction::Certificates(certificates)) if certificates.action.is_none() => {
-                "remote certificates"
-            }
             _ => return None,
         },
         _ => return None,
@@ -471,7 +463,7 @@ fn check_fields(path: &[String]) -> Outcome {
 
 async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     use tokio::signal::unix::{SignalKind, signal};
-    let server = matches!(command, Command::Start(_) | Command::Connect(_));
+    let server = matches!(command, Command::Start(_));
     let (Ok(mut interrupt), Ok(mut terminate), Ok(mut hangup)) = (
         signal(SignalKind::interrupt()),
         signal(SignalKind::terminate()),
@@ -572,15 +564,8 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
     match command {
         Command::Up(args) => gateway::up(home, &args).await,
         Command::Down => gateway::down(home),
-        Command::Link(args) if args.client == tree::LinkClient::ClaudeApp => {
-            connect::claude_app(home).await
-        }
         Command::Link(args) => link::link(home, &args).await,
         Command::Tailscale(args) => connect::tailscale(home, &args).await,
-        Command::Relay(group) => match group.action {
-            Some(tree::RelayAction::Setup(args)) => connect::relay_setup(home, &args).await,
-            None => Ok(()),
-        },
         Command::Unlink(args) => link::unlink(home, &args),
         Command::Mcp => mcp::serve(home).await,
         Command::Stats(args) => stats::run(home, &args).await,
@@ -653,35 +638,8 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             Some(WebAction::Devices) => access::sessions_list(home, &tree::ListArgs::default()),
             None => Ok(()),
         },
-        Command::Remote(group) => match group.action {
-            Some(RemoteAction::Enable(args)) => {
-                commands::remote_enable(home, &args, commands::MODERN).await
-            }
-            Some(RemoteAction::On(args)) => {
-                commands::remote_enable(home, &args, commands::LEGACY).await
-            }
-            Some(RemoteAction::Disable(args)) => {
-                commands::remote_disable(home, &args, commands::MODERN).await
-            }
-            Some(RemoteAction::Off(args)) => {
-                commands::remote_disable(home, &args, commands::LEGACY).await
-            }
-            Some(RemoteAction::Status(args)) => commands::remote_status(home, &args),
-            Some(RemoteAction::Key(args)) => commands::remote_key(home, &args),
-            Some(RemoteAction::Certificates(certificates)) => match certificates.action {
-                Some(CertificatesAction::Accept(args)) => {
-                    commands::certificate_accept(home, args.fingerprint.as_deref())
-                }
-                None => Ok(()),
-            },
-            Some(RemoteAction::CertificateAccept(args)) => {
-                commands::certificate_accept(home, args.fingerprint.as_deref())
-            }
-            None => Ok(()),
-        },
         Command::Pair(args) => commands::pair(home, &args),
         Command::Join(args) => commands::join(home, &args).await,
-        Command::Connect(args) => commands::connect(&args).await,
         Command::Start(args) => commands::start(home, args).await,
         Command::Status => commands::status(home),
         Command::Doctor(args) => commands::doctor(home, &args),

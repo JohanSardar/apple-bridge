@@ -20,7 +20,6 @@ native:
 
 lint: lint-rust-sources
 	python3 packaging/dev/test_source_registrations.py
-	python3 packaging/relay/test_selfhost.py
 	python3 packaging/npm/test_npm.py
 	packaging/capture/check.sh
 
@@ -53,8 +52,6 @@ dist:
 	packaging/dev/build-bridge.sh bin/bridge-darwin-arm64 aarch64-apple-darwin
 	packaging/dev/build-bridge.sh bin/bridge-linux-amd64 x86_64-unknown-linux-musl
 	packaging/dev/build-bridge.sh bin/bridge-linux-arm64 aarch64-unknown-linux-musl
-	packaging/dev/build-bridge.sh bin/ab-relay-linux-amd64 x86_64-unknown-linux-musl ab-relay ab-relay
-	packaging/dev/build-bridge.sh bin/ab-relay-linux-arm64 aarch64-unknown-linux-musl ab-relay ab-relay
 
 .PHONY: rust-check rust-lint
 rust-check:

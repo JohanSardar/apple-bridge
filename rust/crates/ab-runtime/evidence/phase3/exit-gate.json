@@ -506,17 +506,9 @@
     ]
   },
   "additional_unrun_harness_blockers": {
-    "count": 9,
+    "count": 1,
     "scenarios": [
-      "CON-RELAY",
-      "RMT-PRIVATE-CONNECT",
-      "WEB-MEDIA-VARIANTS",
-      "WEB-RELAY-COMMAND",
-      "WEB-RELAY-CONNECT",
-      "WEB-RELAY-NATIVE-AGENTS",
-      "WEB-RELAY-PUBLIC-AGENTS",
-      "WEB-RELAY-REPLICA-BLOBS",
-      "WEB-RELAY-REPLICA"
+      "WEB-MEDIA-VARIANTS"
     ]
   }
 }

@@ -7,8 +7,6 @@ Everything still to do, in order. The aim is your Mac as a server you sign in to
 **Research this plan rests on:**
 - [`research/capability-catalog.md`](../research/capability-catalog.md): 234 capabilities with mechanism, permission, iPhone route, feasibility and value. Row IDs such as `C07` or `F03` below point there.
 - [`research/imcp-port-map.md`](../research/imcp-port-map.md): every iMCP tool at `1f3798d`, what to copy and how it fits our Source model.
-- [`research/remote-setup-flows.md`](../research/remote-setup-flows.md): the exact setup flow for each remote-access option.
-- [`research/remote-access-services.md`](../research/remote-access-services.md): the relay and tunnel service comparison.
 
 **Rules carried over from the SPEC:**
 - **Done means evidence:** a feature is done only with passing evidence at every level it lists (`features.yaml` status rules). Unprovable work is `limited` with the reason.
@@ -19,33 +17,20 @@ Everything still to do, in order. The aim is your Mac as a server you sign in to
 
 | ID | Work | Why | Done when |
 |---|---|---|---|
-| R0-1 | **Real connector test** over today's Tailscale Funnel: Claude Code (`claude mcp add --transport http apple-bridge https://<host>/mcp`, then `/mcp` to sign in), a claude.ai custom connector (which also reaches Claude mobile), and ChatGPT | The sign-in path (`web.agents`) has sim and browser coverage only; it has never been tested with a real client | Each client signs in through the passkey consent page, lists tools, reads, and sends a tagged message to the owner's own handle that cleanup then removes. Evidence is committed as a new real-level scenario |
-| R0-2 | **OAuth fixes:** Client ID Metadata Document support (ChatGPT prefers it); `scopes_supported` in protected-resource metadata lists all 12 scopes; passkey enrollment works on the public origin | Gaps found in `internal/web/oauth_*.go` | WEB-AGENT-OAUTH covers CIMD and DCR; R0-1 passes for all three clients |
 | R0-3 | **Deploy the Screen Time CPU fix (#332)** to the owner's live bridge | The live Helper used 161% of a core | Helper CPU is measured before and after; doctor shows 0 shape violations |
 | P0-1 | **iPhone Shortcuts relay spike:** a self-sent iMessage triggers an iPhone automation, which replies with the battery level, then sets Focus and then a Clock alarm, with the phone locked and unlocked | Decides whether Track 4A is possible without an iPhone app (catalog S03) | Pass or fail is recorded per step. If it fails, retry with the email trigger, then fall back to Track 4B |
 
-## Track 1 — remote access: many options, each with a one-command setup
+## Track 1 — remote access through Tailscale
 
-Visiting devices never install anything: they open a URL or add an MCP URL. TLS should end on the Mac wherever possible. Every option publishes the web app, `/.well-known/*`, `/oauth/*`, `/v1/*` and `/mcp` on one stable origin, chosen **before** passkey enrollment, because passkeys are bound to the hostname.
+Other devices reach the Mac only on the owner's Tailscale network. TLS ends on the Mac. The route publishes the web app, `/.well-known/*`, `/oauth/*`, `/v1/*` and `/mcp` on one stable tailnet origin, chosen **before** passkey enrollment, because passkeys are bound to the hostname.
 
 | ID | Option | Command on the Mac | What the user does | Other device | TLS ends on Mac | Status |
 |---|---|---|---|---|---|---|
-| R1-1 | **Built-in Tailscale (default today)** | `bridge remote on` (embedded tsnet; no Tailscale app, no VPN profile) | Sign in with Google, Apple, GitHub or Microsoft in the browser it opens; click the Funnel/HTTPS approval link it prints. The command waits and finishes by itself | Nothing: open `https://bridge.<tailnet>.ts.net` | Yes | Exists as `--via embedded`. Needed: make it the default, open the auth and enable links automatically using `QueryFeature("funnel")`, run an external check of HTTPS, OAuth and streaming before printing "ready", and get real embedded-mode evidence |
-| R1-2 | Tailscale app already installed | `bridge remote on --via tailscale-app` | None if Funnel is already enabled | Nothing | Yes | Exists (`--via system`); keep it advanced only |
-| R1-3 | **Private, no public URL** | `bridge remote on --private` | Same Tailscale sign-in | `bridge connect <pair-code>`, a userspace tsnet proxy to `localhost` with no VPN | Yes | New. Works for the web app and Claude Code on that device, not hosted connectors. The canonical-origin and passkey story must be settled first |
-| R1-4 | **Our relay (future default for people without Tailscale)** | `bridge remote on --via relay` | Nothing: gets a stable random name such as `x7k2.<ourdomain>` | Nothing | Yes (SNI passthrough; per-Mac Let's Encrypt cert via DNS-01; CT monitoring) | New. Needs a domain, a small VPS, a Let's Encrypt rate-limit override, and later a Public Suffix List entry |
-| R1-5 | **Own domain on our relay** | `bridge remote on --via relay --domain mac.example.com` | Adds the 2 DNS records it prints (host CNAME to the relay, `_acme-challenge` CNAME for certificate delegation). The command waits until they resolve | Nothing | Yes | New, after R1-4 |
-| R1-6 | ngrok, own account | `bridge remote on --via ngrok` (prompts for an authtoken; optional `--domain`) | Sign up, copy the authtoken; for a custom domain, add the CNAME it prints | Nothing | Only with a paid TLS endpoint | New (ngrok-go in-process). Warn that free-plan browser interstitials can break the consent page |
-| R1-7 | Cloudflare, own domain | `bridge remote on --via cloudflare --domain mac.example.com` (prompts for an API token) | Create a token with the printed scopes. Bridge creates the tunnel and DNS route and supervises a bundled `cloudflared` | Nothing | **No: Cloudflare can read traffic** (stated plainly in the CLI) | New. Must ensure SSE isn't buffered and that no Access login wall sits in front |
-| R1-8 | SSH tunnel (Pinggy, localhost.run) | `bridge remote on --via ssh --provider pinggy` | None for a demo; a paid plan for a stable domain | Nothing | Yes in TLS passthrough mode | New, advanced, mostly for demos |
-| — | Router port forwarding plus dynamic DNS | not offered | — | — | — | Discouraged; documented only |
+| R1-1 | **Tailscale route** | `bridge tailscale` (installed Tailscale app, Tailscale Serve only) | Sign in to Tailscale in the browser it opens, if needed | Signed in to the same tailnet; opens `https://<mac>.<tailnet>.ts.net` | Yes | Needed: install Tailscale when missing, add an owned Serve mapping, and get real evidence from another tailnet device |
 
 **Shared pieces:**
-- `bridge remote status`: shows provider, URL, pending action link, certificate expiry and where TLS ends.
-- `bridge remote off`: stops publishing within 1 s.
-- Provider secrets go through a hidden prompt into the credential store.
-- One onboarding screen in the app: "Get a public URL" (R1-1, later R1-4), then "Use my own domain" (R1-5, R1-6, R1-7), then "Keep it private" (R1-3).
-- The app shows connection snippets for Claude Code, claude.ai, ChatGPT, Codex and Grok for the chosen URL. That already exists per token; extend it per remote URL.
+- `bridge tailscale --off`: removes the owned mapping.
+- The app shows connection snippets for Claude Code, Codex and Grok for the tailnet URL.
 
 ## Track 2 — iMCP parity (port order from the port map)
 
@@ -105,7 +90,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | D7 | Open an app or URL, speak or play a sound, phone clipboard, screenshot | I24–I27 |
 | D8 | Appearance, Night Shift, Always-On, rotation lock, silence unknown callers, other supported app settings | I15–I22, I31 |
 
-**4B: iPhone companion app (the long-term answer).** It needs the Apple Developer Program (see E1) and App Store or TestFlight distribution. Commands arrive by push notification through our relay, because iPhone apps can't stay running in the background.
+**4B: iPhone companion app (the long-term answer).** It needs the Apple Developer Program (see E1) and App Store or TestFlight distribution.
 
 | ID | Feature | Catalog rows |
 |---|---|---|
@@ -120,7 +105,7 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 | ID | Item | Notes |
 |---|---|---|
 | E2 | **New permissions in onboarding** | Location, Camera, Microphone, Screen Recording, Focus status, Bluetooth. Each is requested only when its feature is turned on, and appears in `sources.status` and `doctor` |
-| E3 | **Per-feature on/off switches and agent scopes** | New sources get their own `<source>:read` and `<source>:write` grants, so connectors can be given Mail without Contacts, for example |
+| E3 | **Per-feature on/off switches and agent scopes** | New sources get their own `<source>:read` and `<source>:write` grants, so agents can be given Mail without Contacts, for example |
 | E4 | **Real-test safety for new sources** | Tagged fixtures only (for example a tagged test album, a tagged test file folder, tagged mail drafts). Phone tests only on the owner's devices |
 
 ## Blocked by Apple (won't build)
@@ -135,13 +120,12 @@ The best value × feasibility rows that iMCP lacks, grouped into features:
 
 ## Suggested order
 
-1. **Track 0:** R0-1, R0-2, R0-3, P0-1.
-2. **R1-1:** a polished one-command built-in Tailscale default.
+1. **Track 0:** R0-3, P0-1.
+2. **R1-1:** a one-command Tailscale route.
 3. **Shortcuts first:** B9 Shortcuts, then C1 Mac alarms and timers and C2 Focus, all cheap once B9 exists.
 4. **Big data sources:** B1 Mail, B3 Calls and voicemail, B2 Voice Memos.
 6. **Larger new sources:** C3 Files, C9 Mail actions.
 7. **iPhone without an app:** Track 4A, if P0-1 passed.
-8. **Our relay and own domains:** R1-4, R1-5, then the R1-6 and R1-7 bring-your-own-account options.
-9. **iPhone app and Home:** E1, then Track 4B and B11 Home.
+8. **iPhone app and Home:** E1, then Track 4B and B11 Home.
 
 Each item becomes a `features.yaml` entry with scenarios (`todo`) when its slice starts, and ships as its own PR with sim and real evidence.

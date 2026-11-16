@@ -2,13 +2,13 @@
 
 # Gateway-side scenario qualification (FIX-MISC)
 
-APP-APPROVE-SIM, APP-CMD-SIM, APP-LIVE-SIM and APP-PAIR-SIM currently stop in the generic replica qualification guard before starting the selected Rust gateway. The command/live journeys construct Go iphone, operations, relay, state and trust implementations directly; pairing uses Go trust directly. They require a binary-driven fixture adapter before gateway parity can be measured. Merely allowing these IDs through the guard would leave the Go implementation under test.
+APP-APPROVE-SIM, APP-CMD-SIM and APP-PAIR-SIM currently stop in the generic replica qualification guard before starting the selected Rust gateway. The command/live journeys construct Go iphone, operations, state and trust implementations directly; pairing uses Go trust directly. They require a binary-driven fixture adapter before gateway parity can be measured. Merely allowing these IDs through the guard would leave the Go implementation under test.
 
-Runtime gateway assembly currently has no ab-iphone dependency or delivery worker. The health ingestion transaction requirement is recorded in ab-state.md. Gateway delivery must share the gateway's existing State and LocalGateway; another writable State must not be introduced. No relay server work or live phone operations were attempted here.
+Runtime gateway assembly currently has no ab-iphone dependency or delivery worker. The health ingestion transaction requirement is recorded in ab-state.md. Gateway delivery must share the gateway's existing State and LocalGateway; another writable State must not be introduced. No live phone operations were attempted here.
 
 ## G-F binary assembly proof
 
-The runtime installs Delivery<PhoneGateway> against its shared Gateway State and common LocalGateway. The independent Python binary fixture exercises real pairing CLI, authenticated Tailscale forwarding, Ed25519/X25519/HKDF/AES-GCM packets, common ledger results, phone approvals, location dedupe and revocation. Both Go and Rust pass the 12 common checks; Rust additionally preserves a running Tailscale adapter across relay selection changes. This is assembly evidence, not APP scenario qualification.
+The runtime installs Delivery<PhoneGateway> against its shared Gateway State and common LocalGateway. The independent Python binary fixture exercises real pairing CLI, authenticated Tailscale forwarding, Ed25519/X25519/HKDF/AES-GCM packets, common ledger results, phone approvals, location dedupe and revocation. Both Go and Rust pass the 12 common checks. This is assembly evidence, not APP scenario qualification.
 
 The Go lab binary accepts an isolated LocalAPI socket and loopback public probe target behind the lab build tag. The probe still verifies TLS and performs the production OAuth/MCP/Web/60-second SSE checks; ordinary Go builds retain their existing LocalAPI and public DNS behavior.
 
@@ -29,8 +29,6 @@ Fixture transport forces the isolated Unix LocalAPI socket on macOS, supplies an
 APP-SCREENTIME-SIM preserves its Swift shield-policy checks and measures all four gateway admission assertions through REST against the selected binary. The invalid one-minute schedule is rejected by the gateway. Both Go and Rust pass the original assertions plus the binary-fixture prerequisite.
 
 ## G-F push qualification seam request
-
-APP-CMD/NOTIFY/LIVE binary fixtures must reach an isolated TLS relay and fake APNs network endpoint without changing system trust or bypassing certificate checks. Please expose PushClient::with_client(endpoint, hostname, credential, reqwest::Client), retaining the same endpoint validation and request contract as new. Runtime can then install its lab-only fixture root in that client; ordinary builds retain default trust. Delivery's private wake Notify is also not observed by runtime's manual push loop: expose notified() (or an equivalent wake future) so signed push/live-token registration promptly wakes the runtime while it reloads current relay identity. Runtime currently reacts to LocalGateway's separate phone_notify and a 30-second interval only. This is an assembly seam request, not permission to duplicate delivery internals.
 
 ## G-F APP-HEALTH-SIM binary conversion
 

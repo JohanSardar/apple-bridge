@@ -108,10 +108,7 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         && paths.iter().all(|path| {
             path.file_stem()
                 .and_then(|stem| stem.to_str())
-                .is_some_and(|stem| {
-                    lab_adapters::iphone_real::handles(stem)
-                        || lab_adapters::relay_replica::sim_backed(stem)
-                })
+                .is_some_and(lab_adapters::iphone_real::handles)
         });
     if real && !phone_only {
         lab_world::require_signed_helper(helper.as_deref())?;
@@ -125,7 +122,6 @@ fn run() -> Result<bool, Box<dyn std::error::Error>> {
         let mut scenario: Scenario = serde_saphyr::from_slice(&fs::read(path)?)?;
         lab_adapters::prepare(&mut scenario);
         lab_adapters::checks::inject(&mut scenario);
-        lab_adapters::connectors::inject(&mut scenario);
         lab_adapters::native_core::inject(&mut scenario);
         if scenario.when.is_empty()
             && lab_adapters::readmodels::SCENARIOS.contains(&scenario.id.as_str())

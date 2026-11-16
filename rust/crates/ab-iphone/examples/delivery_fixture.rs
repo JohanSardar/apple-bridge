@@ -134,15 +134,6 @@ fn run(input: &Value) -> Result<Value, Box<dyn std::error::Error>> {
                 json!({"digest":batch.digest()?, "raw":String::from_utf8(ab_wire::gojson::legacy_json(&batch, ab_wire::gojson::EscapeMode::Html)?)?}),
             )
         }
-        "live" => {
-            let p = authority.principal(input["id"].as_str().ok_or("id")?)?;
-            let (token, aps) = ab_iphone::delivery::live_payload(
-                &p,
-                &input["command"],
-                input["now"].as_i64().ok_or("now")?,
-            )?;
-            Ok(json!({"token":token,"raw":aps.get()}))
-        }
         "list" => Ok(serde_json::to_value(authority.iphones()?)?),
         "revoke" => {
             authority.revoke_iphone(input["id"].as_str().ok_or("id")?)?;

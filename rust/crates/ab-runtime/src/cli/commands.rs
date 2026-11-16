@@ -4,10 +4,7 @@ use super::{
     gateway,
     modes::Modes,
     permissions,
-    tree::{
-        BackupArgs, ConnectArgs, JoinArgs, PairArgs, RemoteDisableArgs, RemoteEnableArgs,
-        RemoteKeyArgs, RemoteStatusArgs, RestoreArgs, SelftestArgs, StartArgs,
-    },
+    tree::{BackupArgs, JoinArgs, PairArgs, RestoreArgs, SelftestArgs, StartArgs},
     ui,
 };
 use crate::{Config, Error, product_cli};
@@ -721,7 +718,7 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
         ));
         rows.push((
             "Kept".to_owned(),
-            "credentials, settings and remote setup".to_owned(),
+            "credentials, settings and Tailscale setup".to_owned(),
         ));
     } else {
         rows.push((
@@ -882,7 +879,7 @@ fn report_restore(home: &Path, backup: Option<&PathBuf>, replaced: bool) -> Outc
     );
     ui::row(
         "Kept",
-        "credentials, settings, remote setup and the command ledger",
+        "credentials, settings, Tailscale setup and the command ledger",
     );
     if settings {
         ui::next_steps(&[Step::new("Start it again", ["bridge", "up"])]);
@@ -897,34 +894,6 @@ fn report_restore(home: &Path, backup: Option<&PathBuf>, replaced: bool) -> Outc
         )]);
     }
     Ok(())
-}
-
-fn route(via: Option<&str>, private: bool, domain: Option<&str>) -> Outcome<String> {
-    if private && (via.is_some() || domain.is_some()) {
-        let other = if via.is_some() { "--via" } else { "--domain" };
-        return Err(Failure::new(
-            Reason::ConflictingOptions,
-            format!("Can't use --private with {other}."),
-        ));
-    }
-    let route = if private {
-        "private"
-    } else {
-        via.unwrap_or("relay")
-    };
-    if !matches!(
-        route,
-        "relay" | "tailnet" | "cloud" | "private" | "tailscale-app" | "system" | "both"
-    ) {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            format!(
-                "Can't use --via {}. Accepted: relay, tailnet, cloud, private, tailscale-app, both.",
-                ui::clean(route)
-            ),
-        ));
-    }
-    Ok(route.to_owned())
 }
 
 fn json_problem(path: &Path, error: &serde_json::Error) -> Failure {
@@ -957,7 +926,7 @@ pub fn remote_file<T: serde::de::DeserializeOwned + Default>(
     };
     serde_json::from_slice(&bytes).map_err(|error| {
         json_problem(&path, &error).sentence(
-            "Nothing was changed and no keys were created. Fix the file, or move it away to start remote setup again.",
+            "Nothing was changed and no keys were created. Fix the file, or move it away to start Tailscale setup again.",
         )
     })
 }
@@ -965,81 +934,6 @@ pub fn remote_file<T: serde::de::DeserializeOwned + Default>(
 pub(super) fn check_remote_files(home: &Path) -> Outcome {
     remote_file::<ab_remote::state::Config>(home, "config")?;
     remote_file::<Value>(home, "status")?;
-    Ok(())
-}
-
-pub(super) fn valid_domain(domain: &str) -> bool {
-    domain.len() <= 253
-        && domain.contains('.')
-        && domain.split('.').all(|label| {
-            !label.is_empty()
-                && label.len() <= 63
-                && !label.starts_with('-')
-                && !label.ends_with('-')
-                && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
-        })
-}
-
-fn relay_url(url: &str) -> Outcome<String> {
-    let parsed = reqwest::Url::parse(url).ok();
-    if parsed
-        .as_ref()
-        .is_some_and(|parsed| !parsed.username().is_empty() || parsed.password().is_some())
-        || url.split_once("://").is_some_and(|(_, rest)| {
-            rest.split(['/', '?', '#'])
-                .next()
-                .unwrap_or_default()
-                .contains('@')
-        })
-    {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            format!(
-                "Can't use --relay-url {}. Relay addresses can't include a user name or password.",
-                ui::clean_input(url)
-            ),
-        )
-        .sentence(
-            "Nothing was saved. Pass the relay's address alone, such as https://relay.example.com.",
-        ));
-    }
-    let parsed = parsed.filter(|parsed| parsed.scheme() == "https" && parsed.host_str().is_some());
-    if parsed.is_none() {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            format!(
-                "Can't use --relay-url {}. Relays use https://HOST.",
-                ui::clean_input(url)
-            ),
-        ));
-    }
-    Ok(url.to_owned())
-}
-
-fn cloud_sources(text: &str) -> Outcome<Vec<String>> {
-    let mut sources = Vec::new();
-    for source in text.split(',').map(str::trim) {
-        if source.is_empty() || !ab_trust::agent_source(source) || source == "system" {
-            return Err(Failure::new(
-                Reason::InvalidValue,
-                format!(
-                    "Can't use --sources {}. List services such as calendar,reminders,notes.",
-                    ui::clean_input(text)
-                ),
-            ));
-        }
-        sources.push(source.to_owned());
-    }
-    Ok(sources)
-}
-
-fn device_name(name: &str) -> Outcome {
-    if name.trim().is_empty() || name.chars().count() > 64 || name.chars().any(char::is_control) {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            "Can't use that --name. Names are 1 to 64 printable characters.",
-        ));
-    }
     Ok(())
 }
 
@@ -1065,37 +959,8 @@ impl std::io::Write for Stderr {
     }
 }
 
-pub const MODERN: Voice = Voice::Modern {
-    open: false,
-    no_open: false,
-};
-
-pub const LEGACY: Voice = Voice::Legacy { no_open: false };
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Voice {
-    Legacy { no_open: bool },
-    Modern { open: bool, no_open: bool },
-}
-
 fn ssh() -> bool {
     std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some()
-}
-
-fn relay_host(home: &Path) -> String {
-    let saved = remote_file::<ab_remote::state::Config>(home, "config")
-        .map(|config| config.relay_url)
-        .unwrap_or_default();
-    let url = if saved.is_empty() {
-        std::env::var("APPLE_BRIDGE_RELAY_URL")
-            .unwrap_or_else(|_| "https://applebridge.eilmer.si".to_owned())
-    } else {
-        saved
-    };
-    reqwest::Url::parse(&url)
-        .ok()
-        .and_then(|parsed| parsed.host_str().map(str::to_owned))
-        .unwrap_or_else(|| ui::redact_url(&url))
 }
 
 fn sentence_case(text: &str) -> String {
@@ -1106,25 +971,16 @@ fn sentence_case(text: &str) -> String {
     })
 }
 
-fn remote_failed(home: &Path, route: &str, verb_past: &str, error: &ab_remote::Error) -> Failure {
+fn remote_failed(verb_past: &str, error: &ab_remote::Error) -> Failure {
     let text = error.to_string();
     let detail = text.strip_prefix("remote: ").unwrap_or(&text).to_owned();
     let cause = ab_remote::failure_cause(&detail).map(str::to_owned);
-    let headline = match (&cause, route) {
-        (Some(cause), "relay" | "both") => format!(
-            "Couldn't reach {}. {}",
-            relay_host(home),
+    let headline = match &cause {
+        Some(cause) => format!(
+            "Couldn't turn Tailscale access {verb_past}. {}",
             sentence_case(&ui::redact_urls(cause))
         ),
-        (Some(cause), _) => format!(
-            "Couldn't turn remote access {verb_past}. {}",
-            sentence_case(&ui::redact_urls(cause))
-        ),
-        (None, "relay" | "both") if verb_past == "on" => format!(
-            "Couldn't turn remote access on through {}.",
-            relay_host(home)
-        ),
-        (None, _) => format!("Failed to turn remote access {verb_past}."),
+        None => format!("Failed to turn Tailscale access {verb_past}."),
     };
     let mut failure = Failure::new(
         if cause.is_some() {
@@ -1137,12 +993,10 @@ fn remote_failed(home: &Path, route: &str, verb_past: &str, error: &ab_remote::E
     if cause.is_none() {
         failure = failure.remote("Gateway", detail);
     }
-    failure
-        .then("Check remote access", ["bridge", "remote", "status"])
-        .then(
-            "Turn it off before trying again",
-            ["bridge", "remote", "disable"],
-        )
+    failure.then("Check it", ["bridge", "status"]).then(
+        "Turn it off before trying again",
+        ["bridge", "tailscale", "--off"],
+    )
 }
 
 struct Pending {
@@ -1154,9 +1008,8 @@ struct Pending {
 pub(super) async fn onboard(
     home: &Path,
     action: &str,
-    route: &str,
     timeout: Option<&str>,
-    voice: Voice,
+    open: bool,
 ) -> Outcome<Result<ab_remote::state::Status, String>> {
     let limit = timeout
         .map(|text| duration("--timeout", text))
@@ -1173,7 +1026,7 @@ pub(super) async fn onboard(
     };
     let modes = Modes::get();
     let machine = modes.json;
-    ui::phase(1, 2, &format!("{verb} remote access ({route})…"));
+    ui::phase(1, 2, &format!("{verb} Tailscale access…"));
     let pending = Arc::new(Pending {
         link: std::sync::Mutex::new(None),
         seen: tokio::sync::Notify::new(),
@@ -1185,36 +1038,21 @@ pub(super) async fn onboard(
         }
         recorder.seen.notify_one();
     };
-    let opener: ab_remote::onboarding::Opener = match voice {
-        Voice::Legacy { no_open } => Arc::new(move |link: &str| {
-            record(link);
-            !no_open && ab_remote::onboarding::open_link(link)
-        }),
-        Voice::Modern { open, no_open } => {
-            let launch = !no_open && (modes.browser_allowed() || (open && !ssh()));
-            let echo = !modes.stdout_tty() && !modes.json;
-            Arc::new(move |link: &str| {
-                record(link);
-                if echo {
-                    ui::outln(link);
-                }
-                if launch {
-                    ui::phase(2, 2, "Opening the sign-in page in your browser…");
-                }
-                launch && ab_remote::onboarding::open_link(link)
-            })
+    let launch = open && (modes.browser_allowed() || !ssh());
+    let echo = !modes.stdout_tty() && !modes.json;
+    let opener: ab_remote::onboarding::Opener = Arc::new(move |link: &str| {
+        record(link);
+        if echo {
+            ui::outln(link);
         }
-    };
-    let mut legacy_out = std::io::stdout();
-    let mut modern_out = Stderr;
-    let out: &mut (dyn std::io::Write + Send) = if matches!(voice, Voice::Legacy { .. }) && !machine
-    {
-        &mut legacy_out
-    } else {
-        &mut modern_out
-    };
+        if launch {
+            ui::phase(2, 2, "Opening the sign-in page in your browser…");
+        }
+        launch && ab_remote::onboarding::open_link(link)
+    });
+    let mut out = Stderr;
     let settling =
-        ab_remote::onboarding::settle(home, action, route, out, opener, Duration::from_millis(100));
+        ab_remote::onboarding::settle(home, action, &mut out, opener, Duration::from_millis(100));
     let link_needed = async {
         loop {
             pending.seen.notified().await;
@@ -1241,7 +1079,7 @@ pub(super) async fn onboard(
             let mut failure = Failure::new(
                 Reason::Timeout,
                 format!(
-                    "Stopped waiting after {}. Remote access isn't confirmed {verb_past} yet.",
+                    "Stopped waiting after {}. Tailscale access isn't confirmed {verb_past} yet.",
                     friendly(limit)
                 ),
             )
@@ -1251,340 +1089,24 @@ pub(super) async fn onboard(
                     .row("Sign-in link", link.clone())
                     .data("signInUrl", link);
             }
-            Err(failure.then("Check it", ["bridge", "remote", "status"]))
+            Err(failure.then("Check it", ["bridge", "status"]))
         }
         Ok(Err(link)) => Ok(Err(link)),
         Ok(Ok(Err(ab_remote::Error::Remote(message)))) if message == "interrupted" => {
             Err(Failure::canceled(format!(
-                "Canceled. The request to turn remote access {verb_past} was withdrawn."
+                "Canceled. The request to turn Tailscale access {verb_past} was withdrawn."
             )))
         }
         Ok(Ok(Err(ab_remote::Error::Remote(message)))) if message.contains("superseded") => {
             Err(Failure::new(
                 Reason::Conflict,
-                "Stopped waiting. Another remote access request replaced this one.",
+                "Stopped waiting. Another Tailscale request replaced this one.",
             )
-            .then("Check it", ["bridge", "remote", "status"]))
+            .then("Check it", ["bridge", "status"]))
         }
-        Ok(Ok(Err(error))) => Err(remote_failed(home, route, verb_past, &error)),
+        Ok(Ok(Err(error))) => Err(remote_failed(verb_past, &error)),
         Ok(Ok(Ok(status))) => Ok(Ok(status)),
     }
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn report_pending(link: &str) -> Outcome {
-    ui::json_keyed(
-        "remote",
-        json!({
-            "remote": {"state": "pending", "signInUrl": link},
-            "outcome": "pending",
-            "userActionRequired": true,
-            "message": "A person must open the sign-in link and approve this Mac. Remote access turns on after that; the gateway keeps waiting.",
-            "next": [Step::new("Check whether it's on", ["bridge", "remote", "status", "--json"]).to_json()],
-        }),
-    );
-    Ok(())
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn report_remote(status: &ab_remote::state::Status, on: bool, voice: Voice) -> Outcome {
-    if Modes::get().json {
-        ui::json_keyed(
-            "remote",
-            json!({
-                "remote": status,
-                "outcome": if on { "enabled" } else { "disabled" },
-                "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()],
-            }),
-        );
-        return Ok(());
-    }
-    if matches!(voice, Voice::Legacy { .. }) {
-        if status.url.is_empty() {
-            ui::outln(&status.state);
-        } else {
-            ui::outln(&status.url);
-            ui::outln(&format!("{}/mcp", status.url));
-        }
-        return Ok(());
-    }
-    if on {
-        if !Modes::get().stdout_tty() && !status.url.is_empty() {
-            ui::outln(&status.url);
-        }
-        ui::receipt(
-            "Remote access on",
-            &status.url,
-            &format!("Remote access is on at {}.", status.url),
-        );
-        if !status.url.is_empty() {
-            ui::row("MCP address", &format!("{}/mcp", status.url));
-        }
-        ui::row("Route", &status.backend);
-    } else {
-        ui::receipt("Remote access off", "", "Remote access is off.");
-    }
-    ui::next_steps(&[Step::new("Check it", ["bridge", "remote", "status"])]);
-    Ok(())
-}
-
-pub async fn remote_enable(home: &Path, args: &RemoteEnableArgs, voice: Voice) -> Outcome {
-    let route = route(args.via.as_deref(), args.private, args.domain.as_deref())?;
-    if let Some(domain) = &args.domain
-        && (route != "relay" || !valid_domain(domain))
-    {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            format!(
-                "Can't use --domain {}. It needs a domain name such as mac.example.com and the relay route.",
-                ui::clean(domain)
-            ),
-        ));
-    }
-    if let Some(url) = &args.relay_url {
-        relay_url(url)?;
-        if route != "relay" {
-            return Err(Failure::new(
-                Reason::ConflictingOptions,
-                "Can't use --relay-url with a route other than relay.",
-            ));
-        }
-    }
-    let sources = match &args.sources {
-        Some(_) if route != "cloud" => {
-            return Err(Failure::new(
-                Reason::ConflictingOptions,
-                "Can't use --sources with a route other than cloud.",
-            ));
-        }
-        Some(text) => Some(cloud_sources(text)?),
-        None => None,
-    };
-    if let Some(name) = &args.name {
-        device_name(name)?;
-    }
-    if let Some(timeout) = &args.timeout {
-        duration("--timeout", timeout)?;
-    }
-    check_remote_files(home)?;
-    if !gateway::lock_held(home) {
-        return Err(Failure::not_running(home));
-    }
-    if let Some(url) = &args.relay_url {
-        ab_remote::state::set_relay(home, url)?;
-    }
-    if let Some(sources) = &sources {
-        ab_trust::Authority::open(home)
-            .and_then(|authority| {
-                authority.revoke_route_beyond(ab_remote::state::CLOUD_INGRESS, Some(sources))
-            })
-            .map_err(Failure::from)?;
-        ab_remote::state::set_cloud_sources(home, sources)?;
-    }
-    if route == "relay" {
-        ab_remote::state::set_domain(home, args.domain.as_deref().unwrap_or_default())?;
-    }
-    if let Some(name) = &args.name {
-        ab_remote::state::annotate(home, name)?;
-    }
-    let voice = match voice {
-        Voice::Legacy { .. } => Voice::Legacy {
-            no_open: args.no_open,
-        },
-        Voice::Modern { .. } => Voice::Modern {
-            open: args.open,
-            no_open: args.no_open,
-        },
-    };
-    match onboard(home, "on", &route, args.timeout.as_deref(), voice).await? {
-        Ok(status) => report_remote(&status, true, voice),
-        Err(link) => report_pending(&link),
-    }
-}
-
-pub async fn remote_disable(home: &Path, args: &RemoteDisableArgs, voice: Voice) -> Outcome {
-    let route = route(args.via.as_deref(), args.private, None)?;
-    if let Some(name) = &args.name {
-        device_name(name)?;
-    }
-    if let Some(timeout) = &args.timeout {
-        duration("--timeout", timeout)?;
-    }
-    check_remote_files(home)?;
-    let current = ab_remote::state::status(home)?;
-    if current.state == "off" {
-        if Modes::get().json {
-            ui::json_keyed(
-                "remote",
-                json!({"remote": current, "outcome": "unchanged", "next": [Step::new("Check it", ["bridge", "remote", "status", "--json"]).to_json()]}),
-            );
-        } else if matches!(voice, Voice::Legacy { .. }) {
-            ui::outln("off");
-        } else {
-            ui::receipt(
-                "Already off",
-                "remote access",
-                "Remote access is already off.",
-            );
-        }
-        return Ok(());
-    }
-    if let Some(name) = &args.name {
-        ab_remote::state::annotate(home, name)?;
-    }
-    let voice = match voice {
-        Voice::Legacy { .. } => LEGACY,
-        Voice::Modern { .. } => Voice::Modern {
-            open: false,
-            no_open: true,
-        },
-    };
-    let outcome = onboard(home, "off", &route, args.timeout.as_deref(), voice).await?;
-    if outcome.is_ok() && route == "cloud" {
-        let revoked = ab_trust::Authority::open(home)
-            .and_then(|authority| authority.revoke_route(ab_remote::state::CLOUD_INGRESS))
-            .map_err(Failure::from)?;
-        if !revoked.is_empty() && !Modes::get().json {
-            ui::row(
-                "Disconnected",
-                &format!("{} cloud chat connection(s)", revoked.len()),
-            );
-        }
-    }
-    match outcome {
-        Ok(status) => report_remote(&status, false, voice),
-        Err(link) => report_pending(&link),
-    }
-}
-
-pub fn remote_status(home: &Path, args: &RemoteStatusArgs) -> Outcome {
-    check_remote_files(home)?;
-    if args.snippets {
-        let snippets = ab_remote::state::snippets(home).map_err(|_| {
-            Failure::new(
-                Reason::Conflict,
-                "Can't print snippets. Remote access isn't on.",
-            )
-            .then("Turn it on", ["bridge", "remote", "enable"])
-        })?;
-        if Modes::get().json {
-            ui::json_document(json!({"snippets": snippets}));
-        } else {
-            ui::out(&snippets);
-        }
-        return Ok(());
-    }
-    let status = ab_remote::state::status(home).map_err(|error| {
-        Failure::new(
-            Reason::InvalidConfig,
-            "Couldn't read the remote access state.",
-        )
-        .remote("Remote", error.to_string())
-    })?;
-    let modes = Modes::get();
-    if modes.json || modes.legacy_json() {
-        if !modes.json {
-            legacy("bridge remote status");
-        }
-        let value = serde_json::to_value(&status)?;
-        if modes.json {
-            ui::json_keyed("remote", json!({"remote": value}));
-        } else {
-            ui::exact_json(&value);
-        }
-        return Ok(());
-    }
-    let mut rows = vec![("Remote access".to_owned(), status.state.clone())];
-    for (label, value) in [
-        ("Route", &status.backend),
-        ("URL", &status.url),
-        ("TLS ends", &status.tls_termination),
-        ("Pending link", &status.pending_link),
-        ("Last error", &status.last_error),
-    ] {
-        if !value.is_empty() {
-            rows.push((label.to_owned(), value.clone()));
-        }
-    }
-    if !status.certificate_expiry.starts_with("0001") && !status.certificate_expiry.is_empty() {
-        rows.push((
-            "Certificate".to_owned(),
-            format!("expires {}", status.certificate_expiry),
-        ));
-    }
-    let mark = match status.state.as_str() {
-        "on" => ui::Mark::Good,
-        "error" => ui::Mark::Bad,
-        "off" => ui::Mark::Plain,
-        _ => ui::Mark::Warn,
-    };
-    ui::block(mark, &rows);
-    if !status.ct_warning.is_empty() {
-        ui::warn("certificate", &status.ct_warning);
-    }
-    if status.state == "off" {
-        ui::next_steps(&[Step::new("Turn it on", ["bridge", "remote", "enable"])]);
-    }
-    Ok(())
-}
-
-pub fn remote_key(home: &Path, args: &RemoteKeyArgs) -> Outcome {
-    let config = remote_file::<ab_remote::state::Config>(home, "config")?;
-    if let Some(url) = &args.relay_url {
-        relay_url(url)?;
-        ab_remote::state::set_relay(home, url)?;
-    }
-    let endpoint = args.relay_url.clone().unwrap_or(config.relay_url);
-    let key = ab_remote::relay::public_key(home, &endpoint).map_err(|error| {
-        Failure::new(Reason::ApiError, "Failed to read this Mac's relay key.")
-            .remote("Remote", ui::redact_urls(&error.to_string()))
-    })?;
-    if Modes::get().json {
-        ui::json_document(json!({"key": key}));
-    } else {
-        ui::outln(&key);
-    }
-    Ok(())
-}
-
-pub fn certificate_accept(home: &Path, fingerprint: Option<&str>) -> Outcome {
-    let Some(fingerprint) = fingerprint else {
-        return Err(Failure::new(
-            Reason::MissingArgument,
-            "Can't accept a certificate without its fingerprint.",
-        )
-        .then(
-            "See the certificate warning",
-            ["bridge", "remote", "status"],
-        ));
-    };
-    let normalized = fingerprint.replace(':', "").to_lowercase();
-    if normalized.len() != 64 || !normalized.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err(Failure::new(
-            Reason::InvalidValue,
-            format!(
-                "Can't use {} as a fingerprint. Fingerprints are 64 hexadecimal characters.",
-                ui::clean(fingerprint)
-            ),
-        ));
-    }
-    ab_remote::ct::accept(home, &normalized)?;
-    if Modes::get().json {
-        ui::json_document(json!({"fingerprint": normalized, "outcome": "accepted"}));
-    } else {
-        ui::receipt(
-            "Accepted",
-            &normalized,
-            &format!("Accepted certificate {normalized}."),
-        );
-    }
-    Ok(())
-}
-
-pub async fn connect(args: &ConnectArgs) -> Outcome {
-    address("--listen", &args.listen)?;
-    ab_remote::private::connect(&args.code, &args.listen).await?;
-    Ok(())
 }
 
 pub async fn shortcuts(pack: PathBuf) -> Outcome {
@@ -1616,7 +1138,7 @@ pub async fn shortcuts(pack: PathBuf) -> Outcome {
 }
 
 pub async fn join(home: &Path, args: &JoinArgs) -> Outcome {
-    let code = ab_trust::PairCode::decode(&args.code).map_err(|_| {
+    ab_trust::PairCode::decode(&args.code).map_err(|_| {
         Failure::new(
             Reason::InvalidValue,
             "Can't use that pairing code. Copy the whole code bridge pair printed.",
@@ -1626,11 +1148,7 @@ pub async fn join(home: &Path, args: &JoinArgs) -> Outcome {
         address("--listen", listen)?;
     }
     let authority = Arc::new(access::open(home)?);
-    let result = if code.remote {
-        ab_replication::relay::join(&authority, &args.code)
-            .await
-            .map_err(|_| ab_trust::Error::Unauthorized)
-    } else if let Some(listen) = &args.listen {
+    let result = if let Some(listen) = &args.listen {
         authority.join_listen(&args.code, listen).await
     } else {
         authority.join(&args.code).await
@@ -1751,28 +1269,15 @@ fn remote_url(home: &Path) -> Outcome<String> {
     let off = || {
         Failure::new(
             Reason::Conflict,
-            "Can't pair through remote access. It's off.",
+            "Can't pair an iPhone. Tailscale access is off.",
         )
-        .then("Turn it on", ["bridge", "remote", "enable"])
+        .then("Turn it on", ["bridge", "tailscale"])
     };
     let status: Value = ab_remote::state::read(home, "status").map_err(|_| off())?;
     if status["state"] != "on" {
         return Err(off());
     }
     status["url"].as_str().map(str::to_owned).ok_or_else(off)
-}
-
-fn remote_address(home: &Path) -> Outcome<String> {
-    #[cfg(feature = "lab-harness")]
-    if let Some(address) = std::env::var_os("APPLE_BRIDGE_LAB_PAIR_URL") {
-        return address.into_string().map_err(|_| {
-            Failure::new(
-                Reason::InvalidValue,
-                "APPLE_BRIDGE_LAB_PAIR_URL isn't text.",
-            )
-        });
-    }
-    remote_url(home)
 }
 
 fn print_code(code: &str, qr: bool, ttl: Duration) -> Outcome {
@@ -1819,12 +1324,6 @@ pub fn pair(home: &Path, args: &PairArgs) -> Outcome {
             "Can't pair an iPhone that way. --iphone needs --via-remote and can't use --peer-addr or --dial-replica.",
         ));
     }
-    if args.via_remote && (args.peer_addr.is_some() || args.dial_replica.is_some()) {
-        return Err(Failure::new(
-            Reason::ConflictingOptions,
-            "Can't use --via-remote with --peer-addr or --dial-replica.",
-        ));
-    }
     let grants = if args.iphone {
         Vec::new()
     } else {
@@ -1846,18 +1345,8 @@ pub fn pair(home: &Path, args: &PairArgs) -> Outcome {
     if args.iphone {
         let url = remote_url(home)?;
         let authority = access::open(home)?;
-        let warning = ab_remote::ct::owner_warning(home, ab_remote::ct::now());
-        if !warning.is_empty() {
-            ui::warn("certificate", &warning);
-        }
         let code = authority.pair_iphone_code(&url, true, ttl)?;
         return print_code(&code, true, ttl);
-    }
-    if args.via_remote {
-        let address = remote_address(home)?;
-        let authority = access::open(home)?;
-        let code = authority.pair_remote(&address, grants, ttl)?;
-        return print_code(&code, false, ttl);
     }
     let authority = access::open(home)?;
     let code = authority.pair_with_ttl(
@@ -1926,6 +1415,6 @@ pub fn lab_principal(home: &Path, args: &super::tree::LabPrincipalArgs) -> Outco
             ));
         }
     };
-    ui::outln(&json!({"id":principal.id,"kind":principal.kind,"fingerprint":principal.fingerprint,"grants":principal.grants,"revision":principal.revision,"relay2":principal.relay2()}).to_string());
+    ui::outln(&json!({"id":principal.id,"kind":principal.kind,"fingerprint":principal.fingerprint,"grants":principal.grants,"revision":principal.revision}).to_string());
     Ok(())
 }
