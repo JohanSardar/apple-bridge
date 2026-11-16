@@ -74,7 +74,7 @@ installer to update. Sparkle qualification below applies to the separate DMG.
 Upload the archive to `v<version>/` in the downloads folder on the website
 server (see `deploy/site/README.md`), so it is served at
 `https://eilmer.si/applebridge/download/v<version>/applebridge-<version>.tgz`,
-and create the matching GitLab release with a link to it before changing
+and create the matching GitHub release (`gh release create v<version> -R jujdontbudge/apple-bridge`) with the archive attached and a link to it before changing
 `VERSION` and `SHA256` in `docs/install`. Stage the public website with
 `packaging/site/package.py` and serve it with `deploy/site/serve.py`.
 Require exact installer parity at the public URL and a successful download of
@@ -137,7 +137,7 @@ Run `bridge down` before updating or uninstalling an npm installation. The gatew
 
 ## iPhone releases
 
-The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://gitlab.com/johansardar/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
+The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://github.com/jujdontbudge/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
 
 ## Local qualification
 

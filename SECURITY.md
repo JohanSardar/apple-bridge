@@ -1,8 +1,8 @@
 # Reporting a vulnerability
 
-Report suspected vulnerabilities privately: [open a new issue](https://gitlab.com/johansardar/apple-bridge/-/issues/new) and tick **This issue is confidential** before you submit it, so only maintainers can see it. Do not open a public issue containing exploit details, credentials or personal data.
+Report suspected vulnerabilities privately: use [Report a vulnerability](https://github.com/jujdontbudge/apple-bridge/security/advisories/new) on GitHub, which opens a private advisory only maintainers can see. Do not open a public issue containing exploit details, credentials or personal data.
 
-Include the affected revision, platform, reproduction using synthetic data, expected behavior and observed impact. Remove tokens, personal records and private host addresses from logs and attachments. Maintainers will assess the report and coordinate a fix and disclosure in the confidential issue.
+Include the affected revision, platform, reproduction using synthetic data, expected behavior and observed impact. Remove tokens, personal records and private host addresses from logs and attachments. Maintainers will assess the report and coordinate a fix and disclosure in the private advisory.
 
 Apple Bridge is in early access. Only the latest main revision is currently maintained; no released-version support window or response-time guarantee is established. Review permissions and requested access before connecting apps.
 

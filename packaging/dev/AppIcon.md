@@ -1,6 +1,6 @@
 # App icon
 
-`AppIcon.png` is the owner's icon from [apple-bridge-iphone](https://gitlab.com/johansardar/apple-bridge-iphone), `ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, Git blob `2e416cab2eb046d24816556cc68c2609995d405e`. It is reused unchanged, not third-party artwork.
+`AppIcon.png` is the owner's icon from [apple-bridge-iphone](https://github.com/jujdontbudge/apple-bridge-iphone), `ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, Git blob `2e416cab2eb046d24816556cc68c2609995d405e`. It is reused unchanged, not third-party artwork.
 
 `AppIcon.icns` was generated on macOS by resizing that 1024 × 1024 PNG with `sips` into an `AppIcon.iconset` with 16, 32, 128, 256 and 512 pixel entries and their `@2x` counterparts, then running:
 

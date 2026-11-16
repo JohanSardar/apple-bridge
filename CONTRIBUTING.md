@@ -27,12 +27,12 @@ On an existing development host, `~/bin/ab-local` may serialize checks. It is a 
 
 ## iPhone integration
 
-The gateway owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and command delivery. The separate [iPhone repository](https://gitlab.com/johansardar/apple-bridge-iphone) owns device execution, permissions, keys and receipts. Mac builds need neither its checkout nor the iOS SDK.
+The gateway owns pairing, `/v1/iphone/*`, command admission, the ledger, signed record ingestion and command delivery. The separate [iPhone repository](https://github.com/jujdontbudge/apple-bridge-iphone) owns device execution, permissions, keys and receipts. Mac builds need neither its checkout nor the iOS SDK.
 
 Only scenarios that compile phone models or drive the phone harness need it:
 
 ```sh
-git clone https://gitlab.com/johansardar/apple-bridge-iphone.git ../apple-bridge-iphone
+git clone https://github.com/jujdontbudge/apple-bridge-iphone.git ../apple-bridge-iphone
 APPLE_BRIDGE_IPHONE_ROOT=/path/to/apple-bridge-iphone packaging/dev/rust-lab.sh sim lab/scenarios/iphone/APP-SHELL-SIM.yaml
 ```
 
