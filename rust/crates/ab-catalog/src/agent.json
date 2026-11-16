@@ -958,7 +958,7 @@
       "x": {
         "mode": "Do Not Disturb",
         "on": true,
-        "until": "2026-11-12T18:00:00-06:00"
+        "until": "2030-11-12T18:00:00-06:00"
       }
     },
     "pdf.text": {
@@ -1850,7 +1850,7 @@
       },
       "x": {
         "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
-        "fire_at": 1794470400,
+        "fire_at": 1920700800,
         "title": "Wake up"
       }
     },
@@ -1874,7 +1874,7 @@
       "x": {
         "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
         "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
-        "fire_at": 1794474000
+        "fire_at": 1920704400
       }
     },
     "iphone.capture.audio": {
