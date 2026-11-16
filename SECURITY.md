@@ -1,6 +1,6 @@
 # Reporting a vulnerability
 
-Report suspected vulnerabilities privately: use [Report a vulnerability](https://github.com/jujdontbudge/apple-bridge/security/advisories/new) on GitHub, which opens a private advisory only maintainers can see. Do not open a public issue containing exploit details, credentials or personal data.
+Report suspected vulnerabilities privately: use [Report a vulnerability](https://github.com/JohanSardar/apple-bridge/security/advisories/new) on GitHub, which opens a private advisory only maintainers can see. Do not open a public issue containing exploit details, credentials or personal data.
 
 Include the affected revision, platform, reproduction using synthetic data, expected behavior and observed impact. Remove tokens, personal records and private host addresses from logs and attachments. Maintainers will assess the report and coordinate a fix and disclosure in the private advisory.
 
