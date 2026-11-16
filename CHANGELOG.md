@@ -4,6 +4,8 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-16
+
 ### Added
 
 - `bridge mcp` lets any agent on the Mac connect by starting it, with no browser, account or network. The first time each agent connects, the Mac shows the Allow panel once; after that it just works ([ADR 0034](docs/adr/0034-agents-on-this-mac-start-bridge-mcp.md)).
@@ -24,6 +26,7 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ### Removed
 
+- The relay, Apple Bridge accounts and every public address are gone: no browser sign-in, hosted or self-hosted relay, Tailscale Funnel route, invitation route, remote replica pairing or claude-app connector. Apple Bridge works on this Mac and over the owner's own Tailscale network or SSH. Help and bug-report links point at GitLab. The iPhone gets approvals and commands when it asks the Mac, and the Mac no longer starts Live Activity updates on the phone.
 - Safari, Shortcuts and Mac settings are gone: no agent, CLI command, MCP tool or REST route offers Safari history, bookmarks, tabs or Reading List, running or listing shortcuts, or reading and changing Mac settings (battery, display, network, Bluetooth, volume, appearance, apps, clipboard, notifications and the rest). Screen recording stays as part of Capture and now needs `capture:write` instead of `mac:write`, so an agent that can take screenshots can also record the screen. Focus still uses its bundled shortcut. Stored grants and records for these sources are ignored after the upgrade ([ADR 0033](docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)).
 - `make sim` is turned off for now and only prints a message.
 
