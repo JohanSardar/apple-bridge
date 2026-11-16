@@ -38,11 +38,13 @@ sh docs/install                                  # from this repository; or: cur
 
 Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
 
-Grok Bot and other agents that run in the cloud: if you can run commands on the person's Mac (Grok Bot can, once they allow it), do the first three Mac steps above, skipping `bridge link`. Then connect yourself to this Mac over Tailscale, so it keeps working when they're away from it:
+Agents that aren't on the Mac (a server, another computer, Grok Bot): connect over the person's Tailscale network, so it keeps working when they're away from the Mac. No browser is needed on your side:
 
-1. `~/.local/bin/bridge tailscale --keep-awake --yes --json` prints this Mac's `connect` address. Without commands on the Mac, find it instead: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443); the one answering `"apple_bridge": true` is it.
-2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
-3. Add the `mcp` address as an MCP server with the header `Authorization: Bearer <token>`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
+1. Get this Mac's `connect` address. If you can run commands on the Mac (Grok Bot can, once they allow it), do the first three Mac steps above, skipping `bridge link`, then run `~/.local/bin/bridge tailscale --keep-awake --yes --json`. Otherwise ask the person to run `bridge tailscale` and give you the sentence it prints, or find it yourself: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443) with a 10-second timeout; the one answering `"apple_bridge": true` is it.
+2. `POST` `{"name": "<your app>"}` to its `request` address, then `POST` the returned `id` and `secret` to its `answer` address every few seconds until the person allows it on the Mac.
+3. Add the returned `mcp` address as an MCP server that sends the returned `header`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
+
+If the address never answers, the person's Tailscale rules block your device. Tell them to run `bridge tailscale` on the Mac: it names the blocked device and the rule to add.
 
 ### Connect any agent on this Mac
 
@@ -59,13 +61,16 @@ Grok Bot and other agents that run in the cloud: if you can run commands on the 
 | The Claude app | `bridge link claude-desktop` |
 | Anything else | `bridge link other` prints `{"command": "~/.applebridge/bin/bridge", "args": ["mcp"]}` |
 
-Grok Bot runs custom connectors on Grok's cloud computer, not on your Mac, so it can't reach a local Apple Bridge; `bridge link grok-bot` explains this. See [connect an agent](docs/local-setup.md#connect-an-agent).
+Agents that aren't on this Mac, such as Claude Code on a server or Grok Bot, connect over your Tailscale network or SSH instead; see below.
 
 ### Other ways to connect
 
 | From | Run on the Mac | Then |
 |---|---|---|
-| Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale. Grok Bot finds the Mac on your Tailscale network and asks; click Allow on the Mac |
+| A server, another computer, Grok Bot | `bridge tailscale` | Give the agent the sentence it prints. It asks, you click Allow once, and it gets its own key. No browser on its side |
+| A server that can SSH into this Mac | Nothing | The agent's MCP command is `ssh -T you@your-mac ~/.applebridge/bin/bridge mcp`; click Allow once |
+
+If your Tailscale rules stop a device from reaching the Mac, `bridge tailscale` names it and prints the rule to add. See [use Apple Bridge from another computer](docs/connectors/devices.md).
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 
@@ -161,7 +166,7 @@ The address above only works on that Mac. Your other devices reach it only throu
 
 Turn this on only to connect from your other devices or from a cloud agent on your Tailscale network, such as Grok Bot. Your Mac must stay awake and connected.
 
-Run `bridge tailscale`. It serves this Mac on your Tailscale network only, through Tailscale Serve, never on the public internet. Remote agents ask at the printed `/connect` address, the Mac shows an Allow panel, and the agent gets a key that works only at this Mac's Tailscale address. `bridge agents create --tailnet` makes such a key directly. `bridge tailscale --off` turns it off. See [connecting other devices](docs/connectors/devices.md).
+Run `bridge tailscale`. It serves this Mac on your Tailscale network only, through Tailscale Serve, never on the public internet, and prints a sentence to give the agent. The agent asks at the `/connect` address, the Mac shows an Allow panel naming the agent and its device, and the agent gets a key that works only at this Mac's Tailscale address. If your Tailscale rules block a device, it says which one and prints the rule to add. `bridge agents create --tailnet` makes such a key directly. `bridge tailscale --off` turns it off. See [connecting other devices](docs/connectors/devices.md).
 
 ## Approvals and safety
 

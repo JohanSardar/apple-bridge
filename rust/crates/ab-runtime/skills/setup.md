@@ -18,9 +18,9 @@ bridge tailscale --keep-awake --yes   # only for cloud agents or "even when my M
 bridge stats --wait              # counts per source as each one finishes
 ```
 
-`bridge link` adds `bridge mcp` to the agent's settings. The first time the agent starts it, the Mac shows a small Allow panel naming the agent; after the owner clicks Allow it just works. If your own MCP client isn't listed, `bridge link other` prints the config to add. Restart the agent after linking so it picks up the new server. Grok Bot can't use this: its custom connectors run on Grok's cloud computer, so use the Tailscale route below.
+`bridge link` adds `bridge mcp` to the agent's settings. The first time the agent starts it, the Mac shows a small Allow panel naming the agent; after the owner clicks Allow it just works. If your own MCP client isn't listed, `bridge link other` prints the config to add. Restart the agent after linking so it picks up the new server. Agents that aren't on the Mac, such as Grok Bot or an agent on a server, can't use this; they use the Tailscale route below, or start `bridge mcp` on the Mac over SSH.
 
-`bridge tailscale` installs and signs in to Tailscale, and `--keep-awake` asks macOS once for the owner's password or Touch ID so the Mac stays awake with the lid closed. Cloud agents such as Grok Bot then find the Mac on the owner's Tailscale network at `https://<mac>:8443/connect` (or 9443, 4443), ask, and get a key once the owner clicks Allow.
+`bridge tailscale` installs and signs in to Tailscale, and `--keep-awake` asks macOS once for the owner's password or Touch ID so the Mac stays awake with the lid closed. It prints one sentence for agents that aren't on the Mac: "Connect to Apple Bridge at `https://<mac>:8443/connect` (or 9443, 4443) and use it from now on." Such an agent asks there, gets a key once the owner clicks Allow, and needs no browser. If the owner's Tailscale rules block a device, `bridge tailscale` names it and prints the rule to add; tell the owner, and never change their rules yourself.
 
 ## Checks
 

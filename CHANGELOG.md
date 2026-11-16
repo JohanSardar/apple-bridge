@@ -8,7 +8,10 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 - `bridge mcp` lets any agent on the Mac connect by starting it, with no browser, account or network. The first time each agent connects, the Mac shows the Allow panel once; after that it just works ([ADR 0034](docs/adr/0034-agents-on-this-mac-start-bridge-mcp.md)).
 - `bridge link` sets this up in one line for Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode and the Claude app. `bridge link other` prints the config for any other agent. The install page has Add to Cursor and Install in VS Code buttons.
-- `bridge link grok-bot` explains that Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach Apple Bridge on the Mac.
+- `bridge link grok-bot` explains that Grok Bot runs custom connectors on Grok's cloud computer and connects over the Tailscale route instead.
+- Agents that aren't on the Mac use a private network and a key ([ADR 0035](docs/adr/0035-agents-off-the-mac-use-a-private-network-and-a-key.md)). `bridge tailscale` prints one sentence to give a server's agent, another computer or Grok Bot. The agent asks, the owner clicks Allow once, and `/connect/answer` returns the key with the MCP address and header, so nothing on its side needs a browser. The Allow panel names the device the request came from.
+- `bridge tailscale` reads this Mac's Tailscale access rules, names each device they stop from reaching the route, and prints the exact rule to add. When such a device can already reach the Mac over SSH, it prints the SSH command instead.
+- An agent can start `bridge mcp` on the Mac over plain SSH. The Mac asks once and names where the SSH connection came from.
 
 ### Changed
 
@@ -17,6 +20,7 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 ### Fixed
 
 - Allow and Don't Allow in the Mac panel failed for about a third of agent requests, whose code contained `-` or `_`.
+- An agent allowed in the Mac panel got write scopes only, so every read was refused. It now gets read and write, as the panel says.
 
 ### Removed
 

@@ -334,6 +334,92 @@ fn keep_awake(home: &Path, on: bool) -> Outcome {
     })
 }
 
+fn route_port(url: &str) -> u16 {
+    url.trim_start_matches("https://")
+        .rsplit_once(':')
+        .and_then(|(_, port)| port.parse().ok())
+        .unwrap_or(443)
+}
+
+fn ask_sentence(connect: &str) -> String {
+    format!("Connect to Apple Bridge at {connect} and use it from now on.")
+}
+
+fn ssh_command(home: &Path, url: &str) -> Option<String> {
+    let listening = std::net::TcpStream::connect_timeout(
+        &std::net::SocketAddr::from(([127, 0, 0, 1], ab_remote::reach::SSH_PORT)),
+        Duration::from_millis(300),
+    )
+    .is_ok();
+    let user = std::env::var("USER").ok().filter(|user| !user.is_empty())?;
+    let host = url
+        .trim_start_matches("https://")
+        .split([':', '/'])
+        .next()?;
+    let launch = super::link::Launch::for_home(home);
+    let mut remote = vec![launch.command];
+    remote.extend(launch.args);
+    listening.then(|| {
+        ui::shell_line(&[
+            "ssh".to_owned(),
+            "-T".to_owned(),
+            format!("{user}@{host}"),
+            ui::shell_line(&remote),
+        ])
+    })
+}
+
+fn names(devices: &[&ab_remote::reach::Device]) -> String {
+    let mut shown: Vec<String> = devices
+        .iter()
+        .take(8)
+        .map(|device| {
+            if device.online {
+                device.name.clone()
+            } else {
+                format!("{} (offline)", device.name)
+            }
+        })
+        .collect();
+    if devices.len() > 8 {
+        shown.push(format!("and {} more", devices.len() - 8));
+    }
+    shown.join(", ")
+}
+
+fn explain_reach(reach: &ab_remote::reach::Reach, ssh: Option<&str>) {
+    let Some(rule) = reach.rule_text() else {
+        return;
+    };
+    ui::blank();
+    let blocked: Vec<_> = reach.blocked.iter().collect();
+    let allowed: Vec<_> = reach.allowed.iter().collect();
+    ui::warn(
+        "blocked_by_tailscale_rules",
+        &format!(
+            "Your Tailscale access rules don't let {} reach this Mac on port {}. A connection from there waits and then fails without an answer.",
+            names(&blocked),
+            reach.port
+        ),
+    );
+    if !allowed.is_empty() {
+        ui::note(&format!("Allowed now: {}.", names(&allowed)));
+    }
+    ui::note(&format!(
+        "To let them in, add this rule to \"acls\" in your Tailscale policy file at {}, then run bridge tailscale again to check:",
+        ab_remote::reach::POLICY_FILE
+    ));
+    ui::err_line(&format!("    {rule}"));
+    let over_ssh: Vec<_> = reach.blocked.iter().filter(|device| device.ssh).collect();
+    if let (Some(ssh), false) = (ssh, over_ssh.is_empty()) {
+        ui::note(&format!(
+            "{} can already reach this Mac over SSH. An agent there can start Apple Bridge over SSH instead, with this as its MCP command:",
+            names(&over_ssh)
+        ));
+        ui::err_line(&format!("    {ssh}"));
+    }
+}
+
 pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     if args.off {
         turn_off(home).await?;
@@ -349,22 +435,51 @@ pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
     }
     let mcp = format!("{url}/mcp");
     let connect = format!("{url}/connect");
+    let reach = ab_remote::reach::reach(&ab_remote::localapi::LocalApi::Discover, route_port(&url))
+        .await
+        .ok();
+    let ssh = ssh_command(home, &url);
     if Modes::get().json {
-        ui::json_document(serde_json::json!({"outcome": "on", "mcp": mcp, "connect": connect}));
+        ui::json_document(serde_json::json!({
+            "outcome": "on",
+            "mcp": mcp,
+            "connect": connect,
+            "ask": ask_sentence(&connect),
+            "reach": reach.as_ref().map(|reach| serde_json::json!({
+                "port": reach.port,
+                "allowed": reach.allowed,
+                "blocked": reach.blocked,
+                "rule": reach.rule(),
+                "policy": ab_remote::reach::POLICY_FILE,
+            })),
+            "ssh": ssh,
+        }));
         return Ok(());
     }
     if !Modes::get().stdout_tty() {
-        ui::outln(&mcp);
+        ui::outln(&connect);
     }
+    let blocked = reach
+        .as_ref()
+        .is_some_and(|reach| !reach.blocked.is_empty());
     ui::receipt(
         "On",
-        &mcp,
-        "Your devices on Tailscale can reach Apple Bridge now.",
+        &connect,
+        if blocked {
+            "Apple Bridge is on your Tailscale network now, for the devices your Tailscale rules let in."
+        } else {
+            "Your devices on Tailscale can reach Apple Bridge now."
+        },
     );
     ui::blank();
-    ui::note(&format!(
-        "Cloud agents such as Grok Bot find this Mac on your Tailscale network at {connect}. They ask on this Mac first, and you click Allow."
-    ));
+    ui::note("To connect an agent on another computer, a server or Grok Bot, tell it:");
+    ui::err_line(&format!("    {}", ask_sentence(&connect)));
+    ui::note(
+        "It asks this Mac, you click Allow once, and it gets its own key. Nothing on its side needs a browser.",
+    );
+    if let Some(reach) = &reach {
+        explain_reach(reach, ssh.as_deref());
+    }
     ui::next_steps(&[Step::new("Turn it off", ["bridge", "tailscale", "--off"])]);
     Ok(())
 }
