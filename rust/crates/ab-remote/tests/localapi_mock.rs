@@ -165,6 +165,26 @@ async fn adds_and_removes_over_tcp_with_basic_auth() {
 }
 
 #[tokio::test]
+async fn tailnet_route_skips_a_port_with_public_exposure_enabled() {
+    let (port, state) = serve(
+        "t",
+        json!({"AllowFunnel":{"node.example.ts.net:8443":true}}),
+        false,
+    )
+    .await;
+    let home = tempfile::tempdir().unwrap();
+    let tailscale = Tailscale::tcp(home.path().to_owned(), port, "t".into());
+    let lease = tailscale.add("http://127.0.0.1:9/secret").await.unwrap();
+    let config = state.lock().unwrap().config.clone();
+    let host = format!("{}:{}", lease.host, lease.port);
+    assert_ne!(
+        config["AllowFunnel"][host],
+        json!(true),
+        "the private route was assigned a publicly enabled port: {config}"
+    );
+}
+
+#[tokio::test]
 async fn wrong_token_is_rejected() {
     let (port, _) = serve("right", json!({}), false).await;
     let home = tempfile::tempdir().unwrap();

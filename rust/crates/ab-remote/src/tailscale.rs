@@ -31,7 +31,7 @@ fn section<'a>(value: &'a Value, key: &str) -> Result<Option<&'a serde_json::Map
 }
 fn port_used(value: &Value, port: u16) -> Result<bool> {
     let p = port.to_string();
-    for key in ["TCP", "Web"] {
+    for key in ["TCP", "Web", "AllowFunnel"] {
         if let Some(map) = section(value, key)?
             && map.keys().any(|k| *k == p || k.ends_with(&format!(":{p}")))
         {
