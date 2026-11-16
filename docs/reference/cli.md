@@ -10,8 +10,9 @@ Connect local agents such as Claude Code and Codex to your Mac's Apple data
 
 Getting started:
   up           Start Apple Bridge on this Mac for local agents
-  link         Connect Claude Code or Codex to this Mac
-  unlink       Disconnect Claude Code or Codex
+  link         Connect an agent on this Mac, such as Claude Code, Codex or Cursor
+  unlink       Disconnect an agent that bridge link connected
+  mcp          Talk MCP over stdin and stdout; agents on this Mac launch this
   permissions  Check or allow the Mac permissions Apple Bridge reads with
   stats        Show how much each source has synced, as counts only
   down         Stop a gateway that bridge up started
@@ -97,21 +98,20 @@ Notes:
 ## bridge link
 
 ```text
-bridge link <CLIENT> [options]
-Connect Claude Code or Codex to this Mac
+bridge link <AGENT> [options]
+Connect an agent on this Mac, such as Claude Code, Codex or Cursor
 
 Arguments:
-  <CLIENT>  Which agent to connect (accepted: claude, codex, claude-app, other)
+  <AGENT>  Which agent to connect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
+           opencode, claude-desktop, grok-bot, claude-app, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
-  --no-login            Register only; sign in later from the agent
-  --no-open             Print the sign-in address instead of opening a browser
-  --print               Print the agent's commands instead of running them
+  --print               Print the agent's setup instead of applying it
   --scope <SCOPE>       Claude Code only: where Claude Code saves the registration. This isn't
-                        access; you grant access when you sign in (accepted: user, project, local)
+                        access; you allow access on your Mac (accepted: user, project, local)
                         (default: user)
-  --timeout <DURATION>  Stop waiting for sign-in after this long (default: 10m)
+  --timeout <DURATION>  Stop waiting for the agent's own commands after this long (default: 30s)
 
 Global options: see bridge --help
 
@@ -119,22 +119,35 @@ Examples:
   Connect Claude Code
     bridge link claude
 
-  Print the commands to run yourself
+  Connect Cursor
+    bridge link cursor
+
+  Print the setup to apply yourself
     bridge link codex --print
 
+  Print the setup for any other agent
+    bridge link other
+
 Notes:
-  Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.
-  Piped, stdout holds only the server name; bridge link other prints only the MCP address.
+  The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the
+  Apple Bridge Allow panel once; nothing opens a browser.
+  Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed,
+  OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its
+  install link, and Goose opens its install link.
+  Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach this Mac; bridge link
+  grok-bot explains this and changes nothing.
+  Piped, stdout holds only the server name; bridge link other prints only the config.
 ```
 
 ## bridge unlink
 
 ```text
-bridge unlink <CLIENT> [options]
-Disconnect Claude Code or Codex
+bridge unlink <AGENT> [options]
+Disconnect an agent that bridge link connected
 
 Arguments:
-  <CLIENT>  Which agent to disconnect (accepted: claude, codex, claude-app, other)
+  <AGENT>  Which agent to disconnect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
+           opencode, claude-desktop, grok-bot, claude-app, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -149,9 +162,29 @@ Examples:
     bridge unlink claude
 
 Notes:
-  This removes the agent's registration. To end its access on this Mac too, revoke it with bridge
-  agents revoke.
+  This removes the agent's registration from Claude Code, Codex, Gemini CLI, Cursor, Zed, OpenCode
+  or the Claude app. Remove it from other agents in their own settings.
+  To end its access on this Mac too, revoke it with bridge agents revoke.
   Piped, stdout holds only the removed server name.
+```
+
+## bridge mcp
+
+```text
+bridge mcp [options]
+Talk MCP over stdin and stdout; agents on this Mac launch this
+
+Global options: see bridge --help
+
+Examples:
+  What an agent's config runs
+    bridge mcp
+
+Notes:
+  Agents launch this; you don't run it yourself. It speaks MCP as JSON lines on stdin and stdout and
+  forwards to the Apple Bridge running on this Mac.
+  The first time an agent connects, the Mac asks you to Allow it once. The approval is remembered
+  for that agent, and bridge agents revoke ends it.
 ```
 
 ## bridge permissions

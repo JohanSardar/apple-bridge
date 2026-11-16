@@ -27,7 +27,7 @@ Your data stays in `~/Library/Application Support/AppleBridge`, including a copy
 ```sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge permissions guide    # a small window walks you through the Mac permissions
-bridge link claude          # connect Claude Code. Or: bridge link codex
+bridge link claude          # connect Claude Code. Or: codex, cursor, vscode, zed, gemini, goose, opencode, claude-desktop, other
 bridge stats --wait         # counts per source, as each one finishes
 ```
 
@@ -39,7 +39,7 @@ Local is the default. The others are off until you turn them on with one command
 
 | Way | Who connects | How | Needs |
 |---|---|---|---|
-| On this Mac, the default | Agents on this Mac: Claude Code, Codex, other apps and bots | `bridge link claude` or `bridge link codex`. For anything else, `bridge link other` prints the details | Nothing else |
+| On this Mac, the default | Agents on this Mac: Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode, the Claude app and any other MCP agent | `bridge link <agent>`. For anything else, `bridge link other` prints the config | Nothing else. The Mac asks you to Allow each new agent once |
 | Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge tailscale` | A Tailscale account; it installs and starts Tailscale on this Mac |
 | Cloud chats, opt-in | The Claude app, claude.ai, ChatGPT and other MCP apps that can't join Tailscale | `bridge link claude-app` | A Tailscale account. It opens a public address through Tailscale Funnel |
 | Your own relay | Anyone who runs their own server | `bridge relay setup root@server --domain bridge.example.com` | [Your own server](self-host.md) |
@@ -58,30 +58,49 @@ Run `bridge down` before updating or uninstalling. Moving, replacing or deleting
 
 ## Connect an agent
 
-`bridge link claude` adds the server to Claude Code, then signs in through your browser. The page says "Approve on your Mac" and a small Apple Bridge panel asks you to Allow. If both show a four-digit code, more than one app is asking at once: allow only the one whose code matches. When Claude Code runs `bridge link claude` itself, there is no browser: the panel asks, you click Allow, and Claude Code gets a key; restart Claude Code or run `/mcp` to load it. Without the app, `bridge link` prints the command to run in another terminal:
+Agents on this Mac start Apple Bridge themselves with one local command, `bridge mcp`. Nothing opens a browser, and nothing needs an account or a network. The first time a given agent connects, the Mac shows the small Apple Bridge panel: "Allow “Cursor” to use your Mac?". Click Allow once; after that the agent just works, including after restarts. Don't Allow keeps it out.
 
-```sh
-bridge connectors allow --request <id> --code <code>
+| Agent | Run on the Mac | What it does |
+|---|---|---|
+| Claude Code | `bridge link claude` | `claude mcp add` |
+| Codex | `bridge link codex` | `codex mcp add` |
+| Gemini CLI | `bridge link gemini` | `gemini mcp add` |
+| Cursor | `bridge link cursor` | Adds it to `~/.cursor/mcp.json` |
+| Visual Studio Code | `bridge link vscode` | `code --add-mcp`, or opens VS Code's install link |
+| Zed | `bridge link zed` | Adds it to `~/.config/zed/settings.json` |
+| OpenCode | `bridge link opencode` | Adds it to `~/.config/opencode/opencode.json` |
+| Goose | `bridge link goose` | Opens Goose's install link |
+| The Claude app | `bridge link claude-desktop` | Adds it to the Claude app's config. Quit and reopen it |
+| Anything else | `bridge link other` | Prints the config to paste |
+
+Every other MCP agent on this Mac uses the same setup, which `bridge link other` prints:
+
+```json
+{"mcpServers": {"apple-bridge": {"command": "/Users/you/.applebridge/bin/bridge", "args": ["mcp"]}}}
 ```
+
+`bridge link` only edits a config file it can read as plain JSON; comment lines at the top are kept. For a file with comments elsewhere it changes nothing and prints the lines to add. Running it again is safe: it says "Already added", and it replaces an older Apple Bridge entry with the same name, such as the address `http://127.0.0.1:7780/mcp` that earlier versions registered.
 
 | Option | What it does |
 |---|---|
-| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code then asks you to approve it once: run `claude` in that folder, choose "Use this MCP server", and run `bridge link` again. The default, `user`, works in every project with no extra step. On 2026-11-05 a script drove this two-step path through sign-in on a Linux debug build of the current code with Claude Code 2.1.318, ending at `Connected`. It did not go on to a read by Claude Code, and it has not been repeated on a Mac |
+| `--scope project` | Claude Code only: save it in this project's `.mcp.json`. Claude Code asks you to approve project servers the first time it starts there. The default, `user`, works in every project |
 | `--name NAME` | Use another name in the agent |
-| `--no-login` | Add the server now and sign in later with `claude mcp login apple-bridge` |
-| `--no-open` | Print the sign-in address instead of opening a browser. Claude Code then asks you to paste the final address back. The old spelling `--no-browser` still works |
-| `--timeout DURATION` | Stop waiting for sign-in after this long, such as `5m` (default `10m`). The server stays registered |
-| `--print` | Show the agent's commands and run nothing |
+| `--print` | Show the agent's command, config or install link and change nothing |
+| `--timeout DURATION` | Stop waiting for the agent's own `mcp add` command after this long (default `30s`) |
 
-Without a terminal, for example when an agent runs it, `bridge link` adds the server and prints the sign-in command for you to run. It never allows a request itself.
+To undo it: `bridge unlink claude`, or the name of another agent whose config it edits. To end that agent's access on this Mac as well, run `bridge agents list`, then `bridge agents revoke <id>`. A revoked agent sees the Allow panel again the next time it starts.
 
-To undo it: `bridge unlink claude`. To end that agent's access on this Mac as well, run `bridge agents list`, then `bridge agents revoke <id>`.
+When you allow an agent you choose nothing else: it can read and change Apple data, and its changes happen right away, with no further approval. That includes screenshots, recordings, camera photos, current location, Focus and Photos changes. To have an agent ask you before each change instead, run `bridge agents list`, then `bridge agents update <id> --level approve`; `--level full` switches it back. See [connector approvals](connectors/approvals.md).
 
-When you allow a request you choose nothing else: the agent can read and change what it asked for, and its changes happen right away, with no further approval. That includes screenshots, recordings, camera photos, current location, Focus and Photos changes. To have an agent ask you before each change instead, run `bridge agents list`, then `bridge agents update <id> --level approve`; `--level full` switches it back. Apps connected before this version act at once too. See [connector approvals](connectors/approvals.md).
+`bridge mcp` remembers each allowed agent by the name the agent reports and the app it runs in, such as "Claude Code in Ghostty". The key it was given stays in `local-agents/` in the data folder, readable only by you. If Apple Bridge isn't running, the agent's tools answer "Apple Bridge isn't running on this Mac"; run `bridge up`.
+
+### Grok Bot
+
+Grok Bot can't use Apple Bridge through a custom connector on this Mac. Grok Bot starts a Command connector on Grok's own cloud computer, not on your Mac, and it calls a Remote HTTPS connector from Grok's servers, which can't reach `127.0.0.1`. On 2026-11-16 a Command connector added in Grok Bot on this Mac never started here; the bot reported that its script "doesn't exist on my computer". `bridge link grok-bot` explains this and changes nothing. Grok Bot's built-in Messages connector does run on the Mac.
 
 ## Other apps and bots
 
-`bridge link other` prints the address. Apps that support MCP sign-in work the same way as Claude Code. For a bot without sign-in, create a token with the least access it needs:
+Agents that speak MCP over HTTP instead of starting a command can use `http://127.0.0.1:7780/mcp` with a token. Create one with the least access it needs:
 
 ```sh
 bridge agents create --name my-bot --level read --scope messages:read,contacts:read
@@ -180,7 +199,24 @@ Neither includes the time to read Apple's own stores, or attachments. So expect 
 
 ## What has been proven
 
-Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setup-proof.py) on an 8 GB MacBook Air, with a release build and Claude Code 2.1.318, running the default `bridge link claude`.
+### Agents starting `bridge mcp` (2026-11-16)
+
+On a Mac with macOS 26, a debug build of this change ran against a throw-away home and port with no Helper attached, so no panel could appear on the screen. Requests were allowed with `bridge connectors allow`, the same decision the panel's Allow button makes. Each agent ran headless from a scratch folder, so no real agent configuration changed.
+
+| Agent | First connection | Next connection |
+|---|---|---|
+| Claude Code (`claude -p`, Haiku) | Asked once as "Claude Code in T3 Code (Nightly)"; allowed 5 s in; answered with its agent id from `apple_status` 12 s after start | No request; same agent id |
+| Codex (`codex exec`) | Asked once as "Codex in …"; answered with its agent id 9 s after start | No request; same agent id |
+| Cursor (`cursor-agent -p`) | Asked once as "Cursor in …"; answered with its agent id | Not repeated |
+| Gemini CLI, OpenCode | `gemini mcp list` and `opencode mcp list` showed the server connected | Their models couldn't run on this account, so no tool call was made |
+
+`bridge mcp` answers `initialize` in about 20 ms and lists the tools at once, before Allow is clicked, so no agent times out while the panel waits. A tool call waits up to 50 s for the click, then tells the agent to try again. After Allow it sends `notifications/tools/list_changed` when the agent's real tool list differs. A revoked agent asked again on its next start. With Apple Bridge stopped, a tool call answered "Apple Bridge isn't running on this Mac" at once.
+
+`bridge link` was run for every agent against a throw-away `HOME`: Claude Code, Codex and Gemini CLI listed the server as connected through their own `mcp get` or `mcp list`; the Cursor, Zed, OpenCode and Claude app files held the entry; an older `http://127.0.0.1:7780/mcp` entry in Claude Code was replaced; and `bridge unlink` removed each one. VS Code and Goose were only printed: neither is installed on that Mac, and opening their links would have launched an app.
+
+### Browser sign-in, before `bridge mcp`
+
+Earlier versions signed agents in through a browser. Measured with [`packaging/dev/local-setup-proof.py`](../packaging/dev/local-setup-proof.py) on an 8 GB MacBook Air, with a release build and Claude Code 2.1.318, running the default `bridge link claude`.
 
 | Step | Fresh, empty home | Fresh home, test copy of data (195,243 records) |
 |---|---|---|

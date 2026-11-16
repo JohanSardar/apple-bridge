@@ -1,6 +1,6 @@
 # Connecting other devices and cloud chats
 
-Agents on your Mac use `http://127.0.0.1:7780/mcp` and need nothing else. This page is for everything else. Each way is one command on the Mac, and every new connection still needs you to click Allow in the small Apple Bridge window.
+Agents on your Mac connect with `bridge link <agent>`, which has them start `bridge mcp` ([connect an agent](../local-setup.md#connect-an-agent)). This page is for everything else. Each way is one command on the Mac, and every new connection still needs you to click Allow in the small Apple Bridge window.
 
 | You want to use Apple Bridge from | Run on the Mac | Private? |
 |---|---|---|

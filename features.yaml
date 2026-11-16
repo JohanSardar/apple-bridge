@@ -50,9 +50,10 @@ features:
     modules: [rust/crates/ab-runtime]
     depends_on: [core.permissions]
     status: done
-    notes: Sim drives the real CLI against a real gateway and an independent peer. The real Claude Code connection proof ran by hand on a test copy of data; see docs/local-setup.md. The real Helper path of the permission guide is tested only through a fixture, because a real run would prompt.
+    notes: Sim drives the real CLI against a real gateway and an independent peer. The real Helper path of the permission guide is tested only through a fixture, because a real run would prompt. SETUP-AGENT-STDIO (2026-11-16, ADR 0034) ran real Claude Code, Codex and Cursor agents through bridge mcp against a test gateway; each asked once and then read, and a second start did not ask. Gemini CLI and OpenCode connected but their models could not run on the available accounts. The Helper's Allow panel was shown and pressed, Allow and Don't Allow, inside a macOS 26.6.2 VM. VS Code, Zed and Goose are not installed on the test Mac, so bridge link wrote or printed their config without running them. Grok Bot runs custom connectors on its cloud computer and cannot reach the Mac.
     scenarios:
       - {id: SETUP-LOCAL-CLI, levels: [sim]}
+      - {id: SETUP-AGENT-STDIO, levels: [real]}
   - id: core.shortcuts
     title: Deterministic workflow compilation and macOS shortcut signing
     requirements: [R-PKG]

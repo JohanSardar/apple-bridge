@@ -651,15 +651,7 @@ fn link_stops_a_slow_client_at_the_deadline_and_reaps_it() -> Check {
     let began = Instant::now();
     let output = bridge()
         .env("PATH", with_path(bin.path()))
-        .args([
-            "link",
-            "claude",
-            "--no-login",
-            "--timeout",
-            "1s",
-            "--json",
-            "--home",
-        ])
+        .args(["link", "claude", "--timeout", "1s", "--json", "--home"])
         .arg(home.path())
         .output()?;
     assert!(
@@ -688,51 +680,31 @@ fn link_prints_commands_on_their_own_lines_and_a_json_document() -> Check {
     let home = short_home()?;
     seeded_home(home.path())?;
     let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
-    let runtime: Value = serde_json::from_slice(&std::fs::read(home.path().join("runtime.json"))?)?;
-    let url = format!(
-        "http://{}/mcp",
-        runtime["api_address"].as_str().ok_or("address")?
-    );
     let bin = short_home()?;
-    fake_program(
-        bin.path(),
-        "claude",
-        &format!("if [ \"$2\" = get ]; then echo \"apple-bridge: {url}\"; fi\nexit 0"),
-    )?;
+    fake_program(bin.path(), "claude", "exit 0")?;
     let output = bridge()
         .env("PATH", with_path(bin.path()))
         .env("COLUMNS", "40")
-        .args(["link", "claude", "--no-login", "--home"])
+        .args(["link", "claude", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let stderr = text(&output.stderr);
-    assert!(
-        stderr
-            .lines()
-            .any(|line| line.starts_with("  bridge skills get core")),
-        "{stderr}"
-    );
-    assert!(
-        stderr
-            .lines()
-            .any(|line| line == "  claude mcp login apple-bridge"),
-        "{stderr}"
-    );
-    assert!(!stderr.contains("--no-browser"), "{stderr}");
+    assert!(stderr.contains("click Allow"), "{stderr}");
     let output = bridge()
         .env("PATH", with_path(bin.path()))
-        .args(["link", "claude", "--no-login", "--json", "--home"])
+        .args(["link", "claude", "--json", "--home"])
         .arg(home.path())
         .output()?;
     let document: Value = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(document["outcome"], "registered");
-    assert_eq!(document["url"], url.as_str());
+    assert_eq!(document["outcome"], "added");
+    assert_eq!(document["args"][0], "mcp");
+    assert_eq!(document["running"], true);
     let printed = run(home.path(), &["link", "claude", "--print"])?;
-    assert_eq!(text(&printed.stdout).lines().count(), 2);
+    assert_eq!(text(&printed.stdout).lines().count(), 1);
     let printed = run(home.path(), &["link", "claude", "--print", "--json"])?;
     let document: Value = serde_json::from_slice(&printed.stdout)?;
-    assert_eq!(document["login"]["argv"][0], "claude");
+    assert_eq!(document["argv"][0], "claude");
     let output = bridge()
         .env("PATH", with_path(bin.path()))
         .args(["unlink", "claude", "--json", "--home"])

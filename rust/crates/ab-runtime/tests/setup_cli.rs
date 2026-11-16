@@ -63,7 +63,7 @@ fn fake_tool(directory: &Path, name: &str) -> Result<PathBuf, std::io::Error> {
     std::fs::write(
         &path,
         format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ]; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ] && {{ [ \"$FAKE_ADD_WAITS\" != 1 ] || grep -q '^mcp add ' '{}'; }}; then echo \"URL: $FAKE_URL\"; echo \"$FAKE_STATUS\"; fi\nif [ \"$2\" = add ] && [ \"$FAKE_ADD_WAITS\" = 1 ]; then sleep 60; fi\nexit 0\n",
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{}'\nif [ \"$FAKE_EXISTS\" = 1 ] && [ \"$2\" = add ] && ! grep -q '^mcp remove ' '{}'; then echo 'MCP server apple-bridge already exists in user config' >&2; exit 1; fi\nif [ \"$2\" = get ]; then echo \"URL: $FAKE_URL\"; fi\nexit 0\n",
             log.display(),
             log.display()
         ),
@@ -128,7 +128,6 @@ fn every_failure_names_what_went_wrong() -> Check {
         (&["status"], "isn't set up", 1),
         (&["doctor"], "isn't set up", 1),
         (&["stats"], "isn't set up", 1),
-        (&["link", "claude"], "isn't running", 1),
         (&["read", "messages"], "isn't running", 1),
         (&["connector", "pending"], "isn't running", 1),
         (
@@ -371,14 +370,15 @@ fn down_refuses_a_gateway_it_did_not_start() -> Check {
 }
 
 #[test]
-fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
+fn link_registers_each_agent_to_launch_bridge_mcp() -> Check {
     let tools = tempfile::tempdir()?;
     let claude_log = fake_tool(tools.path(), "claude")?;
     let codex_log = fake_tool(tools.path(), "codex")?;
     let home = tempfile::tempdir()?;
     let api = free_port()?;
     let (_guard, _) = up(home.path(), &api)?;
-    let url = format!("http://{api}/mcp");
+    let bridge_path = env!("CARGO_BIN_EXE_bridge");
+    let launch = format!("{bridge_path} mcp --home {}", home.path().display());
     let path = format!(
         "{}:{}",
         tools.path().display(),
@@ -387,7 +387,7 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     let link = |arguments: &[&str]| {
         bridge()
             .env("PATH", &path)
-            .env("FAKE_URL", &url)
+            .env("HOME", tools.path())
             .args(arguments)
             .arg("--home")
             .arg(home.path())
@@ -398,26 +398,21 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     let calls = std::fs::read_to_string(&claude_log)?;
     assert_eq!(
         calls.lines().next(),
-        Some(format!("mcp add --transport http --scope user apple-bridge {url}").as_str())
+        Some(format!("mcp add --scope user apple-bridge -- {launch}").as_str())
     );
     assert!(!calls.contains("mcp login"));
-    assert!(text(&claude.stderr).contains("claude mcp login apple-bridge"));
+    assert!(text(&claude.stderr).contains("click Allow"));
     assert_eq!(text(&claude.stdout), "apple-bridge\n");
 
     let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
     assert!(project.status.success());
-    assert!(std::fs::read_to_string(&claude_log)?.contains(&format!("--scope project ab {url}")));
+    assert!(
+        std::fs::read_to_string(&claude_log)?.contains(&format!("--scope project ab -- {launch}"))
+    );
 
-    let codex = bridge()
-        .env("PATH", &path)
-        .env("FAKE_URL", &url)
-        .env("FAKE_ADD_WAITS", "1")
-        .args(["link", "codex", "--home"])
-        .arg(home.path())
-        .output()?;
+    let codex = link(&["link", "codex"])?;
     assert!(codex.status.success(), "{}", text(&codex.stderr));
-    assert!(text(&codex.stderr).contains("codex mcp login apple-bridge"));
-    let expected_add = format!("mcp add apple-bridge --url {url}");
+    let expected_add = format!("mcp add apple-bridge -- {launch}");
     assert!(
         std::fs::read_to_string(&codex_log)?
             .lines()
@@ -425,66 +420,43 @@ fn link_registers_each_agent_without_a_terminal_and_never_approves() -> Check {
     );
 
     let print = link(&["link", "codex", "--print"])?;
-    assert_eq!(
-        text(&print.stdout),
-        format!("codex mcp add apple-bridge --url {url}\ncodex mcp login apple-bridge\n")
+    assert!(
+        text(&print.stdout).starts_with("codex mcp add apple-bridge -- "),
+        "{}",
+        text(&print.stdout)
     );
 
+    let cursor = link(&["link", "cursor"])?;
+    assert!(cursor.status.success(), "{}", text(&cursor.stderr));
+    let saved: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(tools.path().join(".cursor/mcp.json"))?)?;
+    assert_eq!(saved["mcpServers"]["apple-bridge"]["command"], bridge_path);
+    assert_eq!(saved["mcpServers"]["apple-bridge"]["args"][0], "mcp");
+    let again = link(&["link", "cursor"])?;
+    assert!(text(&again.stderr).contains("already in Cursor"));
+
     let other = link(&["link", "other"])?;
-    assert_eq!(text(&other.stdout).trim(), url);
-    let other = link(&["link", "other", "--print"])?;
-    assert_eq!(text(&other.stdout), format!("{url}\n"));
+    let config: serde_json::Value = serde_json::from_slice(&other.stdout)?;
+    assert_eq!(config["mcpServers"]["apple-bridge"]["command"], bridge_path);
+
+    let grok = link(&["link", "grok-bot"])?;
+    assert_eq!(grok.status.code(), Some(1));
+    assert!(text(&grok.stderr).contains("cloud computer"));
 
     let unlink = bridge()
         .env("PATH", &path)
+        .env("HOME", tools.path())
         .args(["unlink", "claude"])
         .output()?;
     assert!(unlink.status.success(), "{}", text(&unlink.stderr));
     assert_eq!(text(&unlink.stdout), "apple-bridge\n");
     let calls = std::fs::read_to_string(&claude_log)?;
-    assert!(calls.contains("mcp logout apple-bridge"));
-    assert!(calls.contains("mcp remove apple-bridge --scope user"));
+    assert!(calls.contains("mcp remove --scope user apple-bridge"));
     Ok(())
 }
 
 #[test]
-fn link_accepts_the_same_server_and_refuses_a_different_one() -> Check {
-    let tools = tempfile::tempdir()?;
-    fake_tool(tools.path(), "claude")?;
-    let home = tempfile::tempdir()?;
-    let api = free_port()?;
-    let (_guard, _) = up(home.path(), &api)?;
-    let path = format!(
-        "{}:{}",
-        tools.path().display(),
-        std::env::var("PATH").unwrap_or_default()
-    );
-    let link = |existing_url: String| {
-        bridge()
-            .env("PATH", &path)
-            .env("FAKE_EXISTS", "1")
-            .env("FAKE_URL", existing_url)
-            .args(["link", "claude", "--no-login", "--home"])
-            .arg(home.path())
-            .output()
-    };
-    let same = link(format!("http://{api}/mcp"))?;
-    assert!(same.status.success(), "{}", text(&same.stderr));
-    assert!(text(&same.stderr).contains("apple-bridge is already in Claude Code at"));
-    let different = link("http://elsewhere.example/mcp".to_owned())?;
-    assert_eq!(different.status.code(), Some(1));
-    assert!(text(&different.stderr).contains("different server"));
-    assert_eq!(
-        link("http://elsewhere.example/mcp".to_owned())?
-            .status
-            .code(),
-        Some(1)
-    );
-    Ok(())
-}
-
-#[test]
-fn link_waits_for_claude_code_to_approve_a_project_server() -> Check {
+fn link_replaces_its_old_address_and_refuses_a_different_server() -> Check {
     let tools = tempfile::tempdir()?;
     let log = fake_tool(tools.path(), "claude")?;
     let home = tempfile::tempdir()?;
@@ -495,22 +467,45 @@ fn link_waits_for_claude_code_to_approve_a_project_server() -> Check {
         tools.path().display(),
         std::env::var("PATH").unwrap_or_default()
     );
+    let link = |existing: String| {
+        bridge()
+            .env("PATH", &path)
+            .env("FAKE_EXISTS", "1")
+            .env("FAKE_URL", existing)
+            .args(["link", "claude", "--home"])
+            .arg(home.path())
+            .output()
+    };
+    let old = link(format!("http://{api}/mcp"))?;
+    assert!(old.status.success(), "{}", text(&old.stderr));
+    assert!(std::fs::read_to_string(&log)?.contains("mcp remove --scope user apple-bridge"));
+    std::fs::write(&log, "")?;
+    let different = link("https://elsewhere.example/mcp".to_owned())?;
+    assert_eq!(different.status.code(), Some(1));
+    assert!(text(&different.stderr).contains("different server"));
+    Ok(())
+}
+
+#[test]
+fn review_link_zed_accepts_zeds_initial_settings() -> Check {
+    let home = tempfile::tempdir()?;
+    let user = tempfile::tempdir()?;
+    let config_home = user.path().join(".config");
+    let settings = config_home.join("zed/settings.json");
+    std::fs::create_dir_all(settings.parent().ok_or("settings parent")?)?;
+    std::fs::write(
+        &settings,
+        "// Zed settings\n{\n  \"ui_font_size\": 16,\n  \"buffer_font_size\": 15,\n  \"theme\": {\n    \"mode\": \"system\",\n    \"light\": \"One Light\",\n    \"dark\": \"One Dark\",\n  },\n}\n",
+    )?;
     let output = bridge()
-        .env("PATH", &path)
-        .env("FAKE_STATUS", "Status: ⏸ Pending approval")
-        .args([
-            "link",
-            "claude",
-            "--scope",
-            "project",
-            "--no-browser",
-            "--home",
-        ])
+        .env("HOME", user.path())
+        .env("XDG_CONFIG_HOME", &config_home)
+        .args(["link", "zed", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stderr).contains("approve project servers first"));
-    assert!(!std::fs::read_to_string(&log)?.contains("mcp login"));
+    let saved = std::fs::read_to_string(settings)?;
+    assert!(saved.contains("apple-bridge"), "{saved}");
     Ok(())
 }
 

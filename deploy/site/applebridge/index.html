@@ -69,7 +69,7 @@
 <article class="step">
 <h3>Connect your agent</h3>
 <code>bridge link claude</code>
-<p>Use <code>bridge link codex</code> for Codex. Follow the browser connection flow and approve the connection.</p>
+<p>Use <code>bridge link codex</code>, <code>cursor</code>, <code>gemini</code> or another agent’s name. The first time the agent starts Apple Bridge, click Allow on your Mac once.</p>
 </article>
 <article class="step">
 <h3>Choose access</h3>
@@ -77,6 +77,11 @@
 <p>Allow the Mac permissions you want, then use <code>bridge stats --wait</code> to see sync counts.</p>
 </article>
 </div>
+<div class="actions">
+<a class="button secondary" href="cursor://anysphere.cursor-deeplink/mcp/install?name=apple-bridge&amp;config=eyJjb21tYW5kIjoiL2Jpbi9zaCIsImFyZ3MiOlsiLWMiLCJleGVjIFwiJEhPTUUvLmFwcGxlYnJpZGdlL2Jpbi9icmlkZ2VcIiBtY3AiXX0%3D">Add to Cursor</a>
+<a class="button secondary" href="vscode:mcp/install?%7B%22name%22%3A%22apple-bridge%22%2C%22command%22%3A%22%2Fbin%2Fsh%22%2C%22args%22%3A%5B%22-c%22%2C%22exec%20%5C%22%24HOME%2F.applebridge%2Fbin%2Fbridge%5C%22%20mcp%22%5D%7D">Install in VS Code</a>
+</div>
+<p class="meta">After installing, these buttons add Apple Bridge to Cursor or VS Code. Click Allow on your Mac the first time the editor starts it.</p>
 <p class="note">Apple Bridge reads private data. Local use sends nothing off your Mac, but an agent you connect may send what it reads to its own service. Remote access is optional. Review your agent’s settings before connecting.</p>
 <a href="https://eilmer.si/applebridge/source/docs/local-setup.md">Full setup, updates &amp; uninstall guide ↗</a>
 </section>
@@ -84,7 +89,7 @@
 <h2>A few things to know.</h2>
 <details>
 <summary>Which agents can connect?</summary>
-<p>Claude Code and Codex have built-in linking commands. Other MCP clients can use the local MCP server; see the repository for configuration.</p>
+<p>Any MCP agent on your Mac. <code>bridge link</code> sets up Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode and Claude Desktop in one line, and <code>bridge link other</code> prints the settings for anything else. Grok Bot runs its custom connectors on its own cloud computer, so it cannot reach Apple Bridge on your Mac.</p>
 </details>
 <details>
 <summary>What can it access?</summary>

@@ -27,13 +27,7 @@ struct Handler {
 }
 impl ServerHandler for Handler {
     fn get_info(&self) -> ServerConfig {
-        serde_json::from_value(json!({
-            "protocolVersion":"2025-03-26",
-            "capabilities":{"logging":{},"tools":{"listChanged":true},"resources":{}},
-            "serverInfo":{"name":"apple-bridge","version":"1"},
-            "instructions": crate::mcp_guides::INSTRUCTIONS,
-        }))
-        .unwrap_or_default()
+        serde_json::from_value(server_info()).unwrap_or_default()
     }
     fn list_tools(
         &self,
@@ -290,6 +284,17 @@ fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_jso
         };
     }
     tools
+}
+pub fn server_info() -> serde_json::Value {
+    json!({
+        "protocolVersion":"2025-03-26",
+        "capabilities":{"logging":{},"tools":{"listChanged":true},"resources":{}},
+        "serverInfo":{"name":"apple-bridge","version":"1"},
+        "instructions": crate::mcp_guides::INSTRUCTIONS,
+    })
+}
+pub fn every_tool() -> Vec<serde_json::Value> {
+    crate::mcp_registry::registry().map_or_else(Vec::new, |registry| registry.tools(None))
 }
 pub(crate) async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
     let principal = request.extensions().get::<Principal>().cloned();

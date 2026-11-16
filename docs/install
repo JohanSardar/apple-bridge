@@ -90,7 +90,7 @@ main() {
 
 Next:
   bridge up                   # start Apple Bridge. It asks nothing
-  bridge link claude          # connect Claude Code. Or: bridge link codex
+  bridge link claude          # connect Claude Code. Or: codex, cursor, gemini, other
   bridge permissions guide    # allow the Mac permissions you want
   bridge stats --wait         # counts per source, as each one finishes
 NEXT
