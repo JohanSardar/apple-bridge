@@ -1,0 +1,21 @@
+[Unit]
+Description=Eilmer website (eilmer.si and the Apple Bridge curl install)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=yes
+ExecStart=/usr/bin/python3 /opt/eilmer-site/serve.py /srv/eilmer/site --downloads /srv/eilmer/downloads --port 8793
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=128M
+
+[Install]
+WantedBy=multi-user.target
