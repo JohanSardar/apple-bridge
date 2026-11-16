@@ -5,7 +5,7 @@ use serde_json::Value;
 
 const RESOURCE: &str = "https://bridge.example/mcp";
 const VERIFIER: &str = "synthetic-verifier-synthetic-verifier-synthetic-verifier";
-const CALLBACK: &str = "https://claude.ai/api/mcp/auth_callback";
+const CALLBACK: &str = "https://app.example/api/mcp/auth_callback";
 
 fn client(name: &str, uris: &[String]) -> Client {
     Client {
@@ -354,11 +354,11 @@ fn client_names_lose_line_breaks_and_invisible_controls() {
     );
     assert_eq!(shown("Clau\u{202e}de\u{200b}\u{2066}"), "Claude");
     assert_eq!(shown("Cla\u{2028}ude\u{85}x\u{e0041}"), "Cla ude x");
-    assert_eq!(shown("  \n\t "), "claude.ai");
-    assert_eq!(shown("\u{202e}\u{200b}"), "claude.ai");
+    assert_eq!(shown("  \n\t "), "app.example");
+    assert_eq!(shown("\u{202e}\u{200b}"), "app.example");
     assert_eq!(shown(&"x".repeat(500)).chars().count(), 64);
     assert_eq!(shown("Claude"), "Claude");
-    assert_eq!(shown("ChatGPT Connector — été"), "ChatGPT Connector — été");
+    assert_eq!(shown("Example Connector — été"), "Example Connector — été");
 }
 
 #[test]

@@ -93,41 +93,6 @@ fn agent_json_matches_go_key_order_and_id_shape() -> Check {
 }
 
 #[test]
-fn remote_flags_validate_like_go() -> Check {
-    let home = tempfile::tempdir()?;
-    for (arguments, code) in [
-        (&["remote", "on", "--private", "--via", "relay"][..], 2),
-        (
-            &["remote", "on", "--private", "--domain", "example.com"][..],
-            2,
-        ),
-        (&["remote", "on", "--snippets"][..], 2),
-        (&["remote", "status", "--snippets"][..], 1),
-        (
-            &[
-                "remote",
-                "on",
-                "--domain",
-                "example.com",
-                "--via",
-                "private",
-            ][..],
-            2,
-        ),
-        (
-            &["remote", "on", "--relay-url", "http://relay.example"][..],
-            2,
-        ),
-        (&["remote", "on", "--timeout", "0"][..], 2),
-    ] {
-        let output = bridge(home.path(), arguments)?;
-        assert_eq!(output.status.code(), Some(code), "{arguments:?}");
-        assert!(output.stdout.is_empty(), "{arguments:?}");
-    }
-    Ok(())
-}
-
-#[test]
 fn doctor_reports_credential_store_last_error_without_a_database() -> Check {
     let home = tempfile::tempdir()?;
     let failure = serde_json::json!({
@@ -176,41 +141,11 @@ fn web_enroll_prints_only_the_url_when_piped() -> Check {
 }
 
 #[test]
-fn remote_certificate_accept_clears_the_warning_and_rejects_bad_input() -> Check {
-    let home = tempfile::tempdir()?;
-    let fingerprint = "ab".repeat(32);
-    let report: ab_remote::ct::Report = serde_json::from_value(serde_json::json!({
-        "checked_at": 100,
-        "names": ["mac.example.test"],
-        "unknown": [],
-        "unexpected": {fingerprint.clone(): {
-            "fingerprint": fingerprint,
-            "names": ["mac.example.test"],
-            "precertificate": false
-        }}
-    }))?;
-    ab_remote::state::write(home.path(), "ct-monitor", &report)?;
-    assert_eq!(
-        bridge(home.path(), &["remote", "certificate-accept", "nope"])?
-            .status
-            .code(),
-        Some(2)
-    );
-    assert!(
-        bridge(home.path(), &["remote", "certificate-accept", &fingerprint])?
-            .status
-            .success()
-    );
-    assert_eq!(ab_remote::ct::owner_warning(home.path(), 100), "");
-    Ok(())
-}
-
-#[test]
 fn a_pairing_code_with_the_gateway_key_still_fits_a_scannable_qr() -> Check {
     let home = tempfile::tempdir()?;
     let authority = ab_trust::Authority::open(home.path())?;
     let code = authority.pair_iphone_code(
-        "https://0123456789abcdef0123456789abcdef.relay.bridge.example.com",
+        "https://apple-bridge-0123456789abcdef-macbook.tail0123ab.ts.net:8443",
         true,
         std::time::Duration::from_secs(600),
     )?;

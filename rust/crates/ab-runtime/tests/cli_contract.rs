@@ -92,7 +92,7 @@ fn bare_bridge_and_groups_print_help_to_stdout() -> Check {
     for arguments in [
         &[][..],
         &["agents"][..],
-        &["remote"][..],
+        &["tokens"][..],
         &["web", "sessions"][..],
     ] {
         let output = bridge().args(arguments).output()?;
@@ -109,7 +109,7 @@ fn bare_bridge_and_groups_print_help_to_stdout() -> Check {
         "Getting started:",
         "Reading data:",
         "Access:",
-        "Remote and replicas:",
+        "Tailscale and replicas:",
         "Maintenance:",
         "Global options:",
         "Learn more:",
@@ -240,10 +240,10 @@ fn unknown_options_are_refused_the_same_wherever_globals_sit() -> Check {
     }
     let forms: [&[&str]; 2] = [
         &[
-            "--home", &home_text, "status", "--force", "--name", "zz", "--via", "relay",
+            "--home", &home_text, "status", "--force", "--name", "zz", "--level", "zz",
         ],
         &[
-            "status", "--force", "--name", "zz", "--via", "relay", "--home", &home_text,
+            "status", "--force", "--name", "zz", "--level", "zz", "--home", &home_text,
         ],
     ];
     for form in forms {
@@ -252,7 +252,7 @@ fn unknown_options_are_refused_the_same_wherever_globals_sit() -> Check {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
-        for option in ["--force", "--name", "--via"] {
+        for option in ["--force", "--name", "--level"] {
             assert!(
                 error.contains(&format!(
                     "{option} is ignored by bridge status and will be refused in the next major version."
@@ -300,7 +300,7 @@ fn reads_and_invalid_input_create_nothing() -> Check {
         &["web", "devices"][..],
         &["status"][..],
         &["doctor"][..],
-        &["remote", "status", "--json"][..],
+        &["tailscale", "--off", "--json"][..],
         &["agents", "create", "--name", "x", "--level", "root"][..],
         &["agents", "create", "--name", "x", "--scope", "made:up"][..],
         &["tokens", "create", "--scope", "made-up"][..],
@@ -943,25 +943,6 @@ fn only_the_old_revoke_spellings_skip_consent_for_one_release() -> Check {
     let output = run(home.path(), &["agent", "revoke", id])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     assert!(text(&output.stderr).contains("deprecated"));
-    Ok(())
-}
-
-#[test]
-fn flags_old_commands_refused_are_still_refused() -> Check {
-    let home = short_home()?;
-    let output = run(
-        home.path(),
-        &[
-            "remote",
-            "on",
-            "--snippets",
-            "--timeout",
-            "1ms",
-            "--no-open",
-        ],
-    )?;
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
-    assert!(!home.path().join("remote").exists());
     Ok(())
 }
 

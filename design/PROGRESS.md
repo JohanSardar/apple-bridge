@@ -27,8 +27,6 @@ This section supersedes the earlier IN PROGRESS, TODO and "waiting" lines below.
   - Groups and typing: own-handles-only rule.
   - Reminders and Calendar parity mutations: Automation consent pending, never automated.
   - Notes delete and real writes: AppleScript delete no-ops on 25G241, and no verified cleanup route exists.
-  - Embedded tsnet Remote: needs a tailnet device approval through the owner’s login.
-  - Contacts public relay: 20/20 delivered, but p95 1.45 s under external TCC load.
   - web.media cold arrival: same own-handle send restriction.
 - **Release web build:** lab fixtures excluded (#315). Cacheable gzip is 593,179 of 614,400 bytes; the largest route is 60,296 of 61,440.
 - **Test data left on the owner’s Apple ID (disclosed, never purged):**
@@ -102,17 +100,16 @@ Process: every change ships as a small PR (AGENTS.md, Git and GitHub). Status li
 - DONE W0: decisions, the Messages spec (`design/web/messages.md`), SPEC §23 with W2–W8 unit tables (#98–#100), ADRs 0015–0020 and the Reminders/Calendar/Contacts/Notes drafts. On 2026-10-22 the owner delegated the skim to the leader, who approved the drafts as the working spec. The input gate was redefined as our own main-thread cost (#103), and the list rules were pinned (#105).
 - DONE W1-RM: chat, thread and collection read models (#2), plus rich filters, collections and `messages.handles` (#14, #22).
 - DONE W1-WEB / web.frontdoor: front door, passkey sessions and `web/1` live views (#3–#5); hardening (#15, #19, #23, #24); contact thumbnails and the handles route (#16, #38); canceled-view errors (#71).
-- DONE W1-AGENT: credentials, activity, approvals, OAuth, screens and polish (#18, #26, #32, #47, #54, #62, #64, #68, #81). Replica delegation (#73) and approved replica writes (#78) shipped with W1-RELAY.
+- DONE W1-AGENT: credentials, activity, approvals, OAuth, screens and polish (#18, #26, #32, #47, #54, #62, #64, #68, #81). Replica delegation (#73) and approved replica writes (#78) shipped with W1-REPLICA.
 - DONE W1-UI: Solid shell, design system, springs, virtual list and web-level runner (#6–#8). 120 Hz is unproven on this 60 Hz headless host (`input_8ms_proven:false`).
 - DONE W1-DEMO: deterministic 60-contact / 40-chat / 5,000-message world, demo sessions and CLI, rich runner (#20, #25, #30).
-- IN PROGRESS W1-REMOTE: the system Funnel backend is real on the test Mac, with public REST/MCP/SSE at REST p95 60 ms (#27–#29, #34). The embedded tsnet login needs a GUI approval on the test Mac.
 - IN PROGRESS W1-MEDIA: Helper variants (#9). Cleanup of six tagged self-chat bubbles and cold-arrival latency wait for the unlock.
-- IN PROGRESS W1-RELAY: Safari local session (#40), relay auth/pairing/feed (#45, #52, #55), replay/revocation (#56), remote commands (#67), native agent commands over the public route (#83), feed pipelining (#76), upload resume (#92) and blob staging (#90). R-LIVE waits on LIVE-FIX.
-- IN PROGRESS LIVE-FIX (#75): native Reminders capture fixed. Relay-added p95 is 35 ms pipelined vs 124 ms serial. The real Calendar regression sweep is running. `CAL-ALLDAY-FUTURE` fails on baseline too (civil offset, Truth, cleanup audit) and is tracked separately. Earlier fixes: #72, #91, #96.
+- IN PROGRESS W1-REPLICA: Safari local session (#40), feed pipelining (#76), upload resume (#92) and blob staging (#90). R-LIVE waits on LIVE-FIX.
+- IN PROGRESS LIVE-FIX (#75): native Reminders capture fixed. The real Calendar regression sweep is running. `CAL-ALLDAY-FUTURE` fails on baseline too (civil offset, Truth, cleanup audit) and is tracked separately. Earlier fixes: #72, #91, #96.
 - UPDATE 2026-10-21 evening:
   - **Merged:** binary upload transport and replica forwarding with proofs (#107, #111, #112); the replica command-status lost-wakeup fix with a 10/10 clean series (#119); sources freshness and thumb-cache fix (#101); first command layer with the ambiguous-send policy (#113, #114, #116); transcript bubbles (#79); SimApple source video geometry (#117); the Reminders store contract and reader (#109, #110); the motion test oracle (#127); dev infrastructure (#121/#124/#126/#129 one heavy slot on the 8 GB Air, #128 Swift build lock, #130 worker turn rule); and the replica capture atomicity spec (#122).
   - **Open:** list (#104, plates approved), video minimum (#118), video/Live (#108), cards (#125), composer (#123), the Reminders faster reader and capture enrichment (#115/#120, waiting on #75), LIVE-FIX (#75).
-  - **In flight:** CAL-FIX's real Calendar fixes (stale occurrences, outside-window eviction, count-to-date future splits, scoped live scans for ≤1 s), W1-RELAY's capture atomicity (CORE-REPLICA-CAPTURE-ATOMIC red pinned), and W3's per-part multi-file status.
+  - **In flight:** CAL-FIX's real Calendar fixes (stale occurrences, outside-window eviction, count-to-date future splits, scoped live scans for ≤1 s), W1-REPLICA's capture atomicity (CORE-REPLICA-CAPTURE-ATOMIC red pinned), and W3's per-part multi-file status.
   - **Known open issues:** the WebKit transcript text overflow (sub-pixel canvas vs DOM; W2-TRANSCRIPT fixing), Calendar real latency of 4–7 s (abandoned full-window scans; CAL-FIX fixing), and Reminders live p95 of about 18 s on main until #75 merges.
 - **Checkpoint 2026-10-22 (evening, leader).** Since the fast-process restart, 52+ PRs merged (#149–#223). Current state per unit:
   - **W2-READER:** done.
@@ -144,15 +141,12 @@ Process: every change ships as a small PR (AGENTS.md, Git and GitHub). Status li
 - **Waiting on the test Mac being unlocked** (lock screen; passwords are never typed):
   - Messages capture pass for `messages.md` §17 and the "to verify" rows.
   - The W3 unlock script (cleanup of W1-MEDIA bubbles and self-test bubbles, then the UI proofs).
-  - Embedded tsnet login approval (`/tmp/ablab/w1-remote-embedded-check/remote-on.log`).
 - UPDATE 2026-10-21 night:
   - **Merged:** per-part command outcomes (#141), video and Live Photo bubbles (#108), the Reminders `reminders.lists`/`reminders.items` read models at gateway p95 about 5 ms (#150), a memory-gated sim lane beside the single heavy slot (#151–#153, #156), and a lab gate that fails any run during which the Helper crashed (#155).
   - **Fixing:** a Helper SIGABRT in Messages media export. Cancellation reached `cancelExport()` before the async export configured its session (W2-MEDIA, priority). Real Calendar and Contacts acceptance reruns wait for that fix.
 - **Waiting on the test Mac's system Tailscale**, which has been stopped since before 16:31 local on 2026-10-21. That is the owner’s host state and agents never change it. These gates are recorded as host-blocked and rerun when it's back:
-  - #141: the public relay gate (`remote_on_system`).
-  - #154: the six `runRelayWorld` relay scenarios (CONNECT, COMMAND, PUBLIC-AGENTS, NATIVE-AGENTS, REPLICA-BLOBS, REPLICA), plus CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
-  - Contacts public-path R-LIVE (#139).
-  - **Update 2026-10-22:** the owner delegated host fixes, and the leader turned the test Mac's Tailscale back on (`tailscale up`, Serve config unchanged by md5). The gates above are no longer host-blocked; each PR reruns its public gates before merge.
+  - #154: CORE-GATEWAY-DIALS at replica level if its Tailscale dial fails.
+  - **Update 2026-10-22:** the owner delegated host fixes, and the leader turned the test Mac's Tailscale back on (`tailscale up`, Serve config unchanged by md5). The gates above are no longer host-blocked; each PR reruns its gates before merge.
   - The Air reaches the Ubuntu replica host over LAN while Tailscale is stopped: its lab `ubuntu` SSH alias tries `replica-host` first and falls back to the Ubuntu LAN address (original config at `~/.ssh/config.bak-ablab-20261021`).
 - UPDATE 2026-10-21 late night:
   - **Merged:** Helper media-export crash fix (#159), Calendar invalidated-capture crash fix (#163), demo Reminders data (#157), native manual ordering (#160), read-model hardening (#161), and dev infrastructure: YAML latency classification (#162), the dispatch-only rebase rule (#164), and host-thrash guards for sensitive and extreme cases (#168–#170).

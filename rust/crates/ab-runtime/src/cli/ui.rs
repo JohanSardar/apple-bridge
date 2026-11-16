@@ -524,9 +524,7 @@ pub fn receipt(label: &str, value: &str, sentence: &str) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mark {
     Good,
-    Warn,
     Bad,
-    Plain,
 }
 
 fn mark(mark: Mark) -> String {
@@ -535,9 +533,7 @@ fn mark(mark: Mark) -> String {
     }
     let (code, glyph) = match mark {
         Mark::Good => ("32", "✓"),
-        Mark::Warn => ("33", "!"),
         Mark::Bad => ("31", "✗"),
-        Mark::Plain => return " ".to_owned(),
     };
     if Modes::get().color() && Modes::get().stdout_styled() {
         format!("\u{1b}[{code}m{glyph}\u{1b}[0m")
@@ -1201,7 +1197,7 @@ mod tests {
             "127.0.0.1:7780",
             "at 14:03 today",
             r"C:\a@b.com\config",
-            "https://relay.test/sign-in?code=abc#x",
+            "https://login.example.test/sign-in?code=abc#x",
             "ssh me@host.test",
             "see https://h.test and mail a@b.com",
             "Error: Can't use a@b.com",

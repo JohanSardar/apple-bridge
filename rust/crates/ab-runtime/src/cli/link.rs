@@ -219,7 +219,7 @@ fn setup(client: LinkClient, name: &str, scope: LinkScope, launch: &Launch) -> O
                 after: "Confirm the extension in Goose.",
             }
         }
-        LinkClient::Other | LinkClient::GrokBot | LinkClient::ClaudeApp => return None,
+        LinkClient::Other | LinkClient::GrokBot => return None,
     })
 }
 

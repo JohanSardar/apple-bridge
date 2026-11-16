@@ -1,6 +1,6 @@
 # Set up Apple Bridge on your own Mac
 
-Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on remote use yourself, though an agent you connect may send what it reads to its own service.
+Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on the Tailscale route yourself, though an agent you connect may send what it reads to its own service.
 
 ## Install
 
@@ -35,16 +35,14 @@ Then ask your agent: "Use Apple Bridge to show my reminder lists. Then run `brid
 
 ## Ways to connect
 
-Local is the default. The others are off until you turn them on with one command.
+Local is the default. The Tailscale route is off until you turn it on with one command.
 
 | Way | Who connects | How | Needs |
 |---|---|---|---|
 | On this Mac, the default | Agents on this Mac: Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode, the Claude app and any other MCP agent | `bridge link <agent>`. For anything else, `bridge link other` prints the config | Nothing else. The Mac asks you to Allow each new agent once |
 | Tailscale, recommended for other devices | Your other computers, and Grok Bot through its Tailscale plugin | `bridge tailscale` | A Tailscale account; it installs and starts Tailscale on this Mac |
-| Cloud chats, opt-in | The Claude app, claude.ai, ChatGPT and other MCP apps that can't join Tailscale | `bridge link claude-app` | A Tailscale account. It opens a public address through Tailscale Funnel |
-| Your own relay | Anyone who runs their own server | `bridge relay setup root@server --domain bridge.example.com` | [Your own server](self-host.md) |
 
-See [connecting other devices and cloud chats](connectors/devices.md). Nothing leaves this Mac until you turn one of these on, and `bridge remote disable --via ROUTE` turns it off again.
+The Tailscale route serves this Mac on your Tailscale network only, never on the public internet. See [connecting other devices](connectors/devices.md). Nothing leaves this Mac until you turn it on, and `bridge tailscale --off` turns it off again.
 
 ## Start and stop
 

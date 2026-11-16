@@ -28,7 +28,6 @@ async fn real_app_status_and_serve_config_are_readable() {
         .to_owned();
     assert!(host.ends_with(".ts.net"));
     assert!(status["Self"]["CapMap"].get("https").is_some());
-    assert!(status["Self"]["CapMap"].get("funnel").is_some());
     let response = api
         .request(reqwest::Method::GET, "serve-config", None, None)
         .await
@@ -53,7 +52,7 @@ async fn real_app_status_and_serve_config_are_readable() {
         .and_then(|(port, _)| port.parse::<u16>().ok());
     if let Some(port) = port {
         let expiry = certificate_expiry(&host, port).await.unwrap();
-        println!("public certificate expiry on port {port}: {expiry}");
+        println!("certificate expiry on port {port}: {expiry}");
         assert!(expiry.ends_with('Z') && !expiry.starts_with("0001"));
     }
 }

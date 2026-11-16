@@ -4,7 +4,7 @@
 
 ## Build recipe for `rust/lab/families-parity.py` and `lab-families`
 
-The gateway under test must be built with the lab harness: `cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-queries --bin bridge`. A plain `cargo build -p ab-runtime --bin bridge` lacks `lab-principal`, `lab-session`, `lab-operation-catalog` and the apply-boundary hooks, so scenarios that pair replicas (WEB-RELAY-AUTH, CORE-KILL-DURING-APPLY, replica-backed families) fail at `paired_world`. `lab-families` now refuses to run a sim scenario against such a binary and prints this command. Also build `lab-simapple` and `lab-adapters` (`cargo build --manifest-path rust/Cargo.toml -p lab-simapple -p lab-adapters`) and the Go lab (`go build -o bin/bridge-lab ./cmd/bridge-lab`). Relay scenarios other than WEB-RELAY-AUTH additionally need `AB_RELAY_FIXTURE` pointing at `cargo build -p ab-relay --examples`'s `lab_fixture`; `packaging/dev/gateway-matrix.sh` builds all of this.
+The gateway under test must be built with the lab harness: `cargo build --manifest-path rust/Cargo.toml -p ab-runtime --features lab-queries --bin bridge`. A plain `cargo build -p ab-runtime --bin bridge` lacks `lab-principal`, `lab-session`, `lab-operation-catalog` and the apply-boundary hooks, so scenarios that pair replicas (CORE-KILL-DURING-APPLY, replica-backed families) fail at `paired_world`. `lab-families` now refuses to run a sim scenario against such a binary and prints this command. Also build `lab-simapple` and `lab-adapters` (`cargo build --manifest-path rust/Cargo.toml -p lab-simapple -p lab-adapters`) and the Go lab (`go build -o bin/bridge-lab ./cmd/bridge-lab`). `packaging/dev/gateway-matrix.sh` builds all of this.
 
 `replica_application_exactly_once` and `mcp_replica_application_exactly_once` are reported `passed: false, status: unverified, detail: "kill-during-apply check did not run"` by every scenario except CORE-KILL-DURING-APPLY, in the Go and Rust harnesses alike. That is the designed "not exercised here" marker (`record_integrity(.., None)`); parity and scenario verdicts treat `unverified` as non-failing. The real check is CORE-KILL-DURING-APPLY.
 
@@ -33,14 +33,8 @@ This is synthetic REST-plus-IPC parity, not all-ingress or live qualification. D
 
 | Blocked default entries | Required boundary before G-E can preserve the assertions through binaries |
 | --- | --- |
-| CONN-CHATGPT, CONN-CLAUDE-AI | Selected-runtime connector owner socket/CLI plus a lab-only decision clock for five-minute expiry, without starting a second Go Handler/Authority. Public DCR alone does not replace clock and owner-socket assertions. |
 | WEB-AGENT-OAUTH-CIMD | Selected-runtime DNS answer, TLS dial/CA and decision-clock fixtures for public/private resolution, rebinding, redirect, timeout and cache checks. No actual public/private network dial is allowed to replace the injected resolver. |
-| SEC-REMOTE-ACCESS | Selected-runtime trusted/public owner sessions, source-IP/rate clock, negative authority/approval setup and backend-unavailable fault. The existing source 503 check deliberately closes its State backend; an ordinary healthy HTTP call cannot preserve it. |
-| RMT-ONECOMMAND-FLOW, RMT-PRIVATE-CONNECT | Disposable binary-owned Tailscale/LocalAPI and ingress adapters. Existing real-branch paths change live configuration and remain forbidden. |
-| WEB-RELAY-AGENTS, WEB-RELAY-AUTH, WEB-RELAY-PAIRING | Isolated selected gateway relay ingress and selected CLI pairing/delegation/expiry/revocation setup, retaining raw signed-auth negative probes and scope/socket closure assertions. A Go `replication.Server`/Authority is not a selected gateway. |
-| APP-APPROVE-SIM, APP-CMD-SIM, APP-LIVE-SIM | Selected phone pairing/delivery/ingest, approval decision and controlled clock/race boundaries, with a fake relay and no APNs/real phone access. |
-| RELAY-ENROLL, RELAY-LIMITS, RELAY-PASSTHROUGH, RELAY-ROTATE-GATED | Relay-owner binary fixture selection plus SIM/real branch separation. `lab/relayfixture` uses its Go backend unless `AB_RELAY_FIXTURE` is set; simply removing conservative import blockers would create false Rust evidence. These relay service checks do not prove the gateway merely by running with a gateway selector. |
-| RELAY-TLS-SPLICE, RELAY-DOWNGRADE, RELAY-LEGACY-COMPAT, RELAY-STREAMS, RELAY-ACME, RELAY-OWN-DOMAIN | Ported to the Rust runner (see `lab-simapple.md`, relay client scenarios). The first three drive the selected gateway's relay TLS listener with the `lab-relay` client, so they no longer build Go feed or authority state. |
+| APP-APPROVE-SIM, APP-CMD-SIM | Selected phone pairing/delivery/ingest, approval decision and controlled clock/race boundaries, with polled delivery and no APNs/real phone access. |
 
 Nondefault performance and native/real P/D entries remain unqualified: actual state transaction/maintenance timing needs binary-owned instrumentation, and Mac/native boundaries need the native owners' fixture binaries and orchestrator-scheduled host runs. G-E will not replace measured product work with a lab implementation or drop its assertions.
 
@@ -144,9 +138,9 @@ The all-ingress admission observer, deterministic decision clock/identity alloca
 
 ### Lab pair-code wire decoding
 
-The lab consumes selected CLI pair output using its own ab1/base32/JSON codec, including purpose/remote/dial and the existing ID/address/fingerprint/secret/expiry fields. This is transport validation with an explicit observation clock; it does not allocate identities, perform join verification or open authority homes. CORE-PAIR retains its wrong-secret, expired, replayed-code and revocation assertions against selected binaries. Remote relay setup uses the same decoder but remains separately unqualified until its full remote and authority fixtures run through selected binaries.
+The lab consumes selected CLI pair output using its own ab1/base32/JSON codec, including purpose/dial and the existing ID/address/fingerprint/secret/expiry fields. This is transport validation with an explicit observation clock; it does not allocate identities, perform join verification or open authority homes. CORE-PAIR retains its wrong-secret, expired, replayed-code and revocation assertions against selected binaries.
 
-Pair-code continuation proof: default Go suite 201/201 (204.479s), make rust-ci, codec vectors and selected Rust-gateway/Go-replica CORE-PAIR pass on the a941c4ed artifact. All 12 named Go pairing assertions match before/after. This does not qualify the remote relay branch.
+Pair-code continuation proof: default Go suite 201/201 (204.479s), make rust-ci, codec vectors and selected Rust-gateway/Go-replica CORE-PAIR pass on the a941c4ed artifact. All 12 named Go pairing assertions match before/after.
 
 
 ### Session wiring

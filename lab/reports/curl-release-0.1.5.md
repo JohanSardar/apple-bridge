@@ -1,7 +1,7 @@
 # Curl release 0.1.5 qualification
 
-Date: 2026-11-09 UTC. Verdict: signed release, Eilmer default onboarding route,
-and installation from the public curl URL on a clean Mac pass. The independent
+Date: 2026-11-09 UTC. Verdict: signed release and installation from the public curl
+URL on a clean Mac pass. The independent
 parent review accepted the installer bytes and this qualification with the limits
 below. No product behavior changed beyond the merged source and release version.
 
@@ -33,8 +33,7 @@ which pins the archive checksum; Developer ID signatures seal the app contents.
 
 The parent independently reviewed the canonical and retained owner Pages PR
 bytes. Only the production static installer file was atomically replaced. Its
-previous bytes, owner and mode were retained for rollback. No relay runtime,
-service or configuration changed or restarted.
+previous bytes, owner and mode were retained for rollback.
 
 Owner Pages deployment reported `built` for merge
 `eb2bab4b36672bb25fa8ba3ca29a91d9fb6297c3`. Both public URLs returned exactly
@@ -67,7 +66,6 @@ spctl -a -vv --type execute "$HOME/.applebridge/Apple Bridge.app"
 ~/.local/bin/bridge status
 ~/.local/bin/bridge doctor
 curl -fsS http://127.0.0.1:7780/v1/health
-~/.local/bin/bridge remote status
 ~/.local/bin/bridge permissions status
 ```
 
@@ -75,18 +73,10 @@ Installation reported success and `bridge 0.1.5`. Installed-app signature,
 staple and Gatekeeper checks passed. First startup reported 0.3 seconds;
 health returned `{"state":"alive"}`. Status reported gateway role. Doctor
 reported `ok=true`, SQLite integrity complete, `sqlite=ok`, private modes true
-and Keychain credentials. Remote access was initially off. Protected sources
+and Keychain credentials. Protected sources
 reported missing permissions; no permission guide or request was run.
 
-With no saved relay override or relay environment override, `bridge remote on`
-produced an onboarding URL on `app.applebridge.eilmer.si`. The command was bounded
-to 20 seconds and timed out waiting for owner sign-in. Remote status was pending,
-backend relay, without a last error. This proves the default onboarding route,
-not successful enrollment. The source default control endpoint is
-`https://applebridge.eilmer.si`.
-
-After `bridge remote off`, `bridge down` and `bridge up`, remote remained off,
-startup reported 0.2 seconds and health again returned alive. SIP and Gatekeeper
+After `bridge down` and `bridge up`, startup reported 0.2 seconds and health again returned alive. SIP and Gatekeeper
 still reported the original enabled settings.
 
 ## Checks and limits
@@ -98,8 +88,6 @@ workspace metadata at version 0.1.5, staged-site installer parity and public
 installer parity passed. Feature graph: 79 features, 78 done, one in progress;
 434/475 scenario-level entries passing. Existing graph limits were not resolved.
 
-The clean guest's authenticated enrollment and customer TLS were not qualified.
 Native permission-dependent reads were not qualified because no new grants were
 made. Doctor observed FileVault off in the guest; it remained unchanged. Physical
-iPhone continuity and future certificate renewal were not requalified. Prior
-relay migration evidence is separate and is not claimed as fresh guest evidence.
+iPhone continuity was not requalified.

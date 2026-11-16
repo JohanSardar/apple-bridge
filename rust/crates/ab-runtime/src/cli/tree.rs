@@ -126,10 +126,6 @@ pub enum Command {
     Web(WebCommand),
     #[command(about = "Let your other devices and cloud agents reach this Mac through Tailscale")]
     Tailscale(TailscaleArgs),
-    #[command(about = "Set up your own relay server and connect this Mac to it")]
-    Relay(RelayCommand),
-    #[command(about = "Use Apple Bridge from other computers; off until you enable it")]
-    Remote(RemoteCommand),
     #[command(about = "Create a pairing code for a replica or iPhone")]
     Pair(PairArgs),
     #[command(about = "Join a gateway as a replica with a pairing code")]
@@ -155,8 +151,6 @@ pub enum Command {
         about = "Run the gateway in the foreground; bridge up is usually easier"
     )]
     Start(StartArgs),
-    #[command(hide = true, about = "Run the private replica client")]
-    Connect(ConnectArgs),
     #[command(hide = true, about = "Prepare credentials for the background service")]
     InstallCredentials,
     #[command(
@@ -234,11 +228,6 @@ pub enum LinkClient {
     ClaudeDesktop,
     #[value(alias = "grok", help = "Grok Bot")]
     GrokBot,
-    #[value(
-        name = "claude-app",
-        help = "The Claude app or claude.ai, through a custom connector"
-    )]
-    ClaudeApp,
     #[value(help = "Print the setup any other agent needs")]
     Other,
 }
@@ -574,128 +563,6 @@ pub struct TailscaleArgs {
     pub keep_awake: bool,
 }
 
-#[derive(Debug, Args)]
-pub struct RelayCommand {
-    #[command(subcommand)]
-    pub action: Option<RelayAction>,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum RelayAction {
-    #[command(about = "Install a relay on your server over ssh and connect this Mac")]
-    Setup(RelaySetupArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct RelaySetupArgs {
-    #[arg(
-        value_name = "SERVER",
-        help = "How you reach the server with ssh, such as root@203.0.113.10"
-    )]
-    pub server: String,
-    #[arg(
-        long,
-        value_name = "DOMAIN",
-        help = "A domain used only for this, such as bridge.example.com"
-    )]
-    pub domain: String,
-    #[arg(
-        long,
-        value_name = "IP",
-        help = "The server's public IPv4 address, if ssh reaches it another way"
-    )]
-    pub ip: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct RemoteCommand {
-    #[command(subcommand)]
-    pub action: Option<RemoteAction>,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum RemoteAction {
-    #[command(about = "Turn on remote access through the relay or a private route")]
-    Enable(RemoteEnableArgs),
-    #[command(about = "Turn off remote access")]
-    Disable(RemoteDisableArgs),
-    #[command(about = "Show remote access state")]
-    Status(RemoteStatusArgs),
-    #[command(about = "Print this Mac's relay key for a self-hosted relay")]
-    Key(RemoteKeyArgs),
-    #[command(about = "Manage certificates seen for this Mac's remote address")]
-    Certificates(CertificatesCommand),
-    #[command(
-        hide = true,
-        about = "Turn on remote access (deprecated: bridge remote enable)"
-    )]
-    On(RemoteEnableArgs),
-    #[command(
-        hide = true,
-        about = "Turn off remote access (deprecated: bridge remote disable)"
-    )]
-    Off(RemoteDisableArgs),
-    #[command(
-        name = "certificate-accept",
-        hide = true,
-        about = "Accept a certificate (deprecated: bridge remote certificates accept)"
-    )]
-    CertificateAccept(FingerprintArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct RemoteEnableArgs {
-    #[arg(
-        long,
-        value_name = "ROUTE",
-        value_parser = route_values(),
-        help = "Route (default: relay)"
-    )]
-    pub via: Option<String>,
-    #[arg(long, help = "Use the private route; same as --via private")]
-    pub private: bool,
-    #[arg(long, value_name = "DOMAIN", help = "Custom domain on the relay route")]
-    pub domain: Option<String>,
-    #[arg(long, value_name = "URL", help = "Your own relay's address")]
-    pub relay_url: Option<String>,
-    #[arg(
-        long,
-        value_name = "SOURCES",
-        help = "Cloud route only: services cloud chats may see, such as calendar,reminders"
-    )]
-    pub sources: Option<String>,
-    #[arg(long, value_name = "NAME", help = "Name for this Mac")]
-    pub name: Option<String>,
-    #[arg(
-        long,
-        value_name = "DURATION",
-        help = "Stop waiting after this long (default: 10m)"
-    )]
-    pub timeout: Option<String>,
-    #[arg(
-        long,
-        conflicts_with = "no_open",
-        help = "Open sign-in links in the browser even without a terminal, unless over SSH"
-    )]
-    pub open: bool,
-    #[arg(long, help = "Print sign-in links instead of opening a browser")]
-    pub no_open: bool,
-}
-
-fn route_values() -> clap::builder::PossibleValuesParser {
-    clap::builder::PossibleValuesParser::new([
-        clap::builder::PossibleValue::new("relay"),
-        clap::builder::PossibleValue::new("tailnet")
-            .help("Your devices on your Tailscale network only"),
-        clap::builder::PossibleValue::new("cloud")
-            .help("A public address for cloud chats such as Claude and ChatGPT"),
-        clap::builder::PossibleValue::new("private"),
-        clap::builder::PossibleValue::new("tailscale-app"),
-        clap::builder::PossibleValue::new("both"),
-        clap::builder::PossibleValue::new("system").hide(true),
-    ])
-}
-
 fn levels(switchable: bool) -> [clap::builder::PossibleValue; 3] {
     [
         clap::builder::PossibleValue::new("full").help("Acts at once"),
@@ -730,60 +597,6 @@ impl clap::builder::TypedValueParser for LevelText {
     ) -> Option<Box<dyn Iterator<Item = clap::builder::PossibleValue> + '_>> {
         Some(Box::new(levels(self.0).into_iter()))
     }
-}
-
-#[derive(Debug, Args)]
-pub struct RemoteDisableArgs {
-    #[arg(
-        long,
-        value_name = "ROUTE",
-        value_parser = route_values(),
-        help = "Route to turn off (default: relay)"
-    )]
-    pub via: Option<String>,
-    #[arg(long, help = "Turn off the private route; same as --via private")]
-    pub private: bool,
-    #[arg(long, value_name = "NAME", help = "Name for this Mac")]
-    pub name: Option<String>,
-    #[arg(
-        long,
-        value_name = "DURATION",
-        help = "Stop waiting after this long (default: 10m)"
-    )]
-    pub timeout: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct RemoteStatusArgs {
-    #[arg(long, help = "Print connection snippets for agents")]
-    pub snippets: bool,
-}
-
-#[derive(Debug, Args)]
-pub struct RemoteKeyArgs {
-    #[arg(long, value_name = "URL", help = "Save this relay address first")]
-    pub relay_url: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct CertificatesCommand {
-    #[command(subcommand)]
-    pub action: Option<CertificatesAction>,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum CertificatesAction {
-    #[command(about = "Accept a certificate you requested yourself")]
-    Accept(FingerprintArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct FingerprintArgs {
-    #[arg(
-        value_name = "FINGERPRINT",
-        help = "SHA-256 fingerprint: 64 hexadecimal characters"
-    )]
-    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -948,7 +761,7 @@ pub enum TokenAction {
     Create {
         #[arg(long, value_name = "ACCESS", default_value = DEFAULT_GRANTS, help = "Access grants, comma-separated")]
         scope: String,
-        #[arg(long, help = "Allow use through remote access")]
+        #[arg(long, help = "Allow use through Tailscale")]
         remote: bool,
         #[arg(
             long,
@@ -989,7 +802,7 @@ pub enum WebAction {
             help = "Page address: https://HOST, or http://localhost:PORT (default: this Mac's gateway address)"
         )]
         host: Option<String>,
-        #[arg(long, help = "Use the remote access address")]
+        #[arg(long, help = "Use the Tailscale address")]
         public: bool,
     },
     #[command(about = "List or sign out signed-in browsers")]
@@ -1111,7 +924,7 @@ pub struct PairArgs {
     pub expires_in: String,
     #[arg(long, help = "Pair an iPhone; needs --via-remote")]
     pub iphone: bool,
-    #[arg(long, help = "Pair through remote access")]
+    #[arg(long, requires = "iphone", help = "Pair through Tailscale")]
     pub via_remote: bool,
 }
 
@@ -1125,19 +938,6 @@ pub struct JoinArgs {
         help = "Listen for the gateway on this address"
     )]
     pub listen: Option<String>,
-}
-
-#[derive(Debug, Args)]
-pub struct ConnectArgs {
-    #[arg(value_name = "CODE", help = "Connection code")]
-    pub code: String,
-    #[arg(
-        long,
-        value_name = "ADDRESS",
-        default_value = "127.0.0.1:7780",
-        help = "Local address to serve"
-    )]
-    pub listen: String,
 }
 
 #[derive(Debug, Args)]

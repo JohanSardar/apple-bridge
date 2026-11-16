@@ -10,7 +10,6 @@ The Go generators are deleted. Rust tests under `rust/crates/*/tests/golden.rs` 
 | delegation.json | trust.Delegation raw marshal and Ed25519 signature; preserve raw bytes during verification |
 | ipc.json | EncodeFrame / ReadFrame; Open, Ready, Capture, Committed, Ping/Pong, Close |
 | feed.json | feed/1 Hello, Welcome, snapshot begin/page/end, batch and partial batch, State snapshot digest |
-| relay.json | relay/1 ProofMessage and X-Bridge-Proof handshake, synthetic signature, smux version |
 | iphone.json | production sharedCipher and Open, fixed X25519 keys, nonce, Ed25519 seed; salt/info binding and wrong-device rejection |
 | mcp-json.json / mcp-sse.json | production frontdoor mcpHandler using current go-sdk, initialize, initialized, full descriptor tools/list, unauthenticated tools/call error |
 | passkey.json | existing Go virtual authenticator, resident registration and UV discoverable assertion verified by current WebAuthn implementation |

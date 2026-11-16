@@ -107,18 +107,18 @@ pub fn fixture(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
             s.put(record);
         }
     } else {
-        let bytes = if input["relay_fixture"] == true {
-            b"[ab-test] relay blob\n".repeat(8192)
+        let bytes = if input["replica_fixture"] == true {
+            b"[ab-test] replica blob\n".repeat(8192)
         } else {
             fixture_bytes(usize::try_from(size).map_err(|_| invalid("size"))?)
         };
         let digest = hex::encode(Sha256::digest(&bytes));
         let length = bytes.len();
-        let relay = input["relay_fixture"] == true;
+        let replica = input["replica_fixture"] == true;
         if !s.data["blob_fixtures"].is_array() {
             s.data["blob_fixtures"] = json!([]);
         }
-        let entry = json!({"size":size,"relay":relay,"state":s.blob.state,"slow_ms":s.blob.delay_ms,"refresh":s.blob.refresh});
+        let entry = json!({"size":size,"replica":replica,"state":s.blob.state,"slow_ms":s.blob.delay_ms,"refresh":s.blob.refresh});
         if let Some(all) = s.data["blob_fixtures"].as_array_mut() {
             all.push(entry);
         }
@@ -150,8 +150,8 @@ pub fn fixture(state: &Shared, tx: &mpsc::Sender<Request>, input: &Value) -> Res
 pub fn restore(data: &Value) -> Fixture {
     let mut fixture = Fixture::default();
     for entry in data["blob_fixtures"].as_array().into_iter().flatten() {
-        let bytes = if entry["relay"] == true {
-            b"[ab-test] relay blob\n".repeat(8192)
+        let bytes = if entry["replica"] == true {
+            b"[ab-test] replica blob\n".repeat(8192)
         } else {
             fixture_bytes(
                 usize::try_from(entry["size"].as_u64().unwrap_or_default()).unwrap_or_default(),

@@ -10,12 +10,12 @@ The table is a conservative source inventory. Every P/D journey must drive the s
 
 | Category | Files |
 | --- | ---: |
-| wire-contract only | 181 |
+| wire-contract only | 171 |
 | read-only inspection | 4 |
-| P-class | 71 |
-| D-class | 77 |
+| P-class | 57 |
+| D-class | 60 |
 
-Total: 333 files. Existing evidence annotations record the implementation that produced the original results; they do not refresh timestamps or change verdicts. All 746 historical evidence JSON files retain their previous data apart from the added impl field.
+Total: 292 files. Existing evidence annotations record the implementation that produced the original results; they do not refresh timestamps or change verdicts. All 746 historical evidence JSON files retain their previous data apart from the added impl field.
 
 | File | Classification | Basis | Internal imports |
 | --- | --- | --- | --- |
@@ -28,16 +28,6 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/demo/fixtures.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/demo/world.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/iphonegateway/main.go` | D-class | Home constructor/inspection may initialize or migrate: Open | blobs, iphone, state, contracts, frontdoor, operations, trust |
-| `lab/relayprobe/agents.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
-| `lab/relayprobe/commands.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/relayprobe/contacts.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/relayprobe/contacts_watch.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/relayprobe/live.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/relayprobe/postburst.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
-| `lab/relayprobe/query.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
-| `lab/relayprobe/replay.go` | D-class | Home constructor/inspection may initialize or migrate: Open | trust |
-| `lab/relayprobe/revocation.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
-| `lab/relayprobe/transport.go` | P-class | Product implementation linked in-process: trust | trust |
 | `lab/scenarios/actions.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/agent_access.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust, web |
 | `lab/scenarios/agent_activity.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust, web |
@@ -76,7 +66,6 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/scenarios/clock_timer_native.go` | P-class | Product implementation linked in-process: shortcut | shortcut |
 | `lab/scenarios/commands.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/connector_approval.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust, web |
-| `lab/scenarios/connector_real.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, remote, trust, web |
 | `lab/scenarios/consent.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
 | `lab/scenarios/consent_activity.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, state |
 | `lab/scenarios/contact_recipient_lookup.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
@@ -84,7 +73,6 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/scenarios/contacts_groups.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/contacts_identity.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/contacts_list.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/contacts_relay.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/date_fixtures.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/delegation.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
 | `lab/scenarios/demo_item_coverage.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
@@ -104,15 +92,15 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/scenarios/integrity.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/iphone_capability.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_capture.go` | D-class | Home constructor/inspection may initialize or migrate: Open | blobs, contracts, iphone, operations, state, trust |
-| `lab/scenarios/iphone_command.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, relay, state, trust |
+| `lab/scenarios/iphone_command.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_connector_real.go` | P-class | Product implementation linked in-process: iphone, trust, web | contracts, iphone, trust, web |
 | `lab/scenarios/iphone_connector_real_test.go` | D-class | Home constructor/inspection may initialize or migrate: Open | trust |
 | `lab/scenarios/iphone_health.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_health_write.go` | P-class | Product semantic helper in-process: ValidateIPhoneCommand | contracts |
-| `lab/scenarios/iphone_live.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, relay, state, trust |
+| `lab/scenarios/iphone_live.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_location.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_pair.go` | D-class | Home constructor/inspection may initialize or migrate: Open | trust |
-| `lab/scenarios/iphone_real.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, relay, state, trust |
+| `lab/scenarios/iphone_real.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, iphone, operations, state, trust |
 | `lab/scenarios/iphone_real_test.go` | D-class | Home constructor/inspection may initialize or migrate: Open | iphone, trust |
 | `lab/scenarios/iphone_screentime.go` | P-class | Product semantic helper in-process: ValidateIPhoneCommand | contracts |
 | `lab/scenarios/iterator_pool.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
@@ -192,37 +180,11 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/scenarios/readmodels_reminders_sorts.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/readmodels_reminders_zones.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/recordings.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_acme_pebble.go` | P-class | Product implementation linked in-process: relay, remote | relay, remote |
-| `lab/scenarios/relay_agent_approvals.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
-| `lab/scenarios/relay_agent_delegation.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
-| `lab/scenarios/relay_agent_parent.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust |
-| `lab/scenarios/relay_agents.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust, web |
-| `lab/scenarios/relay_auth.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, replication, trust |
-| `lab/scenarios/relay_auth_capture.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
-| `lab/scenarios/relay_connect.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | contracts, remote, trust |
-| `lab/scenarios/relay_dns.go` | P-class | Product implementation linked in-process: relay | relay |
-| `lab/scenarios/relay_ingress.go` | P-class | Product implementation linked in-process: remote | remote |
-| `lab/scenarios/relay_native.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_native_blobs.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_native_ready.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_pairing.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, replication, trust |
-| `lab/scenarios/relay_postburst.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_public_agents.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, trust, web |
-| `lab/scenarios/relay_real.go` | P-class | Product implementation linked in-process: remote | contracts, remote |
-| `lab/scenarios/relay_security.go` | D-class | Home constructor/inspection may initialize or migrate: Open | trust |
-| `lab/scenarios/relay_service.go` | D-class | Home constructor/inspection may initialize or migrate: Open | relay |
-| `lab/scenarios/relay_snapshot.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/relay_streams.go` | P-class | Product implementation linked in-process: relay | relay |
 | `lab/scenarios/reminders_demo.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/reminders_demo_readmodels.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/reminders_store.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/reminders_store_perf.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/reminders_store_real.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
-| `lab/scenarios/remote.go` | P-class | Product implementation linked in-process: remote | contracts, remote |
-| `lab/scenarios/remote_checks.go` | P-class | Product implementation linked in-process: remote | remote |
-| `lab/scenarios/remote_flow.go` | P-class | Product implementation linked in-process: remote | remote |
-| `lab/scenarios/remote_private.go` | D-class | Home constructor/inspection may initialize or migrate: Open | frontdoor, remote, trust |
-| `lab/scenarios/remote_private_real.go` | P-class | Product implementation linked in-process: remote | remote |
 | `lab/scenarios/replica_capture_atomic.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/replica_capture_staging.go` | D-class | Direct writable product SQLite open or mutation; can create/alter a Rust home | contracts, state |
 | `lab/scenarios/robust.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
@@ -235,8 +197,6 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/scenarios/security_failures.go` | P-class | Product implementation linked in-process: frontdoor, remote | frontdoor, remote |
 | `lab/scenarios/security_oauth.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
 | `lab/scenarios/security_owner.go` | P-class | Product implementation linked in-process: trust | contracts, trust |
-| `lab/scenarios/security_relay.go` | D-class | Home constructor/inspection may initialize or migrate: Open | relay |
-| `lab/scenarios/security_remote.go` | D-class | Home constructor/inspection may initialize or migrate: Open | contracts, remote, trust, web |
 | `lab/scenarios/setup.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/scenarios/shortcut_probe.go` | P-class | Product implementation linked in-process: shortcut | contracts, shortcut |
 | `lab/scenarios/shortcut_probe_test.go` | P-class | Product implementation linked in-process: shortcut | shortcut |
@@ -349,7 +309,6 @@ Total: 333 files. Existing evidence annotations record the implementation that p
 | `lab/world/disk.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | trust |
 | `lab/world/frameproxy.go` | D-class | Home constructor/inspection may initialize or migrate: Open | trust, contracts |
 | `lab/world/pairing.go` | P-class | Product implementation linked in-process: trust | trust |
-| `lab/world/relay.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | trust |
 | `lab/world/truth.go` | wire-contract only | Contract types/codecs only; replace with lab-owned wire before deleting Go | contracts |
 | `lab/world/world.go` | D-class | Product home/database mutation or fixture setup; audit before Rust qualification | contracts, trust |
 
@@ -375,7 +334,7 @@ Only WEB-AGENT-ACTIVITY and WEB-AGENT-LEVELS receive the new Rust-gateway SIM en
 
 `agent_credentials.go`, `agent_oauth_credentials.go`, `agent_oauth_grants.go` and `agent_oauth_http.go` now drive the selected CLI and public registration/consent/token/revocation boundaries. OAuth wire models and token hashing are lab-owned. Existing resource/expiry corruption remains an explicit frozen-format fixture fault; authentication is verified through the selected HTTP endpoint and principal lookup is read-only. The before/after Go assertion lists and verdicts match exactly: 46 credential assertions and 28 OAuth assertions. Both journeys and consent pass against Go before their Rust SIM entry allowance is extended. No real-level or Rust-replica allowance is changed.
 
-Remaining custom CIMD resolver/transport, public-origin/security, iPhone runtime and in-process state/performance fixtures are still unqualified. No constructor or HTTP handler from the Go product is invoked by the converted OAuth paths.
+Remaining custom CIMD resolver/transport, iPhone runtime and in-process state/performance fixtures are still unqualified. No constructor or HTTP handler from the Go product is invoked by the converted OAuth paths.
 
 ## G-E source/capture and blob-wire continuation
 
@@ -404,14 +363,14 @@ The capability descriptor check now obtains the selected lab binary's actual ope
 
 ## G-E portable gateway entry continuation
 
-Generic binary and media SIM bodies are explicit entries with unchanged assertion bodies. Their portable runtime gate consumes the audited inventory and rechecks current imports and semantic calls; missing metadata fails closed. Existing native owner allowances remain separate. Source-type casts such as Grant/HealthSample do not invoke product semantics. Relay certificate fixtures, connector consent, CIMD and relay-auth roots now name their actual callbacks: real product couplings remain blocked, while unrelated native dispatcher branches no longer classify a portable journey.
+Generic binary and media SIM bodies are explicit entries with unchanged assertion bodies. Their portable runtime gate consumes the audited inventory and rechecks current imports and semantic calls; missing metadata fails closed. Existing native owner allowances remain separate. Source-type casts such as Grant/HealthSample do not invoke product semantics. Connector consent and CIMD roots now name their actual callbacks: real product couplings remain blocked, while unrelated native dispatcher branches no longer classify a portable journey.
 
 Go default proof is 201/201. Runtime negative probes reject stale-map product imports/semantic calls and missing classification/map data; a blocked CLI result stays blocked in the matrix. The ordinary matrix build enables the same lab query surface as the Go lab build. No real/native body or assertion was weakened or removed.
 
 ### Pair-code wire decoder continuation
 
-`lab/world/relay.go` no longer calls the Go trust pair-code decoder. `lab/wire.PairCode` decodes the frozen ab1/base32/JSON shape with explicit expiry time and relay-address validation. The ordinary selected-binary CORE-PAIR journey uses this decoder for its fresh CLI code; its 12 named assertions match the Go control exactly. Expired-code mutation remains an offline wire fault followed by selected-binary join rejection. Codec vectors cover malformed envelopes, required field lengths, remote URL/dial constraints and the exact expiry boundary. This removes the relay decoder dependency; the remote relay journey and its remaining in-process probe/authority fixtures still require their own proof and are not qualified by the local pairing control.
+The Go pairing world no longer calls the Go trust pair-code decoder. `lab/wire.PairCode` decodes the frozen ab1/base32/JSON shape with explicit expiry time and address validation. The ordinary selected-binary CORE-PAIR journey uses this decoder for its fresh CLI code; its 12 named assertions match the Go control exactly. Expired-code mutation remains an offline wire fault followed by selected-binary join rejection. Codec vectors cover malformed envelopes, required field lengths, dial constraints and the exact expiry boundary. This removes that decoder dependency.
 
 ### Current gateway qualification boundary (2026-11-03)
 
-The original table is a Phase 0 file baseline, not a current passing-coverage claim. The current 201-entry Linux gateway run reports 165 pass, 18 executed failures and 18 blocked entries against the fixed 69e150c7 Rust artifact. The default Go control remains 201/201. `lab/testing/gateway-status-2026-11-03.json` records only summary verdicts, assertion names and blocked source paths. `rust/interfaces/lab-world.md` lists the exact remaining selected-binary fixture boundaries for the blocked families and distinguishes pure relay/native helper fixtures from gateway execution. Native/real and performance entries still require their own proof; no SIM result qualifies those branches.
+The original table is a Phase 0 file baseline, not a current passing-coverage claim. The current 201-entry Linux gateway run reports 165 pass, 18 executed failures and 18 blocked entries against the fixed 69e150c7 Rust artifact. The default Go control remains 201/201. `lab/testing/gateway-status-2026-11-03.json` records only summary verdicts, assertion names and blocked source paths. `rust/interfaces/lab-world.md` lists the exact remaining selected-binary fixture boundaries for the blocked families and distinguishes pure native helper fixtures from gateway execution. Native/real and performance entries still require their own proof; no SIM result qualifies those branches.

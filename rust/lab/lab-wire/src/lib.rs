@@ -1,5 +1,4 @@
 pub mod json;
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
@@ -95,25 +94,6 @@ pub fn verify_ipc_proof(
     mac.update(format!("apple-bridge-ipc/1\0{role}\0{a}\0{b}").as_bytes());
     mac.verify_slice(&hex::decode(proof).map_err(|_| Error::Invalid)?)
         .map_err(|_| Error::Invalid)
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct RelayProof {
-    pub hostname: String,
-    pub credential: String,
-    pub nonce: String,
-    pub signature: String,
-}
-impl RelayProof {
-    pub fn message(&self, role: &str) -> String {
-        format!(
-            "apple-bridge-relay/1\n{role}\n{}\n{}\n{}",
-            self.hostname, self.credential, self.nonce
-        )
-    }
-    pub fn header(&self) -> Result<String, Error> {
-        Ok(URL_SAFE_NO_PAD.encode(serde_json::to_vec(self)?))
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

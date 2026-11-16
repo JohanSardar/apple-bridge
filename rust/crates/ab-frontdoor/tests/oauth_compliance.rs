@@ -12,8 +12,8 @@ use sha2::{Digest, Sha256};
 use std::{net::SocketAddr, sync::Arc};
 use tower::ServiceExt;
 
-const CLAUDE_CALLBACK: &str = "https://claude.ai/api/mcp/auth_callback";
-const CHATGPT_CALLBACK: &str = "https://chatgpt.com/connector_platform_oauth_redirect";
+const APP_CALLBACK: &str = "https://app.example/api/mcp/auth_callback";
+const OTHER_CALLBACK: &str = "https://other.example/oauth/callback";
 
 struct Server {
     _home: tempfile::TempDir,
@@ -209,12 +209,12 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
 async fn review_s2_agent_request_makes_a_waiting_oauth_request_ambiguous() {
     let s = Server::tailnet();
     let (_, client) = s
-        .register(&json!({"redirect_uris": [CLAUDE_CALLBACK], "client_name": "Claude"}))
+        .register(&json!({"redirect_uris": [APP_CALLBACK], "client_name": "Example App"}))
         .await;
     let (_, challenge) = pkce();
     let query = s.authorize_query(
         client["client_id"].as_str().unwrap(),
-        CLAUDE_CALLBACK,
+        APP_CALLBACK,
         &challenge,
     );
     let response = s
@@ -233,7 +233,7 @@ async fn review_s2_agent_request_makes_a_waiting_oauth_request_ambiguous() {
             s.request("POST", "/connect/request")
                 .header(header::ORIGIN, &s.origin)
                 .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(json!({"name": "Claude"}).to_string()))
+                .body(Body::from(json!({"name": "Example App"}).to_string()))
                 .unwrap(),
         )
         .await;
@@ -246,7 +246,7 @@ async fn review_s2_agent_request_makes_a_waiting_oauth_request_ambiguous() {
         .unwrap();
     assert!(
         oauth.show_code,
-        "two requests named Claude are waiting on the same tailnet, but the OAuth code stays hidden"
+        "two requests named Example App are waiting on the same tailnet, but the OAuth code stays hidden"
     );
 }
 
@@ -275,7 +275,7 @@ async fn discovery_has_what_both_clients_read() {
     assert!(has("token_endpoint_auth_methods_supported", "none"));
     assert!(
         has("scopes_supported", "offline_access"),
-        "Claude asks for refresh tokens with it"
+        "Example App asks for refresh tokens with it"
     );
     assert!(has("grant_types_supported", "refresh_token"));
     assert_eq!(meta["client_id_metadata_document_supported"], true);
@@ -287,9 +287,9 @@ async fn discovery_has_what_both_clients_read() {
 async fn registration_takes_what_real_clients_send() {
     let s = Server::new();
     for metadata in [
-        json!({"redirect_uris": [CLAUDE_CALLBACK], "client_name": "Claude", "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"], "token_endpoint_auth_method": "none"}),
-        json!({"redirect_uris": [CHATGPT_CALLBACK]}),
-        json!({"redirect_uris": [CHATGPT_CALLBACK], "client_name": "ChatGPT", "token_endpoint_auth_method": "client_secret_basic", "grant_types": ["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer"], "scope": "calendar:read"}),
+        json!({"redirect_uris": [APP_CALLBACK], "client_name": "Example App", "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"], "token_endpoint_auth_method": "none"}),
+        json!({"redirect_uris": [OTHER_CALLBACK]}),
+        json!({"redirect_uris": [OTHER_CALLBACK], "client_name": "Other App", "token_endpoint_auth_method": "client_secret_basic", "grant_types": ["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer"], "scope": "calendar:read"}),
     ] {
         let (status, client) = s.register(&metadata).await;
         assert_eq!(status, StatusCode::CREATED, "{metadata}");
@@ -304,8 +304,8 @@ async fn registration_takes_what_real_clients_send() {
         json!({"client_name": "no redirect"}),
         json!({"redirect_uris": []}),
         json!({"redirect_uris": ["http://evil.example/cb"]}),
-        json!({"redirect_uris": ["https://user:pw@claude.ai/cb"]}),
-        json!({"redirect_uris": ["https://claude.ai/cb#fragment"]}),
+        json!({"redirect_uris": ["https://user:pw@app.example/cb"]}),
+        json!({"redirect_uris": ["https://app.example/cb#fragment"]}),
     ] {
         let (status, error) = s.register(&bad).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{bad}");
@@ -317,11 +317,11 @@ async fn registration_takes_what_real_clients_send() {
 async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
     let s = Server::new();
     let (_, client) = s
-        .register(&json!({"redirect_uris": [CLAUDE_CALLBACK], "client_name": "Claude"}))
+        .register(&json!({"redirect_uris": [APP_CALLBACK], "client_name": "Example App"}))
         .await;
     let id = client["client_id"].as_str().unwrap();
     let (verifier, challenge) = pkce();
-    let query = s.authorize_query(id, CLAUDE_CALLBACK, &challenge);
+    let query = s.authorize_query(id, APP_CALLBACK, &challenge);
 
     let page = s
         .send(
@@ -332,9 +332,9 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
         .await;
     assert_eq!(page.status(), StatusCode::OK);
     let html = body_text(page).await;
-    assert!(html.contains("Allow Claude to use your Mac?"));
+    assert!(html.contains("Allow Example App to use your Mac?"));
     assert!(
-        html.contains("claude.ai"),
+        html.contains("app.example"),
         "consent shows the redirect host"
     );
 
@@ -350,7 +350,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
             ("grant_type", "authorization_code"),
             ("client_id", id),
             ("code", &code),
-            ("redirect_uri", CLAUDE_CALLBACK),
+            ("redirect_uri", APP_CALLBACK),
             ("code_verifier", wrong),
             ("resource", &resource),
         ])
@@ -363,7 +363,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
             ("grant_type", "authorization_code"),
             ("client_id", id),
             ("code", &code),
-            ("redirect_uri", CLAUDE_CALLBACK),
+            ("redirect_uri", APP_CALLBACK),
             ("code_verifier", &verifier),
             ("resource", &resource),
         ])
@@ -406,7 +406,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(
         error["error"], "invalid_grant",
-        "Claude needs invalid_grant here"
+        "Clients need invalid_grant here"
     );
 
     let (status, error, _) = s
@@ -443,7 +443,7 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
             ("grant_type", "authorization_code"),
             ("client_id", id),
             ("code", &code),
-            ("redirect_uri", CLAUDE_CALLBACK),
+            ("redirect_uri", APP_CALLBACK),
             ("code_verifier", &verifier),
             ("resource", &resource),
         ])
@@ -464,13 +464,13 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
 async fn errors_redirect_only_once_the_redirect_is_verified() {
     let s = Server::new();
     let (_, client) = s
-        .register(&json!({"redirect_uris": [CHATGPT_CALLBACK], "client_name": "ChatGPT"}))
+        .register(&json!({"redirect_uris": [OTHER_CALLBACK], "client_name": "Other App"}))
         .await;
     let id = client["client_id"].as_str().unwrap();
     let (_, challenge) = pkce();
 
     for query in [
-        s.authorize_query("client_unknown", CHATGPT_CALLBACK, &challenge),
+        s.authorize_query("client_unknown", OTHER_CALLBACK, &challenge),
         s.authorize_query(id, "https://evil.example/cb", &challenge),
     ] {
         let response = s
@@ -493,8 +493,7 @@ async fn errors_redirect_only_once_the_redirect_is_verified() {
         ("scope", "not-a-scope", "invalid_scope"),
     ] {
         let query: Vec<(String, String)> = url::form_urlencoded::parse(
-            s.authorize_query(id, CHATGPT_CALLBACK, &challenge)
-                .as_bytes(),
+            s.authorize_query(id, OTHER_CALLBACK, &challenge).as_bytes(),
         )
         .map(|(k, v)| {
             let replaced = if k == name {
@@ -517,13 +516,13 @@ async fn errors_redirect_only_once_the_redirect_is_verified() {
             .await;
         assert_eq!(response.status(), StatusCode::SEE_OTHER, "{name}");
         let to = url::Url::parse(response.headers()[header::LOCATION].to_str().unwrap()).unwrap();
-        assert!(to.as_str().starts_with(CHATGPT_CALLBACK));
+        assert!(to.as_str().starts_with(OTHER_CALLBACK));
         assert_eq!(param(&to, "error").unwrap(), expected);
         assert_eq!(param(&to, "state").unwrap(), "xyz");
         assert_eq!(
             param(&to, "iss").unwrap(),
             s.origin,
-            "ChatGPT: iss on every error too"
+            "Other App: iss on every error too"
         );
     }
 }
@@ -531,18 +530,14 @@ async fn errors_redirect_only_once_the_redirect_is_verified() {
 #[tokio::test]
 async fn a_request_without_resource_still_binds_to_the_one_resource() {
     let s = Server::new();
-    let (_, client) = s
-        .register(&json!({"redirect_uris": [CLAUDE_CALLBACK]}))
-        .await;
+    let (_, client) = s.register(&json!({"redirect_uris": [APP_CALLBACK]})).await;
     let id = client["client_id"].as_str().unwrap();
     let (verifier, challenge) = pkce();
-    let query: Vec<(String, String)> = url::form_urlencoded::parse(
-        s.authorize_query(id, CLAUDE_CALLBACK, &challenge)
-            .as_bytes(),
-    )
-    .filter(|(k, _)| k != "resource")
-    .map(|(k, v)| (k.into_owned(), v.into_owned()))
-    .collect();
+    let query: Vec<(String, String)> =
+        url::form_urlencoded::parse(s.authorize_query(id, APP_CALLBACK, &challenge).as_bytes())
+            .filter(|(k, _)| k != "resource")
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
     let query = url::form_urlencoded::Serializer::new(String::new())
         .extend_pairs(query)
         .finish();
@@ -553,7 +548,7 @@ async fn a_request_without_resource_still_binds_to_the_one_resource() {
             ("grant_type", "authorization_code"),
             ("client_id", id),
             ("code", &code),
-            ("redirect_uri", CLAUDE_CALLBACK),
+            ("redirect_uri", APP_CALLBACK),
             ("code_verifier", &verifier),
         ])
         .await;
@@ -564,7 +559,7 @@ async fn a_request_without_resource_still_binds_to_the_one_resource() {
 async fn cross_origin_browser_writes_are_refused() {
     let s = Server::new();
     let (_, challenge) = pkce();
-    let query = s.authorize_query("client_x", CLAUDE_CALLBACK, &challenge);
+    let query = s.authorize_query("client_x", APP_CALLBACK, &challenge);
     for origin in ["https://evil.example", "null"] {
         let response = s
             .send(
@@ -598,12 +593,14 @@ async fn cross_origin_browser_writes_are_refused() {
 async fn pages_never_echo_client_markup() {
     let s = Server::new();
     let (_, client) = s
-        .register(&json!({"redirect_uris": [CLAUDE_CALLBACK], "client_name": "<script>alert(1)</script>"}))
+        .register(
+            &json!({"redirect_uris": [APP_CALLBACK], "client_name": "<script>alert(1)</script>"}),
+        )
         .await;
     let (_, challenge) = pkce();
     let query = s.authorize_query(
         client["client_id"].as_str().unwrap(),
-        CLAUDE_CALLBACK,
+        APP_CALLBACK,
         &challenge,
     );
     let page = s

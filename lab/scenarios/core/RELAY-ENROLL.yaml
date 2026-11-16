@@ -1,4 +1,0 @@
-id: RELAY-ENROLL
-feature: remote.relay
-levels: [sim]
-when: [{relay_service: {}}]

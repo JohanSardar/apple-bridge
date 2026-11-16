@@ -19,18 +19,9 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
         return TrustedChild.capture(path, identifier: TrustedChild.bridgeName, arguments: ["connector"] + arguments)
     }
 
-    nonisolated static func certificateWarning(home: String?) -> String? {
-        guard let home else { return nil }
-        struct Remote: Decodable { let ct_warning: String? }
-        let file = URL(fileURLWithPath: home).appendingPathComponent("remote/status.json")
-        guard let data = try? Data(contentsOf: file), let warning = (try? JSONDecoder().decode(Remote.self, from: data))?.ct_warning, !warning.isEmpty else { return nil }
-        return warning
-    }
-
     func watchConnectors() {
         let options = connectorHome.map { ["--home", $0] } ?? []
         let executable = connectorLabExecutable
-        let warningHome = connectorHome
         approvals.decide = { [weak self] request, allow in self?.decide(request, allow: allow, options: options, executable: executable) }
         approvalPanel.contentView = NSHostingView(rootView: ApprovalView(model: approvals))
         connectorTask = Task { @MainActor [weak self] in
@@ -51,7 +42,6 @@ final class PackagedApp: NSObject, NSApplicationDelegate {
                     self.approvalPanel.orderOut(nil)
                 }
                 if self.approvals.request == nil, let next = requests.first {
-                    self.approvals.warning = Self.certificateWarning(home: warningHome) ?? ""
                     self.approvals.request = next
                     self.present()
                 }

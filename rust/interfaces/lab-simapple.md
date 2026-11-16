@@ -161,20 +161,6 @@ The real level mirrors Go's `world.NewReal` protections and is compile-only in C
 
 Unit tests cover the refusals (no Helper, unsigned Helper, live home) and an unrelated directory.
 
-## Lab relay/2 listener (Phase 8, web relay prerequisites)
-
-Both the Rust gateway (`lab-harness`, which `lab-queries` and `seeded-faults` imply) and the Go gateway built with `-tags lab` can expose their relay/1 and relay/2 feed over TLS 1.3 to the lab. Product builds contain neither the Rust module nor the Go file's body; the Go product build links a no-op `serveRelayLab`.
-
-The listener is configured only by `<home>/lab-relay.json`, read at gateway start. If the file is absent nothing is listened on:
-
-```json
-{"listen": "127.0.0.1:0", "cert": "/abs/path/leaf-chain.pem", "key": "/abs/path/leaf-key.pem"}
-```
-
-`cert` is the server chain (leaf first) signed by a lab-owned test CA; `key` is the PKCS#8 private key. The lab owns the CA (`lab-relay` generates it with rcgen) and its clients trust only that CA, never webpki roots. After binding, the gateway writes the resolved `host:port` to `<home>/run/lab-relay-addr`. A gateway restart rereads the file and rebinds, so read the address again.
-
-Only `GET /v1/feed` is served; any other path returns 401. The handler is the production relay handler (`feed.RelayHandler()` in Go, `Server::relay_http` in Rust): no client certificate is requested, requests carrying an `Origin` header are rejected with 401, relay/1 hellos (no `version`) are accepted as legacy, relay/2 hellos are bound to the TLS 1.3 exporter `EXPORTER-Channel-Binding` with an empty context. The feed started after authentication is the same one the gateway peer and ingress paths use.
-
 ## Maps, location and Files handlers (Phase 8)
 
 The Rust peer answers the Maps and Location queries of the Go simulator (`maps.rs`): `location.current`, `location.geocode`, `location.reverse_geocode`, `maps.search`, `maps.nearby`, `maps.directions`, `maps.eta` and `maps.snapshot`, with the Go argument rules (strict keys, coordinate and radius ranges, `transit` directions `unsupported`, snapshot size 128..1024, at most 50 markers). Snapshots are blank RGBA PNGs stored in the session blob map. `maps.open` prepares and dispatches with the `com.apple.Maps` frontmost evidence bound to the request hash. The peer advertises `maps.open` and the eight `files.*` commands in `Ready`.
@@ -232,7 +218,6 @@ APP-SHELL-REAL, APP-PAIR-REAL, APP-CMD-REAL, APP-NOTIFY-REAL, APP-APPROVE-REAL, 
 - `lab-families --level real` routes these IDs (and the sensor IDs in `iphone_real.rs`) to `iphone_real::run_real` before any world exists. The signed-Helper requirement applies only when the run includes a scenario that is not handled by the iPhone real path, so a phone-only run needs no Helper.
 - The run needs `AB_REAL_DEVICE`, `APPLE_BRIDGE_SECRET_STORE=file` and `APPLE_BRIDGE_IPHONE_ROOT`. It takes the `/tmp/ab-iphone.lock` phone lock, drives the iPhone project's `lab/iphone-real/device.py` and `devicectl` (request copy, launch, receipt polling with the offline-time allowance, 210 s per phase, 800 s total), and always runs the restore handshake.
 - Paired scenarios start an isolated `Gateway` fixture. A `Lan` forwarder listens on `0.0.0.0` with its own TLS certificate, hands connections to the fixture's ingress proxy, and rewrites the pairing code's `address` and `fingerprint` for the phone (`AB_REAL_HOST` or `en0`).
-- Push scenarios point the gateway at a loopback relay stand-in that forwards `POST /iphone/push` to the APNs sandbox with an ES256 token (`AB_REAL_APNS_KEY`, `AB_REAL_APNS_KEY_ID`, `AB_REAL_APNS_TEAM_ID`) and counts accepted and failed pushes for `apns_accepted`.
 - APP-APPROVE-REAL's connector phase registers an OAuth client, creates a pending connector approval, and after the phone decision exchanges the code and checks the token against the API. The pending-approval response field names (`id`, `code`) and the token check operation are unverified against a live run.
 - The paired device ID is read from the gateway's `credentials.json` because the gateway has no CLI to list iPhones.
 
@@ -262,23 +247,12 @@ SIRI-INTENTS (sim level only) runs the shortcut-probe simulation (one `AB Bridge
 
 Gate: `python3 rust/lab/families-parity.py ... --helper` (with `AB_SESSION_BINARY` set) and `--darwin-usage --calls`, identical per-assertion verdicts with the Go harness against the Rust gateway built with `--features lab-queries`.
 
-### lab-relay client (Phase 8)
-
-`rust/lab/lab-relay` is a standalone relay client with no `ab-*` dependency (rustls, tungstenite, rcgen, x509-parser, ed25519-dalek only). It provides `Ca` (a lab-owned Ed25519 test CA that issues the leaf chain written for `lab-relay.json`), `configure_gateway` and `gateway_address` (write the listener config, read back the bound address), `Link::dial` (TLS 1.3 trusting only the lab CA, SNI `localhost`, optional `Origin`, exporter `EXPORTER-Channel-Binding` with an empty context captured as `Link::binding`), `Identity::load` (a replica home's `identity.pem` and file-store key) and `Identity::generate` (an unpaired device), `authenticate`/`relay1_client`/`relay2_client`/`join` (the relay/1 and relay/2 handshakes including pairing proofs), transcript helpers `input1`/`input2` for oracle checks on captured frames, and `replay_gateway` (a one-shot TLS websocket server that replays a captured challenge and reports whether a proof arrived). The same code drives the Go and Rust gateways.
-
 ### Lab gateway commands (Phase 8)
 
 Both gateways, built with `lab-harness`/`-tags lab` only:
 
 - `bridge lab-session --home H` creates an owner device session and prints `{"name":"ab_session_local","value":"..."}`; send it as that cookie to the owner web routes (approvals, devices).
-- `bridge lab-principal --home H (--id ID | --fingerprint FP)` prints `{"id","kind","fingerprint","grants","revision","relay2"}` for an active principal and exits nonzero otherwise. Revision is the subscription revision relay/2 reports after a scope change.
-- `bridge pair --via-remote` honours `APPLE_BRIDGE_LAB_PAIR_URL` and pairs against that URL instead of the Remote status URL. The URL is validated exactly as the product validates its Remote URL (`https`, no userinfo, path, query, fragment, port 1..65535); an invalid URL exits nonzero with `invalid`. The Rust product path now validates through the same `pair_remote` helper.
-
-### WEB-RELAY adapters (Phase 8)
-
-`web_relay.rs` registers the `web` action for WEB-RELAY-AUTH and WEB-RELAY-PAIRING. Each scenario writes `lab-relay.json`, restarts the gateway so it rebinds the lab listener, and drives it with `lab-relay`; gateway state changes use the CLI (`scope`, `revoke`, `pair --via-remote`, `lab-principal`). Assertion names and order match Go. Differences from Go's in-process fixture: the revocation timer starts when the `revoke` command returns, not before it; replica enrollment persistence is asserted from the join result and the gateway's `lab-principal` record because the lab client keeps no enrollment file.
-
-Gate: `python3 rust/lab/families-parity.py ... --web-relay` gives identical per-assertion verdicts for the Go harness against a Rust gateway (`lab-queries`) and against the Go `-tags lab` gateway.
+- `bridge lab-principal --home H (--id ID | --fingerprint FP)` prints `{"id","kind","fingerprint","grants","revision"}` for an active principal and exits nonzero otherwise.
 
 ## Remaining Reminders scenarios (Phase 8)
 
@@ -288,41 +262,12 @@ Gate: `python3 rust/lab/families-parity.py ... --web-relay` gives identical per-
 
 Gate: `families-parity.py ... --reminders` (now includes `reminders/REM-DST`) on Linux, and `--reminders-mac` for the four Darwin scenarios on the build Mac. Verdicts are identical in both.
 
-WEB-RELAY-AGENTS is ported in `web_relay_agents.rs` on the same `web` action (the registry routes `web` to `web_relay` for the three WEB-RELAY ids and to the notes adapter otherwise). It seeds three records, pairs one replica, creates replica agents through the replica CLI, mints an owner session with `lab-session` for the approvals page, forges delegation headers with the replica key and posts them to the gateway peer `/v1/commands` through `lab_relay::peer_post` (TLS 1.3 with the replica certificate, gateway pinned by fingerprint), restarts the replica with `replicas::crash`/`restart`, and reads stored approval states from the gateway `ledger.db`. Verdicts are identical to Go with the Rust gateway and with the Go `-tags lab` gateway.
-
-### Relay client scenarios (Phase 8)
-
-`relay_splice.rs` ports RELAY-TLS-SPLICE, RELAY-DOWNGRADE (same adapter, same assertions) and RELAY-LEGACY-COMPAT. Each enrols a device on the Rust relay fixture (`AB_RELAY_FIXTURE`), issues a lab-CA leaf for the enrolled hostname with `Ca::issue_for`, points the gateway's `lab-relay.json` listener at it and restarts the gateway, then pairs replicas with the CLI. Clients are `lab-relay` (`Link::dial_as` takes the TLS server name). TLS-SPLICE seeds one reminder through `/external-change` and reads it back over a bound relay/2 feed, runs two downgrade servers (relay/1 version, missing `tls-exporter` capability), attaches the gateway behind the relay and puts a two-leg TLS splicer between client and relay, counting the four `Auth*` frames and the feed marker. The wrong-name, untrusted-certificate and pinned-fingerprint controls each dial the splicer. LEGACY-COMPAT runs the relay/1 and relay/2 matrix against one gateway and a relay/1-only server that counts connections and frames to prove there is no fallback. Differences from Go: Go also ran the same matrix against its own gateway, so the `go_*` assertions in LEGACY-COMPAT are listed in `GO_TARGET_SCENARIOS` in `families-parity.py` and ignored; the `rust_*` names are kept because they are the Rust gateway checks. In TLS-SPLICE the Go `rust_*` client assertions and the unprefixed Go-client assertions are the same lab-client check and are both emitted.
-
-`relay_streams.rs` ports RELAY-STREAMS with a lab-side reconnecting outbound tunnel client (`/tunnel` WebSocket carrying smux v2 frames, 1 s NOP keepalive, 100 ms to 1 s backoff, 262144-byte window updates) that forwards each stream to a lab TLS origin serving an SSE feed, a WebSocket echo and a minimal MCP streamable HTTP session. `Lab::restart` closes sessions, stops the relay listener and starts a new one behind the unchanged public address. `AB_LAB_RELAY_STREAM_SECONDS=4` shortens the ten-minute idle-budget read exactly as in Go. The Go harness blocks this scenario under `--impl gateway=rust`, so its gate runs without `--go-rust-gateway` (`--relay-streams`).
-
-`relay_acme.rs` ports RELAY-ACME and RELAY-OWN-DOMAIN. `Lab` callbacks now answer the fixture's `/dns` (TXT publish), `/cname` (resolver) and `/ct` (Certificate Transparency) requests from a shared `Hooks` table. A UDP DNS responder serves TXT answers for Pebble (`AB_LAB_PEBBLE`, `-dnsserver`), mapping `_acme-challenge.mac.example.test` onto the assigned name for the own-domain case. The lab ACME client (ES256 JWS, dns-01, CSR from rcgen) publishes the challenge value through the relay's signed `/dns` endpoint, finalises, writes `relay-cert.pem` and `relay-key.pem` (0600) under a lab home, renews, and clears the TXT value; the control certificate uses the fixture's `control` action against the same Pebble. The Go `MissingRecords` helper is replaced by the same check over the callback CNAME table.
-
-Gate: `families-parity.py ... --relay` (adds the five scenarios above except STREAMS) and `--relay-streams`, both with identical per-assertion verdicts.
-
 ### Agent access: CONSENT-CONNECTOR (Phase 8)
 
 `consent.rs` ports CONSENT-CONNECTOR (`consent_connector` step, injected for the empty-`when` scenario). `Site` talks to the gateway's API address with `Host: localhost:PORT`, so the OAuth issuer and resource are `http://localhost:PORT`. The owner session is a passkey enrolment through `bridge web enroll` and the in-memory authenticator in `webauthn.rs`. `agent_oauth` covers discovery challenges, dynamic registration, PKCE and redirect refusals, consent that may not exceed the requested scopes, code exchange, one-hour and 90-day lifetimes, refresh rotation and reuse, expiry edits and owner revocation; token expiry is simulated by editing `credentials.json` under the `credentials.lock` flock, which the Rust gateway rereads. The consent half creates an approve-level agent, sends `messages.send`, checks the approvals page arguments, approves through the form and waits for `observed`. Unlike Go the world is started with one replica only by the YAML; the adapter does not start any (`consent::SCENARIOS` is in the self-started list). `edit_credentials` and `Site` are shared helpers for the other agent-access scenarios.
 
 Gate: `families-parity.py ... --consent` gives identical per-assertion verdicts for the Go harness on a Rust gateway.
 
-### SEC-REMOTE-ACCESS (Phase 8)
-
-`security.rs` ports the sim level (`security_remote` step) on top of the CONSENT-CONNECTOR helpers. The connector approval flow runs on the main world (`connectors::connector_approval`); everything else runs on `world.sibling("security")` so the approval rate limits do not leak into the OAuth checks, as Go used two worlds. Library-level Go checks became black-box checks against the Rust binaries, and these are the intentional differences:
-
-- Relay proofs run against the Rust relay fixture (`Fixture::open_zone`, zone `relay.example`, limits 2/1024/4096): signed enrolment, enrolment replay, single-use, wrong action, wrong device, wrong credential, wrong key and revocation through the fixture's `challenge`, `enroll`, `verify` and `policy` actions.
-- `public_health_requires_authentication` sends `GET /v1/health` with `Host: bridge.example` to the gateway (a non-local host is the public host and requires a token) instead of calling the Go front door in-process.
-- `remote_setup_failure_redacts_credential_urls_in_logs` points a sibling gateway's Tailscale LocalAPI (`APPLE_BRIDGE_TAILSCALE_SOCKET`) at a lab Unix socket that answers 500 with a credential URL, runs `bridge remote on --via tailscale-app` with `open` and `xdg-open` shimmed, and checks that stderr and the log lines appended during the call contain neither `credential` nor `https://`. No Tailscale or browser is touched.
-- OAuth codes come from the owner approval POST (the passkey session from `consent.rs`) instead of `IssueOAuthCode`; the revoked principal is found from the stored access hash.
-- Trust boundaries: an expired trusted owner session must be refused `POST /auth/passkeys/options`; an agent whose principal expired cannot refresh an OAuth token; a delegated replica agent with `messages:read` is refused `contacts.create` although its replica holds `contacts:write` (read operations return filtered, empty results rather than errors, so a write is the discriminating operation); and a paired replica whose principal gets `expires_at` or `revoked_at` in `credentials.json` is refused by relay/1 authentication on the lab TLS listener.
-
-The real level (`security::real`) is compile-only: it enables the relay backend, sweeps the public origin with `curl`, then revokes the relay credential and turns Remote off. Owner-session, OAuth and trust-boundary checks at the real level are not ported; they need a passkey session against the public relay host. Never run it against the production relay.
-
-Gate: `families-parity.py ... --security` gives identical per-assertion verdicts. The full Go run takes about ten minutes because of the connector rate-limit waits.
-
-### lab-probe (Linux replacement for the Funnel probes)
-
-`rust/lab/lab-probe` is an `ab-*`-free Linux binary that replaces two of the Go probes used by the Funnel-level scenarios, without the Go product packages. `lab-probe remote` reads the same stdin JSON as `lab/remoteprobe` (`URL`, `IP`, `Remote`, `Local`, `Off`), dials the public IP with the URL's host as SNI and verifies the certificate against the webpki roots, and prints `{"checks":{...},"latency":{...}}` with the same check names (`html_valid_certificate` through `read_19`, `mcp_*` over the streamable HTTP JSON-RPC wire protocol instead of the Go SDK). `lab-probe proxy --host https://H --ip IP --ready FILE` replaces `relayprobe proxy`: a loopback CONNECT proxy that tunnels only to the pinned `host:port` through the pinned public IP and rewrites the ready file with the connection count; private, loopback and unspecified IPs are refused. `remote_real.rs` (RELAY-REAL, CONN-RELAY-CLAUDE) now drives the probe host over `ssh ubuntu`: public DNS through `dig @1.1.1.1`, two `curl --resolve` checks, then it copies the Linux `lab-probe` named by `AB_LAB_PROBE` (build it on `ssh build`), runs it with the same stdin JSON and reports each check as an assertion, replacing the old `unverified` placeholder. Without `AB_LAB_PROBE` the `external_probe_build` assertion fails with that instruction. Both probes are compile- and test-only so far: the tests run `remote` against a local TLS server with a lab CA and `proxy` against a local echo upstream. They have not been run against a Funnel. The remaining `relayprobe` actions (query, command, agents, live, blob, replay, revocation, postburst, contacts-crud) still need the Go product packages and are not replaced.
 ## Focus and Clock (Phase 8)
 
 `lab-adapters/src/focus.rs` ports FOC-SIM / FOC-PHONE-SYNC (the Focus pack and compiled-pack checks of `ab-shortcuts-checks`, `focus.set` contract through the gateway, `full` and `approve` agents created with `bridge agent create` both stopping at `awaiting_approval`, and the native `FocusChecks` run). No owner session is needed: approval is not granted, only required. All three need macOS (`ShortcutsChecks`, `FocusChecks`, `plutil`). Gate: `families-parity.py --shortcuts`.
@@ -348,7 +293,7 @@ Gate: `python3 rust/lab/families-parity.py ... --web-rm-latency`. Run it with re
 
 ## Real-only and replica-only scenarios
 
-`families-parity.py` tracks the scenarios that have no sim-level parity run in two explicit lists. `REAL_ONLY_COMPILED` holds scenarios whose adapter has real steps (a registered real or standalone handler, the phone-real harness, or registered sim steps). `REAL_ONLY_STUB` holds scenarios whose adapter only returns an explicit not-ported error or an `unverified` placeholder: `APP-BUILD-REAL`, `CON-ME`, `CON-NOTE`, `CON-RELAY`, `FOC-IDLE`, `FOC-SET-REAL`, `FOC-STATUS-REAL`, `MAIL-AGENT`, `MAIL-BODY-REAL`, `MAIL-DRAFT-REAL`, `MAIL-ORGANIZE-REAL`, `MAIL-READ-REAL`, `MAIL-SEND-SELF-REAL` and `SC-IDLE`.
+`families-parity.py` tracks the scenarios that have no sim-level parity run in two explicit lists. `REAL_ONLY_COMPILED` holds scenarios whose adapter has real steps (a registered real or standalone handler, the phone-real harness, or registered sim steps). `REAL_ONLY_STUB` holds scenarios whose adapter only returns an explicit not-ported error or an `unverified` placeholder: `APP-BUILD-REAL`, `CON-ME`, `CON-NOTE`, `FOC-IDLE`, `FOC-SET-REAL`, `FOC-STATUS-REAL`, `MAIL-AGENT`, `MAIL-BODY-REAL`, `MAIL-DRAFT-REAL`, `MAIL-ORGANIZE-REAL`, `MAIL-READ-REAL`, `MAIL-SEND-SELF-REAL` and `SC-IDLE`.
 
 `lab-families check YAML...` loads each YAML through the runner's own `Scenario` type and reports `compiled`, `stub` or an error. `python3 rust/lab/families-parity.py --check-real-only --families BIN` fails when a listed YAML does not load, a compiled scenario has no registered adapter at its level, a stub is listed as compiled, or a compiled scenario is listed as a stub. It never runs a scenario. Stubs are recognised from the constants next to the stub code (`contacts::STUB`, `mail::REAL_ONLY`, `iphone_real::STUB`, `shortcuts::real_only_stub`), so porting a stub means removing it from that constant and moving its ID between the two lists.
 
@@ -359,7 +304,7 @@ The check found real-level adapters that existed only as sim-step handlers and w
 
 CORE-SIM-PROGRESS-RECOVERY reads the durable progress the peer already writes: `rust-sim-progress.json` (`in_progress`, `committed`, `checkpoints`) and the per-source `revision` in `rust-sim-state.json`.
 
-`lab-relay` gains `FeedLink` and `pinned_config`: an mTLS WebSocket client for `/v1/feed` built from a replica home (`identity.pem`, `secrets/`, `credentials.json`), pinned to the gateway fingerprint. `snapshot_pool.rs` uses it for CORE-SNAPSHOT-POOL (twelve paused snapshots, reads and writes progressing, frozen digests on resume). `frame_proxy.rs` terminates TLS with the gateway identity, dials the gateway with the replica identity and relays feed frames, optionally dropping `Ack` frames. `World::retarget_proxy` points the TCP fault proxy at it, so CORE-SLOW-CONSUMER now suppresses acknowledgements like the Go harness instead of pausing the replica.
+`rust/lab/lab-feed` provides `FeedLink` and `pinned_config`: an mTLS WebSocket client for `/v1/feed` built from a replica home (`identity.pem`, `secrets/`, `credentials.json`), pinned to the gateway fingerprint. `snapshot_pool.rs` uses it for CORE-SNAPSHOT-POOL (twelve paused snapshots, reads and writes progressing, frozen digests on resume). `frame_proxy.rs` terminates TLS with the gateway identity, dials the gateway with the replica identity and forwards feed frames, optionally dropping `Ack` frames. `World::retarget_proxy` points the TCP fault proxy at it, so CORE-SLOW-CONSUMER now suppresses acknowledgements like the Go harness instead of pausing the replica.
 
 CORE-SHORTCUT-SIGN runs the `ab-shortcuts` binary found next to the gateway (or `AB_LAB_SHORTCUTS`) and reads plists back with `plutil`, so it runs on macOS only and is in the `--native` group. Its real-level part is compiled, never run.
 

@@ -117,8 +117,8 @@ pub fn loopback(text: &str) -> Outcome<SocketAddr> {
                 ui::clean(text)
             ),
         )
-        .sentence("For access from other devices, turn on remote access instead.")
-        .then("Turn on remote access", ["bridge", "remote", "enable"]));
+        .sentence("For access from other devices, turn on Tailscale access instead.")
+        .then("Turn it on", ["bridge", "tailscale"]));
     }
     Ok(parsed)
 }
@@ -325,7 +325,7 @@ fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapse
     );
     let remote = remote_status(home);
     ui::row(
-        "Remote access",
+        "Tailscale access",
         if remote.state == "off" {
             "off (optional)"
         } else {
@@ -338,7 +338,7 @@ fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapse
         ui::warn(
             "remote_error",
             &format!(
-                "Remote access failed{}",
+                "Tailscale access failed{}",
                 if cause.is_empty() {
                     ".".to_owned()
                 } else {
@@ -346,7 +346,10 @@ fn print_summary(home: &Path, address: &str, started: bool, helper: bool, elapse
                 }
             ),
         );
-        ui::next_steps(&[Step::new("See why", ["bridge", "remote", "status"])]);
+        ui::next_steps(&[Step::new(
+            "Turn it off before trying again",
+            ["bridge", "tailscale", "--off"],
+        )]);
     }
     if !helper {
         ui::warn(

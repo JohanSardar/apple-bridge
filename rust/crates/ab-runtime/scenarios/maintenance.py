@@ -1,7 +1,7 @@
 import json, os, pathlib, sqlite3, subprocess, tempfile, time, sys
 binary=sys.argv[1]
 go=sys.argv[2]
-env=dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file')
+env=dict(os.environ, APPLE_BRIDGE_SECRET_STORE='file', SSH_CONNECTION='1')
 checks=[]
 def run(*args,ok=True):
     p=subprocess.run([binary,*args],env=env,capture_output=True,text=True,timeout=15)
@@ -41,23 +41,9 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-cli-') as root:
     assert home.stat().st_mode & 0o777==0o700
     assert backup.stat().st_mode & 0o777==0o600
     checks.append('home and backup retain private modes')
-    def request(*args):
-        try:
-            subprocess.run([binary,'remote',*args,'--home',str(home)],env=env,capture_output=True,text=True,timeout=2)
-        except subprocess.TimeoutExpired:
-            pass
-    def selections():
-        return json.loads((home/'remote/ingresses.json').read_text())
-    request('on','--via','both')
-    assert selections()=={'relay':True,'system':True}
-    request('off','--via','relay')
-    assert selections()=={'relay':False,'system':True}
-    document=json.loads(run('remote','status','--home',str(home)))
-    assert [key for key in document if key!='message']==['id','state','backend','url','last_error','pending_link','tls_termination','certificate_expiry']
-    run('remote','on','--via','invalid','--home',str(home),ok=False)
-    checks.append('remote both/on/off/status and invalid backend')
-    assert not json.loads((home/'remote/config.json').read_text())['backend']=='both'
-    checks.append('remote selection keeps Go-readable legacy backend')
+    assert json.loads(run('tailscale','--off','--json','--home',str(home)))=={'outcome':'unchanged'}
+    assert not (home/'remote/ingresses.json').exists()
+    checks.append('tailscale off on an idle home changes nothing')
     agent=json.loads(run('agent','create','--home',str(home),'--name','fixture','--scope','messages:read','--level','read'))
     assert agent['token'] and agent['agent']['id'].startswith('agent:')
     agents=json.loads(run('agent','list','--home',str(home)))

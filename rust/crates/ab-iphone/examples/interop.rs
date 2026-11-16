@@ -23,17 +23,6 @@ fn run(input: &Value) -> Result<Value, Box<dyn std::error::Error>> {
                 json!({"packet":a.seal_iphone(&p, b"synthetic-command")?,"gateway_key":a.iphone_gateway_key()?}),
             )
         }
-        "push-json" => {
-            let request = ab_iphone::PushRequest {
-                hostname: "fixture.example".into(),
-                token: "synthetic-token".into(),
-                packet: serde_json::from_value(input["packet"].clone())?,
-                expires: 1_800_000_000,
-            };
-            Ok(
-                json!({"raw":String::from_utf8(ab_wire::gojson::legacy_json(&request, ab_wire::gojson::EscapeMode::Html)?)?}),
-            )
-        }
         "tokens" => {
             let id = input["id"].as_str().ok_or("id")?;
             a.set_iphone_push_token(id, &"a".repeat(64))?;

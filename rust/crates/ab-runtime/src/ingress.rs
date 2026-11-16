@@ -22,7 +22,6 @@ pub struct App {
     pub approvals: Arc<Approvals>,
     pub connectors: Arc<ab_frontdoor::web_connector::Connectors>,
     pub phone: Router,
-    pub feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     routers: Mutex<BTreeMap<String, Router>>,
     statuses: watch::Sender<ab_remote::IngressStatuses>,
 }
@@ -37,7 +36,6 @@ impl App {
         approvals: Arc<Approvals>,
         connectors: Arc<ab_frontdoor::web_connector::Connectors>,
         phone: Router,
-        feed: Arc<ab_replication::server::Server<ab_replication::gateway::StateAdapter>>,
     ) -> Self {
         Self {
             home,
@@ -48,27 +46,16 @@ impl App {
             approvals,
             connectors,
             phone,
-            feed,
             routers: Mutex::default(),
             statuses: watch::channel(BTreeMap::new()).0,
         }
     }
     fn router(&self, host: &str) -> Result<Router, Error> {
-        let chosen = selected(&self.home)?;
-        if !hosts(&chosen, &self.statuses.borrow()).contains(host) {
+        if !hosts(&self.home, &self.statuses.borrow()).contains(host) {
             return Err(ab_operations::Error::from(Code::Unauthorized).into());
         }
-        let route = self
-            .statuses
-            .borrow()
-            .iter()
-            .find(|(_, status)| status.active && status.host == host)
-            .map(|(name, _)| name.clone())
-            .unwrap_or_default();
-        let cloud = route == ab_remote::state::CLOUD_INGRESS;
-        let key = format!("{host} {route}");
         let mut routers = self.routers.lock().map_err(|_| Error::Invalid)?;
-        if let Some(router) = routers.get(&key) {
+        if let Some(router) = routers.get(host) {
             return Ok(router.clone());
         }
         let frontdoor = ab_frontdoor::Frontdoor::new(
@@ -76,7 +63,7 @@ impl App {
             ab_frontdoor::Config {
                 hosts: vec![host.into()],
                 origins: vec![],
-                public: host != "localhost:7780",
+                public: true,
                 requests_per_second: 200,
             },
             self.audit.clone(),
@@ -88,179 +75,79 @@ impl App {
             Some(self.approvals.clone()),
             self.connectors.clone(),
         );
-        if cloud {
-            let home = self.home.clone();
-            let limit: ab_frontdoor::SourceLimit = Arc::new(move || {
-                match ab_remote::state::read::<ab_remote::state::Config>(&home, "config") {
-                    Ok(config) if config.cloud_sources.is_empty() => None,
-                    Ok(config) => Some(config.cloud_sources.into_iter().collect()),
-                    Err(_) => Some(BTreeSet::new()),
-                }
-            });
-            frontdoor.limit_sources(limit.clone());
-            web.limit_sources(limit);
-        }
-        web.set_route(&route);
+        web.set_route(ab_remote::state::ROUTE);
         let router = frontdoor
             .router()
             .merge(self.phone.clone())
             .fallback_service(web.router());
-        #[cfg(feature = "lab-harness")]
-        let router = if host == "localhost:7780"
-            && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some()
-        {
-            router
-                .route(
-                    "/",
-                    axum::routing::get(|| async {
-                        (axum::http::StatusCode::UNAUTHORIZED, "passkey required")
-                    }),
-                )
-                .route(
-                    "/v1/feed",
-                    axum::routing::get(|| async {
-                        (
-                            [("content-type", "text/event-stream")],
-                            "data: private-feed\n\n",
-                        )
-                    }),
-                )
-        } else {
-            router
-        };
         if routers.len() >= 4 {
             routers.clear();
         }
-        routers.insert(key, router.clone());
+        routers.insert(host.to_owned(), router.clone());
         Ok(router)
     }
 }
-fn legacy_backends(mut selected: BTreeMap<String, bool>) -> BTreeMap<String, bool> {
-    if let Some(enabled) = selected.remove("embedded") {
-        let relay = selected.entry("relay".into()).or_insert(false);
-        *relay = *relay || enabled;
+fn hosts(home: &Path, statuses: &ab_remote::IngressStatuses) -> BTreeSet<String> {
+    if !ab_remote::state::selected(home) {
+        return BTreeSet::new();
     }
-    selected
-}
-fn selected(home: &Path) -> Result<BTreeMap<String, bool>, Error> {
-    match ab_remote::state::read(home, "ingresses") {
-        Ok(selected) => Ok(legacy_backends(selected)),
-        Err(ab_remote::Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-            match ab_remote::state::read::<ab_remote::state::Config>(home, "config") {
-                Ok(config) => Ok(legacy_backends(BTreeMap::from([(
-                    config.backend,
-                    config.enabled,
-                )]))),
-                Err(ab_remote::Error::Io(error))
-                    if error.kind() == std::io::ErrorKind::NotFound =>
-                {
-                    Ok(BTreeMap::new())
-                }
-                Err(error) => Err(error.into()),
-            }
-        }
-        Err(error) => Err(error.into()),
-    }
-}
-fn hosts(
-    selected: &BTreeMap<String, bool>,
-    statuses: &ab_remote::IngressStatuses,
-) -> BTreeSet<String> {
     statuses
-        .iter()
-        .filter(|(name, status)| selected.get(*name) == Some(&true) && status.active)
-        .map(|(_, status)| status.host.clone())
+        .get(ab_remote::state::ROUTE)
+        .filter(|status| status.active)
+        .map(|status| status.host.clone())
+        .into_iter()
         .collect()
 }
-const ROUTES: [&str; 4] = ["relay", "system", "tailnet", "private"];
-fn publish(
-    home: &Path,
-    selected: &BTreeMap<String, bool>,
-    statuses: &ab_remote::IngressStatuses,
-) -> Result<(), Error> {
+fn publish(home: &Path, statuses: &ab_remote::IngressStatuses) -> Result<(), Error> {
     let config =
         ab_remote::state::read::<ab_remote::state::Config>(home, "config").unwrap_or_default();
-    let active = ROUTES.iter().find_map(|name| {
-        statuses
-            .get_key_value(*name)
-            .filter(|(_, status)| selected.get(*name) == Some(&true) && status.active)
-    });
-    let progress = if active.is_some() {
-        None
-    } else {
-        let pending = statuses
-            .iter()
-            .filter(|(name, _)| selected.get(*name) == Some(&true))
-            .filter_map(|(_, status)| status.progress.as_ref())
-            .collect::<Vec<_>>();
-        pending
-            .iter()
-            .find(|progress| progress.state == "error")
-            .or_else(|| pending.first())
-            .copied()
-    };
-    let state = if active.is_some() {
+    let selection = ab_remote::state::selection(home);
+    let enabled = selection == Some(true);
+    let status = statuses.get(ab_remote::state::ROUTE);
+    let running = status.is_some_and(|status| status.active);
+    let active = enabled && running;
+    let progress = status
+        .and_then(|status| status.progress.as_ref())
+        .filter(|_| enabled && !active);
+    let state = if active {
         "on"
+    } else if running {
+        "stopping"
     } else if let Some(progress) = progress {
         progress.state
-    } else if selected.values().any(|enabled| *enabled) {
+    } else if enabled {
         "starting"
     } else {
         "off"
     };
-    let private = active.is_some_and(|(name, _)| name == "private");
-    let mut document = serde_json::json!({"id":config.id,"state":state,
-        "backend":active.map_or(config.backend.as_str(),|(name,_)|name.as_str()),"url":active.filter(|(name,_)| name.as_str() != "private").map_or_else(String::new,|(_,status)|format!("https://{}",status.host)),
-        "message": if private { ab_remote::state::read::<String>(home,"invitation").unwrap_or_default() } else { progress.map_or_else(String::new,|progress|progress.message.clone()) },"last_error":progress.map_or("",|progress|progress.last_error.as_str()),"pending_link":progress.map_or("",|progress|progress.pending_link.as_str()),"tls_termination": if private { "Tailscale encrypted private transport" } else { "on this Mac" },"certificate_expiry":active.and_then(|(_,status)|status.certificate_expiry.clone()).unwrap_or_else(||"0001-01-01T00:00:00Z".into())});
-    let routes = ROUTES
-        .iter()
-        .filter(|name| selected.contains_key(**name))
-        .map(|name| {
-            let enabled = selected.get(*name) == Some(&true);
-            let status = statuses.get(*name);
-            let active = enabled && status.is_some_and(|status| status.active);
-            let progress = status
-                .and_then(|status| status.progress.as_ref())
-                .filter(|_| enabled && !active);
-            let state = if active {
-                "on"
-            } else if let Some(progress) = progress {
-                progress.state
-            } else if enabled {
-                "starting"
-            } else {
-                "off"
-            };
-            let url = if active && *name != "private" {
-                status.map_or_else(String::new, |status| format!("https://{}", status.host))
-            } else {
-                String::new()
-            };
-            (
-                (*name).to_owned(),
-                ab_remote::state::Route {
-                    state: state.into(),
-                    url,
-                    message: progress.map_or_else(String::new, |p| p.message.clone()),
-                    pending_link: progress.map_or_else(String::new, |p| p.pending_link.clone()),
-                    link: progress.map_or_else(String::new, |p| p.link.clone()),
-                    last_error: progress.map_or_else(String::new, |p| p.last_error.clone()),
-                    sources: if *name == ab_remote::state::CLOUD_INGRESS {
-                        config.cloud_sources.clone()
-                    } else {
-                        Vec::new()
-                    },
-                },
-            )
-        })
-        .collect::<BTreeMap<_, _>>();
-    if !routes.is_empty() {
-        document["routes"] = serde_json::to_value(routes)?;
-    }
-    let ct_warning = ab_remote::ct::owner_warning(home, ab_remote::ct::now());
-    if !ct_warning.is_empty() {
-        document["ct_warning"] = ct_warning.into();
-    }
+    let url = status
+        .filter(|_| active)
+        .map_or_else(String::new, |status| format!("https://{}", status.host));
+    let route = ab_remote::state::Route {
+        state: state.into(),
+        url: url.clone(),
+        message: progress.map_or_else(String::new, |p| p.message.clone()),
+        pending_link: progress.map_or_else(String::new, |p| p.pending_link.clone()),
+        link: progress.map_or_else(String::new, |p| p.link.clone()),
+        last_error: progress.map_or_else(String::new, |p| p.last_error.clone()),
+    };
+    let document = ab_remote::state::Status {
+        id: config.id,
+        state: state.into(),
+        url,
+        last_error: route.last_error.clone(),
+        message: route.message.clone(),
+        pending_link: route.pending_link.clone(),
+        certificate_expiry: status
+            .filter(|_| active)
+            .and_then(|status| status.certificate_expiry.clone())
+            .unwrap_or_else(|| ab_remote::state::ZERO_TIME.into()),
+        routes: if selection.is_some() {
+            BTreeMap::from([(ab_remote::state::ROUTE.to_owned(), route)])
+        } else {
+            BTreeMap::new()
+        },
+    };
     let written = ab_remote::state::write(home, "status", &document);
     match written {
         Err(ab_remote::Error::Io(error)) if error.raw_os_error() == Some(28) => Ok(()),
@@ -311,7 +198,7 @@ async fn connection(
     .await
     .map_err(|_| Error::Invalid)?
     .map_err(|_| Error::Invalid)?;
-    let (binding, source) = (preamble.binding, preamble.source);
+    let source = preamble.source;
     let service =
         hyper::service::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
             let app = app.clone();
@@ -332,22 +219,6 @@ async fn connection(
                         Code::Unauthorized.into(),
                     ));
                 };
-                #[cfg(not(feature = "lab-harness"))]
-                let lab_private_feed = false;
-                #[cfg(feature = "lab-harness")]
-                let lab_private_feed = host == "localhost:7780"
-                    && std::env::var_os("APPLE_BRIDGE_LAB_PRIVATE_FEED").is_some();
-                if request.uri().path() == "/v1/feed" && !lab_private_feed {
-                    if !hosts(
-                        &selected(&app.home).unwrap_or_default(),
-                        &app.statuses.borrow(),
-                    )
-                    .contains(&host)
-                    {
-                        return Ok(ab_frontdoor::problem(Code::Unauthorized.into()));
-                    }
-                    return Ok(app.feed.clone().relay_http(request, binding).map(Body::new));
-                }
                 let router = tokio::task::spawn_blocking(move || app.router(&host)).await;
                 let Ok(Ok(router)) = router else {
                     return Ok(ab_frontdoor::problem(Code::Unauthorized.into()));
@@ -366,227 +237,74 @@ async fn connection(
     )
     .await
 }
+fn config_id(home: &Path) -> String {
+    ab_remote::state::read::<ab_remote::state::Config>(home, "config")
+        .map(|config| config.id)
+        .unwrap_or_default()
+}
 async fn reconcile(
     home: PathBuf,
     gateway: Gateway,
     mut statuses: watch::Receiver<ab_remote::IngressStatuses>,
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), Error> {
-    let mut prior = BTreeMap::new();
-    let mut cancels = BTreeMap::<&str, watch::Sender<bool>>::new();
-    let mut running = BTreeSet::new();
-    let mut tasks: tokio::task::JoinSet<(&'static str, ab_remote::Result<()>)> =
-        tokio::task::JoinSet::new();
+    const ROUTE: &str = ab_remote::state::ROUTE;
+    let mut cancel: Option<watch::Sender<bool>> = None;
+    let mut task: tokio::task::JoinSet<ab_remote::Result<()>> = tokio::task::JoinSet::new();
     let mut tick = tokio::time::interval(std::time::Duration::from_secs(1));
-    let mut failed = BTreeMap::<&str, String>::new();
+    let mut failed: Option<String> = None;
     let mut forwarded = (String::new(), String::new());
-    let mut domains = BTreeMap::<&str, String>::new();
     loop {
         tokio::select! {
             _ = statuses.changed() => {
-                publish(&home,&prior,&statuses.borrow())?;
-                let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
-                let link = statuses.borrow().iter().filter(|(name,_)| prior.get(*name) == Some(&true)).find_map(|(_,status)| status.progress.as_ref().filter(|progress| !progress.link.is_empty()).map(|progress| progress.link.clone()));
+                publish(&home, &statuses.borrow())?;
+                let id = config_id(&home);
+                let link = ab_remote::state::selected(&home)
+                    .then(|| statuses.borrow().get(ROUTE).and_then(|status| status.progress.as_ref()).filter(|progress| !progress.link.is_empty()).map(|progress| progress.link.clone()))
+                    .flatten();
                 if let Some(link) = link && !id.is_empty() && forwarded != (id.clone(), link.clone()) {
                     forwarded = (id.clone(), link.clone());
-                    let _ = ab_remote::onboarding::send_link(&home,&id,&link).await;
+                    let _ = ab_remote::onboarding::send_link(&home, &id, &link).await;
                 }
             },
             _ = stop.changed() => {
-                for cancel in cancels.values() { let _ = cancel.send(true); }
-                while tasks.join_next().await.is_some() {}
+                if let Some(cancel) = &cancel { let _ = cancel.send(true); }
+                while task.join_next().await.is_some() {}
                 return Ok(());
             },
-            Some(result) = tasks.join_next(), if !tasks.is_empty() => {
-                if let Ok((name,outcome)) = result {
-                    running.remove(name);
-                    let cancelled = cancels.remove(name).is_none_or(|cancel| *cancel.borrow());
-                    if let Err(error) = &outcome && !cancelled && !*stop.borrow() {
-                        eprintln!("remote setup failed; turn Remote off and try again: {error}");
-                        failed.insert(name, ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default());
-                        gateway.progress(name, ab_remote::Progress::failed_because(&error.to_string()));
-                    }
+            Some(result) = task.join_next(), if !task.is_empty() => {
+                let cancelled = cancel.take().is_none_or(|cancel| *cancel.borrow());
+                if let Ok(Err(error)) = result && !cancelled && !*stop.borrow() {
+                    eprintln!("Tailscale setup failed; run bridge tailscale --off, then try again: {error}");
+                    failed = Some(config_id(&home));
+                    gateway.progress(ROUTE, ab_remote::Progress::failed_because(&error.to_string()));
                 }
             },
             _ = tick.tick() => {
-                let current = selected(&home)?;
-                for (name,cancel) in &cancels {
-                    if current.get(*name) != Some(&true) { let _ = cancel.send(true); }
-                }
-                let domain = configured_domain(&home);
-                if domains.get("relay").is_some_and(|started| *started != domain) && let Some(cancel) = cancels.get("relay") {
+                let enabled = ab_remote::state::selected(&home);
+                if !enabled && let Some(cancel) = &cancel {
                     let _ = cancel.send(true);
                 }
-                prior = current.clone();
-                publish(&home,&current,&statuses.borrow())?;
-                let id = ab_remote::state::read::<ab_remote::state::Config>(&home,"config").map(|config| config.id).unwrap_or_default();
-                for name in ROUTES {
-                    if current.get(name) != Some(&true) {
-                        failed.remove(name);
-                        if !running.contains(name) {
-                            gateway.clear_progress(name);
-                        }
-                        continue;
+                publish(&home, &statuses.borrow())?;
+                if !enabled {
+                    failed = None;
+                    if task.is_empty() {
+                        gateway.clear_progress(ROUTE);
                     }
-                    if running.contains(name) { continue; }
-                    if failed.get(name) == Some(&id) { continue; }
-                    failed.remove(name);
-                    gateway.clear_progress(name);
-                    let Ok(adapter) = adapter(&home,name) else {
-                        failed.insert(name, id.clone());
-                        gateway.progress(name, ab_remote::Progress::failed());
-                        continue;
-                    };
-                    let gateway = gateway.clone(); let (cancel, stop) = watch::channel(false);
-                    cancels.insert(name,cancel);
-                    running.insert(name);
-                    domains.insert(name, configured_domain(&home));
-                    tasks.spawn(async move { (name, adapter.run(gateway,stop).await) });
+                    continue;
                 }
+                let id = config_id(&home);
+                if !task.is_empty() || failed.as_ref() == Some(&id) {
+                    continue;
+                }
+                failed = None;
+                gateway.clear_progress(ROUTE);
+                let adapter = ab_remote::tailscale::Tailscale::tailnet(home.join("tailnet"));
+                let gateway = gateway.clone();
+                let (sender, receiver) = watch::channel(false);
+                cancel = Some(sender);
+                task.spawn(async move { adapter.run(gateway, receiver).await });
             }
         }
-    }
-}
-fn configured_domain(home: &Path) -> String {
-    ab_remote::state::read::<ab_remote::state::Config>(home, "config")
-        .map(|config| config.domain)
-        .unwrap_or_default()
-}
-fn adapter(home: &Path, name: &str) -> Result<Box<dyn Ingress>, Error> {
-    if name == "tailnet" {
-        return Ok(Box::new(ab_remote::tailscale::Tailscale::tailnet(
-            home.join("tailnet"),
-        )));
-    }
-    if name == "private" {
-        return Ok(Box::new(ab_remote::private::Private {
-            home: home.to_owned(),
-            tailscale: ab_remote::tailscale::Tailscale::system(home.join("private")),
-        }));
-    }
-    if name == "system" {
-        return Ok(Box::new(ab_remote::tailscale::Tailscale::system(
-            home.to_owned(),
-        )));
-    }
-    let roots = rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-    let tls = rustls::ClientConfig::builder_with_provider(Arc::new(
-        rustls::crypto::ring::default_provider(),
-    ))
-    .with_safe_default_protocol_versions()
-    .map_err(|_| Error::Invalid)?
-    .with_root_certificates(roots)
-    .with_no_client_auth();
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .map_err(|_| Error::Invalid)?;
-    let domain = configured_domain(home);
-    #[cfg(feature = "lab-harness")]
-    let resolver: Option<Arc<dyn ab_remote::dns::Resolver>> =
-        match std::env::var("APPLE_BRIDGE_LAB_DNS_SERVER") {
-            Ok(address) => Some(Arc::new(ab_remote::dns::Hickory::server(
-                address.parse().map_err(|_| Error::Invalid)?,
-            )?)),
-            Err(_) => None,
-        };
-    #[cfg(not(feature = "lab-harness"))]
-    let resolver: Option<Arc<dyn ab_remote::dns::Resolver>> = None;
-    Ok(Box::new(ab_remote::relay::Relay {
-        home: home.to_owned(),
-        domain,
-        resolver,
-        domain_poll: std::time::Duration::from_secs(5),
-        certificate_monitor: !cfg!(feature = "lab-harness"),
-        endpoint: relay_endpoint(home),
-        zone: std::env::var("APPLE_BRIDGE_RELAY_ZONE").unwrap_or_default(),
-        client,
-        certificates: Arc::new(ab_remote::certificate::Certificates::new(
-            home.to_owned(),
-            std::env::var("APPLE_BRIDGE_ACME_DIRECTORY")
-                .unwrap_or_else(|_| "https://acme-v02.api.letsencrypt.org/directory".into()),
-        )),
-        tls: Arc::new(tls),
-    }))
-}
-fn relay_endpoint(home: &Path) -> String {
-    ab_remote::state::read::<ab_remote::state::Config>(home, "config")
-        .ok()
-        .map(|config| config.relay_url)
-        .filter(|url| !url.is_empty())
-        .or_else(|| std::env::var("APPLE_BRIDGE_RELAY_URL").ok())
-        .unwrap_or_else(|| "https://applebridge.eilmer.si".into())
-}
-#[cfg(test)]
-mod legacy_tests {
-    use super::*;
-
-    #[test]
-    fn embedded_selection_maps_to_relay() {
-        let selected = legacy_backends(BTreeMap::from([("embedded".into(), true)]));
-        assert_eq!(selected, BTreeMap::from([("relay".into(), true)]));
-        let both = legacy_backends(BTreeMap::from([
-            ("embedded".into(), true),
-            ("relay".into(), false),
-            ("system".into(), true),
-        ]));
-        assert_eq!(both.get("relay"), Some(&true));
-        assert!(!both.contains_key("embedded"));
-    }
-
-    #[test]
-    fn saved_embedded_config_migrates_to_relay() -> Result<(), Box<dyn std::error::Error>> {
-        let home = tempfile::tempdir()?;
-        ab_remote::state::write(
-            home.path(),
-            "config",
-            &serde_json::json!({"id":"r","enabled":true,"backend":"embedded"}),
-        )?;
-        assert_eq!(
-            selected(home.path())?,
-            BTreeMap::from([("relay".into(), true)])
-        );
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod ct_status_tests {
-    use super::*;
-    type Check = Result<(), Box<dyn std::error::Error>>;
-
-    fn publish_with_report(home: &Path) -> Result<ab_remote::state::Status, Error> {
-        publish(home, &BTreeMap::new(), &ab_remote::IngressStatuses::new())?;
-        Ok(ab_remote::state::read(home, "status")?)
-    }
-
-    #[test]
-    fn an_unknown_certificate_reaches_the_status_the_owner_reads() -> Check {
-        let home = tempfile::tempdir()?;
-        let report: ab_remote::ct::Report = serde_json::from_value(serde_json::json!({
-            "checked_at": ab_remote::ct::now(),
-            "names": ["mac.example.test"],
-            "unknown": [],
-            "unexpected": {"f00d": {
-                "fingerprint": "f00d",
-                "names": ["mac.example.test"],
-                "precertificate": false
-            }}
-        }))?;
-        ab_remote::state::write(home.path(), "ct-monitor", &report)?;
-        let status = publish_with_report(home.path())?;
-        assert!(status.ct_warning.contains("mac.example.test"), "{status:?}");
-        assert!(status.ct_warning.contains("not prevention"), "{status:?}");
-        Ok(())
-    }
-
-    #[test]
-    fn a_healthy_monitor_adds_no_status_field() -> Check {
-        let home = tempfile::tempdir()?;
-        publish_with_report(home.path())?;
-        let raw = std::fs::read_to_string(home.path().join("remote/status.json"))?;
-        assert!(!raw.contains("ct_warning"), "{raw}");
-        Ok(())
     }
 }

@@ -6,7 +6,8 @@ fn push(text: &mut String, piece: &str) {
     text.push_str(piece);
 }
 
-pub const DOCS: &str = "https://eilmer.si/applebridge/source/docs/reference/cli.md";
+pub const DOCS: &str =
+    "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md";
 
 pub struct Leaf {
     pub path: &'static str,
@@ -30,10 +31,7 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
     ("Reading data", &["read", "search", "call", "skills"]),
     ("Access", &["agents", "tokens", "connectors", "web"]),
-    (
-        "Remote and replicas",
-        &["tailscale", "relay", "remote", "pair", "join"],
-    ),
+    ("Tailscale and replicas", &["tailscale", "pair", "join"]),
     (
         "Maintenance",
         &[
@@ -49,12 +47,6 @@ const GROUPS: &[(&str, &[&str])] = &[
 ];
 
 pub const DEPRECATED: &[(&str, &str)] = &[
-    ("remote on", "bridge remote enable"),
-    ("remote off", "bridge remote disable"),
-    (
-        "remote certificate-accept",
-        "bridge remote certificates accept",
-    ),
     (
         "agents level",
         "bridge agents update <AGENT> --level <LEVEL>",
@@ -105,23 +97,6 @@ const CREDENTIAL_CHANGE_FIELDS: &[(&str, &str, bool)] = &[
     ("remote", "boolean", false),
     ("expiresAt", "string|null", false),
     ("revokedAt", "string|null", false),
-];
-
-const REMOTE_FIELDS: &[(&str, &str, bool)] = &[
-    ("remote", "object", false),
-    ("outcome", "string", false),
-    ("next", "array", false),
-    ("userActionRequired", "boolean", false),
-    ("message", "string", false),
-    ("id", "string", false),
-    ("state", "string", false),
-    ("backend", "string", false),
-    ("url", "string", false),
-    ("last_error", "string", false),
-    ("pending_link", "string", false),
-    ("signInUrl", "string", true),
-    ("tls_termination", "string", false),
-    ("certificate_expiry", "string", false),
 ];
 
 const LINK_FIELDS: &[(&str, &str, bool)] = &[
@@ -211,18 +186,6 @@ pub const LEAVES: &[Leaf] = &[
             ("mcp", "string", false),
             ("connect", "string", false),
         ],
-    },
-    Leaf {
-        path: "relay setup",
-        examples: &[(
-            "Install a relay on your server and connect this Mac",
-            "bridge relay setup root@203.0.113.10 --domain bridge.example.com",
-        )],
-        notes: &[
-            "Shows the two DNS records to add and waits until they are live, then installs the relay over ssh and connects this Mac.",
-            "Run it again to pick up where it stopped.",
-        ],
-        schema: &[],
     },
     Leaf {
         path: "unlink",
@@ -580,10 +543,7 @@ pub const LEAVES: &[Leaf] = &[
         path: "web enroll",
         examples: &[
             ("Add a passkey on this Mac", "bridge web enroll"),
-            (
-                "Add one through remote access",
-                "bridge web enroll --public",
-            ),
+            ("Add one through Tailscale", "bridge web enroll --public"),
         ],
         notes: &[
             "The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on. Piped, stdout holds only the link and no QR code is drawn.",
@@ -629,97 +589,6 @@ pub const LEAVES: &[Leaf] = &[
         schema: &[],
     },
     Leaf {
-        path: "remote enable",
-        examples: &[
-            (
-                "Turn on remote access through the relay",
-                "bridge remote enable",
-            ),
-            (
-                "Use your own relay",
-                "bridge remote enable --relay-url https://relay.example.com",
-            ),
-        ],
-        notes: &[
-            "Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the request with the gateway; check it with bridge remote status.",
-            "With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending, the link in remote.signInUrl and userActionRequired true.",
-            "--no-open never opens a browser; --open opens one even without a terminal, unless over SSH.",
-        ],
-        schema: REMOTE_FIELDS,
-    },
-    Leaf {
-        path: "remote disable",
-        examples: &[("Turn off remote access", "bridge remote disable")],
-        notes: &[],
-        schema: REMOTE_FIELDS,
-    },
-    Leaf {
-        path: "remote status",
-        examples: &[
-            ("Check remote access", "bridge remote status"),
-            (
-                "Print agent connection snippets",
-                "bridge remote status --snippets",
-            ),
-        ],
-        notes: &[
-            "With --json the state is under remote. Piped without --json it prints the state alone, as before. --snippets --json gives {\"snippets\": TEXT}.",
-        ],
-        schema: &[
-            ("remote", "object", false),
-            ("snippets", "string", false),
-            ("id", "string", false),
-            ("state", "string", false),
-            ("backend", "string", false),
-            ("url", "string", false),
-            ("last_error", "string", false),
-            ("pending_link", "string", false),
-            ("tls_termination", "string", false),
-            ("certificate_expiry", "string", false),
-        ],
-    },
-    Leaf {
-        path: "remote key",
-        examples: &[(
-            "Print the key for your relay's allowlist",
-            "bridge remote key",
-        )],
-        notes: &["Prints only the 43-character key."],
-        schema: &[("key", "string", false)],
-    },
-    Leaf {
-        path: "remote certificates accept",
-        examples: &[(
-            "Accept a certificate you requested",
-            "bridge remote certificates accept <FINGERPRINT>",
-        )],
-        notes: &[],
-        schema: &[
-            ("fingerprint", "string", false),
-            ("outcome", "string", false),
-        ],
-    },
-    Leaf {
-        path: "remote on",
-        examples: &[],
-        notes: &[
-            "Prints the sign-in link and the address on stdout and opens the link in a browser unless --no-open, with or without a terminal.",
-        ],
-        schema: REMOTE_FIELDS,
-    },
-    Leaf {
-        path: "remote off",
-        examples: &[],
-        notes: &[],
-        schema: REMOTE_FIELDS,
-    },
-    Leaf {
-        path: "remote certificate-accept",
-        examples: &[],
-        notes: &[],
-        schema: &[],
-    },
-    Leaf {
         path: "pair",
         examples: &[
             (
@@ -727,7 +596,7 @@ pub const LEAVES: &[Leaf] = &[
                 "bridge pair --scope messages:read",
             ),
             (
-                "Pair an iPhone through remote access",
+                "Pair an iPhone through Tailscale",
                 "bridge pair --iphone --via-remote",
             ),
         ],
@@ -863,12 +732,6 @@ pub const LEAVES: &[Leaf] = &[
             "bridge start --role gateway --api-addr 127.0.0.1:7780 --peer-addr 127.0.0.1:7443",
         )],
         notes: &["Used by the Apple Bridge app's background service."],
-        schema: &[],
-    },
-    Leaf {
-        path: "connect",
-        examples: &[],
-        notes: &[],
         schema: &[],
     },
     Leaf {
@@ -1636,7 +1499,7 @@ mod tests {
             "Getting started:",
             "Reading data:",
             "Access:",
-            "Remote and replicas:",
+            "Tailscale and replicas:",
             "Maintenance:",
         ] {
             assert!(text.contains(title), "{title}");

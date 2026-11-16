@@ -5,7 +5,6 @@ use std::ffi::OsString;
 const TOLERANT_COMMANDS: &[&str] = &[
     "status",
     "doctor",
-    "remote",
     "connector",
     "connectors",
     "agent",
@@ -13,7 +12,6 @@ const TOLERANT_COMMANDS: &[&str] = &[
     "start",
     "pair",
     "join",
-    "connect",
     "token",
     "tokens",
     "revoke",
@@ -36,15 +34,12 @@ const LEGACY_BOOLEANS: &[&str] = &[
     "accept-ledger-loss",
     "no-ui",
     "force",
-    "snippets",
-    "private",
 ];
 
 const LEGACY_VALUES: &[&str] = &[
     "home",
     "host",
     "helper-app",
-    "via",
     "name",
     "level",
     "expires-in",
@@ -63,22 +58,15 @@ const LEGACY_VALUES: &[&str] = &[
     "retention-rows",
     "retention-age",
     "pack",
-    "domain",
-    "relay-url",
 ];
 
 const CONSEQUENTIAL: &[&str] = &[
-    "snippets",
     "force",
     "accept-ledger-loss",
     "remote",
     "public",
     "scope",
     "level",
-    "via",
-    "private",
-    "domain",
-    "relay-url",
     "backup",
     "iphone",
     "via-remote",
@@ -94,7 +82,6 @@ const CONSEQUENTIAL: &[&str] = &[
 const READ_ONLY_LEAVES: &[&str] = &[
     "status",
     "doctor",
-    "remote status",
     "connectors list",
     "connectors pending",
     "agents list",
@@ -103,18 +90,14 @@ const READ_ONLY_LEAVES: &[&str] = &[
     "web devices",
     "selftest",
     "shortcuts",
-    "remote",
     "agents",
     "tokens",
     "connectors",
     "web",
     "web sessions",
-    "remote certificates",
 ];
 
 const GLOBAL_VALUES: &[&str] = &["home", "fields", "cwd"];
-
-const REMOTE_VALUES: &[&str] = &["via", "domain", "relay-url", "name", "timeout"];
 
 #[derive(Debug, Default)]
 pub struct Prepared {
@@ -177,67 +160,6 @@ fn resolve(tokens: &[String]) -> (Vec<String>, Vec<String>, clap::Command, Optio
         command = child;
     }
     (path, typed, command, stray)
-}
-
-fn option_name(token: &str) -> Option<&str> {
-    let long = token.strip_prefix("--")?;
-    Some(long.split_once('=').map_or(long, |(name, _)| name))
-}
-
-fn hoist_remote_options(arguments: Vec<OsString>) -> Vec<OsString> {
-    let tokens: Vec<String> = arguments
-        .iter()
-        .map(|argument| argument.to_string_lossy().into_owned())
-        .collect();
-    let mut index = 0;
-    while index < tokens.len() {
-        let token = &tokens[index];
-        if token == "--" {
-            return arguments;
-        }
-        if let Some(name) = option_name(token) {
-            index += if !token.contains('=') && GLOBAL_VALUES.contains(&name) {
-                2
-            } else {
-                1
-            };
-            continue;
-        }
-        if token.starts_with('-') && token.len() > 1 {
-            index += 1;
-            continue;
-        }
-        break;
-    }
-    if tokens.get(index).is_none_or(|token| token != "remote") {
-        return arguments;
-    }
-    let first = index + 1;
-    let mut cursor = first;
-    while cursor < tokens.len() {
-        let token = &tokens[cursor];
-        if token == "--" {
-            return arguments;
-        }
-        let Some(name) = option_name(token) else {
-            if token.starts_with('-') && token.len() > 1 {
-                cursor += 1;
-                continue;
-            }
-            break;
-        };
-        let takes = !token.contains('=')
-            && (REMOTE_VALUES.contains(&name) || GLOBAL_VALUES.contains(&name));
-        cursor += if takes { 2 } else { 1 };
-    }
-    if cursor == first || cursor >= tokens.len() {
-        return arguments;
-    }
-    let mut reordered = arguments[..first].to_vec();
-    reordered.push(arguments[cursor].clone());
-    reordered.extend_from_slice(&arguments[first..cursor]);
-    reordered.extend_from_slice(&arguments[cursor + 1..]);
-    reordered
 }
 
 fn takes_value(command: &clap::Command, name: &str) -> bool {
@@ -448,7 +370,6 @@ pub fn prepare(raw: Vec<OsString>) -> Prepared {
             Spelling::Keep => rewritten.push(argument),
         }
     }
-    let rewritten = hoist_remote_options(rewritten);
     let tokens: Vec<String> = rewritten
         .iter()
         .map(|argument| argument.to_string_lossy().into_owned())
@@ -612,10 +533,10 @@ mod tests {
     fn reads_drop_unused_legacy_options_with_a_warning_wherever_home_sits() {
         for arguments in [
             &[
-                "bridge", "status", "--force", "--name", "zz", "--via", "relay",
+                "bridge", "status", "--force", "--name", "zz", "--level", "zz",
             ][..],
             &[
-                "bridge", "--home", "/h", "status", "--force", "--name", "zz", "--via", "relay",
+                "bridge", "--home", "/h", "status", "--force", "--name", "zz", "--level", "zz",
             ][..],
             &[
                 "bridge",
@@ -624,15 +545,15 @@ mod tests {
                 "--home",
                 "/h",
                 "--name=zz",
-                "--via",
-                "relay",
+                "--level",
+                "zz",
             ][..],
         ] {
             let (kept, notices) = run(arguments);
             assert!(
                 !kept.iter().any(|argument| argument.starts_with("--force")
                     || argument.starts_with("--name")
-                    || argument.starts_with("--via")),
+                    || argument.starts_with("--level")),
                 "{kept:?}"
             );
             assert_eq!(notices.len(), 3, "{notices:?}");

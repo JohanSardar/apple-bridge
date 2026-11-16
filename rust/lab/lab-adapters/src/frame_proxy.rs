@@ -1,4 +1,4 @@
-use lab_relay::{FeedLink, Identity};
+use lab_feed::{FeedLink, Identity};
 use lab_world::{Error, Result};
 use rustls::{
     DigitallySignedStruct, DistinguishedName, ServerConfig, ServerConnection, SignatureScheme,
@@ -219,7 +219,7 @@ fn from_gateway(text: &str, receipts: &mut Vec<bool>, counters: &Counters) -> bo
     false
 }
 
-fn relay(
+fn forward(
     tcp: TcpStream,
     config: Arc<ServerConfig>,
     replica: &Identity,
@@ -296,7 +296,7 @@ impl FrameProxy {
                     accepting.clone(),
                 );
                 thread::spawn(move || {
-                    let _ = relay(tcp, config, &replica, &pin, &peer, &counters);
+                    let _ = forward(tcp, config, &replica, &pin, &peer, &counters);
                 });
             }
         });

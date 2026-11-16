@@ -367,7 +367,7 @@ impl Failure {
         .row("Error", super::ui::clean(&error.to_string()))
         .then(
             "Review the --debug output, then report it",
-            ["https://eilmer.si/applebridge/issues/new"],
+            ["https://gitlab.com/johansardar/apple-bridge/-/issues/new"],
         )
     }
 }
@@ -426,9 +426,9 @@ impl From<serde_json::Error> for Failure {
 impl From<ab_remote::Error> for Failure {
     fn from(error: ab_remote::Error) -> Self {
         let text = error.to_string();
-        Self::new(Reason::ApiError, "Failed to change remote access.")
-            .remote("Remote", text)
-            .then("Check remote access", ["bridge", "remote", "status"])
+        Self::new(Reason::ApiError, "Failed to change Tailscale access.")
+            .remote("Tailscale", text)
+            .then("Check it", ["bridge", "status"])
     }
 }
 

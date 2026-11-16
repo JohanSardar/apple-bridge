@@ -267,7 +267,7 @@ fn run() -> Result<(), Error> {
 fn main() -> std::process::ExitCode {
     match run() {
         Ok(()) => {
-            eprintln!("ab-session: relay ended");
+            eprintln!("ab-session: session ended");
             std::process::ExitCode::SUCCESS
         }
         Err(error) => {

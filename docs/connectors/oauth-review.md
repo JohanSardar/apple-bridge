@@ -1,6 +1,6 @@
 # OAuth review: what stays hand-written and why
 
-Reviewed 2026-11-04: `rust/crates/ab-trust/src/oauth.rs`, `rust/crates/ab-trust/src/passkeys.rs` and the OAuth routes in `rust/crates/ab-frontdoor`. Requirements are from [Claude's connector authentication docs](https://claude.com/docs/connectors/building/authentication) and [ChatGPT's MCP auth docs](https://developers.openai.com/apps-sdk/build/auth).
+Reviewed 2026-11-04: `rust/crates/ab-trust/src/oauth.rs`, `rust/crates/ab-trust/src/passkeys.rs` and the OAuth routes in `rust/crates/ab-frontdoor`.
 
 ## The decision
 
@@ -8,8 +8,8 @@ The gateway's authorization server stays ours, in Rust. It runs on the owner's M
 
 | Candidate | Result | Why |
 |---|---|---|
-| `oxide-auth` (Rust server framework) | Rejected | Last release June 2024. No RFC 8707 resource binding or RFC 9207 `iss`, which ChatGPT needs for its stable redirect, and no client ID metadata documents. We would write the hard parts anyway, around an unmaintained core. |
-| Better Auth `oauthProvider` + `mcp` | Rejected for the gateway | It covers the protocol, but needs a Node runtime and database on every Mac, and moves approval logic out of Rust. It is used for accounts, where it fits. |
+| `oxide-auth` (Rust server framework) | Rejected | Last release June 2024. No RFC 8707 resource binding or RFC 9207 `iss`, and no client ID metadata documents. We would write the hard parts anyway, around an unmaintained core. |
+| Better Auth `oauthProvider` + `mcp` | Rejected for the gateway | It covers the protocol, but needs a Node runtime and database on every Mac, and moves approval logic out of Rust. |
 | `rmcp` | Used for MCP | Its auth support is client side. It has no authorization server. |
 | `oauth2`, `openidconnect` (Rust clients) | `oauth2` used for PKCE | Client libraries. They contain no server logic to adopt beyond primitives. |
 
@@ -22,27 +22,24 @@ The gateway's authorization server stays ours, in Rust. It runs on the owner's M
 | Cookie parsing and `Set-Cookie` strings built by hand | `cookie` crate |
 | Passkey verification | Already `webauthn-rs-core`, kept. No hand-written WebAuthn remains in the gateway. |
 
-The relay control plane had hand-written WebAuthn and GitHub OAuth. Both are replaced by Better Auth. See `services/accounts`.
-
 ## Kept, and what holds it to account
 
 These have no maintained library, because they are this server's policy rather than protocol plumbing: the code and refresh token store, redirect matching, client ID metadata document fetching with its SSRF checks, the authorization endpoint's error routing, and metadata documents.
 
 Two kinds of test hold them to the specs:
 
-- `rust/crates/ab-frontdoor/tests/oauth_compliance.rs` runs the requirements above through the real HTTP routes, using the metadata the real clients publish.
-- `lab/compliance/` runs clients we did not write: `oauth4webapi`, a strict client library, and the MCP SDK's own `auth()`. They reject non-conforming metadata and responses. Run them against a real relay address too, since some checks only apply on public hosts: `node oauth-clients.mjs https://your-mac-address approve-command`.
+- `rust/crates/ab-frontdoor/tests/oauth_compliance.rs` runs the OAuth requirements through the real HTTP routes, using the metadata the real clients publish.
+- `lab/compliance/` runs clients we did not write: `oauth4webapi`, a strict client library, and the MCP SDK's own `auth()`. They reject non-conforming metadata and responses.
 
 ## Found and fixed in this review
 
 | Problem | Effect | Fix |
 |---|---|---|
-| Each public hostname had its own in-memory approval queue, and the owner's socket read only the local one | A connector coming through the relay could never be approved. Sims passed because they run on localhost. | One queue per gateway |
+| Each hostname had its own in-memory approval queue, and the owner's socket read only the local one | A connector coming through another hostname could never be approved. Sims passed because they run on localhost. | One queue per gateway |
 | The page that asks the Mac or iPhone had been deleted with the old web UI | The page offered only a passkey | New approval page |
 | The gateway never handed connector requests to the iPhone, and nothing opened the Mac window | No approval surface appeared | Wired both |
-| Agents approved through a connector were not allowed on public hosts | Claude got tokens, was refused on every MCP call and refreshed in a loop. Found by the first real Claude connection: every local test passed, because the check only runs on a public host. | Approval on a public host marks the agent as remote |
 | Loopback redirects matched exactly | Claude Code's published metadata lists `http://localhost/callback` and calls back on an ephemeral port, so it would fail. RFC 8252 section 7.3. | Port-agnostic match, loopback only |
-| `offline_access` was not advertised, and a token request naming it was refused | Claude only asks for refresh tokens when it is advertised | Advertised and accepted |
+| `offline_access` was not advertised, and a token request naming it was refused | Clients only ask for refresh tokens when it is advertised | Advertised and accepted |
 | Registration refused a missing `client_name` or a requested auth method | RFC 7591 lets the server replace these | Replaced in the response |
 | Registered clients were capped at 1000, never removed | Anyone could fill the cap and block new connections | Never-used registrations older than a day are evicted at the cap |
 | A repeated refresh token always revoked the agent | A client retrying over a dropped connection would lose its connection and need re-approval | A repeat within 60 seconds rotates. Later reuse still revokes. |

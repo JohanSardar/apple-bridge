@@ -37,15 +37,11 @@ pub(crate) struct Poll {
     pub redirect: String,
     pub show_code: bool,
 }
-pub const ARMED_FILE: &str = "remote/connect-armed";
-pub const ARMED_FOR: Duration = Duration::from_mins(15);
-pub(crate) fn source_of(origin: &str, route: &str) -> &'static str {
+pub(crate) fn source_of(origin: &str) -> &'static str {
     if origin.starts_with("http://") {
         "this_mac"
-    } else if route == "tailnet" {
-        "tailnet"
     } else {
-        "public"
+        "tailnet"
     }
 }
 #[allow(clippy::too_many_arguments)]
@@ -185,7 +181,7 @@ impl Connectors {
             }
         };
         let dest = url::Url::parse(&code.redirect_uri).map_err(|_| Error::Invalid)?;
-        let source = source_of(origin, route);
+        let source = source_of(origin);
         let summary = Summary {
             id: format!("connector:{}", oauth::token(32)),
             code: matching,
@@ -226,12 +222,6 @@ impl Connectors {
         }
         Ok(summary)
     }
-    fn armed(&self) -> bool {
-        std::fs::read_to_string(self.authority.home().join(ARMED_FILE))
-            .ok()
-            .and_then(|text| text.trim().parse::<i64>().ok())
-            .is_some_and(|until| until > jiff::Timestamp::now().as_second())
-    }
     fn reveal(&self, memory: &mut HashMap<String, Pending>) {
         let asking = self.asks.lock().map_or(0, |asks| {
             asks.values()
@@ -239,12 +229,8 @@ impl Connectors {
                 .count()
         });
         let waiting = memory.values().filter(|p| p.redirect.is_none()).count() + asking;
-        let armed = memory
-            .values()
-            .any(|p| p.redirect.is_none() && p.summary.source == "public")
-            && self.armed();
         for p in memory.values_mut().filter(|p| p.redirect.is_none()) {
-            if waiting > 1 || (p.summary.source == "public" && !armed) {
+            if waiting > 1 {
                 p.summary.show_code = true;
             }
         }
@@ -462,9 +448,9 @@ mod tests {
 
     fn client() -> Client {
         Client {
-            client_id: "https://claude.ai/oauth/mcp-oauth-client-metadata".into(),
-            client_name: "Claude".into(),
-            redirect_uris: vec!["https://claude.ai/api/mcp/auth_callback".into()],
+            client_id: "https://app.example/oauth/client-metadata".into(),
+            client_name: "Example App".into(),
+            redirect_uris: vec!["https://app.example/callback".into()],
             ..Client::default()
         }
     }
@@ -475,14 +461,14 @@ mod tests {
                 client(),
                 Code {
                     client_id: client().client_id,
-                    redirect_uri: "https://claude.ai/api/mcp/auth_callback".into(),
+                    redirect_uri: "https://app.example/callback".into(),
                     challenge: "x".into(),
                     resource: format!("{origin}/mcp"),
                     ..Code::default()
                 },
                 "state",
                 origin,
-                "system",
+                "tailnet",
                 vec![Grant::parse("calendar:read").expect("grant")],
             )
             .expect("begin")
@@ -491,11 +477,11 @@ mod tests {
     #[test]
     fn a_request_on_any_host_reaches_the_owner_and_only_its_origin_gets_the_result() {
         let (_home, queue) = queue();
-        let summary = request(&queue, "https://mac.ab.example.com");
+        let summary = request(&queue, "https://mac.example.ts.net:8443");
         assert_eq!(queue.pending().expect("pending").len(), 1);
         assert_eq!(
             queue
-                .poll(&summary.id, "https://mac.ab.example.com")
+                .poll(&summary.id, "https://mac.example.ts.net:8443")
                 .expect("poll")
                 .redirect,
             ""
@@ -509,15 +495,15 @@ mod tests {
                 .is_err()
         );
         let redirect = queue
-            .poll(&summary.id, "https://mac.ab.example.com")
+            .poll(&summary.id, "https://mac.example.ts.net:8443")
             .expect("poll")
             .redirect;
-        assert!(redirect.starts_with("https://claude.ai/api/mcp/auth_callback?"));
-        assert!(redirect.contains("iss=https%3A%2F%2Fmac.ab.example.com"));
+        assert!(redirect.starts_with("https://app.example/callback?"));
+        assert!(redirect.contains("iss=https%3A%2F%2Fmac.example.ts.net%3A8443"));
         assert!(redirect.contains("code="));
         assert!(
             queue
-                .poll(&summary.id, "https://mac.ab.example.com")
+                .poll(&summary.id, "https://mac.example.ts.net:8443")
                 .is_err(),
             "single use"
         );
@@ -526,7 +512,7 @@ mod tests {
     #[test]
     fn an_app_allowed_on_the_mac_acts_without_asking_first() {
         let (_home, queue) = queue();
-        let summary = request(&queue, "https://mac.ab.example.com");
+        let summary = request(&queue, "https://mac.example.ts.net:8443");
         queue
             .decide(&summary.id, &summary.code, true)
             .expect("decide");
@@ -539,7 +525,7 @@ mod tests {
     #[test]
     fn a_wrong_code_is_refused_and_attempts_are_limited() {
         let (_home, queue) = queue();
-        let summary = request(&queue, "https://mac.ab.example.com");
+        let summary = request(&queue, "https://mac.example.ts.net:8443");
         let wrong = if summary.code == "0000" {
             "0001"
         } else {
@@ -575,24 +561,6 @@ mod tests {
                 .show_code
         );
 
-        let (home_two, public) = super::tests::queue();
-        assert!(
-            request(&public, "https://mac.example.ts.net").show_code,
-            "an unexpected request from the internet shows the code"
-        );
-        drop(home_two);
-
-        let (armed_home, armed) = super::tests::queue();
-        std::fs::create_dir_all(armed_home.path().join("remote")).expect("remote");
-        std::fs::write(
-            armed_home.path().join(ARMED_FILE),
-            (jiff::Timestamp::now().as_second() + 600).to_string(),
-        )
-        .expect("arm");
-        assert!(
-            !request(&armed, "https://mac.example.ts.net").show_code,
-            "a request the owner just started needs no code"
-        );
         drop(home);
     }
 
@@ -628,7 +596,7 @@ mod tests {
         queue.on_waiting(Arc::new(move || {
             count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }));
-        request(&queue, "https://mac.ab.example.com");
+        request(&queue, "https://mac.example.ts.net:8443");
         assert_eq!(told.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 }

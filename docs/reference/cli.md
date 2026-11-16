@@ -29,10 +29,8 @@ Access:
   connectors  Allow or deny apps waiting to connect
   web         Manage browser sign-in for this Mac's local pages
 
-Remote and replicas:
+Tailscale and replicas:
   tailscale  Let your other devices and cloud agents reach this Mac through Tailscale
-  relay      Set up your own relay server and connect this Mac to it
-  remote     Use Apple Bridge from other computers; off until you enable it
   pair       Create a pairing code for a replica or iPhone
   join       Join a gateway as a replica with a pairing code
 
@@ -103,7 +101,7 @@ Connect an agent on this Mac, such as Claude Code, Codex or Cursor
 
 Arguments:
   <AGENT>  Which agent to connect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
-           opencode, claude-desktop, grok-bot, claude-app, other)
+           opencode, claude-desktop, grok-bot, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -147,7 +145,7 @@ Disconnect an agent that bridge link connected
 
 Arguments:
   <AGENT>  Which agent to disconnect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
-           opencode, claude-desktop, grok-bot, claude-app, other)
+           opencode, claude-desktop, grok-bot, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -665,7 +663,7 @@ Create a token and print it once
 Options:
   --expires-in <DURATION>  Stop the token working after this long, such as 1h, 7d or 90d (default:
                            never)
-  --remote                 Allow use through remote access
+  --remote                 Allow use through Tailscale
   --scope <ACCESS>         Access grants, comma-separated (default: reminders:read,system:read)
 
 Global options: see bridge --help
@@ -828,7 +826,7 @@ Print a link and QR code to add a passkey
 Options:
   --host <URL>  Page address: https://HOST, or http://localhost:PORT (default: this Mac's gateway
                 address)
-  --public      Use the remote access address
+  --public      Use the Tailscale address
 
 Global options: see bridge --help
 
@@ -836,7 +834,7 @@ Examples:
   Add a passkey on this Mac
     bridge web enroll
 
-  Add one through remote access
+  Add one through Tailscale
     bridge web enroll --public
 
 Notes:
@@ -943,240 +941,6 @@ Notes:
   Cloud agents ask at the printed /connect address, and you click Allow on this Mac.
 ```
 
-## bridge relay
-
-```text
-bridge relay <command> [options]
-Set up your own relay server and connect this Mac to it
-
-Commands:
-  setup  Install a relay on your server over ssh and connect this Mac
-
-Global options: see bridge --help
-```
-
-## bridge relay setup
-
-```text
-bridge relay setup <SERVER> [options]
-Install a relay on your server over ssh and connect this Mac
-
-Arguments:
-  <SERVER>  How you reach the server with ssh, such as root@203.0.113.10
-
-Options:
-  --domain <DOMAIN>  A domain used only for this, such as bridge.example.com
-  --ip <IP>          The server's public IPv4 address, if ssh reaches it another way
-
-Global options: see bridge --help
-
-Examples:
-  Install a relay on your server and connect this Mac
-    bridge relay setup root@203.0.113.10 --domain bridge.example.com
-
-Notes:
-  Shows the two DNS records to add and waits until they are live, then installs the relay over ssh
-  and connects this Mac.
-  Run it again to pick up where it stopped.
-```
-
-## bridge remote
-
-```text
-bridge remote <command> [options]
-Use Apple Bridge from other computers; off until you enable it
-
-Commands:
-  enable        Turn on remote access through the relay or a private route
-  disable       Turn off remote access
-  status        Show remote access state
-  key           Print this Mac's relay key for a self-hosted relay
-  certificates  Manage certificates seen for this Mac's remote address
-
-Global options: see bridge --help
-```
-
-## bridge remote enable
-
-```text
-bridge remote enable [options]
-Turn on remote access through the relay or a private route
-
-Options:
-  --domain <DOMAIN>     Custom domain on the relay route
-  --name <NAME>         Name for this Mac
-  --no-open             Print sign-in links instead of opening a browser
-  --open                Open sign-in links in the browser even without a terminal, unless over SSH
-  --private             Use the private route; same as --via private
-  --relay-url <URL>     Your own relay's address
-  --sources <SOURCES>   Cloud route only: services cloud chats may see, such as calendar,reminders
-  --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route (default: relay) (accepted: relay, tailnet, cloud, private,
-                        tailscale-app, both)
-
-Global options: see bridge --help
-
-Examples:
-  Turn on remote access through the relay
-    bridge remote enable
-
-  Use your own relay
-    bridge remote enable --relay-url https://relay.example.com
-
-Notes:
-  Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the
-  request with the gateway; check it with bridge remote status.
-  With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending,
-  the link in remote.signInUrl and userActionRequired true.
-  --no-open never opens a browser; --open opens one even without a terminal, unless over SSH.
-```
-
-## bridge remote disable
-
-```text
-bridge remote disable [options]
-Turn off remote access
-
-Options:
-  --name <NAME>         Name for this Mac
-  --private             Turn off the private route; same as --via private
-  --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, tailnet, cloud,
-                        private, tailscale-app, both)
-
-Global options: see bridge --help
-
-Examples:
-  Turn off remote access
-    bridge remote disable
-```
-
-## bridge remote status
-
-```text
-bridge remote status [options]
-Show remote access state
-
-Options:
-  --snippets  Print connection snippets for agents
-
-Global options: see bridge --help
-
-Examples:
-  Check remote access
-    bridge remote status
-
-  Print agent connection snippets
-    bridge remote status --snippets
-
-Notes:
-  With --json the state is under remote. Piped without --json it prints the state alone, as before.
-  --snippets --json gives {"snippets": TEXT}.
-```
-
-## bridge remote key
-
-```text
-bridge remote key [options]
-Print this Mac's relay key for a self-hosted relay
-
-Options:
-  --relay-url <URL>  Save this relay address first
-
-Global options: see bridge --help
-
-Examples:
-  Print the key for your relay's allowlist
-    bridge remote key
-
-Notes:
-  Prints only the 43-character key.
-```
-
-## bridge remote certificates
-
-```text
-bridge remote certificates <command> [options]
-Manage certificates seen for this Mac's remote address
-
-Commands:
-  accept  Accept a certificate you requested yourself
-
-Global options: see bridge --help
-```
-
-## bridge remote certificates accept
-
-```text
-bridge remote certificates accept [FINGERPRINT] [options]
-Accept a certificate you requested yourself
-
-Arguments:
-  <FINGERPRINT>  SHA-256 fingerprint: 64 hexadecimal characters
-
-Global options: see bridge --help
-
-Examples:
-  Accept a certificate you requested
-    bridge remote certificates accept <FINGERPRINT>
-```
-
-## bridge remote on
-
-```text
-bridge remote on [options]
-Turn on remote access
-Deprecated: use bridge remote enable.
-
-Options:
-  --domain <DOMAIN>     Custom domain on the relay route
-  --name <NAME>         Name for this Mac
-  --no-open             Print sign-in links instead of opening a browser
-  --open                Open sign-in links in the browser even without a terminal, unless over SSH
-  --private             Use the private route; same as --via private
-  --relay-url <URL>     Your own relay's address
-  --sources <SOURCES>   Cloud route only: services cloud chats may see, such as calendar,reminders
-  --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route (default: relay) (accepted: relay, tailnet, cloud, private,
-                        tailscale-app, both)
-
-Global options: see bridge --help
-
-Notes:
-  Prints the sign-in link and the address on stdout and opens the link in a browser unless
-  --no-open, with or without a terminal.
-```
-
-## bridge remote off
-
-```text
-bridge remote off [options]
-Turn off remote access
-Deprecated: use bridge remote disable.
-
-Options:
-  --name <NAME>         Name for this Mac
-  --private             Turn off the private route; same as --via private
-  --timeout <DURATION>  Stop waiting after this long (default: 10m)
-  --via <ROUTE>         Route to turn off (default: relay) (accepted: relay, tailnet, cloud,
-                        private, tailscale-app, both)
-
-Global options: see bridge --help
-```
-
-## bridge remote certificate-accept
-
-```text
-bridge remote certificate-accept [FINGERPRINT] [options]
-Accept a certificate
-Deprecated: use bridge remote certificates accept.
-
-Arguments:
-  <FINGERPRINT>  SHA-256 fingerprint: 64 hexadecimal characters
-
-Global options: see bridge --help
-```
-
 ## bridge pair
 
 ```text
@@ -1190,7 +954,7 @@ Options:
   --peer-addr <ADDRESS>     Address the replica should dial
   --scope <ACCESS>          Access grants for the replica, comma-separated (default:
                             reminders:read,system:read)
-  --via-remote              Pair through remote access
+  --via-remote              Pair through Tailscale
 
 Global options: see bridge --help
 
@@ -1198,7 +962,7 @@ Examples:
   Create a code for a replica
     bridge pair --scope messages:read
 
-  Pair an iPhone through remote access
+  Pair an iPhone through Tailscale
     bridge pair --iphone --via-remote
 
 Notes:
@@ -1455,21 +1219,6 @@ Examples:
 
 Notes:
   Used by the Apple Bridge app's background service.
-```
-
-## bridge connect
-
-```text
-bridge connect <CODE> [options]
-Run the private replica client
-
-Arguments:
-  <CODE>  Connection code
-
-Options:
-  --listen <ADDRESS>  Local address to serve (default: 127.0.0.1:7780)
-
-Global options: see bridge --help
 ```
 
 ## bridge install-credentials

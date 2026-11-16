@@ -3,7 +3,7 @@ use crate::{
     gojson::{self, EscapeMode},
 };
 use ab_domain::ErrorCode;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::value::RawValue;
 use std::collections::BTreeMap;
 
@@ -207,83 +207,4 @@ pub fn legacy_json<T: Serialize>(value: &T, mode: EscapeMode) -> Result<Vec<u8>,
 
 pub fn canonical_data(bytes: &[u8]) -> Result<Vec<u8>, ErrorCode> {
     gojson::record_data(bytes, EscapeMode::Html).map_err(|_| ErrorCode::Invalid)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RelayProof {
-    pub hostname: String,
-    pub credential: String,
-    pub nonce: String,
-    pub signature: String,
-}
-impl RelayProof {
-    pub fn signature_input(&self, action: &str) -> Vec<u8> {
-        format!(
-            "apple-bridge-relay/1\n{action}\n{}\n{}\n{}",
-            self.hostname, self.credential, self.nonce
-        )
-        .into_bytes()
-    }
-}
-
-pub const TUNNEL_FEATURES_HEADER: &str = "X-Bridge-Tunnel-Features";
-pub const TUNNEL_FEATURE_SOURCE: &str = "source";
-pub const POLICY_VERSION_HEADER: &str = "X-Bridge-Policy-Version";
-
-#[must_use]
-pub fn encode_tunnel_source(source: std::net::IpAddr) -> Vec<u8> {
-    match source {
-        std::net::IpAddr::V4(address) => address.octets().to_vec(),
-        std::net::IpAddr::V6(address) => address.octets().to_vec(),
-    }
-}
-
-#[must_use]
-pub fn decode_tunnel_source(bytes: &[u8]) -> Option<std::net::IpAddr> {
-    if let Ok(octets) = <[u8; 4]>::try_from(bytes) {
-        return Some(std::net::IpAddr::from(octets));
-    }
-    <[u8; 16]>::try_from(bytes).ok().map(std::net::IpAddr::from)
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RelayChallenge {
-    pub nonce: String,
-}
-impl RelayProof {
-    pub fn encode_header(&self) -> Result<String, ErrorCode> {
-        use base64::Engine;
-        Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .encode(legacy_json(self, EscapeMode::Html)?))
-    }
-    pub fn decode_header(header: &str) -> Result<Self, ErrorCode> {
-        use base64::Engine;
-        if header.len() > MAX_FRAME {
-            return Err(ErrorCode::Capacity);
-        }
-        let raw = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(header)
-            .map_err(|_| ErrorCode::Invalid)?;
-        serde_json::from_slice(&raw).map_err(|_| ErrorCode::Invalid)
-    }
-}
-
-pub fn device_link_message(
-    relay: &str,
-    transaction: &str,
-    nonce: &str,
-    public_key: &str,
-) -> Vec<u8> {
-    format!("apple-bridge-device-link/1\n{relay}\n{transaction}\n{nonce}\n{public_key}")
-        .into_bytes()
-}
-
-pub fn device_key_fingerprint(public_key: &[u8; 32]) -> String {
-    use sha2::Digest;
-    let digest = sha2::Sha256::digest(public_key);
-    digest[..8]
-        .chunks(2)
-        .map(|pair| format!("{:02X}{:02X}", pair[0], pair[1]))
-        .collect::<Vec<_>>()
-        .join("-")
 }

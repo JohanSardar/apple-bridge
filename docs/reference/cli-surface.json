@@ -6,7 +6,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -222,14 +222,6 @@
           "summary": "Let your other devices and cloud agents reach this Mac through Tailscale"
         },
         {
-          "name": "relay",
-          "summary": "Set up your own relay server and connect this Mac to it"
-        },
-        {
-          "name": "remote",
-          "summary": "Use Apple Bridge from other computers; off until you enable it"
-        },
-        {
           "name": "pair",
           "summary": "Create a pairing code for a replica or iPhone"
         },
@@ -288,7 +280,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-up",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-up",
       "lifecycle": "stable",
       "notes": [
         "Returns once the gateway is ready; syncing continues in the background. Running it again reuses the running gateway.",
@@ -412,7 +404,6 @@
             "opencode",
             "claude-desktop",
             "grok-bot",
-            "claude-app",
             "other"
           ]
         }
@@ -437,7 +428,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-link",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-link",
       "lifecycle": "stable",
       "notes": [
         "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
@@ -585,7 +576,6 @@
             "opencode",
             "claude-desktop",
             "grok-bot",
-            "claude-app",
             "other"
           ]
         }
@@ -598,7 +588,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-unlink",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-unlink",
       "lifecycle": "stable",
       "notes": [
         "This removes the agent's registration from Claude Code, Codex, Gemini CLI, Cursor, Zed, OpenCode or the Claude app. Remove it from other agents in their own settings.",
@@ -690,7 +680,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-mcp",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-mcp",
       "lifecycle": "stable",
       "notes": [
         "Agents launch this; you don't run it yourself. It speaks MCP as JSON lines on stdin and stdout and forwards to the Apple Bridge running on this Mac.",
@@ -709,7 +699,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-permissions",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -747,7 +737,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-permissions-guide",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-guide",
       "lifecycle": "stable",
       "notes": [
         "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
@@ -829,7 +819,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-permissions-status",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-status",
       "lifecycle": "stable",
       "notes": [
         "With --json, each permission maps to allowed, needs permission or unknown."
@@ -907,7 +897,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-permissions-request",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-request",
       "lifecycle": "stable",
       "notes": [
         "Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording, speech_recognition, focus, automation_mail."
@@ -969,7 +959,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-stats",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-stats",
       "lifecycle": "stable",
       "notes": [
         "Counts only, never content.",
@@ -1074,7 +1064,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-down",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-down",
       "lifecycle": "stable",
       "notes": [
         "Leaves a gateway that something else started, such as the Apple Bridge app, running.",
@@ -1136,7 +1126,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-read",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-read",
       "lifecycle": "stable",
       "notes": [
         "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
@@ -1298,7 +1288,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-search",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-search",
       "lifecycle": "stable",
       "notes": [
         "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
@@ -1404,7 +1394,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-call",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-call",
       "lifecycle": "stable",
       "notes": [
         "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
@@ -1494,7 +1484,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-skills",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1526,7 +1516,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-skills-list",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills-list",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1567,7 +1557,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-skills-get",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills-get",
       "lifecycle": "stable",
       "notes": [
         "Prints the skill's exact Markdown."
@@ -1587,7 +1577,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1639,7 +1629,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-list",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-list",
       "lifecycle": "stable",
       "notes": [
         "Lists agents in the order they were created, oldest first, 50 at a time (--limit up to 200). --next continues; the JSON gives next_cursor, null on the last page.",
@@ -1747,7 +1737,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-create",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-create",
       "lifecycle": "stable",
       "notes": [
         "The token prints once, alone on stdout. --scope sets the agent's access grants.",
@@ -1866,7 +1856,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-inspect",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-inspect",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1941,7 +1931,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-update",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-update",
       "lifecycle": "stable",
       "notes": [
         "A read agent can't be raised to full or approve; revoke it and create a new one.",
@@ -2029,7 +2019,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-revoke",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-revoke",
       "lifecycle": "stable",
       "notes": [
         "Asks first; without a terminal, pass --yes. The agent stays in the list, marked revoked."
@@ -2126,7 +2116,7 @@
       "deprecated": "bridge agents update <AGENT> --level <LEVEL>",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-agents-level",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-level",
       "lifecycle": "deprecated",
       "notes": [
         "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version."
@@ -2189,7 +2179,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-tokens",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2227,7 +2217,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-tokens-create",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-create",
       "lifecycle": "stable",
       "notes": [
         "The token prints once, alone on stdout. With --json it is in secret.",
@@ -2255,7 +2245,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Allow use through remote access",
+          "summary": "Allow use through Tailscale",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -2341,7 +2331,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-tokens-revoke",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-revoke",
       "lifecycle": "stable",
       "notes": [
         "Accepts token, agent and replica IDs. Asks first; without a terminal, pass --yes."
@@ -2434,7 +2424,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-tokens-update",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-update",
       "lifecycle": "stable",
       "notes": [
         "Accepts token, agent and replica IDs. Adding sources asks first; without a terminal, pass --yes."
@@ -2531,7 +2521,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connectors",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2567,7 +2557,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connectors-list",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-list",
       "lifecycle": "stable",
       "notes": [
         "Lists waiting requests, the one that expires first at the top, 50 at a time (--limit up to 200). --next continues."
@@ -2655,7 +2645,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connectors-allow",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-allow",
       "lifecycle": "stable",
       "notes": [
         "Only allow an app whose code matches the one on its page."
@@ -2718,7 +2708,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connectors-deny",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-deny",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -2774,7 +2764,7 @@
       "deprecated": "bridge connectors list",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connectors-pending",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-pending",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -2790,7 +2780,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2820,11 +2810,11 @@
         },
         {
           "command": "bridge web enroll --public",
-          "summary": "Add one through remote access"
+          "summary": "Add one through Tailscale"
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-enroll",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-enroll",
       "lifecycle": "stable",
       "notes": [
         "The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on. Piped, stdout holds only the link and no QR code is drawn."
@@ -2851,7 +2841,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Use the remote access address",
+          "summary": "Use the Tailscale address",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -2887,7 +2877,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-sessions",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2919,7 +2909,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-sessions-list",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions-list",
       "lifecycle": "stable",
       "notes": [
         "Lists browsers in the order they signed in, oldest first, 50 at a time (--limit up to 200). --next continues."
@@ -3007,7 +2997,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-sessions-revoke",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions-revoke",
       "lifecycle": "stable",
       "notes": [
         "Asks first; without a terminal, pass --yes."
@@ -3052,7 +3042,7 @@
       "deprecated": "bridge web sessions revoke --all",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-lock",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-lock",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -3068,7 +3058,7 @@
       "deprecated": "bridge web sessions list",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-web-devices",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-devices",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -3093,7 +3083,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-tailscale",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tailscale",
       "lifecycle": "stable",
       "notes": [
         "Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your Tailscale network can reach it.",
@@ -3155,1092 +3145,6 @@
       "aliases": [],
       "arguments": [],
       "deprecated": null,
-      "examples": [],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-relay",
-      "lifecycle": "stable",
-      "notes": [],
-      "options": [],
-      "path": "bridge relay",
-      "result_schema": null,
-      "subcommands": [
-        {
-          "name": "setup",
-          "summary": "Install a relay on your server over ssh and connect this Mac"
-        }
-      ],
-      "summary": "Set up your own relay server and connect this Mac to it",
-      "usage": "bridge relay <command> [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "SERVER",
-          "required": true,
-          "summary": "How you reach the server with ssh, such as root@203.0.113.10",
-          "values": []
-        }
-      ],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge relay setup root@203.0.113.10 --domain bridge.example.com",
-          "summary": "Install a relay on your server and connect this Mac"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-relay-setup",
-      "lifecycle": "stable",
-      "notes": [
-        "Shows the two DNS records to add and waits until they are live, then installs the relay over ssh and connects this Mac.",
-        "Run it again to pick up where it stopped."
-      ],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--domain",
-          "repeatable": false,
-          "required": true,
-          "short": null,
-          "summary": "A domain used only for this, such as bridge.example.com",
-          "type": "string",
-          "value_hint": "<DOMAIN>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--ip",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "The server's public IPv4 address, if ssh reaches it another way",
-          "type": "string",
-          "value_hint": "<IP>",
-          "values": []
-        }
-      ],
-      "path": "bridge relay setup",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "Install a relay on your server over ssh and connect this Mac",
-      "usage": "bridge relay setup <SERVER> [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote",
-      "lifecycle": "stable",
-      "notes": [],
-      "options": [],
-      "path": "bridge remote",
-      "result_schema": null,
-      "subcommands": [
-        {
-          "name": "enable",
-          "summary": "Turn on remote access through the relay or a private route"
-        },
-        {
-          "name": "disable",
-          "summary": "Turn off remote access"
-        },
-        {
-          "name": "status",
-          "summary": "Show remote access state"
-        },
-        {
-          "name": "key",
-          "summary": "Print this Mac's relay key for a self-hosted relay"
-        },
-        {
-          "name": "certificates",
-          "summary": "Manage certificates seen for this Mac's remote address"
-        }
-      ],
-      "summary": "Use Apple Bridge from other computers; off until you enable it",
-      "usage": "bridge remote <command> [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge remote enable",
-          "summary": "Turn on remote access through the relay"
-        },
-        {
-          "command": "bridge remote enable --relay-url https://relay.example.com",
-          "summary": "Use your own relay"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-enable",
-      "lifecycle": "stable",
-      "notes": [
-        "Waits until remote access is on, up to --timeout (default 10m). Stopping the wait leaves the request with the gateway; check it with bridge remote status.",
-        "With --json it doesn't wait for a person: once a sign-in link is needed it prints outcome pending, the link in remote.signInUrl and userActionRequired true.",
-        "--no-open never opens a browser; --open opens one even without a terminal, unless over SSH."
-      ],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--domain",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Custom domain on the relay route",
-          "type": "string",
-          "value_hint": "<DOMAIN>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--name",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Name for this Mac",
-          "type": "string",
-          "value_hint": "<NAME>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--no-open",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Print sign-in links instead of opening a browser",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--open",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Open sign-in links in the browser even without a terminal, unless over SSH",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--private",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Use the private route; same as --via private",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--relay-url",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Your own relay's address",
-          "type": "string",
-          "value_hint": "<URL>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--sources",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Cloud route only: services cloud chats may see, such as calendar,reminders",
-          "type": "string",
-          "value_hint": "<SOURCES>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--timeout",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Stop waiting after this long (default: 10m)",
-          "type": "string",
-          "value_hint": "<DURATION>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--via",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Route (default: relay)",
-          "type": "string",
-          "value_hint": "<ROUTE>",
-          "values": [
-            "relay",
-            "tailnet",
-            "cloud",
-            "private",
-            "tailscale-app",
-            "both"
-          ]
-        }
-      ],
-      "path": "bridge remote enable",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "remote",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "userActionRequired",
-            "secret": false,
-            "type": "boolean"
-          },
-          {
-            "name": "message",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "backend",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "url",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "last_error",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "pending_link",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "signInUrl",
-            "secret": true,
-            "type": "string"
-          },
-          {
-            "name": "tls_termination",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "certificate_expiry",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Turn on remote access through the relay or a private route",
-      "usage": "bridge remote enable [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge remote disable",
-          "summary": "Turn off remote access"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-disable",
-      "lifecycle": "stable",
-      "notes": [],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--name",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Name for this Mac",
-          "type": "string",
-          "value_hint": "<NAME>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--private",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Turn off the private route; same as --via private",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--timeout",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Stop waiting after this long (default: 10m)",
-          "type": "string",
-          "value_hint": "<DURATION>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--via",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Route to turn off (default: relay)",
-          "type": "string",
-          "value_hint": "<ROUTE>",
-          "values": [
-            "relay",
-            "tailnet",
-            "cloud",
-            "private",
-            "tailscale-app",
-            "both"
-          ]
-        }
-      ],
-      "path": "bridge remote disable",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "remote",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "userActionRequired",
-            "secret": false,
-            "type": "boolean"
-          },
-          {
-            "name": "message",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "backend",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "url",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "last_error",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "pending_link",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "signInUrl",
-            "secret": true,
-            "type": "string"
-          },
-          {
-            "name": "tls_termination",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "certificate_expiry",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Turn off remote access",
-      "usage": "bridge remote disable [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge remote status",
-          "summary": "Check remote access"
-        },
-        {
-          "command": "bridge remote status --snippets",
-          "summary": "Print agent connection snippets"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-status",
-      "lifecycle": "stable",
-      "notes": [
-        "With --json the state is under remote. Piped without --json it prints the state alone, as before. --snippets --json gives {\"snippets\": TEXT}."
-      ],
-      "options": [
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--snippets",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Print connection snippets for agents",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        }
-      ],
-      "path": "bridge remote status",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "remote",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "snippets",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "backend",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "url",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "last_error",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "pending_link",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "tls_termination",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "certificate_expiry",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Show remote access state",
-      "usage": "bridge remote status [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge remote key",
-          "summary": "Print the key for your relay's allowlist"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-key",
-      "lifecycle": "stable",
-      "notes": [
-        "Prints only the 43-character key."
-      ],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--relay-url",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Save this relay address first",
-          "type": "string",
-          "value_hint": "<URL>",
-          "values": []
-        }
-      ],
-      "path": "bridge remote key",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "key",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Print this Mac's relay key for a self-hosted relay",
-      "usage": "bridge remote key [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
-      "examples": [],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-certificates",
-      "lifecycle": "stable",
-      "notes": [],
-      "options": [],
-      "path": "bridge remote certificates",
-      "result_schema": null,
-      "subcommands": [
-        {
-          "name": "accept",
-          "summary": "Accept a certificate you requested yourself"
-        }
-      ],
-      "summary": "Manage certificates seen for this Mac's remote address",
-      "usage": "bridge remote certificates <command> [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "FINGERPRINT",
-          "required": false,
-          "summary": "SHA-256 fingerprint: 64 hexadecimal characters",
-          "values": []
-        }
-      ],
-      "deprecated": null,
-      "examples": [
-        {
-          "command": "bridge remote certificates accept <FINGERPRINT>",
-          "summary": "Accept a certificate you requested"
-        }
-      ],
-      "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-certificates-accept",
-      "lifecycle": "stable",
-      "notes": [],
-      "options": [],
-      "path": "bridge remote certificates accept",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "fingerprint",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Accept a certificate you requested yourself",
-      "usage": "bridge remote certificates accept [FINGERPRINT] [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": "bridge remote enable",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-on",
-      "lifecycle": "deprecated",
-      "notes": [
-        "Prints the sign-in link and the address on stdout and opens the link in a browser unless --no-open, with or without a terminal."
-      ],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--domain",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Custom domain on the relay route",
-          "type": "string",
-          "value_hint": "<DOMAIN>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--name",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Name for this Mac",
-          "type": "string",
-          "value_hint": "<NAME>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--no-open",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Print sign-in links instead of opening a browser",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--open",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Open sign-in links in the browser even without a terminal, unless over SSH",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--private",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Use the private route; same as --via private",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--relay-url",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Your own relay's address",
-          "type": "string",
-          "value_hint": "<URL>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--sources",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Cloud route only: services cloud chats may see, such as calendar,reminders",
-          "type": "string",
-          "value_hint": "<SOURCES>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--timeout",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Stop waiting after this long (default: 10m)",
-          "type": "string",
-          "value_hint": "<DURATION>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--via",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Route (default: relay)",
-          "type": "string",
-          "value_hint": "<ROUTE>",
-          "values": [
-            "relay",
-            "tailnet",
-            "cloud",
-            "private",
-            "tailscale-app",
-            "both"
-          ]
-        }
-      ],
-      "path": "bridge remote on",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "remote",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "userActionRequired",
-            "secret": false,
-            "type": "boolean"
-          },
-          {
-            "name": "message",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "backend",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "url",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "last_error",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "pending_link",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "signInUrl",
-            "secret": true,
-            "type": "string"
-          },
-          {
-            "name": "tls_termination",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "certificate_expiry",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Turn on remote access",
-      "usage": "bridge remote on [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": "bridge remote disable",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-off",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--name",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Name for this Mac",
-          "type": "string",
-          "value_hint": "<NAME>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--private",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Turn off the private route; same as --via private",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--timeout",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Stop waiting after this long (default: 10m)",
-          "type": "string",
-          "value_hint": "<DURATION>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--via",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Route to turn off (default: relay)",
-          "type": "string",
-          "value_hint": "<ROUTE>",
-          "values": [
-            "relay",
-            "tailnet",
-            "cloud",
-            "private",
-            "tailscale-app",
-            "both"
-          ]
-        }
-      ],
-      "path": "bridge remote off",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "remote",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "userActionRequired",
-            "secret": false,
-            "type": "boolean"
-          },
-          {
-            "name": "message",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "backend",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "url",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "last_error",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "pending_link",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "signInUrl",
-            "secret": true,
-            "type": "string"
-          },
-          {
-            "name": "tls_termination",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "certificate_expiry",
-            "secret": false,
-            "type": "string"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Turn off remote access",
-      "usage": "bridge remote off [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "FINGERPRINT",
-          "required": false,
-          "summary": "SHA-256 fingerprint: 64 hexadecimal characters",
-          "values": []
-        }
-      ],
-      "deprecated": "bridge remote certificates accept",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-remote-certificate-accept",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [],
-      "path": "bridge remote certificate-accept",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "Accept a certificate",
-      "usage": "bridge remote certificate-accept [FINGERPRINT] [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge pair --scope messages:read",
@@ -4248,11 +3152,11 @@
         },
         {
           "command": "bridge pair --iphone --via-remote",
-          "summary": "Pair an iPhone through remote access"
+          "summary": "Pair an iPhone through Tailscale"
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-pair",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-pair",
       "lifecycle": "stable",
       "notes": [
         "The code is a secret that works until --expires-in passes. Piped, stdout holds only the code."
@@ -4331,7 +3235,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Pair through remote access",
+          "summary": "Pair through Tailscale",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -4379,7 +3283,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-join",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-join",
       "lifecycle": "stable",
       "notes": [
         "Piped, stdout holds only the replica's home."
@@ -4429,7 +3333,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-status",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-status",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -4467,7 +3371,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-doctor",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-doctor",
       "lifecycle": "stable",
       "notes": [
         "A finished report exits 0, even when a check fails. Pass --check to exit 1 with unhealthy_home instead."
@@ -4603,7 +3507,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-backup",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-backup",
       "lifecycle": "stable",
       "notes": [
         "Refuses an existing file unless --force, or you confirm at the prompt. The backup is written privately and moved into place whole."
@@ -4669,7 +3573,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-restore",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-restore",
       "lifecycle": "stable",
       "notes": [
         "Stop the gateway first with bridge down. Shows what will be replaced and asks; without a terminal, pass --yes."
@@ -4732,7 +3636,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-selftest",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-selftest",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -4758,7 +3662,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-selftest-messages",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-selftest-messages",
       "lifecycle": "stable",
       "notes": [
         "This sends real messages to your own chat through the Helper."
@@ -4816,7 +3720,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-shortcuts",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -4842,7 +3746,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-shortcuts-install",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts-install",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -4872,7 +3776,7 @@
       "deprecated": "bridge shortcuts install",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-shortcuts-install-pack",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts-install-pack",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [
@@ -4918,7 +3822,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-completion",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-completion",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -4950,7 +3854,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-help",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-help",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -4985,7 +3889,7 @@
         }
       ],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-start",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-start",
       "lifecycle": "hidden",
       "notes": [
         "Used by the Apple Bridge app's background service."
@@ -5133,48 +4037,11 @@
     },
     {
       "aliases": [],
-      "arguments": [
-        {
-          "name": "CODE",
-          "required": true,
-          "summary": "Connection code",
-          "values": []
-        }
-      ],
-      "deprecated": null,
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-connect",
-      "lifecycle": "hidden",
-      "notes": [],
-      "options": [
-        {
-          "aliases": [],
-          "default": "127.0.0.1:7780",
-          "global": false,
-          "name": "--listen",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Local address to serve",
-          "type": "string",
-          "value_hint": "<ADDRESS>",
-          "values": []
-        }
-      ],
-      "path": "bridge connect",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "Run the private replica client",
-      "usage": "bridge connect <CODE> [options]"
-    },
-    {
-      "aliases": [],
       "arguments": [],
       "deprecated": null,
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-install-credentials",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-install-credentials",
       "lifecycle": "hidden",
       "notes": [
         "Used by the Apple Bridge app."
@@ -5217,7 +4084,7 @@
       "deprecated": "bridge tokens revoke",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-revoke",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-revoke",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -5263,7 +4130,7 @@
       "deprecated": "bridge tokens update",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-scope",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-scope",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [
@@ -5321,7 +4188,7 @@
       "deprecated": "bridge selftest messages",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-setup",
+      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-setup",
       "lifecycle": "deprecated",
       "notes": [
         "This sends real messages to your own chat through the Helper."

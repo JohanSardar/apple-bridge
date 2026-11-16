@@ -202,7 +202,7 @@ A command submitted by a device session from a real input event; it is not bound
 _Avoid_: manual send, UI send
 
 **Agent token**:
-A credential for a remote AI agent, with source scopes and a level of `full` (the default: acts at once), `approve` (asks the owner before each change) or `read`.
+A credential for an AI agent, with source scopes and a level of `full` (the default: acts at once), `approve` (asks the owner before each change) or `read`.
 _Avoid_: API key, bot token
 
 **Approval**:
@@ -218,7 +218,7 @@ A browser-safe derivative blob of an attachment (thumb, display, video, poster, 
 _Avoid_: transcode, thumbnail cache
 
 **Remote**:
-The embedded Tailscale node and Funnel listener that makes an instance reachable at its public HTTPS address.
+The Tailscale route: a Tailscale Serve mapping in the installed Tailscale app that makes an instance reachable at its HTTPS address on the owner's tailnet only.
 _Avoid_: tunnel, proxy, cloud
 
 **Live view**:

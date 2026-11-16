@@ -100,7 +100,7 @@ def record(args):
     stop = threading.Event()
     workers = []
     peers = set()
-    remaining_relays = {}
+    remaining_forwards = {}
     lock = threading.Lock()
     errors = []
     sequence = 0
@@ -122,7 +122,7 @@ def record(args):
         server.settimeout(.2)
         previous = signal.signal(signal.SIGTERM, lambda *_: stop.set())
         interrupt = signal.signal(signal.SIGINT, lambda *_: stop.set())
-        def relay(source, target, direction, number):
+        def forward(source, target, direction, number):
             try:
                 while not stop.is_set():
                     raw = receive(source)
@@ -148,9 +148,9 @@ def record(args):
                 except OSError:
                     pass
                 with lock:
-                    remaining_relays[number] -= 1
-                    if remaining_relays[number] == 0:
-                        del remaining_relays[number]
+                    remaining_forwards[number] -= 1
+                    if remaining_forwards[number] == 0:
+                        del remaining_forwards[number]
                         for conn in (source, target):
                             peers.discard(conn)
                             conn.close()
@@ -257,8 +257,8 @@ def record(args):
                 session += 1
                 with lock:
                     peers.update((helper, gateway))
-                    remaining_relays[session] = 2
-                for worker in [threading.Thread(target=relay, args=(helper, gateway, 'helper', session)), threading.Thread(target=relay, args=(gateway, helper, 'gateway', session))]:
+                    remaining_forwards[session] = 2
+                for worker in [threading.Thread(target=forward, args=(helper, gateway, 'helper', session)), threading.Thread(target=forward, args=(gateway, helper, 'gateway', session))]:
                     workers.append(worker)
                     worker.start()
                 workers = [worker for worker in workers if worker.is_alive()]

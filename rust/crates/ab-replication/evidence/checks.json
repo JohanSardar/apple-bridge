@@ -32,8 +32,7 @@
     "gateway dials replica"
   ],
   "remaining": [
-    "C frontdoor/runtime integration and D full replica scenario matrix",
-    "Remote relay establishment and smoke test"
+    "C frontdoor/runtime integration and D full replica scenario matrix"
   ],
   "reproduce": [
     "cargo build --manifest-path rust/Cargo.toml -p ab-replication --examples",

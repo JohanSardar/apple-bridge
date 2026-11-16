@@ -4,13 +4,13 @@
   "private": true,
   "description": "Lets agents on your Mac read Messages, Contacts, Calendar, Reminders, Notes and Mail, with the actions you approve.",
   "license": "MIT",
-  "homepage": "https://eilmer.si/applebridge",
+  "homepage": "https://gitlab.com/johansardar/apple-bridge",
   "repository": {
     "type": "git",
     "url": "git+https://gitlab.com/johansardar/apple-bridge.git",
     "directory": "packaging/npm"
   },
-  "bugs": "https://eilmer.si/applebridge/issues",
+  "bugs": "https://gitlab.com/johansardar/apple-bridge/-/issues",
   "bin": {
     "bridge": "bin/bridge"
   },

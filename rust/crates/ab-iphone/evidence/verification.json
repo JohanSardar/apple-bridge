@@ -17,8 +17,7 @@
   "remaining": [
     "G-A/G-B Gateway adapter for ledger admission/CAS and capture transactions",
     "Rust gateway runtime mounts and startup",
-    "G-E binary-driven APP scenario drivers; prove Go first",
-    "APNs relay HTTPS integration fixture"
+    "G-E binary-driven APP scenario drivers; prove Go first"
   ],
   "physical_devices_used": false
 }

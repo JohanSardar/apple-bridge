@@ -704,11 +704,15 @@ mod compatibility_tests {
             ),
             ("http://[::1]/callback", "http://[::1]:49152/callback", true),
             (
-                "https://claude.ai/api/mcp/auth_callback",
-                "https://claude.ai/api/mcp/auth_callback",
+                "https://app.example/api/mcp/auth_callback",
+                "https://app.example/api/mcp/auth_callback",
                 true,
             ),
-            ("https://claude.ai/cb", "https://claude.ai:8443/cb", false),
+            (
+                "https://app.example/cb",
+                "https://app.example:8443/cb",
+                false,
+            ),
             (
                 "https://localhost/callback",
                 "https://localhost:3118/callback",

@@ -1,4 +1,4 @@
-use lab_wire::{Frame, RelayProof, RpcMessage, frame_bytes, ipc_proof, receive, sse_messages};
+use lab_wire::{Frame, RpcMessage, frame_bytes, ipc_proof, receive, sse_messages};
 use serde_json::Value;
 fn corpus(name: &str) -> Result<Value, Box<dyn std::error::Error>> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -41,15 +41,6 @@ fn feed_and_message_frames() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    Ok(())
-}
-#[test]
-fn relay_proof() -> Result<(), Box<dyn std::error::Error>> {
-    let corpus = corpus("relay.json")?;
-    let proof: RelayProof = serde_json::from_str(corpus["proof_json"].as_str().ok_or("proof")?)?;
-    assert_eq!(proof.message("tunnel"), corpus["proof_message"]);
-    assert_eq!(serde_json::to_string(&proof)?, corpus["proof_json"]);
-    assert_eq!(proof.header()?, corpus["X-Bridge-Proof"]);
     Ok(())
 }
 #[test]

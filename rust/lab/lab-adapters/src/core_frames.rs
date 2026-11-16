@@ -199,7 +199,7 @@ fn from_gateway(state: &State, frames: &mut Frames, text: &str) -> Option<Value>
     None
 }
 
-fn relay(state: &Arc<State>, downstream: TcpStream) -> Result<()> {
+fn forward(state: &Arc<State>, downstream: TcpStream) -> Result<()> {
     let (chain, key) = identity(&state.gateway_home)?;
     let server = ServerConfig::builder_with_provider(Arc::new(default_provider()))
         .with_safe_default_protocol_versions()
@@ -308,7 +308,7 @@ impl FrameProxy {
                     let state = accepting.clone();
                     thread::spawn(move || {
                         if state.framed.load(Ordering::SeqCst) {
-                            let _ = relay(&state, stream);
+                            let _ = forward(&state, stream);
                         } else {
                             let _ = pass(&state, stream);
                         }

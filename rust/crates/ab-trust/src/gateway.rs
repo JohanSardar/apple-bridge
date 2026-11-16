@@ -58,36 +58,7 @@ fn random_id(prefix: &str) -> String {
     format!("{prefix}{}", hex::encode(bytes))
 }
 
-pub fn relay_url(address: &str) -> Result<String, Error> {
-    let url = url::Url::parse(address).map_err(|_| Error::Invalid)?;
-    if url.scheme() != "https"
-        || url.host_str().is_none_or(str::is_empty)
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || !["", "/"].contains(&url.path())
-        || url.port() == Some(0)
-    {
-        return Err(Error::Invalid);
-    }
-    Ok(url[url::Position::BeforeScheme..url::Position::AfterPort].to_owned())
-}
 impl Authority {
-    pub fn pair_remote(
-        &self,
-        address: &str,
-        grants: Vec<Grant>,
-        ttl: std::time::Duration,
-    ) -> Result<String, Error> {
-        let raw = self.pair_with_ttl(&relay_url(address)?, "", grants, ttl)?;
-        let mut code = PairCode::decode(&raw)?;
-        code.remote = true;
-        Ok(format!(
-            "ab1-{}",
-            data_encoding::BASE32_NOPAD.encode(&serde_json::to_vec(&code)?)
-        ))
-    }
     #[cfg(feature = "lab-harness")]
     pub fn principal_by_fingerprint(&self, fingerprint: &str) -> Result<Principal, Error> {
         self.load()?
@@ -129,7 +100,6 @@ impl Authority {
         rand::thread_rng().fill_bytes(&mut secret);
         let code = PairCode {
             purpose: String::new(),
-            remote: false,
             dial: dial.into(),
             id: random_id(""),
             address: address.into(),
@@ -261,19 +231,6 @@ impl Authority {
                 d.principals.remove(index);
             }
             Ok(())
-        })
-    }
-
-    pub fn mark_relay2(&self, id: &str) -> Result<Principal, Error> {
-        self.update(|d| {
-            let p = d
-                .principals
-                .iter_mut()
-                .find(|p| p.id == id && p.kind == "replica")
-                .ok_or(Error::Unauthorized)?;
-            p.extra
-                .insert("relay2".into(), serde_json::Value::Bool(true));
-            Ok(p.clone())
         })
     }
 

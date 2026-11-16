@@ -108,12 +108,12 @@
   "gateway_full_attempt": {
     "base": "6181e334",
     "complete": true,
-    "expected": 201,
+    "expected": 185,
     "wall_seconds": 219.576,
     "counts": {
-      "blocked": 62,
+      "blocked": 47,
       "pass": 106,
-      "fail": 33
+      "fail": 32
     },
     "results": [
       {
@@ -122,7 +122,7 @@
         "blocked_on": [
           "harness: semantic product helper IPhoneCompletionEvidence",
           "harness: semantic product helper ValidateIPhoneCommand",
-          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, state, trust"
         ]
       },
       {
@@ -131,14 +131,7 @@
         "blocked_on": [
           "harness: semantic product helper IPhoneCompletionEvidence",
           "harness: semantic product helper ValidateIPhoneCommand",
-          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, relay, state, trust"
-        ]
-      },
-      {
-        "id": "APP-LIVE-SIM",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/iphone_live.go still imports product implementations: iphone, operations, relay, state, trust"
+          "harness: lab/scenarios/iphone_command.go still imports product implementations: iphone, operations, state, trust"
         ]
       },
       {
@@ -330,30 +323,6 @@
         "id": "CON-TOKEN-CRASH",
         "status": "pass",
         "blocked_on": []
-      },
-      {
-        "id": "CONN-CHATGPT",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
-          "harness: lab/scenarios/remote.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "CONN-CLAUDE-AI",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/connector_real.go still imports product implementations: remote, trust, web",
-          "harness: lab/scenarios/remote.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
-        ]
       },
       {
         "id": "CONSENT-CONNECTOR",
@@ -1159,71 +1128,6 @@
         "blocked_on": []
       },
       {
-        "id": "RELAY-CAA-ACCOUNT",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-CT-INDEPENDENT",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-ENROLL",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-LIMITS",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-PASSTHROUGH",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-ROTATE-GATED",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RELAY-TLS-SPLICE",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_acme_pebble.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_real.go still imports product implementations: remote",
-          "harness: lab/scenarios/relay_tls_splice.go still imports product implementations: replication, state, trust",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote"
-        ]
-      },
-      {
         "id": "REM-CONFLICT",
         "status": "pass",
         "blocked_on": []
@@ -1279,25 +1183,6 @@
         "blocked_on": []
       },
       {
-        "id": "RMT-ONECOMMAND-FLOW",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/remote.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_checks.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
-        ]
-      },
-      {
-        "id": "RMT-PRIVATE-CONNECT",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/remote_flow.go still imports product implementations: remote",
-          "harness: lab/scenarios/remote_private.go still imports product implementations: frontdoor, remote, trust",
-          "harness: lab/scenarios/remote_private_real.go still imports product implementations: remote"
-        ]
-      },
-      {
         "id": "SC-RUN-REAL",
         "status": "blocked",
         "blocked_on": [
@@ -1305,30 +1190,6 @@
           "harness: semantic product helper ValidateCommand",
           "harness: lab/scenarios/shortcuts_runner.go still imports product implementations: shortcut",
           "harness: lab/scenarios/siri_intents.go still imports product implementations: shortcut"
-        ]
-      },
-      {
-        "id": "SEC-REMOTE-ACCESS",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: semantic product helper BlobReferences",
-          "harness: lab/scenarios/agent_credentials.go still imports product implementations: trust",
-          "harness: lab/scenarios/agent_oauth_credentials.go still imports product implementations: trust",
-          "harness: lab/scenarios/agent_oauth_grants.go still imports product implementations: trust",
-          "harness: lab/scenarios/agent_oauth_http.go still imports product implementations: trust",
-          "harness: lab/scenarios/connector_approval.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
-          "harness: lab/scenarios/security_failures.go still imports product implementations: frontdoor, remote",
-          "harness: lab/scenarios/security_oauth.go still imports product implementations: trust",
-          "harness: lab/scenarios/security_owner.go still imports product implementations: trust",
-          "harness: lab/scenarios/security_relay.go still imports product implementations: relay",
-          "harness: lab/scenarios/security_remote.go still imports product implementations: remote, trust, web",
-          "harness: lab/scenarios/web_auth_isolation.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/web_command_resolve.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/web_hosts.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/web_rate_limits_fixture.go still imports product implementations: trust, web",
-          "harness: lab/scenarios/web_sources.go still imports product implementations: trust",
-          "harness: lab/scenarios/web_sources_errors.go still imports product implementations: operations, state, trust, web"
         ]
       },
       {
@@ -1443,30 +1304,6 @@
           "harness: lab/scenarios/messages_interactive.go still imports product implementations: trust",
           "harness: lab/scenarios/web_messages_read_real.go still imports product implementations: trust, web",
           "harness: lab/scenarios/web_upload_native_real.go still imports product implementations: trust, web"
-        ]
-      },
-      {
-        "id": "WEB-RELAY-AGENTS",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: semantic product helper CommandHash",
-          "harness: lab/scenarios/relay_agent_approvals.go still imports product implementations: trust",
-          "harness: lab/scenarios/relay_agent_delegation.go still imports product implementations: trust",
-          "harness: lab/scenarios/relay_agent_parent.go still imports product implementations: trust",
-          "harness: lab/scenarios/relay_agents.go still imports product implementations: trust, web"
-        ]
-      },
-      {
-        "id": "WEB-RELAY-AUTH",
-        "status": "fail",
-        "blocked_on": []
-      },
-      {
-        "id": "WEB-RELAY-PAIRING",
-        "status": "blocked",
-        "blocked_on": [
-          "harness: lab/scenarios/relay_auth_capture.go still imports product implementations: trust",
-          "harness: lab/scenarios/relay_pairing.go still imports product implementations: replication, trust"
         ]
       },
       {

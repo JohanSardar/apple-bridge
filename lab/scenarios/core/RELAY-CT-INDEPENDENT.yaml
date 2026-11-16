@@ -1,4 +1,0 @@
-id: RELAY-CT-INDEPENDENT
-feature: remote.relay
-levels: [sim]
-when: [{relay_service: {}}]

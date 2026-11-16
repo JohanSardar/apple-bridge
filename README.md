@@ -2,10 +2,10 @@
 
 **Give Claude Code, Codex and other agents your Mac's Messages, Mail, Calendar, Notes and more through one local MCP server.**
 
-[![Pipeline](https://eilmer.si/applebridge/pipeline.svg)](https://eilmer.si/applebridge/pipelines)
+[![Pipeline](https://gitlab.com/johansardar/apple-bridge/badges/main/pipeline.svg)](https://gitlab.com/johansardar/apple-bridge/-/pipelines)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on remote use, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
+> **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on the Tailscale route, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
 
 Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 
@@ -65,9 +65,7 @@ Grok Bot runs custom connectors on Grok's cloud computer, not on your Mac, so it
 
 | From | Run on the Mac | Then |
 |---|---|---|
-| The Claude app or claude.ai | `bridge link claude-app` | It copies an address. In Claude: Customize > Connectors > Add custom connector, paste it, click Connect, then Allow on the Mac |
 | Your other devices, Grok Bot | `bridge tailscale` | Starts Tailscale. Grok Bot finds the Mac on your Tailscale network and asks; click Allow on the Mac |
-| Your own server | `bridge relay setup root@your-server --domain bridge.example.com` | See [your own relay](docs/self-host.md) |
 
 `bridge stats` shows what has synced, as counts only. A trimmed example from a test copy of a real Mac:
 
@@ -117,7 +115,7 @@ An iPhone app adds health, location, alarms, Face ID approvals and more. It is i
 | | `bridge read reminders` | Read a source. Also `chats`, `messages`, `contacts`, `calendar`, `notes`, `mail`, `voicemail` and live `photos` |
 | | `bridge search "dinner"` | Search everything synced |
 | | `bridge call --list` | List every read operation you can call |
-| Remote | `bridge remote enable`, `bridge remote disable` | Use it from other computers. Off by default |
+| Remote | `bridge tailscale`, `bridge tailscale --off` | Use it from your other devices over your Tailscale network. Off by default |
 | Maintenance | `bridge backup FILE`, `bridge restore FILE` | Back up or restore this Mac's synced data. Both refuse to replace anything without asking |
 
 `bridge --help` lists everything, and `bridge help search <text>` finds a command. [Setting up your Mac](docs/local-setup.md) covers each command, the [CLI reference](docs/reference/cli.md) lists every option, and [CLI changes](docs/reference/cli-changes.md) lists what moved in this release.
@@ -154,17 +152,16 @@ Apple Bridge Helper  ── holds your Mac permissions
 Messages, Mail, Calendar and other Apple apps
 
 Optional, off by default:
-ChatGPT, Claude's website, other computers ──▶ relay ──▶ bridge
+Your other devices, Grok Bot ──▶ your Tailscale network ──▶ bridge
 ```
 
-The address above only works on that Mac, so ChatGPT and Claude's website can't reach it without remote use.
+The address above only works on that Mac. Your other devices reach it only through the Tailscale route.
 
 ## Remote access (optional)
 
-Turn this on only to connect from another computer or from cloud apps. Your Mac must stay awake and connected.
+Turn this on only to connect from your other devices or from a cloud agent on your Tailscale network, such as Grok Bot. Your Mac must stay awake and connected.
 
-- **Hosted relay, by invite:** run `bridge remote enable`, follow the account-linking page, then use the printed address ending in `/mcp` in your app's custom connector settings. The relay forwards traffic; TLS ends on your Mac.
-- **Your own server:** run the relay on a Linux server with a domain you control. See [self-hosting](docs/self-host.md).
+Run `bridge tailscale`. It serves this Mac on your Tailscale network only, through Tailscale Serve, never on the public internet. Remote agents ask at the printed `/connect` address, the Mac shows an Allow panel, and the agent gets a key that works only at this Mac's Tailscale address. `bridge agents create --tailnet` makes such a key directly. `bridge tailscale --off` turns it off. See [connecting other devices](docs/connectors/devices.md).
 
 ## Approvals and safety
 
@@ -177,7 +174,7 @@ Report suspected vulnerabilities through the private route in [SECURITY.md](SECU
 - [Setting up your Mac](docs/local-setup.md), including [what has been proven](docs/local-setup.md#what-has-been-proven)
 - [Operations reference](docs/reference/operations.md)
 - [Feature status and known limits](features.yaml)
-- [Self-hosting](docs/self-host.md)
+- [Connecting other devices](docs/connectors/devices.md)
 - [Connector approvals](docs/connectors/approvals.md)
 - [Architecture decisions](docs/adr/)
 - [Changelog](CHANGELOG.md)

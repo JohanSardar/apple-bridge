@@ -132,7 +132,7 @@ fn serve_local(stream: &mut UnixStream, state: &Mutex<LocalState>) {
     {
         (
             200,
-            br#"{"BackendState":"Running","Self":{"DNSName":"node.fixture.test.","CapMap":{"https":null,"funnel":null,"https://tailscale.com/cap/funnel-ports?ports=443,8443,10000":null}}}"#.to_vec(),
+            br#"{"BackendState":"Running","Self":{"DNSName":"node.fixture.test.","CapMap":{"https":null}}}"#.to_vec(),
         )
     } else if path != "/localapi/v0/serve-config" {
         (404, b"404 page not found\n".to_vec())
@@ -161,28 +161,48 @@ fn serve_local(stream: &mut UnixStream, state: &Mutex<LocalState>) {
     let _ = stream.write_all(&payload);
 }
 
-fn lease_target(home: &Path) -> Option<(String, String)> {
+struct Target {
+    address: String,
+    prefix: String,
+    host: String,
+}
+
+fn lease_target(home: &Path) -> Option<Target> {
     let lease: Value =
-        serde_json::from_slice(&fs::read(home.join("remote/lease.json")).ok()?).ok()?;
+        serde_json::from_slice(&fs::read(home.join("tailnet/remote/lease.json")).ok()?).ok()?;
     let target = lease["target"].as_str()?.strip_prefix("http://")?;
-    let (address, path) = target
+    let (address, prefix) = target
         .split_once('/')
         .map_or((target, String::new()), |(a, p)| (a, format!("/{p}")));
-    Some((address.to_owned(), path))
+    let name = lease["host"].as_str()?;
+    let host = match lease["port"].as_u64()? {
+        443 => name.to_owned(),
+        port => format!("{name}:{port}"),
+    };
+    Some(Target {
+        address: address.to_owned(),
+        prefix,
+        host,
+    })
 }
 
 pub(crate) fn proxy(mut downstream: StreamOwned<ServerConnection, TcpStream>, home: &Path) {
     let Some((method, path, headers, body)) = read_request(&mut downstream) else {
         return;
     };
-    let Some((address, prefix)) = lease_target(home) else {
+    let Some(Target {
+        address,
+        prefix,
+        host,
+    }) = lease_target(home)
+    else {
         return;
     };
     let Ok(mut upstream) = TcpStream::connect(&address) else {
         return;
     };
     let mut head = format!(
-        "{method} {prefix}{path} HTTP/1.1\r\nHost: node.fixture.test\r\nX-Forwarded-Host: node.fixture.test\r\nX-Forwarded-Proto: https\r\nX-Forwarded-For: 198.51.100.4\r\nConnection: close\r\nContent-Length: {}\r\n",
+        "{method} {prefix}{path} HTTP/1.1\r\nHost: {host}\r\nX-Forwarded-Host: {host}\r\nX-Forwarded-Proto: https\r\nX-Forwarded-For: 100.100.100.4\r\nConnection: close\r\nContent-Length: {}\r\n",
         body.len()
     );
     for (name, value) in &headers {
@@ -286,10 +306,6 @@ impl Gateway {
                 public_address.to_string(),
             ),
             (
-                "APPLE_BRIDGE_RELAY_URL".to_owned(),
-                "https://127.0.0.1:1".to_owned(),
-            ),
-            (
                 "SSL_CERT_FILE".to_owned(),
                 cert_path.to_string_lossy().into_owned(),
             ),
@@ -321,8 +337,8 @@ impl Gateway {
             api_address: String::new(),
         };
         gateway.launch()?;
-        gateway.command(&["remote", "on", "--via", "tailscale-app"])?;
-        gateway.wait(Duration::from_secs(30), "public ingress readiness", |g| {
+        gateway.command(&["tailscale"])?;
+        gateway.wait(Duration::from_secs(30), "tailnet ingress readiness", |g| {
             fs::read(g.home.join("remote/status.json"))
                 .ok()
                 .and_then(|raw| serde_json::from_slice::<Value>(&raw).ok())
@@ -426,16 +442,16 @@ impl Gateway {
     }
 
     pub fn public(&self, path: &str, body: &[u8]) -> Result<(u16, Vec<u8>)> {
-        let (address, prefix) = lease_target(&self.home).ok_or_else(|| invalid("remote lease"))?;
-        let client = Client::at(&address, "");
+        let target = lease_target(&self.home).ok_or_else(|| invalid("tailnet lease"))?;
+        let client = Client::at(&target.address, "");
         let reply = client.request(
             "POST",
-            &format!("{prefix}{path}"),
+            &format!("{}{path}", target.prefix),
             &[
-                ("Host", "node.fixture.test"),
-                ("X-Forwarded-Host", "node.fixture.test"),
+                ("Host", target.host.as_str()),
+                ("X-Forwarded-Host", target.host.as_str()),
                 ("X-Forwarded-Proto", "https"),
-                ("X-Forwarded-For", "198.51.100.4"),
+                ("X-Forwarded-For", "100.100.100.4"),
                 ("Content-Type", "application/json"),
             ],
             Some(body),
@@ -467,7 +483,7 @@ impl Gateway {
     }
 
     pub fn restart(&mut self) -> Result<()> {
-        let lease = self.home.join("remote/lease.json");
+        let lease = self.home.join("tailnet/remote/lease.json");
         let ingress = lease.exists();
         self.stop_child();
         let started = SystemTime::now();
@@ -475,7 +491,7 @@ impl Gateway {
         if !ingress {
             return Ok(());
         }
-        self.command(&["remote", "on", "--via", "tailscale-app"])?;
+        self.command(&["tailscale"])?;
         let certificate = self.certificate_path();
         let port = self.public_address.port();
         self.wait(Duration::from_secs(30), "ingress readiness", |g| {

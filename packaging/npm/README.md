@@ -79,4 +79,4 @@ A gateway started by `bridge up` checks its own `gateway.log` each second. Above
 
 The app is inside this package, at `Apple Bridge.app`. `bridge` finds it on its own. `bridge up` does not start again after a restart; run it again, or use the Apple Bridge app from the project page, which starts at login and updates itself. If that app is already running, `bridge up` reports it and leaves it alone.
 
-Documentation: <https://eilmer.si/applebridge/source>
+Documentation: <https://gitlab.com/johansardar/apple-bridge>

@@ -71,20 +71,20 @@ no npm command is needed. Verify the extracted app again and record the archive'
 SHA-256. The flat curl app has no Sparkle updater: rerun the checksum-pinned
 installer to update. Sparkle qualification below applies to the separate DMG.
 
-Upload the archive to `v<version>/` in the downloads folder on the relay
+Upload the archive to `v<version>/` in the downloads folder on the website
 server (see `deploy/site/README.md`), so it is served at
 `https://eilmer.si/applebridge/download/v<version>/applebridge-<version>.tgz`,
 and create the matching GitLab release with a link to it before changing
 `VERSION` and `SHA256` in `docs/install`. Stage the public website with
-`packaging/site/package.py` and coordinate deployment with the relay owner.
+`packaging/site/package.py` and serve it with `deploy/site/serve.py`.
 Require exact installer parity at the public URL and a successful download of
 the pinned archive before announcing the release.
 
 Qualify installation from the public curl URL on a fresh authorized macOS guest.
 Verify its existing SIP and Gatekeeper policy first; do not change security
 settings to make a test pass. A temporary HOME on a used Mac is not a clean Mac.
-Record signing, notarization, version, install, default remote host and readiness
-separately. Native permissions and account enrollment need their own evidence.
+Record signing, notarization, version, install and readiness separately.
+Native permissions need their own evidence.
 
 ## Historical npm package
 
@@ -137,7 +137,7 @@ Run `bridge down` before updating or uninstalling an npm installation. The gatew
 
 ## iPhone releases
 
-The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://eilmer.si/applebridge/iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
+The iPhone archive, export and internal TestFlight tooling now lives in [apple-bridge-iphone](https://gitlab.com/johansardar/apple-bridge-iphone). Run those commands from that repository. The dedicated release keychain can hold both existing identities; no certificate or credential migration is needed.
 
 ## Local qualification
 

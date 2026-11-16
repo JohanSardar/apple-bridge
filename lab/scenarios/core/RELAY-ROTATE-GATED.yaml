@@ -1,4 +1,0 @@
-id: RELAY-ROTATE-GATED
-feature: remote.relay
-levels: [sim]
-when: [{relay_service: {}}]

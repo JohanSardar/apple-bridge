@@ -6,7 +6,6 @@ import re
 import subprocess
 
 HARNESS_ONLY = {'credential_backend_override_restored'}
-GO_TARGET_SCENARIOS = {'RELAY-LEGACY-COMPAT'}
 BLOB_SCENARIOS = ['CORE-BLOB-CAP', 'CORE-BLOB-CORRUPT', 'CORE-BLOB-DUPLICATE-REFERENCE',
                   'CORE-BLOB-GATEWAY-RETRY', 'CORE-BLOB-GC', 'CORE-BLOB-INTERRUPT',
                   'CORE-BLOB-NO-DIGEST-AUTH', 'CORE-BLOB-OFFLOADED', 'CORE-BLOB-REFERENCE-INDEX',
@@ -35,7 +34,6 @@ NOTES_SCENARIOS = ['notes/NOTE-CRUD', 'notes/NOTE-RICH-REJECT', 'notes/NOTE-EXTE
 PIM_NATIVE_SCENARIOS = ['notes/NOTE-DECODE', 'notes/NOTE-DECODE-FULL', 'mail/MAIL-CAPTURE', 'mail/MAIL-BODY', 'mail/MAIL-COMMANDS',
                         'mail/MAIL-IDLE', 'mail/MAIL-LIVE', 'mail/MAIL-NO-FALSE-DELETE']
 MEDIA_SCENARIOS = ['web/WEB-MEDIA-VARIANTS', 'messages/MSG-MEDIA-CLEANUP']
-WEB_RELAY_SCENARIOS = ['web/WEB-RELAY-AGENTS', 'web/WEB-RELAY-AUTH', 'web/WEB-RELAY-PAIRING']
 WEB_RM_ITEMS_SCENARIOS = ['web/WEB-RM-REMINDERS-ITEMS']
 WEB_RM_SCENARIOS = ['web/WEB-RM-MEDIA-COLLECTION', 'web/WEB-RM-SEARCH', 'web/WEB-RM-THREAD-ORIGINATOR',
                     'web/WEB-RM-THREAD-ORIGINATOR-PERF', 'web/WEB-RM-REMINDERS-DEMO',
@@ -56,15 +54,10 @@ MESSAGES_A_COMMAND_SCENARIOS = ['messages/MSG-CAPABILITY-MATRIX', 'messages/MSG-
 HELPER_SCENARIOS = ['helper/HELPER-IPC-RESPONSIVE', 'helper/SIRI-INTENTS']
 IPHONE_SCENARIOS = ['iphone/APP-ALARM-SIM', 'iphone/APP-SHELL-SIM', 'iphone/APP-PAIR-SIM', 'iphone/APP-DEVICE-SIM',
                     'iphone/APP-MOTION-SIM', 'iphone/APP-HEALTH-WRITE-SIM', 'iphone/APP-SCREENTIME-SIM',
-                    'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-LIVE-SIM', 'iphone/APP-APPROVE-SIM',
+                    'iphone/APP-HEALTH-SIM', 'iphone/APP-LOC-SIM', 'iphone/APP-APPROVE-SIM',
                     'iphone/APP-CMD-SIM', 'iphone/APP-NOTIFY-SIM', 'iphone/APP-CAPTURE-SIM']
-RELAY_SCENARIOS = ['RELAY-ENROLL', 'RELAY-PASSTHROUGH', 'RELAY-LIMITS', 'RELAY-ROTATE-GATED',
-                   'RELAY-CT-INDEPENDENT', 'RELAY-CAA-ACCOUNT', 'RELAY-TLS-SPLICE', 'RELAY-DOWNGRADE',
-                   'RELAY-LEGACY-COMPAT', 'RELAY-ACME', 'RELAY-OWN-DOMAIN']
-RELAY_STREAM_SCENARIOS = ['RELAY-STREAMS']
-SECURITY_SCENARIOS = ['SEC-REMOTE-ACCESS']
 CONSENT_SCENARIOS = ['consent-connector']
-CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA', 'CONN-CHATGPT', 'CONN-CLAUDE-AI', 'RMT-PRIVATE-CONNECT']
+CONNECTOR_SCENARIOS = ['AUTH-SCOPES-METADATA']
 REMINDER_SCENARIOS = ['REM-CONFLICT', 'REM-EXTERNAL-RACE', 'REM-NATIVE-LIST-RACE', 'REM-OPERATION-SHAPES',
                       'REM-READONLY-LIST']
 REMINDER_NATIVE_SCENARIOS = ['reminders/REM-CRUD', 'reminders/REM-CREATE-EXTERNAL',
@@ -110,15 +103,13 @@ REAL_ONLY_COMPILED = ['CORE-PERMISSION-STATUS', 'CORE-QUERY-HELPER', 'APP-ALARM-
     'APP-DEVICE-REAL', 'APP-HEALTH-REAL', 'APP-HEALTH-WRITE-REAL', 'APP-INTENTS-REAL', 'APP-LIVE-REAL',
     'APP-LOC-REAL', 'APP-MOTION-REAL', 'APP-NOTIFY-REAL', 'APP-PAIR-REAL', 'APP-SCREENTIME-REAL',
     'APP-SHELL-REAL', 'AUD-TRANSCRIBE', 'CALL-READ-REAL', 'CALLS-REPLICA', 'CONN-CLAUDE-CODE',
-    'CONN-RELAY-CLAUDE', 'FILE-REPLICA', 'RELAY-REAL',
-    'WEB-RELAY-COMMAND', 'WEB-RELAY-CONNECT', 'WEB-RELAY-NATIVE-AGENTS', 'WEB-RELAY-PUBLIC-AGENTS',
-    'WEB-RELAY-REPLICA', 'WEB-RELAY-REPLICA-BLOBS', 'WEB-REMOTE-FUNNEL', 'FILE-SEARCH-REAL', 'HELPER-LIVE-BACKFILL',
+    'FILE-REPLICA', 'FILE-SEARCH-REAL', 'HELPER-LIVE-BACKFILL',
     'HELPER-RELEASE-COMMANDS', 'HELPER-RESTART-REAL', 'HELPER-SESSION-SOAK', 'HELPER-SIGNED-APP-CACHE',
     'HELPER-TCC-READY', 'LOC-CURRENT-REAL', 'LOC-GEOCODE-REAL', 'LOC-IDLE', 'MAIL-REPLICA', 'MAP-DIRECTIONS-REAL', 'MAP-IDLE', 'MAP-SEARCH-REAL',
     'MAP-SNAPSHOT-REAL', 'PKG-BACKGROUND', 'PKG-INSTALL', 'R1-DMG-REAL', 'REM-LIST-LOST-ACK',
     'RMT-STATUS-OFF', 'SPEECH-SAY',
     'VIS-IDLE', 'WEB-REM-WRITE']
-REAL_ONLY_STUB = ['APP-BUILD-REAL', 'CON-ME', 'CON-NOTE', 'CON-RELAY', 'FOC-IDLE', 'FOC-SET-REAL',
+REAL_ONLY_STUB = ['APP-BUILD-REAL', 'CON-ME', 'CON-NOTE', 'FOC-IDLE', 'FOC-SET-REAL',
     'FOC-STATUS-REAL', 'MAIL-AGENT', 'MAIL-BODY-REAL', 'MAIL-DRAFT-REAL', 'MAIL-ORGANIZE-REAL',
     'MAIL-READ-REAL', 'MAIL-SEND-SELF-REAL']
 SCENARIOS += ['CORE-SIM-PROGRESS-RECOVERY', 'CORE-SNAPSHOT-POOL']
@@ -169,8 +160,6 @@ SESSION_CONTROLS = {
 
 def ignored(scenario, name):
     if name in HARNESS_ONLY or name == 'world_started':
-        return True
-    if scenario in GO_TARGET_SCENARIOS and name.startswith('go_'):
         return True
     return scenario in JOURNEY_SCENARIOS + FRONTDOOR_SCENARIOS and name in JOURNEY_RUST_ONLY
 
@@ -237,18 +226,14 @@ def main():
     parser.add_argument('--messages-b-native', dest='messages_b_native', action='store_true')
     parser.add_argument('--web-rm', dest='web_rm', action='store_true')
     parser.add_argument('--web-rm-items', dest='web_rm_items', action='store_true')
-    parser.add_argument('--web-relay', dest='web_relay', action='store_true')
     parser.add_argument('--web-rm-latency', dest='web_rm_latency', action='store_true')
     parser.add_argument('--native', dest='native', action='store_true')
     parser.add_argument('--iphone', dest='iphone', action='store_true')
     parser.add_argument('--maps', dest='maps', action='store_true')
     parser.add_argument('--focus', action='store_true')
     parser.add_argument('--clock', action='store_true')
-    parser.add_argument('--relay', dest='relay', action='store_true')
-    parser.add_argument('--relay-streams', dest='relay_streams', action='store_true')
     parser.add_argument('--connectors', dest='connectors', action='store_true')
     parser.add_argument('--consent', dest='consent', action='store_true')
-    parser.add_argument('--security', dest='security', action='store_true')
     parser.add_argument('--reminders', dest='reminders', action='store_true')
     parser.add_argument('--reminders-mac', dest='reminders_mac', action='store_true')
     parser.add_argument('--usage', action='store_true')
@@ -316,8 +301,6 @@ def main():
         args.scenario = (args.scenario or []) + MESSAGES_A_COMMAND_SCENARIOS
     if args.media:
         args.scenario = (args.scenario or []) + MEDIA_SCENARIOS
-    if args.web_relay:
-        args.scenario = (args.scenario or []) + WEB_RELAY_SCENARIOS
     if args.web_rm_items:
         args.scenario = (args.scenario or []) + WEB_RM_ITEMS_SCENARIOS
     if args.web_rm:
@@ -328,12 +311,6 @@ def main():
         args.scenario = (args.scenario or []) + NATIVE_SCENARIOS
     if args.iphone:
         args.scenario = (args.scenario or []) + IPHONE_SCENARIOS
-    if args.relay:
-        args.scenario = (args.scenario or []) + RELAY_SCENARIOS
-    if args.relay_streams:
-        args.scenario = (args.scenario or []) + RELAY_STREAM_SCENARIOS
-    if args.security:
-        args.scenario = (args.scenario or []) + SECURITY_SCENARIOS
     if args.consent:
         args.scenario = (args.scenario or []) + CONSENT_SCENARIOS
     if args.connectors:

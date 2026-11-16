@@ -73,10 +73,7 @@ pub fn legacy_spelling() -> bool {
         "agent" | "token" | "connector" | "revoke" | "scope" | "setup"
     ) || matches!(
         (first, second),
-        ("web", "devices" | "lock")
-            | ("connectors", "pending")
-            | ("remote", "on" | "off" | "certificate-accept")
-            | ("agents", "level")
+        ("web", "devices" | "lock") | ("connectors", "pending") | ("agents", "level")
     )
 }
 static STDIN_PAYLOAD: AtomicBool = AtomicBool::new(false);

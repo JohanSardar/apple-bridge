@@ -70,7 +70,7 @@ async fn respond(
             (
                 "200 OK",
                 None,
-                json!({"BackendState":"Running","Self":{"DNSName":"node.example.ts.net.","CapMap":{"https":null,"funnel":null,"https://tailscale.com/cap/funnel-ports?ports=443,8443,10000":null}}}),
+                json!({"BackendState":"Running","Self":{"DNSName":"node.example.ts.net.","CapMap":{"https":null}}}),
             )
         } else if path == "/localapi/v0/serve-config" && method == "GET" {
             ("200 OK", Some(mock.etag), mock.config.clone())
@@ -134,41 +134,53 @@ async fn adds_and_removes_over_tcp_with_basic_auth() {
     let lease = tailscale.add("http://127.0.0.1:9/secret").await.unwrap();
     assert_eq!(
         (lease.host.as_str(), lease.port),
-        ("node.example.ts.net", 443)
+        ("node.example.ts.net", 8443)
     );
     {
         let mock = state.lock().unwrap();
         assert_eq!(mock.config["Unrelated"], json!(true));
-        assert_eq!(mock.config["TCP"]["443"], json!({"HTTPS":true}));
+        assert_eq!(mock.config["TCP"]["8443"], json!({"HTTPS":true}));
         assert_eq!(
-            mock.config["Web"]["node.example.ts.net:443"],
+            mock.config["Web"]["node.example.ts.net:8443"],
             json!({"Handlers":{"/":{"Proxy":"http://127.0.0.1:9/secret"}}})
-        );
-        assert_eq!(
-            mock.config["AllowFunnel"]["node.example.ts.net:443"],
-            json!(true)
         );
         assert!(mock.config["Web"]["other.ts.net:9999"].is_object());
     }
     let stored: Value =
         serde_json::from_slice(&std::fs::read(home.path().join("remote/lease.json")).unwrap())
             .unwrap();
-    assert_eq!(stored["port"], 443);
-    assert_eq!(
-        stored["absent"],
-        json!({"TCP":true,"Web":false,"AllowFunnel":true})
-    );
+    assert_eq!(stored["port"], 8443);
+    assert_eq!(stored["absent"], json!({"TCP":true,"Web":false}));
     tailscale.remove().await.unwrap();
     let mock = state.lock().unwrap();
     assert_eq!(mock.config.get("TCP"), None);
-    assert_eq!(mock.config.get("AllowFunnel"), None);
     assert!(mock.config["Web"]["other.ts.net:9999"].is_object());
-    assert!(mock.config["Web"].get("node.example.ts.net:443").is_none());
+    assert!(mock.config["Web"].get("node.example.ts.net:8443").is_none());
     assert!(!home.path().join("remote/lease.json").exists());
     assert!(
         mock.seen
             .iter()
             .any(|line| line == "GET /localapi/v0/status?peers=false")
+    );
+}
+
+#[tokio::test]
+async fn tailnet_route_skips_a_port_with_public_exposure_enabled() {
+    let (port, state) = serve(
+        "t",
+        json!({"AllowFunnel":{"node.example.ts.net:8443":true}}),
+        false,
+    )
+    .await;
+    let home = tempfile::tempdir().unwrap();
+    let tailscale = Tailscale::tcp(home.path().to_owned(), port, "t".into());
+    let lease = tailscale.add("http://127.0.0.1:9/secret").await.unwrap();
+    let config = state.lock().unwrap().config.clone();
+    let host = format!("{}:{}", lease.host, lease.port);
+    assert_ne!(
+        config["AllowFunnel"][host],
+        json!(true),
+        "the private route was assigned a publicly enabled port: {config}"
     );
 }
 
@@ -182,12 +194,12 @@ async fn wrong_token_is_rejected() {
 }
 
 #[tokio::test]
-async fn takes_over_a_go_written_lease() {
+async fn takes_over_a_lease_left_by_an_earlier_run() {
     let target = "http://127.0.0.1:54043/abc";
     let host = "node.example.ts.net";
     let (port, state) = serve(
         "t",
-        json!({"TCP":{"10000":{"HTTPS":true}},"Web":{format!("{host}:10000"):{"Handlers":{"/":{"Proxy":target}}}},"AllowFunnel":{format!("{host}:10000"):true}}),
+        json!({"TCP":{"9443":{"HTTPS":true}},"Web":{format!("{host}:9443"):{"Handlers":{"/":{"Proxy":target}}}}}),
         false,
     )
     .await;
@@ -195,14 +207,14 @@ async fn takes_over_a_go_written_lease() {
     std::fs::create_dir_all(home.path().join("remote")).unwrap();
     std::fs::write(
         home.path().join("remote/lease.json"),
-        json!({"host":host,"port":10000,"target":target,"absent":{"AllowFunnel":false,"TCP":false,"Web":false}}).to_string(),
+        json!({"host":host,"port":9443,"target":target,"absent":{"TCP":false,"Web":false},"tailnet":true}).to_string(),
     )
     .unwrap();
     let tailscale = Tailscale::tcp(home.path().to_owned(), port, "t".into());
     tailscale.remove().await.unwrap();
     assert_eq!(state.lock().unwrap().config["TCP"], json!({}));
     let lease = tailscale.add("http://127.0.0.1:55555/new").await.unwrap();
-    assert_eq!(lease.port, 443);
+    assert_eq!(lease.port, 8443);
 }
 
 #[tokio::test]

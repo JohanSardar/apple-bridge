@@ -56,143 +56,12 @@ fn fail_remote_requests(home: PathBuf, cause: &'static str) {
             let status = json!({
                 "id": config.id,
                 "state": "error",
-                "last_error": format!("Remote setup failed: {cause}. Turn Remote off and try again."),
+                "last_error": format!("Tailscale setup failed: {cause}. Run bridge tailscale --off, then try again."),
             });
             let _ = std::fs::write(home.join("remote/status.json"), status.to_string());
             return;
         }
     });
-}
-
-fn opener_bin() -> Result<(tempfile::TempDir, PathBuf), Box<dyn std::error::Error>> {
-    let bin = short_home()?;
-    let opened = bin.path().join("opened");
-    for launcher in ["open", "xdg-open"] {
-        fake_program(
-            bin.path(),
-            launcher,
-            &format!("echo \"$1\" >> {}", opened.display()),
-        )?;
-    }
-    Ok((bin, opened))
-}
-
-fn local_bridge(bin: &Path) -> Command {
-    let mut command = bridge();
-    command
-        .env("PATH", with_path(bin))
-        .env_remove("SSH_CONNECTION")
-        .env_remove("SSH_TTY");
-    command
-}
-
-#[test]
-fn options_written_before_the_remote_action_still_apply() -> Check {
-    let home = short_home()?;
-    let output = run(
-        home.path(),
-        &["remote", "--relay-url", "https://b.example.test", "key"],
-    )?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let key = text(&output.stdout);
-    assert_eq!(key.trim_end().len(), 43, "{key}");
-    assert_eq!(key.lines().count(), 1);
-    let config: Value =
-        serde_json::from_slice(&std::fs::read(home.path().join("remote/config.json"))?)?;
-    assert_eq!(config["relay_url"], "https://b.example.test");
-
-    remote_status(
-        home.path(),
-        &json!({"id": "r1", "state": "on", "backend": "relay", "url": "https://mac.example.test", "last_error": ""}),
-    )?;
-    let output = run(home.path(), &["remote", "--snippets", "status"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(
-        text(&output.stdout).starts_with(
-            "Claude Code: claude mcp add --transport http apple-bridge https://mac.example.test/mcp"
-        ),
-        "{}",
-        text(&output.stdout)
-    );
-    let output = run(home.path(), &["remote", "status", "--snippets", "--json"])?;
-    assert!(output.status.success());
-    let document = json_out(&output)?;
-    assert!(
-        document["snippets"]
-            .as_str()
-            .is_some_and(|snippets| snippets.contains("https://mac.example.test/mcp")),
-        "{document}"
-    );
-    assert_eq!(output.stderr, [] as [u8; 0]);
-    Ok(())
-}
-
-#[test]
-fn a_relay_address_with_a_password_is_refused_before_anything_is_saved() -> Check {
-    let home = short_home()?;
-    let output = run(
-        home.path(),
-        &["remote", "--relay-url", "https://b.example.test", "key"],
-    )?;
-    assert!(output.status.success());
-    let before = std::fs::read(home.path().join("remote/config.json"))?;
-    for arguments in [
-        &[
-            "remote",
-            "--relay-url",
-            "https://me:hunter2@c.example.test",
-            "key",
-        ][..],
-        &[
-            "remote",
-            "enable",
-            "--relay-url",
-            "https://me:hunter2@c.example.test",
-        ][..],
-        &[
-            "remote",
-            "on",
-            "--relay-url",
-            "https://me:hunter2@c.example.test",
-        ][..],
-    ] {
-        let output = bridge()
-            .env("COLUMNS", "400")
-            .args(arguments)
-            .arg("--home")
-            .arg(home.path())
-            .output()?;
-        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        assert_eq!(output.stdout, [] as [u8; 0]);
-        let stderr = text(&output.stderr);
-        assert!(!stderr.contains("hunter2"), "{stderr}");
-        assert!(!stderr.contains("me:"), "{stderr}");
-        assert!(
-            stderr.contains("Relay addresses can't include a user name or password."),
-            "{stderr}"
-        );
-        assert!(stderr.contains("Nothing was saved."), "{stderr}");
-    }
-    let output = run(
-        home.path(),
-        &[
-            "remote",
-            "enable",
-            "--relay-url",
-            "https://me:hunter2@c.example.test",
-            "--json",
-            "--debug",
-        ],
-    )?;
-    assert_eq!(output.status.code(), Some(2));
-    let stderr = text(&output.stderr);
-    assert!(!stderr.contains("hunter2"), "{stderr}");
-    assert_eq!(error_document(&output)?["reason"], "invalid_value");
-    assert_eq!(
-        std::fs::read(home.path().join("remote/config.json"))?,
-        before
-    );
-    Ok(())
 }
 
 #[test]
@@ -718,94 +587,42 @@ fn one_update_reports_every_bad_value() -> Check {
 }
 
 #[test]
-fn remote_json_returns_a_pending_link_and_no_open_never_opens() -> Check {
+fn a_failed_tailscale_attempt_names_the_cause() -> Check {
     let home = short_home()?;
     seeded_home(home.path())?;
     let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
-    let (bin, opened) = opener_bin()?;
-    answer_remote_requests(
-        home.path().to_path_buf(),
-        "https://relay.example.test/sign-in",
-        "https://mac.example.test",
-    );
-    let output = local_bridge(bin.path())
-        .args(["remote", "enable", "--json", "--home"])
-        .arg(home.path())
-        .output()?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let pending = json_out(&output)?;
-    assert_eq!(pending["outcome"], "pending");
-    assert_eq!(pending["userActionRequired"], true);
-    assert_eq!(
-        pending["remote"]["signInUrl"],
-        "https://relay.example.test/sign-in"
-    );
-    assert!(pending["next"].is_array());
-    assert_eq!(output.stderr, [] as [u8; 0]);
-    assert!(!opened.exists());
-
-    std::thread::sleep(Duration::from_millis(500));
-    let _ = std::fs::remove_file(home.path().join("remote/status.json"));
-    let output = local_bridge(bin.path())
-        .args(["remote", "on", "--no-open", "--home"])
-        .arg(home.path())
-        .stderr(Stdio::null())
-        .output()?;
-    assert!(output.status.success());
-    assert!(text(&output.stdout).starts_with("https://relay.example.test/sign-in\n"));
-    assert!(!opened.exists(), "--no-open still opened a browser");
-
-    let _ = std::fs::remove_file(home.path().join("remote/status.json"));
-    let output = local_bridge(bin.path())
-        .args(["remote", "on", "--json", "--home"])
-        .arg(home.path())
-        .output()?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let document = json_out(&output)?;
-    assert!(document.is_object(), "{}", text(&output.stdout));
-    Ok(())
-}
-
-#[test]
-fn a_failed_remote_attempt_names_the_host_and_the_cause() -> Check {
-    let home = short_home()?;
-    seeded_home(home.path())?;
-    let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
-    let (bin, _opened) = opener_bin()?;
+    remote_status(
+        home.path(),
+        &json!({"id": "r0", "state": "on", "url": "https://mac.example.test", "last_error": ""}),
+    )?;
     fail_remote_requests(home.path().to_path_buf(), "connection refused");
-    let output = local_bridge(bin.path())
-        .args([
-            "remote",
-            "enable",
-            "--relay-url",
-            "https://relay.example.test",
-            "--no-open",
-            "--home",
-        ])
+    let output = bridge()
+        .env("SSH_CONNECTION", "1")
+        .args(["tailscale", "--off", "--home"])
         .arg(home.path())
         .output()?;
     assert_eq!(output.status.code(), Some(1));
     let stderr = text(&output.stderr);
     assert!(
-        stderr.contains("Couldn't reach relay.example.test. Connection refused."),
+        stderr.contains("Couldn't turn Tailscale access off. Connection refused."),
         "{stderr}"
     );
-    assert!(stderr.contains("bridge remote status"), "{stderr}");
+    assert!(stderr.contains("bridge status"), "{stderr}");
     Ok(())
 }
 
 #[test]
-fn remote_status_off_is_not_a_warning() -> Check {
+fn tailscale_already_off_is_not_a_warning() -> Check {
     let home = short_home()?;
     let output = bridge()
         .env("TERM", "dumb")
-        .args(["remote", "status", "--json=false", "--home"])
+        .args(["tailscale", "--off", "--home"])
         .arg(home.path())
         .output()?;
-    assert!(output.status.success());
-    let stderr = text(&output.stderr);
-    assert!(!stderr.contains('!'), "{stderr}");
-    assert!(!stderr.contains("Warning: Remote"), "{stderr}");
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let shown = format!("{}{}", text(&output.stdout), text(&output.stderr));
+    assert!(shown.contains("already off"), "{shown}");
+    assert!(!shown.contains('!'), "{shown}");
     Ok(())
 }
 
@@ -873,7 +690,7 @@ fn help_lists_result_schemas_and_safe_examples() -> Check {
         ("link", "outcome"),
         ("down", "outcome"),
         ("connectors list", "connectors"),
-        ("remote enable", "userActionRequired"),
+        ("tailscale", "connect"),
         ("tokens create", "secret"),
         ("agents list", "next_cursor"),
         ("web sessions list", "sessions"),
@@ -907,15 +724,19 @@ fn accessible_mode_numbers_choices_and_names_phases() -> Check {
     let home = short_home()?;
     seeded_home(home.path())?;
     let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
-    let (bin, _opened) = opener_bin()?;
+    remote_status(
+        home.path(),
+        &json!({"id": "r0", "state": "on", "url": "https://mac.example.test", "last_error": ""}),
+    )?;
     answer_remote_requests(
         home.path().to_path_buf(),
-        "https://relay.example.test/sign-in",
+        "https://login.example.test/sign-in",
         "https://mac.example.test",
     );
-    let output = local_bridge(bin.path())
+    let output = bridge()
+        .env("SSH_CONNECTION", "1")
         .env("APPLE_BRIDGE_ACCESSIBLE", "1")
-        .args(["remote", "enable", "--no-open", "--home"])
+        .args(["tailscale", "--off", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
@@ -1095,8 +916,6 @@ fn credentials_in_any_url_spelling_never_reach_the_output() -> Check {
         "https://me:hunter2@c.example.test",
     ] {
         for arguments in [
-            vec!["remote", "enable", "--relay-url", url, "--json", "--debug"],
-            vec!["remote", "--relay-url", url, "key"],
             vec!["agents", "update", &id, "--level", url, "--json"],
             vec!["agents", "update", &id, "--level", url],
         ] {
@@ -1110,26 +929,6 @@ fn credentials_in_any_url_spelling_never_reach_the_output() -> Check {
             );
         }
     }
-    assert!(!home.path().join("remote/config.json").exists());
-
-    let output = run(
-        home.path(),
-        &[
-            "remote",
-            "enable",
-            "--relay-url",
-            "https://me:\thunter2@c.example.test",
-            "--json",
-            "--debug",
-        ],
-    )?;
-    assert_eq!(output.status.code(), Some(2));
-    assert!(
-        !text(&output.stderr).contains("hunter2"),
-        "{}",
-        text(&output.stderr)
-    );
-
     let output = run(
         home.path(),
         &[

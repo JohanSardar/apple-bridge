@@ -264,7 +264,7 @@ pub fn answer_remote_requests(home: PathBuf, link: &'static str, url: &'static s
             std::thread::sleep(Duration::from_millis(100));
             let _ = runtime.block_on(ab_remote::onboarding::send_link(&home, &config.id, link));
             std::thread::sleep(Duration::from_millis(200));
-            let status = json!({"id": config.id, "state": "on", "backend": "relay", "url": url, "last_error": ""});
+            let status = json!({"id": config.id, "state": "on", "url": url, "last_error": ""});
             let _ = std::fs::write(home.join("remote/status.json"), status.to_string());
             answered = config.id;
         }

@@ -1,13 +1,7 @@
 #![forbid(unsafe_code)]
 
-pub mod certificate;
-pub mod ct;
-pub mod dns;
 pub mod localapi;
 pub mod onboarding;
-pub mod private;
-pub mod relay;
-mod smux;
 pub mod state;
 pub mod tailscale;
 
@@ -23,16 +17,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("remote HTTP: {0}")]
     Http(#[from] reqwest::Error),
-    #[error("remote PEM: {0}")]
-    Pem(#[from] rustls::pki_types::pem::Error),
     #[error("remote TLS: {0}")]
     Tls(#[from] rustls::Error),
-    #[error("remote WebSocket: {0}")]
-    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
-    #[error("remote ACME: {0}")]
-    Acme(#[from] instant_acme::Error),
-    #[error("remote certificate: {0}")]
-    Certificate(#[from] rcgen::Error),
     #[error("remote contract: {0}")]
     Contract(&'static str),
     #[error("{0}")]
@@ -57,7 +43,8 @@ impl Progress {
             state: "error",
             message: String::new(),
             pending_link: String::new(),
-            last_error: "Remote setup failed. Turn Remote off and try again.".into(),
+            last_error: "Tailscale setup failed. Run bridge tailscale --off, then try again."
+                .into(),
             link: String::new(),
         }
     }
@@ -67,8 +54,9 @@ impl Progress {
         let mut progress = Self::failed();
         let cause = cause.trim().trim_end_matches('.');
         if !cause.is_empty() {
-            progress.last_error =
-                format!("Remote setup failed: {cause}. Turn Remote off and try again.");
+            progress.last_error = format!(
+                "Tailscale setup failed: {cause}. Run bridge tailscale --off, then try again."
+            );
         }
         progress
     }
@@ -79,8 +67,8 @@ pub fn failure_cause(last_error: &str) -> Option<&str> {
     last_error
         .strip_prefix("remote: ")
         .unwrap_or(last_error)
-        .strip_prefix("Remote setup failed: ")
-        .and_then(|rest| rest.strip_suffix(". Turn Remote off and try again."))
+        .strip_prefix("Tailscale setup failed: ")
+        .and_then(|rest| rest.strip_suffix(". Run bridge tailscale --off, then try again."))
         .filter(|cause| !cause.is_empty())
 }
 #[derive(Clone, Debug)]
@@ -186,11 +174,6 @@ impl Gateway {
             });
         }
     }
-    pub(crate) fn refresh_status(&self) {
-        if let Some(statuses) = &self.statuses {
-            statuses.send_modify(|_| {});
-        }
-    }
     pub(crate) fn certificate_expiry(&self, name: &str, expiry: &str) {
         if let Some(statuses) = &self.statuses {
             statuses.send_if_modified(|entries| {
@@ -202,12 +185,8 @@ impl Gateway {
             });
         }
     }
-    pub(crate) async fn connect(&self) -> Result<tokio::net::TcpStream> {
-        self.connect_stream(None, None).await
-    }
     pub(crate) async fn connect_stream(
         &self,
-        binding: Option<[u8; 32]>,
         source: Option<std::net::IpAddr>,
     ) -> Result<tokio::net::TcpStream> {
         use tokio::io::AsyncWriteExt;
@@ -215,15 +194,12 @@ impl Gateway {
         if let Some(proof) = &self.proof {
             let mut preamble = INGRESS_MAGIC.to_vec();
             preamble.extend_from_slice(proof.as_ref());
-            preamble.push(
-                u8::from(binding.is_some()) * INGRESS_HAS_BINDING
-                    + u8::from(source.is_some()) * INGRESS_HAS_SOURCE,
-            );
-            if let Some(binding) = binding {
-                preamble.extend_from_slice(&binding);
-            }
+            preamble.push(u8::from(source.is_some()) * INGRESS_HAS_SOURCE);
             if let Some(source) = source {
-                let address = ab_wire::framing::encode_tunnel_source(source);
+                let address = match source {
+                    std::net::IpAddr::V4(address) => address.octets().to_vec(),
+                    std::net::IpAddr::V6(address) => address.octets().to_vec(),
+                };
                 preamble.push(u8::try_from(address.len()).map_err(|_| Error::Contract("source"))?);
                 preamble.extend_from_slice(&address);
             }
@@ -262,5 +238,5 @@ pub async fn run_all(
 }
 
 mod preamble;
-use preamble::{INGRESS_HAS_BINDING, INGRESS_HAS_SOURCE, INGRESS_MAGIC};
+use preamble::{INGRESS_HAS_SOURCE, INGRESS_MAGIC};
 pub use preamble::{IngressPreamble, read_ingress_preamble};
