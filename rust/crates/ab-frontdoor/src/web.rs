@@ -567,11 +567,7 @@ fn connect_request(
             .headers
             .get("x-forwarded-device")
             .and_then(|value| value.to_str().ok())
-            .filter(|device| {
-                !device.is_empty()
-                    && !name.is_empty()
-                    && !name.to_lowercase().contains(&device.to_lowercase())
-            });
+            .filter(|device| !device.is_empty() && !name.is_empty());
         let named = device.map_or_else(
             || name.to_owned(),
             |device| {

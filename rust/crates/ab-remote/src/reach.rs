@@ -298,9 +298,6 @@ mod tests {
         let rules = json!([{"SrcIPs": ["*"], "DstPorts": [{"IP": "100.101.1.20", "Ports": {"First": 8443, "Last": 8443}}]}]);
         assert_eq!(from_status(&status(), &rules, 8443).blocked.len(), 3);
         assert!(!matches("100.101.1.10", ip("fd7a:115c:a1e0::aa:10")));
-        assert!(matches(
-            "fd7a:115c:a1e0::/48",
-            ip("fd7a:115c:a1e0::aa:10")
-        ));
+        assert!(matches("fd7a:115c:a1e0::/48", ip("fd7a:115c:a1e0::aa:10")));
     }
 }

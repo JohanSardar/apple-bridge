@@ -33,6 +33,7 @@ enum Access {
 struct Agent {
     label: String,
     key: String,
+    ssh: Option<std::net::IpAddr>,
 }
 
 struct Bridge {
@@ -262,25 +263,34 @@ impl Bridge {
     }
 
     async fn request_approval(&self) -> Access {
-        let label = self
+        let (label, ssh) = self
             .agent
             .lock()
             .ok()
-            .and_then(|agent| agent.as_ref().map(|agent| agent.label.clone()))
-            .unwrap_or_else(|| "An agent".to_owned());
-        let label = match ssh_source() {
-            Some(source) if ab_remote::tailscale::tailnet_address(source) => {
-                match ab_remote::reach::device_name(
-                    &ab_remote::localapi::LocalApi::Discover,
-                    source,
-                )
-                .await
-                {
-                    Some(device) => label.replace(&source.to_string(), &device),
-                    None => label,
+            .and_then(|agent| agent.as_ref().map(|agent| (agent.label.clone(), agent.ssh)))
+            .unwrap_or_else(|| ("An agent".to_owned(), None));
+        let label = match ssh {
+            Some(source) => {
+                let device = if ab_remote::tailscale::tailnet_address(source) {
+                    ab_remote::reach::device_name(&ab_remote::localapi::LocalApi::Discover, source)
+                        .await
+                } else {
+                    None
+                };
+                let suffix = format!(
+                    " over SSH from {}",
+                    device.unwrap_or_else(|| source.to_string())
+                );
+                let mut client = String::new();
+                for c in label.chars() {
+                    if client.len() + c.len_utf8() + suffix.len() > 60 {
+                        break;
+                    }
+                    client.push(c);
                 }
+                format!("{}{suffix}", client.trim_end())
             }
-            _ => label,
+            None => label,
         };
         if self.address().await.is_none() {
             return Access::Unreachable(NOT_RUNNING);
@@ -485,7 +495,6 @@ fn identify(
         client
     };
     let label = match (ssh, launcher) {
-        (Some(source), _) => format!("{client} over SSH from {source}"),
         (None, Some((_, app)))
             if !app.to_lowercase().contains(&client.to_lowercase())
                 && !client.to_lowercase().contains(&app.to_lowercase()) =>
@@ -503,6 +512,7 @@ fn identify(
     Agent {
         label,
         key: data_encoding::HEXLOWER.encode(&digest),
+        ssh,
     }
 }
 

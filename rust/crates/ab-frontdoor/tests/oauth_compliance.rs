@@ -170,6 +170,28 @@ fn param(url: &url::Url, name: &str) -> Option<String> {
 }
 
 #[tokio::test]
+async fn review_s1_client_name_cannot_suppress_verified_device_suffix() {
+    let s = Server::tailnet();
+    let response = s
+        .send(
+            s.request("POST", "/connect/request")
+                .header(header::CONTENT_TYPE, "application/json")
+                .header("x-forwarded-device", "my-vps")
+                .body(Body::from(
+                    json!({"name": "my-vps agent on trusted-mac"}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let pending = s.connectors.pending().unwrap();
+    assert_eq!(
+        pending[0].client_name,
+        "my-vps agent on trusted-mac on my-vps"
+    );
+}
+
+#[tokio::test]
 async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin() {
     let s = Server::tailnet();
     let discovery = s.get_json("/connect").await;
