@@ -8,6 +8,7 @@ use super::{
 };
 use serde_json::{Value, json};
 use std::{
+    fmt::Write as _,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{Duration, Instant},
@@ -205,12 +206,13 @@ fn setup(client: LinkClient, name: &str, scope: LinkScope, launch: &Launch) -> O
                 url.push_str("&arg=");
                 url.push_str(&encode_component(arg));
             }
-            url.push_str(&format!(
+            let _ = write!(
+                url,
                 "&id={}&name={}&description={}",
                 encode_component(name),
                 encode_component("Apple Bridge"),
                 encode_component("Messages, Mail, Calendar and more from this Mac")
-            ));
+            );
             Setup::Open {
                 title: "Goose",
                 url,
@@ -434,7 +436,7 @@ fn missing(tool: &Tool) -> Failure {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Added {
-    Added,
+    New,
     Updated,
     Already,
     Opened,
@@ -443,7 +445,7 @@ enum Added {
 impl Added {
     fn outcome(self) -> &'static str {
         match self {
-            Self::Added => "added",
+            Self::New => "added",
             Self::Updated => "updated",
             Self::Already => "already_added",
             Self::Opened => "opened",
@@ -465,7 +467,7 @@ fn add_with_tool(tool: &Tool, name: &str, launch: &Launch, deadline: &Deadline) 
     let adding = phase(format!("adding {name} to {}", tool.title));
     let (success, text) = run_bounded(tool, &tool.add, deadline, &adding)?;
     if success {
-        return Ok(Added::Added);
+        return Ok(Added::New);
     }
     if !text.contains("already exists") || tool.get.is_empty() {
         return Err(Failure::new(
@@ -519,6 +521,24 @@ struct Config {
     values: serde_json::Map<String, Value>,
 }
 
+fn without_trailing_commas(text: &str) -> String {
+    let mut kept = String::with_capacity(text.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for (index, character) in text.char_indices() {
+        if in_string {
+            in_string = escaped || character != '"';
+            escaped = !escaped && character == '\\';
+        } else if character == '"' {
+            in_string = true;
+        } else if character == ',' && text[index + 1..].trim_start().starts_with(['}', ']']) {
+            continue;
+        }
+        kept.push(character);
+    }
+    kept
+}
+
 fn read_config(file: &File, name: &str) -> Outcome<Config> {
     let text = match std::fs::read_to_string(&file.path) {
         Ok(text) => text,
@@ -542,7 +562,7 @@ fn read_config(file: &File, name: &str) -> Outcome<Config> {
             values: serde_json::Map::new(),
         });
     }
-    match serde_json::from_str::<Value>(body) {
+    match serde_json::from_str::<Value>(&without_trailing_commas(body)) {
         Ok(Value::Object(values)) => Ok(Config { header, values }),
         _ => Err(Failure::new(
             Reason::InvalidConfig,
@@ -623,7 +643,7 @@ fn add_to_file(file: &File, name: &str, launch: &Launch) -> Outcome<Added> {
             ));
         }
         Some(_) => Added::Updated,
-        None => Added::Added,
+        None => Added::New,
     };
     servers.insert(name.to_owned(), file.entry.clone());
     write_config(&file.path, &config)?;
@@ -753,7 +773,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
             &format!("{} is already in {title}.", args.name),
         ),
         Added::Updated => ui::done("Updated", &format!("{} in {title}", args.name)),
-        Added::Added => ui::done("Added", &format!("{} to {title}", args.name)),
+        Added::New => ui::done("Added", &format!("{} to {title}", args.name)),
         Added::Opened => ui::done("Opened", title),
     }
     if !after.is_empty() {

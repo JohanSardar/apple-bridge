@@ -127,7 +127,7 @@ impl Bridge {
             .as_str()
             .or_else(|| client["name"].as_str())
             .unwrap_or("An agent");
-        let agent = identify(name, &launcher());
+        let agent = identify(name, launcher().as_ref());
         let cached = self.cached_token(&agent.key);
         if let Ok(mut slot) = self.agent.lock() {
             *slot = Some(agent);
@@ -445,7 +445,7 @@ fn refusal(message: &Value, method: &str, text: &str) -> Value {
     json!({"jsonrpc":"2.0","id":message["id"],"error":{"code":-32001,"message":text}})
 }
 
-fn identify(client: &str, launcher: &Option<(String, String)>) -> Agent {
+fn identify(client: &str, launcher: Option<&(String, String)>) -> Agent {
     let client: String = client
         .chars()
         .filter(|c| !c.is_control())
@@ -467,11 +467,11 @@ fn identify(client: &str, launcher: &Option<(String, String)>) -> Agent {
         _ => client.clone(),
     };
     let label: String = label.chars().take(60).collect();
-    let bundle = launcher.as_ref().map_or("", |(bundle, _)| bundle.as_str());
+    let bundle = launcher.map_or("", |(bundle, _)| bundle.as_str());
     let digest = Sha256::digest(format!("{client}\0{bundle}").as_bytes());
     Agent {
         label,
-        key: digest.iter().map(|byte| format!("{byte:02x}")).collect(),
+        key: data_encoding::HEXLOWER.encode(&digest),
     }
 }
 

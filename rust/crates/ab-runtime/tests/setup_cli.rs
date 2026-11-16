@@ -487,6 +487,29 @@ fn link_replaces_its_old_address_and_refuses_a_different_server() -> Check {
 }
 
 #[test]
+fn review_link_zed_accepts_zeds_initial_settings() -> Check {
+    let home = tempfile::tempdir()?;
+    let user = tempfile::tempdir()?;
+    let config_home = user.path().join(".config");
+    let settings = config_home.join("zed/settings.json");
+    std::fs::create_dir_all(settings.parent().ok_or("settings parent")?)?;
+    std::fs::write(
+        &settings,
+        "// Zed settings\n{\n  \"ui_font_size\": 16,\n  \"buffer_font_size\": 15,\n  \"theme\": {\n    \"mode\": \"system\",\n    \"light\": \"One Light\",\n    \"dark\": \"One Dark\",\n  },\n}\n",
+    )?;
+    let output = bridge()
+        .env("HOME", user.path())
+        .env("XDG_CONFIG_HOME", &config_home)
+        .args(["link", "zed", "--home"])
+        .arg(home.path())
+        .output()?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let saved = std::fs::read_to_string(settings)?;
+    assert!(saved.contains("apple-bridge"), "{saved}");
+    Ok(())
+}
+
+#[test]
 fn link_explains_a_missing_agent() -> Check {
     let home = tempfile::tempdir()?;
     let api = free_port()?;
