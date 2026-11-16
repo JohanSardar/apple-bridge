@@ -64,7 +64,11 @@ sudo install -m 644 eilmer-site.service /etc/systemd/system/
 sudo install -D -m 644 serve.py /opt/eilmer-site/serve.py
 sudo systemctl daemon-reload
 sudo systemctl enable --now eilmer-site caddy
+sudo systemctl reload caddy
 ```
+
+The package starts Caddy with its default config during install, so the
+reload is what applies this `Caddyfile`.
 
 ## Redeploying
 
