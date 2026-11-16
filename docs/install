@@ -3,8 +3,8 @@
 # https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/local-setup.md
 set -eu
 
-VERSION=0.1.7
-SHA256=4b1af91681aaac58bf9036dd63744f5f0fef8cdb1b9c7e58f6a5ced6ea52f24d
+VERSION=0.1.8
+SHA256=7471c13e29d4ffb9213009fc70156e4259a6f2a965c35152e9399bdfddd762c3
 URL=https://eilmer.si/applebridge/download/v$VERSION/applebridge-$VERSION.tgz
 
 fail() {
