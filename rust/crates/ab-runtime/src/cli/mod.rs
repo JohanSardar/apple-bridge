@@ -7,6 +7,7 @@ mod failure;
 mod gateway;
 mod help;
 mod link;
+mod mcp;
 mod modes;
 mod permissions;
 mod read;
@@ -498,19 +499,13 @@ async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     }
     children::stop_all();
     let note = ui::cancel_note();
-    let with_step = |failure: Failure| match ui::cancel_step() {
-        Some(step) => failure.step(step),
-        None => failure,
-    };
     if Modes::get().json {
-        let failure = with_step(Failure::canceled(
-            note.unwrap_or_else(|| "Canceled.".to_owned()),
-        ));
+        let failure = Failure::canceled(note.unwrap_or_else(|| "Canceled.".to_owned()));
         ui::render_failure(&failure.data("signal", code - 128));
         std::process::exit(code);
     }
     if let Some(note) = note {
-        ui::render_failure(&with_step(Failure::canceled(format!("\n{note}"))));
+        ui::render_failure(&Failure::canceled(format!("\n{note}")));
     }
     std::process::exit(code);
 }
@@ -586,7 +581,8 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             Some(tree::RelayAction::Setup(args)) => connect::relay_setup(home, &args).await,
             None => Ok(()),
         },
-        Command::Unlink(args) => link::unlink(&args),
+        Command::Unlink(args) => link::unlink(home, &args),
+        Command::Mcp => mcp::serve(home).await,
         Command::Stats(args) => stats::run(home, &args).await,
         Command::Read(args) => read::read(home, &args).await,
         Command::Search(args) => read::search(home, &args).await,

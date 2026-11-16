@@ -6,7 +6,7 @@ Allowing a request connects the app at level `full`: from then on its changes an
 
 There is one queue of requests per gateway, shared by every hostname, so a request arriving through the relay reaches the Mac and iPhone. The gateway opens the Helper's Allow and Deny window when a request starts waiting, and the window closes after a minute with nothing waiting. A paired iPhone receives the encrypted request through the existing push and pending-delivery transport, displays its code and scopes, and requires Face ID before sending a signed decision. The physical iPhone check belongs to I1.
 
-`bridge link claude` and `bridge link codex` also watch this queue while they sign in, and print the request with the command that allows it. They never allow the request themselves. When Claude Code runs `bridge link claude` itself, it asks on the Mac instead of opening a browser: the panel shows "Claude Code wants to use Apple Bridge", and Allow gives Claude Code a key that expires in a year. Cloud agents on the owner's Tailscale network ask the same way through `/connect` on the Tailscale address.
+Agents on this Mac start `bridge mcp`, which `bridge link` sets up ([ADR 0034](../adr/0034-agents-on-this-mac-start-bridge-mcp.md)). The first time an agent starts it, `bridge mcp` asks on the Mac without a browser: the panel names the agent and the app it runs in, such as "Claude Code in Terminal", and Allow gives that agent a key that expires in a year. The key is kept in `local-agents/` in the home, so the next start doesn't ask. `bridge mcp` never allows a request itself. Cloud agents on the owner's Tailscale network ask the same way through `/connect` on the Tailscale address.
 
 The owner can also use the CLI on the gateway Mac:
 

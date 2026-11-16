@@ -4,6 +4,20 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- `bridge mcp` lets any agent on the Mac connect by starting it, with no browser, account or network. The first time each agent connects, the Mac shows the Allow panel once; after that it just works ([ADR 0034](docs/adr/0034-agents-on-this-mac-start-bridge-mcp.md)).
+- `bridge link` sets this up in one line for Claude Code, Codex, Cursor, VS Code, Zed, Gemini CLI, Goose, OpenCode and the Claude app. `bridge link other` prints the config for any other agent. The install page has Add to Cursor and Install in VS Code buttons.
+- `bridge link grok-bot` explains that Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach Apple Bridge on the Mac.
+
+### Changed
+
+- `bridge link claude` and `bridge link codex` replace their earlier `http://127.0.0.1:7780/mcp` entry with `bridge mcp`. `--no-login` and `--no-open` do nothing now.
+
+### Fixed
+
+- Allow and Don't Allow in the Mac panel failed for about a third of agent requests, whose code contained `-` or `_`.
+
 ### Removed
 
 - Safari, Shortcuts and Mac settings are gone: no agent, CLI command, MCP tool or REST route offers Safari history, bookmarks, tabs or Reading List, running or listing shortcuts, or reading and changing Mac settings (battery, display, network, Bluetooth, volume, appearance, apps, clipboard, notifications and the rest). Screen recording stays as part of Capture and now needs `capture:write` instead of `mac:write`, so an agent that can take screenshots can also record the screen. Focus still uses its bundled shortcut. Stored grants and records for these sources are ignored after the upgrade ([ADR 0033](docs/adr/0033-remove-safari-shortcuts-and-mac-settings.md)).

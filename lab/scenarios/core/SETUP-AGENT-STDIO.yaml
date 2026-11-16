@@ -1,0 +1,3 @@
+id: SETUP-AGENT-STDIO
+feature: core.local-setup
+levels: [real]

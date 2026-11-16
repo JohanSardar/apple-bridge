@@ -96,10 +96,12 @@ pub struct Globals {
 pub enum Command {
     #[command(about = "Start Apple Bridge on this Mac for local agents")]
     Up(UpArgs),
-    #[command(about = "Connect Claude Code or Codex to this Mac")]
+    #[command(about = "Connect an agent on this Mac, such as Claude Code, Codex or Cursor")]
     Link(LinkArgs),
-    #[command(about = "Disconnect Claude Code or Codex")]
+    #[command(about = "Disconnect an agent that bridge link connected")]
     Unlink(UnlinkArgs),
+    #[command(about = "Talk MCP over stdin and stdout; agents on this Mac launch this")]
+    Mcp,
     #[command(about = "Check or allow the Mac permissions Apple Bridge reads with")]
     Permissions(PermissionsCommand),
     #[command(about = "Show how much each source has synced, as counts only")]
@@ -216,13 +218,28 @@ pub enum LinkClient {
     Claude,
     #[value(help = "Codex")]
     Codex,
+    #[value(help = "Cursor")]
+    Cursor,
+    #[value(alias = "code", alias = "vs-code", help = "Visual Studio Code")]
+    Vscode,
+    #[value(help = "Zed")]
+    Zed,
+    #[value(alias = "gemini-cli", help = "Gemini CLI")]
+    Gemini,
+    #[value(help = "Goose")]
+    Goose,
+    #[value(help = "OpenCode")]
+    Opencode,
+    #[value(help = "The Claude desktop app")]
+    ClaudeDesktop,
+    #[value(alias = "grok", help = "Grok Bot")]
+    GrokBot,
     #[value(
         name = "claude-app",
-        alias = "claude-desktop",
         help = "The Claude app or claude.ai, through a custom connector"
     )]
     ClaudeApp,
-    #[value(help = "Print what any other app or bot needs")]
+    #[value(help = "Print the setup any other agent needs")]
     Other,
 }
 
@@ -245,14 +262,14 @@ impl LinkScope {
 
 #[derive(Debug, Args)]
 pub struct LinkArgs {
-    #[arg(value_enum, value_name = "CLIENT", help = "Which agent to connect")]
+    #[arg(value_enum, value_name = "AGENT", help = "Which agent to connect")]
     pub client: LinkClient,
     #[arg(
         long,
         value_enum,
         value_name = "SCOPE",
         default_value = "user",
-        help = "Claude Code only: where Claude Code saves the registration. This isn't access; you grant access when you sign in"
+        help = "Claude Code only: where Claude Code saves the registration. This isn't access; you allow access on your Mac"
     )]
     pub scope: LinkScope,
     #[arg(
@@ -262,20 +279,16 @@ pub struct LinkArgs {
         help = "Name shown in the agent"
     )]
     pub name: String,
-    #[arg(long, help = "Print the agent's commands instead of running them")]
+    #[arg(long, help = "Print the agent's setup instead of applying it")]
     pub print: bool,
-    #[arg(long, help = "Register only; sign in later from the agent")]
+    #[arg(long, hide = true)]
     pub no_login: bool,
-    #[arg(
-        long,
-        alias = "no-browser",
-        help = "Print the sign-in address instead of opening a browser"
-    )]
+    #[arg(long, alias = "no-browser", hide = true)]
     pub no_open: bool,
     #[arg(
         long,
         value_name = "DURATION",
-        help = "Stop waiting for sign-in after this long (default: 10m)"
+        help = "Stop waiting for the agent's own commands after this long (default: 30s)"
     )]
     pub timeout: Option<String>,
 }
@@ -291,7 +304,7 @@ pub struct DoctorArgs {
 
 #[derive(Debug, Args)]
 pub struct UnlinkArgs {
-    #[arg(value_enum, value_name = "CLIENT", help = "Which agent to disconnect")]
+    #[arg(value_enum, value_name = "AGENT", help = "Which agent to disconnect")]
     pub client: LinkClient,
     #[arg(
         long,

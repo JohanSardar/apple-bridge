@@ -1,0 +1,83 @@
+{
+ "impl": "rust",
+ "scenario": "SETUP-AGENT-STDIO",
+ "level": "real",
+ "passed": true,
+ "git_sha": "9a25999d plus the uncommitted tree of this change",
+ "at": "2026-11-16T08:40:00Z",
+ "hosts": [
+  "air (headless test gateway, no Helper)",
+  "tart macOS 26.6.2 VM (gateway with real Helper)"
+ ],
+ "assertions": [
+  {
+   "name": "claude_code_asks_once_then_reads",
+   "passed": true,
+   "detail": "claude -p: one ask labelled 'Claude Code in T3 Code (Nightly)', allowed 5 s in, agent id returned 12 s after start; second run: no ask, same agent"
+  },
+  {
+   "name": "codex_asks_once_then_reads",
+   "passed": true,
+   "detail": "codex exec: one ask 'Codex in T3 Code (Nightly)', answer in 9 s; second run: no ask, same agent, 0 asks pending"
+  },
+  {
+   "name": "cursor_agent_asks_once_then_reads",
+   "passed": true,
+   "detail": "cursor-agent -p with project .cursor/mcp.json: one ask 'Cursor in ...', agent id returned"
+  },
+  {
+   "name": "gemini_and_opencode_connect",
+   "passed": true,
+   "detail": "gemini mcp list: Connected; opencode mcp list: connected. Their models could not run: account tier and expired key"
+  },
+  {
+   "name": "initialize_and_tools_answer_without_waiting",
+   "passed": true,
+   "detail": "initialize ~20 ms, tools/list ~30 ms before approval; notifications/tools/list_changed after Allow"
+  },
+  {
+   "name": "revoked_agent_asks_again",
+   "passed": true,
+   "detail": "after bridge agents revoke the next call asked again and got a new agent"
+  },
+  {
+   "name": "gateway_off_answers_at_once",
+   "passed": true,
+   "detail": "tools/call answered 'isn't running' immediately"
+  },
+  {
+   "name": "helper_panel_shows_the_ask",
+   "passed": true,
+   "detail": "VM: panel 'Allow “vm-check” to use your Mac?' with 'Asked by an app on this Mac.' and no code"
+  },
+  {
+   "name": "panel_allow_creates_a_full_agent_and_caches_its_key",
+   "passed": true,
+   "detail": "VM: Allow pressed in the panel; full agent valid one year; key file 0600 in a 0700 local-agents folder"
+  },
+  {
+   "name": "second_start_does_not_ask",
+   "passed": true,
+   "detail": "VM: same client again, apple_status answered with the same agent id, no ask"
+  },
+  {
+   "name": "panel_dont_allow_refuses",
+   "passed": true,
+   "detail": "VM: four agents, Don't Allow pressed in the panel each time; each got the denied reply, no agent created"
+  },
+  {
+   "name": "bridge_link_writes_each_agent_config",
+   "passed": true,
+   "detail": "fake HOME: claude, codex, gemini, cursor, zed, opencode, claude-desktop added; old HTTP entry updated; foreign server refused; JSONC refused with a snippet; unlink removes. VS Code and Goose checked with --print only, apps not opened"
+  },
+  {
+   "name": "grok_bot_cannot_reach_the_mac",
+   "passed": true,
+   "detail": "Grok Bot Command connector ran on Grok's cloud computer, not this Mac; bridge link grok-bot explains and exits 1"
+  }
+ ],
+ "limits": [
+  "The Allow panel was only pressed inside a VM, never on the owner's screen",
+  "VS Code, Zed and Goose are not installed here; their configs were written or printed, not run"
+ ]
+}

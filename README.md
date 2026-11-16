@@ -15,10 +15,10 @@ Requires an Apple Silicon Mac on macOS 26 or later. **Early access.**
 curl -fsSL https://eilmer.si/applebridge/install | sh
 bridge up                   # start Apple Bridge. It asks nothing
 bridge permissions guide    # a small window walks you through the Mac permissions
-bridge link claude          # connect Claude Code. Or: bridge link codex
+bridge link claude          # connect Claude Code. Or: codex, cursor, vscode, zed, gemini, goose, opencode, claude-desktop
 ```
 
-`bridge permissions guide` opens System Settings at the right page and puts a small window beside it that shows what to drag where. It moves on by itself after each permission and closes when you're done. `bridge link` asks you on your Mac: click Allow in the Apple Bridge window. An allowed agent gets full access by default. To make one ask you before each change, run `bridge agents update <id> --level approve`.
+`bridge permissions guide` opens System Settings at the right page and puts a small window beside it that shows what to drag where. It moves on by itself after each permission and closes when you're done. `bridge link` sets the agent up to start `bridge mcp` on this Mac: no browser, account or network. The first time each agent connects, click Allow in the small Apple Bridge panel; after that it just works. An allowed agent gets full access by default. To make one ask you before each change, run `bridge agents update <id> --level approve`.
 
 ### Let your agent set it up
 
@@ -32,7 +32,7 @@ On the Mac (Claude Code, Codex), run these in order and wait for each to finish.
 sh docs/install                                  # from this repository; or: curl -fsSL https://eilmer.si/applebridge/install | sh
 ~/.local/bin/bridge up
 ~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
-~/.local/bin/bridge link claude                 # or: link codex. The Mac asks to Allow
+~/.local/bin/bridge link claude                 # or codex, cursor, gemini... The Mac asks to Allow once
 ~/.local/bin/bridge tailscale --keep-awake --yes   # only if they want it while away or with the lid shut
 ```
 
@@ -43,6 +43,23 @@ Grok Bot and other agents that run in the cloud: if you can run commands on the 
 1. `~/.local/bin/bridge tailscale --keep-awake --yes --json` prints this Mac's `connect` address. Without commands on the Mac, find it instead: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443); the one answering `"apple_bridge": true` is it.
 2. `POST` `{"name": "Grok Bot"}` to its `request` address, then `POST` the returned `id` and `secret` to `/connect/answer` every few seconds until the person allows it on the Mac.
 3. Add the `mcp` address as an MCP server with the header `Authorization: Bearer <token>`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
+
+### Connect any agent on this Mac
+
+| Agent | One line |
+|---|---|
+| Claude Code | `bridge link claude` |
+| Codex | `bridge link codex` |
+| Cursor | `bridge link cursor` |
+| Visual Studio Code | `bridge link vscode` |
+| Zed | `bridge link zed` |
+| Gemini CLI | `bridge link gemini` |
+| Goose | `bridge link goose` |
+| OpenCode | `bridge link opencode` |
+| The Claude app | `bridge link claude-desktop` |
+| Anything else | `bridge link other` prints `{"command": "~/.applebridge/bin/bridge", "args": ["mcp"]}` |
+
+Grok Bot runs custom connectors on Grok's cloud computer, not on your Mac, so it can't reach a local Apple Bridge; `bridge link grok-bot` explains this. See [connect an agent](docs/local-setup.md#connect-an-agent).
 
 ### Other ways to connect
 
@@ -91,8 +108,8 @@ An iPhone app adds health, location, alarms, Face ID approvals and more. It is i
 | | `bridge permissions guide` | Walk through the Mac permissions |
 | | `bridge permissions status` | Show permissions without asking macOS for anything |
 | | `bridge doctor` | Check this Mac's data, files and credentials |
-| Connect | `bridge link claude`, `bridge link codex` | Connect an agent on this Mac |
-| | `bridge link other` | Print what other apps and bots need |
+| Connect | `bridge link claude`, `bridge link cursor`, … | Connect an agent on this Mac |
+| | `bridge link other` | Print the config any other agent needs |
 | | `bridge unlink claude` | Disconnect an agent |
 | | `bridge connectors allow` | Allow an app that is waiting to connect |
 | | `bridge agents create`, `list`, `update`, `revoke` | Manage agent access |

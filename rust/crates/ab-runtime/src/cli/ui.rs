@@ -675,18 +675,6 @@ pub fn set_cancel_note(note: Option<&str>) {
     }
 }
 
-static CANCEL_STEP: Mutex<Option<Step>> = Mutex::new(None);
-
-pub fn set_cancel_step(step: Option<Step>) {
-    if let Ok(mut current) = CANCEL_STEP.lock() {
-        *current = step;
-    }
-}
-
-pub fn cancel_step() -> Option<Step> {
-    CANCEL_STEP.lock().ok().and_then(|step| step.clone())
-}
-
 pub fn cancel_note() -> Option<String> {
     CANCEL_NOTE
         .lock()

@@ -163,11 +163,15 @@
         },
         {
           "name": "link",
-          "summary": "Connect Claude Code or Codex to this Mac"
+          "summary": "Connect an agent on this Mac, such as Claude Code, Codex or Cursor"
         },
         {
           "name": "unlink",
-          "summary": "Disconnect Claude Code or Codex"
+          "summary": "Disconnect an agent that bridge link connected"
+        },
+        {
+          "name": "mcp",
+          "summary": "Talk MCP over stdin and stdout; agents on this Mac launch this"
         },
         {
           "name": "permissions",
@@ -394,12 +398,20 @@
       "aliases": [],
       "arguments": [
         {
-          "name": "CLIENT",
+          "name": "AGENT",
           "required": true,
           "summary": "Which agent to connect",
           "values": [
             "claude",
             "codex",
+            "cursor",
+            "vscode",
+            "zed",
+            "gemini",
+            "goose",
+            "opencode",
+            "claude-desktop",
+            "grok-bot",
             "claude-app",
             "other"
           ]
@@ -412,16 +424,26 @@
           "summary": "Connect Claude Code"
         },
         {
+          "command": "bridge link cursor",
+          "summary": "Connect Cursor"
+        },
+        {
           "command": "bridge link codex --print",
-          "summary": "Print the commands to run yourself"
+          "summary": "Print the setup to apply yourself"
+        },
+        {
+          "command": "bridge link other",
+          "summary": "Print the setup for any other agent"
         }
       ],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-link",
       "lifecycle": "stable",
       "notes": [
-        "Opens a browser for sign-in only on a local, interactive terminal; the address is always printed.",
-        "Piped, stdout holds only the server name; bridge link other prints only the MCP address."
+        "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
+        "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
+        "Grok Bot runs custom connectors on Grok's cloud computer, so it can't reach this Mac; bridge link grok-bot explains this and changes nothing.",
+        "Piped, stdout holds only the server name; bridge link other prints only the config."
       ],
       "options": [
         {
@@ -441,39 +463,11 @@
           "aliases": [],
           "default": "false",
           "global": false,
-          "name": "--no-login",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Register only; sign in later from the agent",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [
-            "--no-browser"
-          ],
-          "default": "false",
-          "global": false,
-          "name": "--no-open",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Print the sign-in address instead of opening a browser",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
           "name": "--print",
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Print the agent's commands instead of running them",
+          "summary": "Print the agent's setup instead of applying it",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -486,7 +480,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Claude Code only: where Claude Code saves the registration. This isn't access; you grant access when you sign in",
+          "summary": "Claude Code only: where Claude Code saves the registration. This isn't access; you allow access on your Mac",
           "type": "string",
           "value_hint": "<SCOPE>",
           "values": [
@@ -503,7 +497,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Stop waiting for sign-in after this long (default: 10m)",
+          "summary": "Stop waiting for the agent's own commands after this long (default: 30s)",
           "type": "string",
           "value_hint": "<DURATION>",
           "values": []
@@ -528,51 +522,69 @@
             "type": "string"
           },
           {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
             "name": "url",
             "secret": false,
             "type": "string"
-          },
-          {
-            "name": "mcp",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "rest",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "register",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "login",
-            "secret": false,
-            "type": "object"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
           }
         ]
       },
       "subcommands": [],
-      "summary": "Connect Claude Code or Codex to this Mac",
-      "usage": "bridge link <CLIENT> [options]"
+      "summary": "Connect an agent on this Mac, such as Claude Code, Codex or Cursor",
+      "usage": "bridge link <AGENT> [options]"
     },
     {
       "aliases": [],
       "arguments": [
         {
-          "name": "CLIENT",
+          "name": "AGENT",
           "required": true,
           "summary": "Which agent to disconnect",
           "values": [
             "claude",
             "codex",
+            "cursor",
+            "vscode",
+            "zed",
+            "gemini",
+            "goose",
+            "opencode",
+            "claude-desktop",
+            "grok-bot",
             "claude-app",
             "other"
           ]
@@ -589,7 +601,8 @@
       "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-unlink",
       "lifecycle": "stable",
       "notes": [
-        "This removes the agent's registration. To end its access on this Mac too, revoke it with bridge agents revoke.",
+        "This removes the agent's registration from Claude Code, Codex, Gemini CLI, Cursor, Zed, OpenCode or the Claude app. Remove it from other agents in their own settings.",
+        "To end its access on this Mac too, revoke it with bridge agents revoke.",
         "Piped, stdout holds only the removed server name."
       ],
       "options": [
@@ -663,8 +676,32 @@
         ]
       },
       "subcommands": [],
-      "summary": "Disconnect Claude Code or Codex",
-      "usage": "bridge unlink <CLIENT> [options]"
+      "summary": "Disconnect an agent that bridge link connected",
+      "usage": "bridge unlink <AGENT> [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "deprecated": null,
+      "examples": [
+        {
+          "command": "bridge mcp",
+          "summary": "What an agent's config runs"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/source/docs/reference/cli.md#bridge-mcp",
+      "lifecycle": "stable",
+      "notes": [
+        "Agents launch this; you don't run it yourself. It speaks MCP as JSON lines on stdin and stdout and forwards to the Apple Bridge running on this Mac.",
+        "The first time an agent connects, the Mac asks you to Allow it once. The approval is remembered for that agent, and bridge agents revoke ends it."
+      ],
+      "options": [],
+      "path": "bridge mcp",
+      "result_schema": null,
+      "subcommands": [],
+      "summary": "Talk MCP over stdin and stdout; agents on this Mac launch this",
+      "usage": "bridge mcp [options]"
     },
     {
       "aliases": [],

@@ -31,6 +31,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 #[cfg(feature = "lab-harness")]
 pub use mcp::golden_router;
+pub use mcp::{every_tool as mcp_tools, server_info as mcp_server_info};
 use serde::Serialize;
 use serde_json::json;
 use std::{

@@ -303,7 +303,11 @@ impl Connectors {
             AgentAsk {
                 summary: Summary {
                     id: id.clone(),
-                    code: oauth::token(8),
+                    code: oauth::token(12)
+                        .chars()
+                        .filter(char::is_ascii_alphanumeric)
+                        .take(12)
+                        .collect(),
                     show_code: false,
                     source: source.into(),
                     client_name: name.into(),
@@ -590,6 +594,30 @@ mod tests {
             "a request the owner just started needs no code"
         );
         drop(home);
+    }
+
+    #[test]
+    fn agent_codes_are_ones_the_owner_can_pass_to_bridge_connectors() {
+        let (_home, queue) = queue();
+        queue.on_waiting(Arc::new(|| {}));
+        for _ in 0..64 {
+            let ticket = queue
+                .ask_for_agent("Claude Code in T3 Code", "this_mac", None)
+                .expect("ask");
+            let pending = queue.pending().expect("pending");
+            let code = &pending
+                .iter()
+                .find(|s| s.id == ticket.id)
+                .expect("waiting")
+                .code;
+            assert!(
+                !code.is_empty()
+                    && code.len() <= 16
+                    && code.chars().all(|c| c.is_ascii_alphanumeric()),
+                "{code}"
+            );
+            queue.decide(&ticket.id, code, false).expect("deny");
+        }
     }
 
     #[test]
