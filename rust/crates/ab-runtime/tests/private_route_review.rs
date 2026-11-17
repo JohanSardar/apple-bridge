@@ -64,7 +64,7 @@ async fn review_s2_ssh_approval_keeps_the_complete_source_address() -> Check {
 
 #[tokio::test]
 async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check {
-    for approve in [false, true] {
+    for (approve, abandon) in [(false, false), (true, false), (true, true)] {
         let home = short_home()?;
         let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
         std::fs::create_dir_all(home.path().join("run"))?;
@@ -121,32 +121,32 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
         let request = pending.first().ok_or("missing request")?;
         assert_eq!(request.client_name, "Grok Bot");
         assert_eq!(request.source, "this_mac");
+        assert_eq!(
+            request.resource.as_deref(),
+            Some("https://fixture.example.ts.net:8443/mcp")
+        );
         assert!(
             connectors
                 .agent_answer(&request.id, "wrong secret")
                 .is_err()
         );
+        if abandon {
+            child.kill().await?;
+        }
         connectors.decide(&request.id, "", approve)?;
         let output =
             tokio::time::timeout(Duration::from_secs(10), child.wait_with_output()).await??;
         remote.await??;
         stop.send(true)?;
         server.await??;
-        if approve {
-            assert!(output.status.success(), "{}", text(&output.stderr));
-            let result: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-            assert_eq!(result["outcome"], "allowed");
-            assert_eq!(result["mcp"], "https://fixture.example.ts.net:8443/mcp");
-            let token = result["token"].as_str().ok_or("token")?;
-            assert!(!text(&output.stderr).contains(token));
-            let agent = authority.authenticate_token(token)?;
-            assert!(agent.remote);
-            assert_eq!(agent.extra["resource"], result["mcp"]);
-            authority.authorize(&agent, &ab_trust::Grant::parse("reminders:read")?)?;
-            assert_eq!(
-                result["config"]["mcpServers"]["apple-bridge"]["headers"]["Authorization"],
-                format!("Bearer {token}")
+        if abandon {
+            assert!(
+                authority.agents()?.is_empty(),
+                "late Allow after CLI exit creates no credential"
             );
+        } else if approve {
+            assert!(output.status.success(), "{}", text(&output.stderr));
+            check_grok_connection(&output, &authority)?;
         } else {
             assert!(!output.status.success());
             assert_eq!(output.stdout, [] as [u8; 0]);
@@ -158,5 +158,22 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
         }
         assert!(connectors.pending()?.is_empty());
     }
+    Ok(())
+}
+
+fn check_grok_connection(output: &std::process::Output, authority: &ab_trust::Authority) -> Check {
+    let result: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(result["outcome"], "allowed");
+    assert_eq!(result["mcp"], "https://fixture.example.ts.net:8443/mcp");
+    let token = result["token"].as_str().ok_or("token")?;
+    assert!(!text(&output.stderr).contains(token));
+    let agent = authority.authenticate_token(token)?;
+    assert!(agent.remote);
+    assert_eq!(agent.extra["resource"], result["mcp"]);
+    authority.authorize(&agent, &ab_trust::Grant::parse("reminders:read")?)?;
+    assert_eq!(
+        result["config"]["mcpServers"]["apple-bridge"]["headers"]["Authorization"],
+        format!("Bearer {token}")
+    );
     Ok(())
 }

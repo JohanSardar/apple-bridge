@@ -334,15 +334,16 @@ async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
     );
     let deadline = Instant::now() + limit.min(Duration::from_mins(5));
     loop {
-        let answer = crate::connector::agent_answer(home, id, secret)
-            .await
-            .map_err(|_| {
-                Failure::new(
-                    Reason::ApiError,
-                    "The connection request expired or the gateway restarted.",
-                )
-                .then("Ask again", ["bridge", "link", "grok-bot", "--json"])
-            })?;
+        let answer =
+            crate::connector::tailnet_agent_answer(home, id, secret, &format!("{url}/mcp"))
+                .await
+                .map_err(|_| {
+                    Failure::new(
+                        Reason::ApiError,
+                        "The connection request expired or the gateway restarted.",
+                    )
+                    .then("Ask again", ["bridge", "link", "grok-bot", "--json"])
+                })?;
         match answer["state"].as_str() {
             Some("allowed") => {
                 print_grok_connection(&answer, &url, &args.name)?;

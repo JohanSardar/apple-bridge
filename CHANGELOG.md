@@ -4,6 +4,8 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-16
+
 ### Added
 
 - The public installer points agents to setup instructions and plain-text reference docs on eilmer.si, with the same setup guide embedded in the binary.
@@ -12,6 +14,10 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 ### Changed
 
 - `bridge up` names the Grok Bot/Tailscale setup path. Current source, documentation and reporting links use GitHub; private vulnerability reports use GitHub security advisories.
+
+### Fixed
+
+- Remote-agent consent shows that access is over Tailscale and includes the private address. A key is created only when approved consent is collected for the expected address; late Allow after the command stops waiting leaves no active key.
 
 ## [0.1.8] - 2026-11-16
 
