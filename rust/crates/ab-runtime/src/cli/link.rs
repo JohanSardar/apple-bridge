@@ -259,13 +259,117 @@ fn print_other(name: &str, launch: &Launch) {
     );
 }
 
-fn grok_bot() -> Failure {
-    Failure::new(
-        Reason::Unproven,
-        "Grok Bot can't start Apple Bridge on this Mac. Its connectors run on Grok's own cloud computer, not on your Mac.",
-    )
-    .sentence("Grok Bot connects over your Tailscale network instead. Connect Grok Bot's Tailscale plugin once, run bridge tailscale, and give your bot the sentence it prints. Your Mac asks you to click Allow once.")
-    .then("Turn on the Tailscale route", ["bridge", "tailscale"])
+fn print_grok_connection(answer: &Value, url: &str, name: &str) -> Outcome {
+    let mcp = answer["mcp"].as_str().ok_or_else(|| {
+        Failure::new(
+            Reason::ApiError,
+            "The Mac didn't return a Tailscale MCP address.",
+        )
+    })?;
+    if mcp != format!("{url}/mcp") {
+        return Err(Failure::new(
+            Reason::Conflict,
+            "The Tailscale address changed. Ask again with bridge link grok-bot.",
+        ));
+    }
+    let token = answer["token"]
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| Failure::new(Reason::ApiError, "The Mac did not return a key."))?;
+    let config = json!({"mcpServers": {name: {"type": "http", "url": mcp, "headers": {"Authorization": format!("Bearer {token}")}}}});
+    let result = json!({
+        "outcome": "allowed", "client": "Grok Bot", "name": name,
+        "mcp": mcp, "token": answer["token"], "header": answer["header"], "config": config,
+        "next": "Configure Grok Bot's connector on its Tailscale-connected cloud computer with this URL and header, then call apple_status (sources.status). Keep the key private. The Mac must stay awake.",
+    });
+    if Modes::get().json {
+        ui::json_document(result);
+    } else {
+        ui::outln(&serde_json::to_string_pretty(&result).unwrap_or_default());
+    }
+    Ok(())
+}
+
+async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
+    if args.print {
+        let command = format!(
+            "bridge link grok-bot --json --home {}",
+            ui::shell_quote(&home.to_string_lossy())
+        );
+        if Modes::get().json {
+            ui::json_document(json!({"client": "Grok Bot", "command": command}));
+        } else {
+            ui::outln(&command);
+        }
+        ui::note(
+            "Run this on the Mac. It enables private Tailscale access, waits for your Allow, and returns the MCP URL and bearer header for Grok Bot's Tailscale-connected cloud computer.",
+        );
+        return Ok(());
+    }
+    let url = super::connect::turn_on(home, false).await?;
+    let ticket = crate::connector::ask_for_tailnet_agent(home, "Grok Bot")
+        .await
+        .map_err(|_| {
+            Failure::new(
+                Reason::ApiError,
+                "Couldn't ask the Mac to connect Grok Bot.",
+            )
+            .then("Check Apple Bridge", ["bridge", "status"])
+        })?;
+    let id = ticket["id"].as_str().ok_or_else(|| {
+        Failure::new(
+            Reason::ApiError,
+            "The Mac didn't return a connection request.",
+        )
+    })?;
+    let secret = ticket["secret"].as_str().ok_or_else(|| {
+        Failure::new(
+            Reason::ApiError,
+            "The Mac didn't return a connection secret.",
+        )
+    })?;
+    ui::note(
+        "Click Allow on your Mac. This command waits for you; the key is returned only after Allow.",
+    );
+    let deadline = Instant::now() + limit.min(Duration::from_mins(5));
+    loop {
+        let answer = crate::connector::agent_answer(home, id, secret)
+            .await
+            .map_err(|_| {
+                Failure::new(
+                    Reason::ApiError,
+                    "The connection request expired or the gateway restarted.",
+                )
+                .then("Ask again", ["bridge", "link", "grok-bot", "--json"])
+            })?;
+        match answer["state"].as_str() {
+            Some("allowed") => {
+                print_grok_connection(&answer, &url, &args.name)?;
+                return Ok(());
+            }
+            Some("denied") => {
+                return Err(Failure::new(
+                    Reason::PermissionDenied,
+                    "The Mac declined Grok Bot. No connection was made.",
+                ));
+            }
+            Some("waiting") => {}
+            _ => {
+                return Err(Failure::new(
+                    Reason::ApiError,
+                    "The Mac returned an unknown connection state.",
+                ));
+            }
+        }
+        if Instant::now() >= deadline {
+            return Err(Failure::new(
+                Reason::Timeout,
+                "Stopped waiting for Allow. No key was collected.",
+            )
+            .then("Ask again", ["bridge", "link", "grok-bot", "--json"]));
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -724,7 +828,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         );
     }
     if args.client == LinkClient::GrokBot {
-        return Err(grok_bot());
+        return grok_bot(home, args, given.unwrap_or(Duration::from_mins(5))).await;
     }
     let Some(setup) = setup(args.client, &args.name, args.scope, &launch) else {
         print_other(&args.name, &launch);

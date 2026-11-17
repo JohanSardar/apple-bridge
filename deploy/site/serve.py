@@ -15,6 +15,7 @@ routes = {
     '/applebridge': ('applebridge/index.html', 'text/html; charset=utf-8'),
     '/applebridge/': ('applebridge/index.html', 'text/html; charset=utf-8'),
     '/assets/site.css': ('assets/site.css', 'text/css; charset=utf-8'),
+    '/applebridge/setup.md': ('applebridge/setup.md', 'text/plain; charset=utf-8'),
     '/applebridge/install': ('applebridge/install', 'text/plain; charset=utf-8'),
 }
 DOWNLOAD = re.compile(r'/applebridge/download/((?:[A-Za-z0-9][A-Za-z0-9._-]*/)?[A-Za-z0-9][A-Za-z0-9._-]*)')
@@ -34,6 +35,16 @@ def download_file(path):
     return file, content_type
 
 
+def document_file(path):
+    if not path.startswith('/applebridge/docs/') or not path.endswith('.md'):
+        return None
+    base = (args.root / 'applebridge/docs').resolve()
+    file = (args.root / path.lstrip('/')).resolve()
+    if not file.is_relative_to(base) or not file.is_file():
+        return None
+    return file, 'text/plain; charset=utf-8'
+
+
 class Site(BaseHTTPRequestHandler):
     timeout = 30
 
@@ -49,7 +60,7 @@ class Site(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         route = routes.get(path)
-        found = (args.root / route[0], route[1]) if route else download_file(path)
+        found = (args.root / route[0], route[1]) if route else document_file(path) or download_file(path)
         if found is None:
             self.send_error(404)
             return

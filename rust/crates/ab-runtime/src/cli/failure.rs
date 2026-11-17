@@ -367,7 +367,7 @@ impl Failure {
         .row("Error", super::ui::clean(&error.to_string()))
         .then(
             "Review the --debug output, then report it",
-            ["https://gitlab.com/johansardar/apple-bridge/-/issues/new"],
+            ["https://github.com/JohanSardar/apple-bridge/issues/new"],
         )
     }
 }

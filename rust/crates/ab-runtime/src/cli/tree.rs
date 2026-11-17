@@ -277,7 +277,7 @@ pub struct LinkArgs {
     #[arg(
         long,
         value_name = "DURATION",
-        help = "Stop waiting for the agent's own commands after this long (default: 30s)"
+        help = "Stop waiting after this long (default: 30s for local commands, 5m for Grok Bot Allow)"
     )]
     pub timeout: Option<String>,
 }

@@ -2,7 +2,7 @@
 
 Agents on your Mac connect with `bridge link <agent>` ([connect an agent](../local-setup.md#connect-an-agent)). Anything that isn't on your Mac uses a private network: your Tailscale network, or plain SSH. Nothing is ever on the public internet, and every new agent still needs you to click Allow once on the Mac ([ADR 0035](../adr/0035-agents-off-the-mac-use-a-private-network-and-a-key.md)).
 
-The Mac has to be awake. `bridge tailscale --keep-awake` keeps it awake with the lid closed; macOS asks for your password or Touch ID.
+The Mac has to be awake and online. Do not change its sleep settings automatically.
 
 ## Over Tailscale: servers, other computers and Grok Bot
 
@@ -25,6 +25,8 @@ What the agent does, if you want to check or do it by hand:
 1. `POST {"name": "Claude Code"}` to `/connect/request`. It gets an `id` and a `secret`.
 2. `POST {"id": ..., "secret": ...}` to `/connect/answer` every few seconds until you click Allow.
 3. The answer has the `token`, the `mcp` address and the `header`. For example: `claude mcp add --transport http apple-bridge https://your-mac.tail1234.ts.net:8443/mcp --header "Authorization: Bearer <token>"`.
+
+**One command on the Mac.** An agent with a Mac execution tool can run `bridge link grok-bot --json` instead. It turns on the private route, requests Allow, waits inside the command and returns `mcp`, `header`, `token` and a ready config. No key is available before Allow. Keep stdout private and configure the connector with the returned URL and header; no owner copy/paste is needed. `--print` has no effects, and `--timeout 2m` limits the wait. This can run before Grok Bot's computer reaches the tailnet, but that computer must join before its MCP connection works.
 
 **Grok Bot.** Grok Bot's bots run on Grok's cloud computer, and its Tailscale plugin puts that computer on your Tailscale network. Connect the plugin once, then give your bot the sentence above.
 

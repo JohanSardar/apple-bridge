@@ -269,7 +269,7 @@ impl Connectors {
             || name.len() > 60
             || name.chars().any(char::is_control)
             || !["this_mac", "tailnet"].contains(&source)
-            || (source == "tailnet") != resource.is_some()
+            || (source == "tailnet" && resource.is_none())
         {
             return Err(Error::Invalid);
         }

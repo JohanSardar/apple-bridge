@@ -221,7 +221,7 @@ fn ensure_running(home: &Path) -> Outcome {
     }
 }
 
-async fn turn_on(home: &Path, keep_awake: bool) -> Outcome<String> {
+pub(super) async fn turn_on(home: &Path, keep_awake: bool) -> Outcome<String> {
     ensure_running(home)?;
     commands::check_remote_files(home)?;
     start_tailscale(home, keep_awake)?;

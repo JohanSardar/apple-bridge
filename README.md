@@ -2,7 +2,6 @@
 
 **Give Claude Code, Codex and other agents your Mac's Messages, Mail, Calendar, Notes and more through one local MCP server.**
 
-[![Pipeline](https://gitlab.com/johansardar/apple-bridge/badges/main/pipeline.svg)](https://gitlab.com/johansardar/apple-bridge/-/pipelines)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **Privacy:** Apple Bridge reads your private messages, mail and notes. It sends nothing off your Mac unless you turn on the Tailscale route, but an agent you connect may send what it reads to its own service. Keep command output out of public logs and issues.
@@ -22,29 +21,13 @@ bridge link claude          # connect Claude Code. Or: codex, cursor, vscode, ze
 
 ### Let your agent set it up
 
-Paste this page's link into Claude Code and say "download this and turn on MCP so you can use it". Later, paste it into Grok Bot and say "set this MCP up so you can use it even when my Mac is shut". You only click Allow, or use Touch ID, when your Mac asks.
+Give your agent https://eilmer.si/applebridge/install and say "connect to Apple Bridge". The installer points straight to the [agent setup instructions](https://eilmer.si/applebridge/setup.md), also available after installation as `bridge skills get setup`.
 
-**Agents, read this.** Do every step yourself. Never give the person commands, links, codes or steps to follow, and never click Allow or type a password for them. While you wait, say only "Click Allow when your Mac asks." Run `bridge skills get setup` after installing for the full version.
+Your agent needs a tool that can run on your Mac. It installs Apple Bridge, sets up its connection and checks a real MCP read. You click Allow and grant Mac permissions; the agent must never approve them for you.
 
-On the Mac (Claude Code, Codex), run these in order and wait for each to finish. Download this repository (any branch or fork link works) and run its installer; never build from source for the person:
+For Grok Bot, the agent runs `bridge link grok-bot --json` on the Mac. That command enables private Tailscale access, asks for Allow and waits inside the command, then returns the connector URL and key. The agent configures its connector on Grok's Tailscale-connected cloud computer. The key stays private; you do not copy it yourself. The Mac must be awake and online, and any Tailscale identity sign-in belongs to you.
 
-```sh
-sh docs/install                                  # from this repository; or: curl -fsSL https://eilmer.si/applebridge/install | sh
-~/.local/bin/bridge up
-~/.local/bin/bridge permissions guide           # macOS asks; the panel closes when done
-~/.local/bin/bridge link claude                 # or codex, cursor, gemini... The Mac asks to Allow once
-~/.local/bin/bridge tailscale --keep-awake --yes   # only if they want it while away or with the lid shut
-```
-
-Then use Apple Bridge right away to answer something real, such as the person's reminder lists. If your MCP tools haven't loaded yet, use `~/.local/bin/bridge read reminders` for that first answer.
-
-Agents that aren't on the Mac (a server, another computer, Grok Bot): connect over the person's Tailscale network, so it keeps working when they're away from the Mac. No browser is needed on your side:
-
-1. Get this Mac's `connect` address. If you can run commands on the Mac (Grok Bot can, once they allow it), do the first three Mac steps above, skipping `bridge link`, then run `~/.local/bin/bridge tailscale --keep-awake --yes --json`. Otherwise ask the person to run `bridge tailscale` and give you the sentence it prints, or find it yourself: run `tailscale status --json` and, for each online macOS peer, `GET https://<its DNSName>:8443/connect` (then ports 9443 and 4443) with a 10-second timeout; the one answering `"apple_bridge": true` is it.
-2. `POST` `{"name": "<your app>"}` to its `request` address, then `POST` the returned `id` and `secret` to its `answer` address every few seconds until the person allows it on the Mac.
-3. Add the returned `mcp` address as an MCP server that sends the returned `header`, then use it to answer. An Apple Bridge server you already have may belong to another Mac; use the one you just connected.
-
-If the address never answers, the person's Tailscale rules block your device. Tell them to run `bridge tailscale` on the Mac: it names the blocked device and the rule to add.
+No new service, relay or public route is needed. Apple Bridge never changes your Tailscale access rules. [Other computers and SSH](docs/connectors/devices.md) use the same Mac approval requirement.
 
 ### Connect any agent on this Mac
 

@@ -4,6 +4,15 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- The public installer points agents to setup instructions and plain-text reference docs on eilmer.si, with the same setup guide embedded in the binary.
+- `bridge link grok-bot --json` enables private Tailscale access, waits for the owner's Allow on the Mac and returns the MCP URL, header and config. Its cloud connector can be configured without already running an approval polling process on the tailnet.
+
+### Changed
+
+- `bridge up` names the Grok Bot/Tailscale setup path. Current source, documentation and reporting links use GitHub; private vulnerability reports use GitHub security advisories.
+
 ## [0.1.8] - 2026-11-16
 
 ### Added

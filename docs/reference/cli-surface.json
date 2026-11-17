@@ -6,7 +6,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -280,7 +280,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-up",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-up",
       "lifecycle": "stable",
       "notes": [
         "Returns once the gateway is ready; syncing continues in the background. Running it again reuses the running gateway.",
@@ -419,6 +419,10 @@
           "summary": "Connect Cursor"
         },
         {
+          "command": "bridge link grok-bot --json",
+          "summary": "Connect Grok Bot over private Tailscale after Mac Allow"
+        },
+        {
           "command": "bridge link codex --print",
           "summary": "Print the setup to apply yourself"
         },
@@ -428,13 +432,13 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-link",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link",
       "lifecycle": "stable",
       "notes": [
         "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
         "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
         "Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.",
-        "Piped, stdout holds only the server name; bridge link other prints only the config."
+        "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow; keep them private."
       ],
       "options": [
         {
@@ -488,7 +492,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Stop waiting for the agent's own commands after this long (default: 30s)",
+          "summary": "Stop waiting after this long (default: 30s for local commands, 5m for Grok Bot Allow)",
           "type": "string",
           "value_hint": "<DURATION>",
           "values": []
@@ -551,6 +555,26 @@
             "name": "url",
             "secret": false,
             "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
           }
         ]
       },
@@ -588,7 +612,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-unlink",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-unlink",
       "lifecycle": "stable",
       "notes": [
         "This removes the agent's registration from Claude Code, Codex, Gemini CLI, Cursor, Zed, OpenCode or the Claude app. Remove it from other agents in their own settings.",
@@ -680,7 +704,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-mcp",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-mcp",
       "lifecycle": "stable",
       "notes": [
         "Agents launch this; you don't run it yourself. It speaks MCP as JSON lines on stdin and stdout and forwards to the Apple Bridge running on this Mac.",
@@ -700,7 +724,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-permissions",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -738,7 +762,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-guide",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-permissions-guide",
       "lifecycle": "stable",
       "notes": [
         "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
@@ -820,7 +844,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-status",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-permissions-status",
       "lifecycle": "stable",
       "notes": [
         "With --json, each permission maps to allowed, needs permission or unknown."
@@ -898,7 +922,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-permissions-request",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-permissions-request",
       "lifecycle": "stable",
       "notes": [
         "Names: contacts, calendar, reminders, photos, location, camera, microphone, screen_recording, speech_recognition, focus, automation_mail."
@@ -960,7 +984,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-stats",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-stats",
       "lifecycle": "stable",
       "notes": [
         "Counts only, never content.",
@@ -1065,7 +1089,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-down",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-down",
       "lifecycle": "stable",
       "notes": [
         "Leaves a gateway that something else started, such as the Apple Bridge app, running.",
@@ -1127,7 +1151,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-read",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-read",
       "lifecycle": "stable",
       "notes": [
         "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
@@ -1289,7 +1313,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-search",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-search",
       "lifecycle": "stable",
       "notes": [
         "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
@@ -1395,7 +1419,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-call",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-call",
       "lifecycle": "stable",
       "notes": [
         "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
@@ -1485,7 +1509,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-skills",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1517,7 +1541,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills-list",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-skills-list",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1558,7 +1582,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-skills-get",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-skills-get",
       "lifecycle": "stable",
       "notes": [
         "Prints the skill's exact Markdown."
@@ -1578,7 +1602,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1630,7 +1654,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-list",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-list",
       "lifecycle": "stable",
       "notes": [
         "Lists agents in the order they were created, oldest first, 50 at a time (--limit up to 200). --next continues; the JSON gives next_cursor, null on the last page.",
@@ -1738,7 +1762,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-create",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-create",
       "lifecycle": "stable",
       "notes": [
         "The token prints once, alone on stdout. --scope sets the agent's access grants.",
@@ -1857,7 +1881,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-inspect",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-inspect",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -1932,7 +1956,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-update",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-update",
       "lifecycle": "stable",
       "notes": [
         "A read agent can't be raised to full or approve; revoke it and create a new one.",
@@ -2020,7 +2044,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-revoke",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-revoke",
       "lifecycle": "stable",
       "notes": [
         "Asks first; without a terminal, pass --yes. The agent stays in the list, marked revoked."
@@ -2117,7 +2141,7 @@
       "deprecated": "bridge agents update <AGENT> --level <LEVEL>",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-agents-level",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-level",
       "lifecycle": "deprecated",
       "notes": [
         "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version."
@@ -2180,7 +2204,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tokens",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2218,7 +2242,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-create",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tokens-create",
       "lifecycle": "stable",
       "notes": [
         "The token prints once, alone on stdout. With --json it is in secret.",
@@ -2332,7 +2356,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-revoke",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tokens-revoke",
       "lifecycle": "stable",
       "notes": [
         "Accepts token, agent and replica IDs. Asks first; without a terminal, pass --yes."
@@ -2425,7 +2449,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tokens-update",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tokens-update",
       "lifecycle": "stable",
       "notes": [
         "Accepts token, agent and replica IDs. Adding sources asks first; without a terminal, pass --yes."
@@ -2522,7 +2546,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2558,7 +2582,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-list",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors-list",
       "lifecycle": "stable",
       "notes": [
         "Lists waiting requests, the one that expires first at the top, 50 at a time (--limit up to 200). --next continues."
@@ -2646,7 +2670,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-allow",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors-allow",
       "lifecycle": "stable",
       "notes": [
         "Only allow an app whose code matches the one on its page."
@@ -2709,7 +2733,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-deny",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors-deny",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -2765,7 +2789,7 @@
       "deprecated": "bridge connectors list",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-connectors-pending",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors-pending",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -2781,7 +2805,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2815,7 +2839,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-enroll",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-enroll",
       "lifecycle": "stable",
       "notes": [
         "The link is a one-time secret that works for 10 minutes. It uses the port the gateway listens on. Piped, stdout holds only the link and no QR code is drawn."
@@ -2878,7 +2902,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-sessions",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -2910,7 +2934,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions-list",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-sessions-list",
       "lifecycle": "stable",
       "notes": [
         "Lists browsers in the order they signed in, oldest first, 50 at a time (--limit up to 200). --next continues."
@@ -2998,7 +3022,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-sessions-revoke",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-sessions-revoke",
       "lifecycle": "stable",
       "notes": [
         "Asks first; without a terminal, pass --yes."
@@ -3043,7 +3067,7 @@
       "deprecated": "bridge web sessions revoke --all",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-lock",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-lock",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -3059,7 +3083,7 @@
       "deprecated": "bridge web sessions list",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-web-devices",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-devices",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -3084,7 +3108,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-tailscale",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tailscale",
       "lifecycle": "stable",
       "notes": [
         "Installs and starts Tailscale if needed, then turns on the Tailscale route. Only devices on your Tailscale network can reach it.",
@@ -3173,7 +3197,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-pair",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-pair",
       "lifecycle": "stable",
       "notes": [
         "The code is a secret that works until --expires-in passes. Piped, stdout holds only the code."
@@ -3300,7 +3324,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-join",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-join",
       "lifecycle": "stable",
       "notes": [
         "Piped, stdout holds only the replica's home."
@@ -3350,7 +3374,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-status",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-status",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -3388,7 +3412,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-doctor",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-doctor",
       "lifecycle": "stable",
       "notes": [
         "A finished report exits 0, even when a check fails. Pass --check to exit 1 with unhealthy_home instead."
@@ -3524,7 +3548,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-backup",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-backup",
       "lifecycle": "stable",
       "notes": [
         "Refuses an existing file unless --force, or you confirm at the prompt. The backup is written privately and moved into place whole."
@@ -3590,7 +3614,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-restore",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-restore",
       "lifecycle": "stable",
       "notes": [
         "Stop the gateway first with bridge down. Shows what will be replaced and asks; without a terminal, pass --yes."
@@ -3653,7 +3677,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-selftest",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-selftest",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -3679,7 +3703,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-selftest-messages",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-selftest-messages",
       "lifecycle": "stable",
       "notes": [
         "This sends real messages to your own chat through the Helper."
@@ -3737,7 +3761,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-shortcuts",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -3763,7 +3787,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts-install",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-shortcuts-install",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -3793,7 +3817,7 @@
       "deprecated": "bridge shortcuts install",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-shortcuts-install-pack",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-shortcuts-install-pack",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [
@@ -3839,7 +3863,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-completion",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-completion",
       "lifecycle": "stable",
       "notes": [],
       "options": [],
@@ -3871,7 +3895,7 @@
         }
       ],
       "hidden": false,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-help",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-help",
       "lifecycle": "stable",
       "notes": [],
       "options": [
@@ -3906,7 +3930,7 @@
         }
       ],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-start",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-start",
       "lifecycle": "hidden",
       "notes": [
         "Used by the Apple Bridge app's background service."
@@ -4058,7 +4082,7 @@
       "deprecated": null,
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-install-credentials",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-install-credentials",
       "lifecycle": "hidden",
       "notes": [
         "Used by the Apple Bridge app."
@@ -4101,7 +4125,7 @@
       "deprecated": "bridge tokens revoke",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-revoke",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-revoke",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [],
@@ -4147,7 +4171,7 @@
       "deprecated": "bridge tokens update",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-scope",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-scope",
       "lifecycle": "deprecated",
       "notes": [],
       "options": [
@@ -4205,7 +4229,7 @@
       "deprecated": "bridge selftest messages",
       "examples": [],
       "hidden": true,
-      "learn_more": "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md#bridge-setup",
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-setup",
       "lifecycle": "deprecated",
       "notes": [
         "This sends real messages to your own chat through the Helper."
