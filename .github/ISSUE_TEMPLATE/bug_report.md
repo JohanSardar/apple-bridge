@@ -1,3 +1,10 @@
+---
+name: Bug report
+about: Report unexpected behavior with synthetic reproduction data
+title: "bug: "
+labels: bug
+---
+
 Describe the expected and actual behavior.
 
 ## Reproduction

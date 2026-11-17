@@ -4,6 +4,10 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Changed
+
+- The project is back on GitHub at <https://github.com/JohanSardar/apple-bridge>. GitHub Actions run the Rust and Swift checks again, and the GitLab CI file and templates are removed.
+
 ## [0.1.9] - 2026-11-16
 
 ### Added

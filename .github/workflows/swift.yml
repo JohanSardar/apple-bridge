@@ -1,0 +1,58 @@
+name: Swift
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: swift-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: Swift native
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      APPLE_BRIDGE_HEAVY_SLOT: ci
+      APPLE_BRIDGE_NATIVE_LAB: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compute cache key
+        id: key
+        run: |
+          digest=$(git ls-files -s native packaging/dev/build-native.py packaging/dev/build-native.sh | shasum -a 256 | cut -c1-32)
+          echo "value=swift-$(xcrun swiftc --version | shasum -a 256 | cut -c1-12)-$digest" >> "$GITHUB_OUTPUT"
+          echo "prefix=swift-$(xcrun swiftc --version | shasum -a 256 | cut -c1-12)-" >> "$GITHUB_OUTPUT"
+      - name: Restore build cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: native/.build
+          key: ${{ steps.key.outputs.value }}
+          restore-keys: ${{ steps.key.outputs.prefix }}
+      - name: Build with warnings as errors
+        run: APPLE_BRIDGE_SDK="$(xcrun --show-sdk-path)" make native
+      - name: Run synthetic checks
+        timeout-minutes: 10
+        run: |
+          output=$(cat native/.build/native-output-1)
+          "$output/SourceSupportChecks"
+          "$output/NativeChecks" lab/fixtures/native-1/facts.json
+          "$output/CaptureChecks"
+          "$output/FilesChecks"
+          "$output/MessagesSafetyChecks"
+          "$output/SessionChecks"
+          "$output/CalendarChecks"
+      - name: Save build cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: native/.build
+          key: ${{ steps.key.outputs.value }}
