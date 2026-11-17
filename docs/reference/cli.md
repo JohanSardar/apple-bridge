@@ -109,7 +109,8 @@ Options:
   --scope <SCOPE>       Claude Code only: where Claude Code saves the registration. This isn't
                         access; you allow access on your Mac (accepted: user, project, local)
                         (default: user)
-  --timeout <DURATION>  Stop waiting for the agent's own commands after this long (default: 30s)
+  --timeout <DURATION>  Stop waiting after this long (default: 30s for local commands, 5m for Grok
+                        Bot Allow)
 
 Global options: see bridge --help
 
@@ -119,6 +120,9 @@ Examples:
 
   Connect Cursor
     bridge link cursor
+
+  Connect Grok Bot over private Tailscale after Mac Allow
+    bridge link grok-bot --json
 
   Print the setup to apply yourself
     bridge link codex --print
@@ -134,7 +138,8 @@ Notes:
   install link, and Goose opens its install link.
   Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over
   your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.
-  Piped, stdout holds only the server name; bridge link other prints only the config.
+  Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot
+  prints credentials as JSON only after Allow; keep them private.
 ```
 
 ## bridge unlink

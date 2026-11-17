@@ -14,6 +14,8 @@ pub struct Summary {
     pub code: String,
     pub show_code: bool,
     pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<String>,
     pub client_name: String,
     pub redirect_host: String,
     pub scopes: Vec<Grant>,
@@ -117,9 +119,8 @@ pub const AGENT_SERVICES: [&str; 11] = [
 struct AgentAsk {
     summary: Summary,
     secret: String,
-    resource: Option<String>,
     expires: Instant,
-    outcome: Option<Result<String, ()>>,
+    outcome: Option<bool>,
 }
 #[derive(Debug, Serialize)]
 pub struct AgentTicket {
@@ -191,6 +192,7 @@ impl Connectors {
             code: matching,
             show_code: false,
             source: source.into(),
+            resource: None,
             client_name: client.client_name.clone(),
             redirect_host: dest.authority().into(),
             access: crate::web_pages::access_sentence(&scopes),
@@ -269,7 +271,7 @@ impl Connectors {
             || name.len() > 60
             || name.chars().any(char::is_control)
             || !["this_mac", "tailnet"].contains(&source)
-            || (source == "tailnet") != resource.is_some()
+            || (source == "tailnet" && resource.is_none())
         {
             return Err(Error::Invalid);
         }
@@ -300,6 +302,7 @@ impl Connectors {
                         .collect(),
                     show_code: false,
                     source: source.into(),
+                    resource,
                     client_name: name.into(),
                     redirect_host: String::new(),
                     access: crate::web_pages::access_sentence(&scopes),
@@ -307,7 +310,6 @@ impl Connectors {
                     expires_at: expires_at.clone(),
                 },
                 secret: secret.clone(),
-                resource,
                 expires: Instant::now() + Duration::from_mins(5),
                 outcome: None,
             },
@@ -323,6 +325,14 @@ impl Connectors {
         })
     }
     pub fn agent_answer(&self, id: &str, secret: &str) -> Result<AgentAnswer, Error> {
+        self.agent_answer_at(id, secret, None)
+    }
+    pub fn agent_answer_at(
+        &self,
+        id: &str,
+        secret: &str,
+        expected_resource: Option<&str>,
+    ) -> Result<AgentAnswer, Error> {
         let mut asks = self.asks.lock().map_err(|_| Error::Unavailable)?;
         asks.retain(|_, a| a.expires > Instant::now());
         let ask = asks
@@ -337,23 +347,42 @@ impl Connectors {
                         == 0
             })
             .ok_or(Error::Unauthorized)?;
-        let answer = match &ask.outcome {
+        if expected_resource
+            .is_some_and(|expected| ask.summary.resource.as_deref() != Some(expected))
+        {
+            asks.remove(id);
+            return Err(Error::Invalid);
+        }
+        let answer = match ask.outcome {
             None => AgentAnswer {
                 state: "waiting",
                 token: None,
                 mcp: None,
                 header: None,
             },
-            Some(Ok(token)) => AgentAnswer {
-                state: "allowed",
-                token: Some(token.clone()),
-                mcp: ask.resource.clone(),
-                header: ask
-                    .resource
-                    .as_ref()
-                    .map(|_| format!("Authorization: Bearer {token}")),
-            },
-            Some(Err(())) => AgentAnswer {
+            Some(true) => {
+                let expires = jiff::Timestamp::now()
+                    .checked_add(jiff::SignedDuration::from_hours(24 * 365))
+                    .ok();
+                let (_, token) = self.authority.create_agent_for_resource(
+                    &ask.summary.client_name,
+                    ab_trust::AgentLevel::DEFAULT,
+                    ask.summary.scopes.clone(),
+                    expires,
+                    ask.summary.resource.as_deref(),
+                )?;
+                AgentAnswer {
+                    state: "allowed",
+                    mcp: ask.summary.resource.clone(),
+                    header: ask
+                        .summary
+                        .resource
+                        .as_ref()
+                        .map(|_| format!("Authorization: Bearer {token}")),
+                    token: Some(token),
+                }
+            }
+            Some(false) => AgentAnswer {
                 state: "denied",
                 token: None,
                 mcp: None,
@@ -371,23 +400,7 @@ impl Connectors {
             .get_mut(id)
             .filter(|a| a.expires > Instant::now() && a.outcome.is_none())
             .ok_or(Error::Unauthorized)?;
-        if !approve {
-            ask.outcome = Some(Err(()));
-            return Ok(());
-        }
-        let expires = jiff::Timestamp::now()
-            .checked_add(jiff::SignedDuration::from_hours(24 * 365))
-            .ok();
-        let (agent, token) = self.authority.create_agent_until(
-            &ask.summary.client_name,
-            ab_trust::AgentLevel::DEFAULT,
-            ask.summary.scopes.clone(),
-            expires,
-        )?;
-        if let Some(resource) = &ask.resource {
-            self.authority.bind_to_resource(&agent.id, resource)?;
-        }
-        ask.outcome = Some(Ok(token));
+        ask.outcome = Some(approve);
         Ok(())
     }
     pub fn decide(&self, id: &str, matching: &str, approve: bool) -> Result<(), Error> {
@@ -614,6 +627,9 @@ mod tests {
             )
             .expect("ask");
         queue.decide(&ticket.id, "", true).expect("allow");
+        queue
+            .agent_answer(&ticket.id, &ticket.secret)
+            .expect("collect");
         let agents = queue.authority.agents().expect("agents");
         let grants: Vec<&str> = agents[0].grants.iter().map(Grant::as_str).collect();
         for scope in [
@@ -624,6 +640,59 @@ mod tests {
         ] {
             assert!(grants.contains(&scope), "{scope} missing from {grants:?}");
         }
+    }
+
+    #[test]
+    fn consent_without_collection_leaves_no_active_key() {
+        let (_home, queue) = queue();
+        queue.on_waiting(Arc::new(|| {}));
+        let ticket = queue
+            .ask_for_agent(
+                "Grok Bot",
+                "this_mac",
+                Some("https://mac.example.ts.net:8443/mcp".into()),
+            )
+            .expect("ask");
+        queue.decide(&ticket.id, "", true).expect("late Allow");
+        assert!(queue.authority.agents().expect("agents").is_empty());
+        queue
+            .asks
+            .lock()
+            .expect("asks")
+            .get_mut(&ticket.id)
+            .expect("request")
+            .expires = Instant::now();
+        assert!(queue.agent_answer(&ticket.id, &ticket.secret).is_err());
+        assert!(queue.authority.agents().expect("agents").is_empty());
+    }
+
+    #[test]
+    fn an_address_mismatch_after_allow_discards_consent_without_a_key() {
+        let (_home, queue) = queue();
+        queue.on_waiting(Arc::new(|| {}));
+        let resource = "https://mac.example.ts.net:8443/mcp";
+        let ticket = queue
+            .ask_for_agent("Grok Bot", "this_mac", Some(resource.into()))
+            .expect("ask");
+        let pending = queue.pending().expect("pending");
+        let shown = serde_json::to_value(&pending[0]).expect("Helper request");
+        assert_eq!(shown["resource"], resource);
+        queue.decide(&ticket.id, "", true).expect("Allow");
+        assert!(
+            queue
+                .agent_answer_at(
+                    &ticket.id,
+                    &ticket.secret,
+                    Some("https://other.example.ts.net:8443/mcp")
+                )
+                .is_err()
+        );
+        assert!(queue.authority.agents().expect("agents").is_empty());
+        assert!(
+            queue
+                .agent_answer_at(&ticket.id, &ticket.secret, Some(resource))
+                .is_err()
+        );
     }
 
     #[test]

@@ -6,8 +6,7 @@ fn push(text: &mut String, piece: &str) {
     text.push_str(piece);
 }
 
-pub const DOCS: &str =
-    "https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/reference/cli.md";
+pub const DOCS: &str = "https://eilmer.si/applebridge/docs/reference/cli.md";
 
 pub struct Leaf {
     pub path: &'static str,
@@ -111,6 +110,10 @@ const LINK_FIELDS: &[(&str, &str, bool)] = &[
     ("file", "string", false),
     ("config", "object", false),
     ("url", "string", false),
+    ("mcp", "string", false),
+    ("token", "string", false),
+    ("header", "string", false),
+    ("next", "string", false),
 ];
 
 pub const LEAVES: &[Leaf] = &[
@@ -146,6 +149,10 @@ pub const LEAVES: &[Leaf] = &[
             ("Connect Claude Code", "bridge link claude"),
             ("Connect Cursor", "bridge link cursor"),
             (
+                "Connect Grok Bot over private Tailscale after Mac Allow",
+                "bridge link grok-bot --json",
+            ),
+            (
                 "Print the setup to apply yourself",
                 "bridge link codex --print",
             ),
@@ -155,7 +162,7 @@ pub const LEAVES: &[Leaf] = &[
             "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
             "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
             "Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.",
-            "Piped, stdout holds only the server name; bridge link other prints only the config.",
+            "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow; keep them private.",
         ],
         schema: LINK_FIELDS,
     },

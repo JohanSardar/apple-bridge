@@ -1,6 +1,6 @@
 # Set up Apple Bridge on your own Mac
 
-Agents on your Mac, such as Claude Code and Codex, connect to one local address: `http://127.0.0.1:7780/mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on the Tailscale route yourself, though an agent you connect may send what it reads to its own service.
+Agents on your Mac, such as Claude Code and Codex, connect by starting `bridge mcp`. You need no account, server or domain. Apple Bridge sends nothing off your Mac unless you turn on the Tailscale route yourself, though an agent you connect may send what it reads to its own service.
 
 ## Install
 
@@ -95,7 +95,9 @@ When you allow an agent you choose nothing else: it can read and change Apple da
 
 ### Grok Bot
 
-Grok Bot can't use Apple Bridge through a custom connector on this Mac. Grok Bot starts a Command connector on Grok's own cloud computer, not on your Mac, and it calls a Remote HTTPS connector from Grok's servers, which can't reach `127.0.0.1`. On 2026-11-16 a Command connector added in Grok Bot on this Mac never started here; the bot reported that its script "doesn't exist on my computer". Grok Bot connects over your Tailscale network instead: connect its Tailscale plugin, run `bridge tailscale` and give your bot the sentence it prints ([use Apple Bridge from another computer](connectors/devices.md)). `bridge link grok-bot` says this and changes nothing.
+`bridge link grok-bot --json` runs on the Mac, turns on private Tailscale access, asks for Allow and waits up to five minutes. After you click Allow it prints the MCP URL, bearer header and config in one JSON result. The agent can configure its connector without keeping a polling process on a computer that already reaches the tailnet. Keep the output private: it contains a key. `--print` changes nothing; `--timeout 2m` limits the approval wait.
+
+Grok Bot's connector runs on its cloud computer. Its Tailscale plugin must connect that computer to your private network. A Mac-local stdio command or a public HTTPS connector outside the tailnet cannot reach the bridge. See [other devices](connectors/devices.md) and the [instructions your agent can read](https://eilmer.si/applebridge/setup.md).
 
 ## Other apps and bots
 

@@ -2,7 +2,7 @@ use crate::Error;
 use ab_frontdoor::web_connector::Connectors;
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{Extension, State},
     http::StatusCode,
     routing::{get, post},
 };
@@ -54,6 +54,22 @@ struct Answer {
     id: String,
     secret: String,
 }
+#[derive(Deserialize)]
+struct TailnetAnswer {
+    id: String,
+    secret: String,
+    resource: String,
+}
+async fn answer_tailnet(
+    State(connectors): State<Arc<Connectors>>,
+    Json(input): Json<TailnetAnswer>,
+) -> Result<Json<Value>, StatusCode> {
+    connectors
+        .agent_answer_at(&input.id, &input.secret, Some(&input.resource))
+        .and_then(|answer| serde_json::to_value(answer).map_err(|_| ab_trust::Error::Unavailable))
+        .map(Json)
+        .map_err(|_| StatusCode::GONE)
+}
 async fn ask(
     State(connectors): State<Arc<Connectors>>,
     Json(input): Json<Ask>,
@@ -64,6 +80,25 @@ async fn ask(
         .map(Json)
         .map_err(|_| StatusCode::BAD_REQUEST)
 }
+async fn ask_tailnet(
+    State(connectors): State<Arc<Connectors>>,
+    Extension(home): Extension<std::path::PathBuf>,
+    Json(input): Json<Ask>,
+) -> Result<Json<Value>, StatusCode> {
+    let status = ab_remote::state::status(&home).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let route = status
+        .routes
+        .get(ab_remote::state::ROUTE)
+        .filter(|route| route.state == "on" && route.url.starts_with("https://"))
+        .ok_or(StatusCode::CONFLICT)?;
+    let resource = format!("{}/mcp", route.url.trim_end_matches('/'));
+    connectors
+        .ask_for_agent(&input.name, "this_mac", Some(resource))
+        .and_then(|ticket| serde_json::to_value(ticket).map_err(|_| ab_trust::Error::Unavailable))
+        .map(Json)
+        .map_err(|_| StatusCode::BAD_REQUEST)
+}
+
 async fn answer(
     State(connectors): State<Arc<Connectors>>,
     Json(input): Json<Answer>,
@@ -77,8 +112,24 @@ async fn answer(
 pub async fn ask_for_agent(home: &Path, name: &str) -> Result<Value, Error> {
     socket_post(home, "ask", &json!({"name": name})).await
 }
+pub async fn ask_for_tailnet_agent(home: &Path, name: &str) -> Result<Value, Error> {
+    socket_post(home, "ask-tailnet", &json!({"name": name})).await
+}
 pub async fn agent_answer(home: &Path, id: &str, secret: &str) -> Result<Value, Error> {
     socket_post(home, "answer", &json!({"id": id, "secret": secret})).await
+}
+pub async fn tailnet_agent_answer(
+    home: &Path,
+    id: &str,
+    secret: &str,
+    resource: &str,
+) -> Result<Value, Error> {
+    socket_post(
+        home,
+        "answer-tailnet",
+        &json!({"id": id, "secret": secret, "resource": resource}),
+    )
+    .await
 }
 async fn socket_post(home: &Path, route: &str, body: &Value) -> Result<Value, Error> {
     let client = reqwest::Client::builder()
@@ -109,11 +160,19 @@ pub async fn serve(
         .ok_or(Error::Invalid)?
         .to_owned();
     let uid = std::fs::metadata(&path)?.uid();
+    let home = path
+        .parent()
+        .and_then(Path::parent)
+        .ok_or(Error::Invalid)?
+        .to_owned();
     let router = Router::new()
         .route("/pending", get(pending))
         .route("/decision", post(decide))
         .route("/ask", post(ask))
+        .route("/ask-tailnet", post(ask_tailnet))
         .route("/answer", post(answer))
+        .route("/answer-tailnet", post(answer_tailnet))
+        .layer(Extension(home))
         .with_state(connectors);
     let mut tasks = tokio::task::JoinSet::new();
     loop {

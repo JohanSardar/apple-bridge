@@ -473,6 +473,7 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
             "restart_needed": older.is_some(),
             "next": [
                 Step::new("Connect Claude Code", ["bridge", "link", "claude"]).to_json(),
+                Step::new("Connect Grok Bot through private Tailscale", ["bridge", "link", "grok-bot", "--json"]).to_json(),
                 Step::new("Check that it's healthy", ["bridge", "status"]).to_json(),
             ],
         }));
@@ -502,6 +503,9 @@ pub async fn up(home: &Path, args: &UpArgs) -> Outcome {
         ui::next_steps(&restart);
     }
     stats::print_once_stderr(home)?;
+    ui::note(
+        "For Grok Bot or another cloud agent, run bridge tailscale. Grok Bot's cloud computer must join your Tailscale network; bridge link grok-bot --json waits for Allow and returns its connector key.",
+    );
     ui::next_steps(&[
         Step::new(
             "Connect Claude Code (or: bridge link codex)",

@@ -16,7 +16,7 @@
 </a>
 <nav aria-label="Main">
 <a href="#install">Install</a>
-<a href="https://gitlab.com/johansardar/apple-bridge">Source ↗</a>
+<a href="https://github.com/JohanSardar/apple-bridge">Source ↗</a>
 </nav>
 </header>
 <main id="main">
@@ -26,7 +26,7 @@
 <p class="lead">Messages, Mail, Calendar, Notes and more — connected to Claude Code, Codex and other agents through one local MCP server.</p>
 <div class="actions">
 <a class="button" href="#install">Install Apple Bridge ↓</a>
-<a class="button secondary" href="https://gitlab.com/johansardar/apple-bridge">Explore the source ↗</a>
+<a class="button secondary" href="https://github.com/JohanSardar/apple-bridge">Explore the source ↗</a>
 </div>
 <p class="meta">Apple silicon · macOS 26 or later · Open source / MIT</p>
 </section>
@@ -44,16 +44,17 @@
 </article>
 <article>
 <h3>Keep a say</h3>
-<p>Choose Mac permissions yourself. Connected agents can read; changes require your approval by default.</p>
+<p>Choose Mac permissions yourself. Each new agent needs Allow on your Mac; an allowed agent can read and change the sources it requested.</p>
 </article>
 </div>
-<p class="meta">Availability depends on permissions and source support. <a href="https://gitlab.com/johansardar/apple-bridge/-/blob/main/features.yaml">See feature status and limits ↗</a>
+<p class="meta">Availability depends on permissions and source support. <a href="https://github.com/JohanSardar/apple-bridge/blob/main/features.yaml">See feature status and limits ↗</a>
 </p>
 </section>
 <section class="section" id="install">
 <div class="eyebrow">From terminal to connected</div>
 <h2>Start on your Mac.</h2>
-<p class="muted">Open Terminal and run the installer. No account, server or domain is needed for local use.</p>
+<p class="muted">Give your agent this link and say “connect to Apple Bridge”. It can follow the <a href="/applebridge/setup.md">agent setup instructions</a>, install on your Mac and configure its connection. You click Allow and grant Mac permissions.</p>
+<p class="meta">Agents need a tool that can run on your Mac. Grok Bot’s connector computer also needs its Tailscale plugin connected to your private network. No Apple Bridge account or hosted service.</p>
 <div class="terminal install">
 <p>1 / INSTALL · APPLE SILICON · MACOS 26+</p>
 <pre>curl -fsSL https://eilmer.si/applebridge/install | sh</pre>
@@ -83,7 +84,7 @@
 </div>
 <p class="meta">After installing, these buttons add Apple Bridge to Cursor or VS Code. Click Allow on your Mac the first time the editor starts it.</p>
 <p class="note">Apple Bridge reads private data. Local use sends nothing off your Mac, but an agent you connect may send what it reads to its own service. Remote access is optional. Review your agent’s settings before connecting.</p>
-<a href="https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/local-setup.md">Full setup, updates &amp; uninstall guide ↗</a>
+<a href="/applebridge/docs/local-setup.md">Full setup, updates &amp; uninstall guide ↗</a>
 </section>
 <section class="section">
 <h2>A few things to know.</h2>
@@ -108,7 +109,7 @@
 <footer>
 <a href="/">← All Eilmer projects</a>
 <span>Apple Bridge · Open source / MIT</span>
-<a href="https://gitlab.com/johansardar/apple-bridge/-/issues">Issues &amp; feedback ↗</a>
+<a href="https://github.com/JohanSardar/apple-bridge/issues">Issues &amp; feedback ↗</a>
 </footer>
 </body>
 </html>

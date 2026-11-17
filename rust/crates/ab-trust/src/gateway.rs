@@ -388,6 +388,20 @@ impl Authority {
         scopes: Vec<Grant>,
         expires_at: Option<jiff::Timestamp>,
     ) -> Result<(Principal, String), Error> {
+        self.create_agent_for_resource(name, level, scopes, expires_at, None)
+    }
+    pub fn create_agent_for_resource(
+        &self,
+        name: &str,
+        level: AgentLevel,
+        scopes: Vec<Grant>,
+        expires_at: Option<jiff::Timestamp>,
+        resource: Option<&str>,
+    ) -> Result<(Principal, String), Error> {
+        if resource.is_some_and(|value| !value.starts_with("https://") || !value.ends_with("/mcp"))
+        {
+            return Err(Error::Invalid);
+        }
         let name = name.trim();
         if name.is_empty() || name.len() > 120 || scopes.is_empty() {
             return Err(Error::Invalid);
@@ -416,6 +430,10 @@ impl Authority {
             revision: 1,
             ..Principal::default()
         };
+        if let Some(resource) = resource {
+            p.remote = true;
+            p.extra.insert("resource".into(), resource.into());
+        }
         p.extra.insert("name".into(), serde_json::json!(name));
         p.extra.insert(
             "created_at".into(),

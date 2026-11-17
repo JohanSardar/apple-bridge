@@ -11,8 +11,12 @@ struct ConnectorRequest: Decodable, Sendable, Equatable {
     let expires_at: String
     let show_code: Bool?
     let source: String?
+    let resource: String?
 
     var from: String {
+        if let resource {
+            return "For an agent reaching this Mac over Tailscale\nPrivate address: " + resource
+        }
         switch source {
         case "this_mac": return "Asked by an app on this Mac"
         case "tailnet": return "Asked from your Tailscale network"
@@ -66,6 +70,6 @@ struct ApprovalView: View {
 
     func detail(_ request: ConnectorRequest) -> String {
         let access = request.access.map { $0.hasSuffix(".") ? $0 : $0 + "." } ?? ""
-        return [access, request.from + "."].filter { $0.count > 1 }.joined(separator: "\n")
+        return [access, request.from + (request.resource == nil ? "." : "")].filter { $0.count > 1 }.joined(separator: "\n")
     }
 }

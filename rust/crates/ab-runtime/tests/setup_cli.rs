@@ -436,8 +436,8 @@ fn link_registers_each_agent_to_launch_bridge_mcp() -> Check {
     let config: serde_json::Value = serde_json::from_slice(&other.stdout)?;
     assert_eq!(config["mcpServers"]["apple-bridge"]["command"], bridge_path);
 
-    let grok = link(&["link", "grok-bot"])?;
-    assert_eq!(grok.status.code(), Some(1));
+    let grok = link(&["link", "grok-bot", "--print"])?;
+    assert!(grok.status.success());
     assert!(text(&grok.stderr).contains("cloud computer"));
 
     let unlink = bridge()

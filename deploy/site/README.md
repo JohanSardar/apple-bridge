@@ -27,7 +27,7 @@ It listens on loopback and rejects HTTP Host values other than `eilmer.si`.
 It serves `/` as `index.html`, `/applebridge` and `/applebridge/` as
 `applebridge/index.html`, `/assets/site.css` as `text/css`, and
 `/applebridge/install` as `text/plain; charset=utf-8` with no HTML fallback.
-Every other path returns a real 404.
+The version-matched agent instructions are served as plain text at `/applebridge/setup.md`; Markdown documentation is served at `/applebridge/docs/<path>.md`. The package includes the same setup instructions that `bridge skills get setup` prints. Unknown paths, non-Markdown docs and traversal outside that directory return a real 404.
 
 Release files are not in git and not in the staged site: they live in a
 separate folder on the server, passed as `--downloads`, so redeploying the site

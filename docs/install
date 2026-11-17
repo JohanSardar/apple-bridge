@@ -1,6 +1,8 @@
 #!/bin/sh
 # Installs Apple Bridge for this user. Run again to update.
-# https://gitlab.com/johansardar/apple-bridge/-/blob/main/docs/local-setup.md
+# Agent setup: https://eilmer.si/applebridge/setup.md
+# Given this link and asked to connect? Read that guide and perform setup yourself.
+# Grok Bot needs its cloud computer on private Tailscale; bridge link grok-bot --json waits for Mac Allow.
 set -eu
 
 VERSION=0.1.8
@@ -90,9 +92,12 @@ main() {
 
 Next:
   bridge up                   # start Apple Bridge. It asks nothing
-  bridge link claude          # connect Claude Code. Or: codex, cursor, gemini, other
+  bridge link claude          # on this Mac. Or: codex, cursor, gemini, other
+  bridge link grok-bot --json # Grok Bot: private Tailscale + Mac Allow + connector key
   bridge permissions guide    # allow the Mac permissions you want
   bridge stats --wait         # counts per source, as each one finishes
+Agent instructions: https://eilmer.si/applebridge/setup.md
+Grok Bot connectors must run on its Tailscale-connected cloud computer.
 NEXT
 }
 
