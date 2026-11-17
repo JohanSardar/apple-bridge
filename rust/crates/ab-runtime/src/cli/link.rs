@@ -314,6 +314,7 @@ async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
                 Reason::ApiError,
                 "Couldn't ask the Mac to connect Grok Bot.",
             )
+            .sentence("If Apple Bridge was updated while running, stop the older gateway with bridge down and start it with bridge up.")
             .then("Check Apple Bridge", ["bridge", "status"])
         })?;
     let id = ticket["id"].as_str().ok_or_else(|| {
