@@ -4,6 +4,8 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-11-18
+
 ### Changed
 
 - Agents name operations as `app.verb_object` over MCP, and `apple_read` and `apple_change` list every operation the agent may run in their schema. Lists are `.list` (`reminders.list`, `calendar.list`, `messages.list`), Screen Time is `screentime.summary`, and operations about Apple Bridge itself start with `bridge.` (`bridge.search`, `bridge.list_records`). `apple_describe` and `apple_guide` start with a short overview, and each operation they describe comes with a one-line summary, its arguments and an example call ([ADR 0038](docs/adr/0038-agent-operation-names.md)).
