@@ -82,6 +82,10 @@ struct CalendarChecks {
         precondition(CalendarTime.identity("series", occurrence: sameOriginal) == original)
         precondition(original != CalendarTime.identity("series", occurrence: after))
         precondition(CalendarTime.identity("single", occurrence: nil) == "single")
-        print("Calendar time checks passed: chunk coverage, leap/DST days, wall time, floating dates, recurrence end bounds, occurrence identity")
+        let lastSecond = try CalendarTime.date("2026-11-18", allDay: true, zone: calendar.timeZone).addingTimeInterval(-1)
+        precondition(CalendarTime.allDayEnd(lastSecond, zone: calendar.timeZone) == "2026-11-18")
+        let nextMidnight = try CalendarTime.date("2026-11-18", allDay: true, zone: calendar.timeZone)
+        precondition(CalendarTime.allDayEnd(nextMidnight, zone: calendar.timeZone) == "2026-11-18")
+        print("Calendar time checks passed: chunk coverage, leap/DST days, wall time, floating dates, all-day ends, recurrence end bounds, occurrence identity")
     }
 }

@@ -40,7 +40,9 @@ pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) ->
                         .checked_add(jiff::Span::new().days(1))
                         .map_err(|_| ErrorCode::Invalid)?;
                 }
-                s(&fields, "start") < end_day.to_string().as_str() && s(&fields, "end") > start_day
+                let first = s(&fields, "start");
+                let after = s(&fields, "end").max(first);
+                first < end_day.to_string().as_str() && (after > start_day || first == start_day)
             } else {
                 match (
                     s(&fields, "start").parse::<jiff::Timestamp>(),
