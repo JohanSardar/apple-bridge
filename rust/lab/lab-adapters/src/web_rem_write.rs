@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_lines)]
 use crate::{
     assertions::await_until,
+    containers::{Kind, Ledger},
     helper_real::truth,
     http::{Client, random_id},
 };
@@ -150,6 +151,9 @@ pub fn real(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     let _ = fs::create_dir_all(&helper);
     let _ = fs::write(helper.join("lab-pause-media"), b"paused");
     let shared: &World = world;
+    let ledger = Ledger::of(shared);
+    ledger.expect(Kind::ReminderList, &tag)?;
+    ledger.expect(Kind::ReminderList, &destination_tag)?;
     let mut run = Run {
         world: shared,
         client,
@@ -180,6 +184,7 @@ pub fn real(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     if first_id.is_empty() {
         return Ok(());
     }
+    ledger.created(Kind::ReminderList, &tag, &first_id)?;
     run.owned.push(Owned {
         id: first_id,
         list: list_name.clone(),
@@ -268,6 +273,7 @@ fn journey(
     if !list_ok {
         return Ok(());
     }
+    Ledger::of(run.world).created(Kind::ReminderList, destination_tag, &native_key)?;
     run.owned.push(Owned {
         id: native_key,
         list: destination_name.to_owned(),

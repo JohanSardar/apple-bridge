@@ -4,6 +4,7 @@ use crate::{
         Observed, await_until, false_deletion_free, gateway_aliases, read_all, record_integrity,
     },
     calendar_fixtures,
+    containers::{self, Kind, Ledger},
     http::{Client, random_id},
     replicas,
     watch::Watcher,
@@ -819,18 +820,23 @@ impl Run<'_> {
         }
         let gone = self.await_count(0);
         self.add("created_series_deleted_with_future_span", gone);
+        let ledger = Ledger::of(self.world);
+        let name = containers::title(tag);
+        if ledger.expect(Kind::Calendar, tag).is_err() {
+            return self.fail("created_calendar_ledger");
+        }
         if self
-            .submit(
-                "calendar.create_calendar",
-                &json!({"title": format!("Bridge Test {tag}")}),
-                0,
-            )
+            .submit("calendar.create_calendar", &json!({"title": name}), 0)
             .is_some()
         {
             return self.fail("create_calendar");
         }
         let seq = self.last["commit_seq"].as_u64().unwrap_or(0);
         self.add("create_calendar_observed", seq > 0);
+        let recorded = ledger
+            .record(&self.gateway, Kind::Calendar, tag, &name, &self.last)
+            .is_ok();
+        self.add("created_calendar_recorded", recorded);
         Some(())
     }
 

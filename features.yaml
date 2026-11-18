@@ -77,6 +77,7 @@ features:
       - {id: LAB-TRUTH-MULTIPLICITY, levels: [sim]}
       - {id: LAB-MALFORMED-SCENARIO, levels: [sim]}
       - {id: LAB-SSE, levels: [sim]}
+      - {id: LAB-CREATED-CONTAINERS, levels: [sim]}
   - id: core.replication
     title: Journal, snapshots, resumable push feed with exactly-once replica application
     requirements: [R-FULL, R-LIVE, R-RESILIENT, R-NO-FALSE-DELETE]

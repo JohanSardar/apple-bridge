@@ -11,6 +11,7 @@
 )]
 use crate::{
     assertions::{Observed, await_until, converged, gateway_aliases, read_all},
+    containers::{self, Kind, Ledger},
     http::{Client, random_id},
     replicas::{self, Endpoint},
 };
@@ -375,7 +376,9 @@ fn crud(
             .filter(|r| r["collection"] == "notes.folder")
             .filter_map(|r| r["id"].as_str().map(str::to_owned))
             .collect();
-        let folder_title = format!("Bridge Test {tag} {protocol}");
+        let folder_title = format!("{} {protocol}", containers::title(tag));
+        let ledger = Ledger::of(world);
+        ledger.expect(Kind::NotesFolder, tag)?;
         let (_, reply) = send(
             gateway,
             protocol,
@@ -392,6 +395,14 @@ fn crud(
         if !observed {
             return Ok(());
         }
+        let answer = reply.as_ref().map_or(&Value::Null, |(_, v)| v);
+        add(
+            evidence,
+            &format!("{protocol}_created_folder_recorded"),
+            ledger
+                .record(gateway, Kind::NotesFolder, tag, &folder_title, answer)
+                .is_ok(),
+        );
         let mut folder = String::new();
         let visible = await_until(5, || {
             records(gateway)

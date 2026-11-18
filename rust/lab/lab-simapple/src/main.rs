@@ -2,6 +2,7 @@
 mod blobs;
 mod calendar;
 mod contacts;
+mod containers;
 mod files;
 #[cfg(test)]
 mod golden;
@@ -303,6 +304,9 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
     if route == "/contacts" {
         return contacts::control_contacts(state, tx, &input);
     }
+    if route == "/containers" {
+        return containers::control(state, tx, &input);
+    }
     if route == "/readmodels" {
         return sources::readmodels(state, tx, &input);
     }
@@ -350,6 +354,7 @@ fn control(state: &Shared, tx: &mpsc::Sender<Request>, route: &str, input: Value
                     "calendar-part-delay",
                     "external-move-before-prepare",
                     "external-edit-between-prepare-and-dispatch",
+                    containers::REFUSED,
                 ]
                 .contains(&name.as_str())
             {

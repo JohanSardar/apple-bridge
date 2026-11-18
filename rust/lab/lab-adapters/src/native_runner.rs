@@ -1,5 +1,6 @@
 use crate::{
     assertions::{Visibility, await_until, gateway_aliases, record_multiset, truth_records},
+    containers::{self, Kind, Ledger},
     http::{Client, random_id},
     journey::{GATEWAY_SCOPE, all_endpoints, gateway_client, records},
     replicas::{self, Endpoint},
@@ -242,7 +243,7 @@ impl Native<'_> {
         let proceed = match id {
             "REM-CREATE-EXTERNAL" => self.create_external(&title, out),
             "REM-LIST-MANAGE" => self.list_manage(&tag, out)?,
-            "REM-LIST-CREATE" | "REM-LIST-LOST-ACK" => self.list_create(id, out)?,
+            "REM-LIST-CREATE" | "REM-LIST-LOST-ACK" => self.list_create(id, &tag, out)?,
             "REM-PERMISSION-LOSS" => self.permission_loss(&title, out)?,
             _ => self.reminder_flow(id, &tag, title, out)?,
         };
@@ -305,13 +306,19 @@ impl Native<'_> {
     }
 
     fn list_manage(&self, tag: &str, out: &mut Out) -> Result<bool> {
-        let name = format!("Bridge Test {tag}");
-        if self
-            .submit("reminders.create_list", &json!({"title": name}), 0)?
-            .is_none()
-        {
+        let name = containers::title(tag);
+        let ledger = Ledger::of(self.world);
+        ledger.expect(Kind::ReminderList, tag)?;
+        let Some(created) = self.submit("reminders.create_list", &json!({"title": name}), 0)?
+        else {
             return Ok(out.fail("create_owned_list"));
-        }
+        };
+        out.add(
+            "created_list_recorded",
+            ledger
+                .record(&self.gateway, Kind::ReminderList, tag, &name, &created)
+                .is_ok(),
+        );
         let mut owned = None;
         if !await_until(3, || {
             owned = find(&self.gateway, REMINDER_LIST, &name);
@@ -372,8 +379,11 @@ impl Native<'_> {
         Ok(true)
     }
 
-    fn list_create(&self, id: &str, out: &mut Out) -> Result<bool> {
+    fn list_create(&self, id: &str, tag: &str, out: &mut Out) -> Result<bool> {
         let lost = id == "REM-LIST-LOST-ACK";
+        let name = containers::title(tag);
+        let ledger = Ledger::of(self.world);
+        ledger.expect(Kind::ReminderList, tag)?;
         if lost {
             let armed = self
                 .world
@@ -388,7 +398,7 @@ impl Native<'_> {
                 return Ok(out.fail("arm_lost_list_outcome"));
             }
         }
-        let submitted = self.submit("reminders.create_list", &json!({"title": LIST}), 0)?;
+        let submitted = self.submit("reminders.create_list", &json!({"title": name}), 0)?;
         if lost {
             out.add("list_response_ambiguous", submitted.is_none());
             let paused = self
@@ -406,7 +416,19 @@ impl Native<'_> {
         }
         out.add(
             "list_visible",
-            await_until(3, || find(&self.gateway, REMINDER_LIST, LIST).is_some()),
+            await_until(3, || find(&self.gateway, REMINDER_LIST, &name).is_some()),
+        );
+        out.add(
+            "created_list_recorded",
+            ledger
+                .record(
+                    &self.gateway,
+                    Kind::ReminderList,
+                    tag,
+                    &name,
+                    submitted.as_ref().unwrap_or(&Value::Null),
+                )
+                .is_ok(),
         );
         Ok(true)
     }
