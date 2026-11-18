@@ -5,8 +5,8 @@
 # Grok Bot needs its cloud computer on private Tailscale; bridge link grok-bot --json waits for Mac Allow.
 set -eu
 
-VERSION=0.1.10
-SHA256=d15654e96f0c61b7299c2b96ab19f38d2a3af7b3f453b8adbcc35a63205de85c
+VERSION=0.1.11
+SHA256=480ce5369e6e8f8333905c9f803aceddfe2250b4fbbdb0c7805a26a7fa9cf615
 URL=https://eilmer.si/applebridge/download/v$VERSION/applebridge-$VERSION.tgz
 
 fail() {
