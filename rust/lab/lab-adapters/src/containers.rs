@@ -10,6 +10,7 @@ use std::{collections::BTreeMap, fs, os::unix::fs::PermissionsExt, path::PathBuf
 
 pub const CHECK: &str = "created_containers_removed";
 pub const SCENARIO: &str = "LAB-CREATED-CONTAINERS";
+const UNREADABLE: &str = "the run record of created containers could not be read";
 const SCOPE: &str = "calendar:read,calendar:write,reminders:read,reminders:write,notes:read,notes:write,system:read";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -96,8 +97,12 @@ impl Ledger {
         }
     }
     fn load(&self) -> Result<Entries> {
-        let Ok(bytes) = fs::read(&self.path) else {
-            return Ok(Entries::default());
+        let bytes = match fs::read(&self.path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Entries::default());
+            }
+            Err(error) => return Err(error.into()),
         };
         let value: Value = serde_json::from_slice(&bytes)?;
         let kind = |entry: &Value| {
@@ -244,21 +249,20 @@ impl Ledger {
             .collect()
     }
     pub fn settle(&self, world: &World, evidence: &mut Evidence, check: &str) -> Result<()> {
-        self.report(world, evidence, check, true)
+        self.report(world, evidence, check, true);
+        Ok(())
     }
     pub fn audit(&self, world: &World, evidence: &mut Evidence, check: &str) -> Result<()> {
-        self.report(world, evidence, check, false)
+        self.report(world, evidence, check, false);
+        Ok(())
     }
-    fn report(
-        &self,
-        world: &World,
-        evidence: &mut Evidence,
-        check: &str,
-        remove: bool,
-    ) -> Result<()> {
-        let entries = self.load()?;
+    fn report(&self, world: &World, evidence: &mut Evidence, check: &str, remove: bool) {
+        let Ok(entries) = self.load() else {
+            evidence.check(check, false, UNREADABLE);
+            return;
+        };
         if entries.expected.is_empty() {
-            return Ok(());
+            return;
         }
         let failures = if remove {
             entries
@@ -275,7 +279,7 @@ impl Ledger {
                 "created containers could not be observed after cleanup",
             );
             evidence.passed = false;
-            return Ok(());
+            return;
         };
         let left: u64 = counts.values().sum();
         let mut detail: Vec<String> = counts
@@ -284,7 +288,6 @@ impl Ledger {
             .collect();
         detail.push(format!("removal_failures={failures}"));
         evidence.check(check, failures == 0 && left == 0, &detail.join(" "));
-        Ok(())
     }
 }
 
@@ -414,6 +417,21 @@ pub fn scenario(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result
         "preexisting_containers_untouched",
         &untouched,
         "calendar=1 reminder_list=1 notes_folder=1 removal_failures=0",
+    );
+    let corrupt = Ledger::named(world, "corrupt-record");
+    fs::write(&corrupt.path, b"{\"created\": [")?;
+    let mut garbled = probe(evidence);
+    corrupt.settle(world, &mut garbled, CHECK)?;
+    caught(evidence, "corrupt_record_fails_check", &garbled, UNREADABLE);
+    let blocked = Ledger::named(world, "unreadable-record");
+    fs::create_dir(&blocked.path)?;
+    let mut unreadable = probe(evidence);
+    blocked.settle(world, &mut unreadable, CHECK)?;
+    caught(
+        evidence,
+        "unreadable_record_fails_check",
+        &unreadable,
+        UNREADABLE,
     );
     Ok(())
 }
