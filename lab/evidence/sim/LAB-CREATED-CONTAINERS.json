@@ -6,8 +6,8 @@
  "scenario": "LAB-CREATED-CONTAINERS",
  "level": "sim",
  "passed": true,
- "git_sha": "9adc128ca3ee8633c27e88a93bc14cc56d063b4d",
- "at": "2026-11-18T02:00:01Z",
+ "git_sha": "46410545e971677b00cc93ebb57d7683097fc047",
+ "at": "2026-11-18T03:58:31Z",
  "hosts": [
   "macos"
  ],
@@ -56,6 +56,16 @@
    "name": "preexisting_containers_untouched",
    "passed": true,
    "detail": "calendar=1 reminder_list=1 notes_folder=1 removal_failures=0"
+  },
+  {
+   "name": "corrupt_record_fails_check",
+   "passed": true,
+   "detail": "the run record of created containers could not be read"
+  },
+  {
+   "name": "unreadable_record_fails_check",
+   "passed": true,
+   "detail": "the run record of created containers could not be read"
   },
   {
    "name": "created_containers_removed",
