@@ -853,6 +853,10 @@ pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
         ));
     }
     let json = Modes::get().json;
+    if args.answers {
+        answers(home, json);
+        return Ok(());
+    }
     if args.follow {
         let timeout = follow_limit(timeout)?;
         if json {
@@ -893,9 +897,96 @@ pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
     Ok(())
 }
 
+#[derive(Debug, Default, Serialize)]
+struct AnswerSizes {
+    tool: String,
+    operation: String,
+    calls: u64,
+    median_bytes: u64,
+    largest_bytes: u64,
+    largest_tokens: u64,
+}
+
+fn answer_sizes(log: &str) -> Vec<AnswerSizes> {
+    let mut seen: BTreeMap<(String, String), Vec<u64>> = BTreeMap::new();
+    for line in log.lines() {
+        let Ok(entry) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        let (Some(bytes), Some(route)) = (entry["answer_bytes"].as_u64(), entry["route"].as_str())
+        else {
+            continue;
+        };
+        let mut words = route.split(' ').skip(1);
+        let tool = words.next().unwrap_or_default().to_owned();
+        let operation = words.next().unwrap_or_default().to_owned();
+        seen.entry((tool, operation)).or_default().push(bytes);
+    }
+    let mut sizes: Vec<AnswerSizes> = seen
+        .into_iter()
+        .map(|((tool, operation), mut bytes)| {
+            bytes.sort_unstable();
+            let largest = bytes.last().copied().unwrap_or_default();
+            AnswerSizes {
+                tool,
+                operation,
+                calls: bytes.len() as u64,
+                median_bytes: bytes[bytes.len() / 2],
+                largest_bytes: largest,
+                largest_tokens: (largest * 10).div_ceil(35),
+            }
+        })
+        .collect();
+    sizes.sort_by_key(|size| std::cmp::Reverse(size.largest_bytes));
+    sizes
+}
+
+fn answers(home: &Path, json: bool) {
+    let log = std::fs::read_to_string(home.join("frontdoor-audit.jsonl")).unwrap_or_default();
+    let sizes = answer_sizes(&log);
+    if json {
+        ui::json_document(json!({"answers": sizes}));
+        return;
+    }
+    if sizes.is_empty() {
+        ui::err_line("No agent answers recorded yet.");
+        return;
+    }
+    ui::outln("Largest agent answers (about 3.5 bytes per token):");
+    for size in sizes.iter().take(15) {
+        ui::outln(&format!(
+            "  {:<16} {:<24} {:>6} calls  median {:>7} bytes  largest {:>8} bytes (~{} tokens)",
+            size.tool,
+            size.operation,
+            thousands(i64::try_from(size.calls).unwrap_or(i64::MAX)),
+            thousands(i64::try_from(size.median_bytes).unwrap_or(i64::MAX)),
+            thousands(i64::try_from(size.largest_bytes).unwrap_or(i64::MAX)),
+            thousands(i64::try_from(size.largest_tokens).unwrap_or(i64::MAX)),
+        ));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn answer_sizes_rank_tools_by_their_largest_answer() {
+        let log = [
+            r#"{"principal":"a","method":"POST","route":"/mcp","status":200}"#,
+            r#"{"principal":"a","method":"MCP","route":"tools/call apple_read notes.list ok","status":200,"answer_bytes":7000}"#,
+            r#"{"principal":"a","method":"MCP","route":"tools/call apple_read notes.list ok","status":200,"answer_bytes":3000}"#,
+            r#"{"principal":"a","method":"MCP","route":"tools/call calendar_events calendar.agenda ok","status":200,"answer_bytes":900}"#,
+        ]
+        .join("\n");
+        let sizes = answer_sizes(&log);
+        assert_eq!(sizes.len(), 2);
+        assert_eq!(sizes[0].operation, "notes.list");
+        assert_eq!(sizes[0].calls, 2);
+        assert_eq!(sizes[0].largest_bytes, 7000);
+        assert_eq!(sizes[0].largest_tokens, 2000);
+        assert_eq!(sizes[1].tool, "calendar_events");
+    }
 
     fn source(name: &str, state: &str, total: i64) -> SourceStats {
         SourceStats {

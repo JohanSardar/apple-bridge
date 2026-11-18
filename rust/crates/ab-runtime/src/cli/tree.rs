@@ -352,6 +352,12 @@ pub struct StatsArgs {
     pub settle: String,
     #[arg(short = 'a', long, help = "Include sources with nothing synced")]
     pub all: bool,
+    #[arg(
+        long,
+        conflicts_with_all = ["follow", "wait", "watch"],
+        help = "Show the largest answers agents got over MCP, per tool, as sizes only"
+    )]
+    pub answers: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]

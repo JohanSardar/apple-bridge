@@ -230,12 +230,17 @@ pub const LEAVES: &[Leaf] = &[
                 "Stream sync events as JSON lines for 5 minutes",
                 "bridge stats --follow --timeout 5m --json",
             ),
+            (
+                "See which MCP tools gave agents the largest answers",
+                "bridge stats --answers",
+            ),
         ],
         notes: &[
             "Counts only, never content.",
             "--wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention, such as a missing permission, or when --timeout (default 10m) passes first; syncing continues either way.",
             "--follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
             "With --json, --wait and --follow print one JSON event per line; warnings arrive as {\"type\":\"warning\"} lines.",
+            "--answers reads the gateway's MCP audit log: per tool and operation, the number of calls and the median and largest answer size. Sizes only, never content.",
         ],
         schema: &[("sources", "array", false), ("total", "number", false)],
     },
