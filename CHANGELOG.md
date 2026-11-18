@@ -4,9 +4,22 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-11-17
+
 ### Changed
 
+- Agents get small answers over MCP. A default read stays under about 2,000 tokens and a larger one the agent asks for under about 8,000; on the owner's Mac, the notes list went from 1.2 MB to 7 KB, today's reminders from 49 KB to 1.6 KB and unread chats from 32 KB to 1 KB. Lists default to 20 items, at most 100, and carry `page` with `total`, `returned`, `truncated` and `next`. Anything left out to fit is named in `cut`. A read of one whole record, mail body, file or blob chunk is never trimmed ([ADR 0037](docs/adr/0037-small-agent-answers.md)).
+- Defaults answer the usual question: chat lists leave out spam and senders not in Contacts, and counts them in `omitted`; today's reminders split into due today, overdue and upcoming; the notes list returns titles and previews, not bodies; `calendar_events`, `contacts_find` and `apple_search` return short cards.
 - The project is back on GitHub at <https://github.com/JohanSardar/apple-bridge>. GitHub Actions run the Rust and Swift checks again, and the GitLab CI file and templates are removed.
+
+### Added
+
+- `bridge stats --answers` ranks the MCP tools by the largest answers agents got, with call counts and medians. Sizes only, never content.
+
+### Fixed
+
+- A calendar read for one day lists the all-day and multi-day events that cover it. A multi-day event stored before this version can still be missing on its last day until the Helper captures it again.
+- Lab runs on a real Mac remove every calendar, reminder list and notes folder they create, and fail if any is left behind.
 
 ## [0.1.9] - 2026-11-16
 
