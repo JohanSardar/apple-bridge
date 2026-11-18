@@ -325,16 +325,13 @@ fn notes_view(raw: &Value, window: Window) -> Value {
         },
         "Folders are listed in full up to 100.",
     );
-    let mut value = json!({
+    json!({
         "notes": notes,
         "page": page,
         "folders": folders,
+        "folders_page": folder_page,
         "next": "Read one note's full text with apple_read records.get and its id.",
-    });
-    if folder_page["truncated"] == true {
-        value["folders_page"] = folder_page;
-    }
-    value
+    })
 }
 
 pub(crate) fn search_card(record: &Value) -> Value {

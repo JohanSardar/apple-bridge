@@ -124,7 +124,9 @@ pub(crate) async fn call(
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
     };
     let mut outcome = result.unwrap_or_else(|problem| Outcome::fail(&problem));
-    crate::mcp_answer::fit(&mut outcome.value, crate::mcp_answer::budget(tool, &input));
+    if !crate::mcp_answer::whole(tool, &input) {
+        crate::mcp_answer::fit(&mut outcome.value, crate::mcp_answer::budget(tool, &input));
+    }
     outcome
 }
 

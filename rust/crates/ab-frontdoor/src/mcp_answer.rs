@@ -60,12 +60,19 @@ pub(crate) fn asks_for_more(input: &Map<String, Value>) -> bool {
             .is_some_and(|n| n > DEFAULT_ITEMS as u64)
 }
 
-pub(crate) fn budget(tool: &str, input: &Map<String, Value>) -> usize {
-    let single = tool == "apple_read"
+pub(crate) fn whole(tool: &str, input: &Map<String, Value>) -> bool {
+    matches!(
+        tool,
+        "blobs_read" | "files_read" | "mail_body" | "records_get"
+    ) || (tool == "apple_read"
         && matches!(
             input.get("operation").and_then(Value::as_str),
-            Some("records.get" | "records_get" | "mail.body" | "mail_body" | "files.read")
-        );
+            Some("records.get" | "mail.body" | "files.read" | "blobs.read")
+        ))
+}
+
+pub(crate) fn budget(tool: &str, input: &Map<String, Value>) -> usize {
+    let single = whole(tool, input);
     let documentation = matches!(tool, "apple_describe" | "apple_guide");
     let batch = tool == "apple_read" && input.contains_key("reads");
     let wide = input
@@ -269,10 +276,11 @@ fn label(path: &str) -> String {
     path.trim_start_matches('/').replace('/', ".")
 }
 
-fn largest(value: &mut Value) -> Option<Largest<'_>> {
+fn largest<'a>(value: &'a mut Value, settled: &[String]) -> Option<Largest<'a>> {
     let mut arrays = Vec::new();
     let mut texts = Vec::new();
     find(value, "", &mut arrays, &mut texts);
+    texts.retain(|(_, path)| !settled.contains(path));
     let array = arrays.into_iter().max_by_key(|(size, _)| *size);
     let text = texts.into_iter().max_by_key(|(size, _)| *size);
     let prefer_text = match (&array, &text) {
@@ -298,6 +306,8 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
     let limit = bytes_for(budget);
     let mut dropped: Map<String, Value> = Map::new();
     let mut shortened: Vec<Value> = Vec::new();
+    let mut settled: Vec<String> = Vec::new();
+    let mut unpaged = false;
     for _ in 0..256 {
         let size = serde_json::to_vec(value).map_or(0, |b| b.len());
         let reserve = 400;
@@ -305,7 +315,7 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
             break;
         }
         let excess = size + reserve - limit;
-        match largest(value) {
+        match largest(value, &settled) {
             Some(Largest::Array(items, path)) => {
                 let mut removed = 0;
                 let mut count = 0;
@@ -318,13 +328,16 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
                 let key = label(&path);
                 let before = dropped.get(&key).and_then(Value::as_u64).unwrap_or(0);
                 dropped.insert(key, json!(before + count as u64));
-                adjust_page(value, &path, count);
+                if !adjust_page(value, &path, count) {
+                    unpaged = true;
+                }
             }
             Some(Largest::Text(text, path)) => {
                 let chars = text.chars().count();
                 let keep = chars.saturating_sub(excess + 8).max(LONG_TEXT / 2);
                 if keep >= chars {
-                    break;
+                    settled.push(path);
+                    continue;
                 }
                 let (kept, _) = clip(text, keep);
                 *text = kept;
@@ -346,6 +359,11 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
     if !dropped.is_empty() {
         cut["dropped_items"] = Value::Object(dropped);
     }
+    if unpaged {
+        cut["unpaged"] = json!(
+            "Some dropped items are in a list without page; ask without verbose, or with a smaller limit or narrower arguments, to see them."
+        );
+    }
     if !shortened.is_empty() {
         cut["shortened_text"] = Value::Array(shortened);
     }
@@ -356,17 +374,20 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
     }
 }
 
-fn adjust_page(value: &mut Value, path: &str, count: usize) {
+fn adjust_page(value: &mut Value, path: &str, count: usize) -> bool {
     let Some((parent, key)) = path.rsplit_once('/') else {
-        return;
+        return false;
     };
     let Some(parent) = value.pointer_mut(parent) else {
-        return;
+        return false;
     };
     let Some(container) = parent.as_object_mut() else {
-        return;
+        return false;
     };
-    let target = if container.get("page").is_some() {
+    let own = format!("{key}_page");
+    let target = if container.contains_key(&own) {
+        container.get_mut(&own)
+    } else if container.get("page").is_some() {
         container.get_mut("page")
     } else {
         container
@@ -374,7 +395,7 @@ fn adjust_page(value: &mut Value, path: &str, count: usize) {
             .and_then(|pages| pages.get_mut(key))
     };
     let Some(info) = target.and_then(Value::as_object_mut) else {
-        return;
+        return false;
     };
     let returned = info
         .get("returned")
@@ -383,29 +404,25 @@ fn adjust_page(value: &mut Value, path: &str, count: usize) {
         .saturating_sub(count as u64);
     info.insert("returned".into(), json!(returned));
     info.insert("truncated".into(), json!(true));
-    match info
+    let resumable = info
         .get("next")
-        .map(|next| next.get("offset").and_then(Value::as_u64))
-    {
-        Some(Some(next)) => {
-            let start = next.saturating_sub(returned + count as u64);
-            info.insert("next".into(), json!({"offset": start + returned}));
-        }
-        Some(None) => {
-            let left_out = info
-                .get("left_out")
-                .and_then(Value::as_u64)
-                .unwrap_or_default()
-                + count as u64;
-            info.insert("left_out".into(), json!(left_out));
-            info.insert(
-                "gap".into(),
-                json!("left_out items were dropped to fit; ask again with a smaller limit to see them."),
-            );
-        }
-        None => {
-            let start = info.get("offset").and_then(Value::as_u64).unwrap_or(0);
-            info.insert("next".into(), json!({"offset": start + returned}));
-        }
+        .is_none_or(|next| next.get("offset").and_then(Value::as_u64).is_some());
+    if resumable {
+        let start = info.get("offset").and_then(Value::as_u64).unwrap_or(0);
+        info.insert("next".into(), json!({"offset": start + returned}));
+    } else {
+        let left_out = info
+            .get("left_out")
+            .and_then(Value::as_u64)
+            .unwrap_or_default()
+            + count as u64;
+        info.insert("left_out".into(), json!(left_out));
+        info.insert(
+            "gap".into(),
+            json!(
+                "left_out items were dropped to fit; ask again with a smaller limit to see them."
+            ),
+        );
     }
+    true
 }

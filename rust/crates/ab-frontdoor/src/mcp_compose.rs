@@ -563,6 +563,14 @@ impl Call<'_> {
         if !complete {
             page["total"] = json!(format!("more than {}", page["total"]));
             page["scanned"] = json!(chats.len());
+            page["truncated"] = json!(true);
+            if page.get("next").is_none() {
+                let mut arguments = json!({"after": after});
+                if !filter.is_empty() {
+                    arguments["filter"] = json!(filter);
+                }
+                page["next"] = json!({"tool": "apple_read", "arguments": {"operation": "messages.chats", "arguments": arguments}});
+            }
         }
         let mut value = json!({
             "chats": kept,
@@ -825,12 +833,18 @@ impl Call<'_> {
             "complete": complete,
             "page": crate::mcp_answer::cursor_page(
                 count,
-                (!more.is_empty()).then(|| json!({"sources": "one key of more", "after": "its value"})),
+                more.iter()
+                    .find(|(source, _)| source.as_str() != "contacts")
+                    .map(|(source, after)| json!({"arguments": {"sources": [source], "after": after}})),
                 None,
                 "Pass sources to search fewer places, or more specific words.",
             ),
             "next": next,
         });
+        if !more.is_empty() {
+            value["page"]["truncated"] = json!(true);
+            value["page"]["gap"] = json!("more lists every source with further matches.");
+        }
         if !skipped.is_empty() {
             value["skipped"] = Value::Object(skipped);
         }

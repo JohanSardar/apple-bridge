@@ -392,6 +392,14 @@ fn pages_are_declared(value: &Value, path: &str, problems: &mut Vec<String>) {
             {
                 problems.push(format!("{path}.cut has no reason"));
             }
+            if fields.get("cut").is_some_and(|cut| {
+                cut.get("dropped_items").is_some() && cut.get("unpaged").is_none()
+            }) && !Value::Object(fields.clone())
+                .to_string()
+                .contains("\"truncated\":true")
+            {
+                problems.push(format!("{path} dropped items without a truncated page"));
+            }
             for (key, child) in fields {
                 pages_are_declared(child, &format!("{path}.{key}"), problems);
             }
@@ -684,10 +692,16 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     assert_eq!(answers[20]["page"]["offset"], 20);
 
     let body = &answers[19]["records"][0]["data"];
-    assert!(
-        body["plain_text"].as_str().is_some_and(|t| t.len() > 1000),
-        "one note returns its body"
+    let number = body["title"]
+        .as_str()
+        .and_then(|t| t.strip_prefix("Synthetic note "))
+        .ok_or("note title")?;
+    assert_eq!(
+        body["plain_text"].as_str(),
+        Some(format!("Synthetic note {number}. ").repeat(400).as_str()),
+        "one note returns its whole body"
     );
+    assert!(answers[19].get("cut").is_none());
 
     let stats = bridge(&home, &["stats", "--answers", "--json"])?;
     assert!(

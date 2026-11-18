@@ -92,15 +92,15 @@ impl ServerHandler for Handler {
                 () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
                 outcome = crate::mcp_facade::call(&self.frontdoor, principal, &request.name, arguments) => outcome,
             };
-            let (response, size) = self.compact_result(&outcome)?;
+            let encoded = self.compact_result(&outcome);
             self.frontdoor.observe_mcp(
                 principal,
                 &request.name,
                 outcome.operation.as_deref(),
                 outcome.class().as_deref(),
-                size,
+                encoded.as_ref().map_or(0, |(_, size)| *size),
             );
-            return Ok(response);
+            return encoded.map(|(response, _)| response);
         }
         self.legacy(principal, request, context).await
     }
@@ -192,37 +192,42 @@ impl Handler {
                 .unwrap_or_else(|| "error".into())
         });
 
-        let mut image = None;
-        let raw = match result {
-            Ok(value) if returns_image(&descriptor.name) => {
-                let (body, attached) = detach_image(value.get())
-                    .map_err(|_| ErrorData::internal_error("encoding", None))?;
-                image = attached;
-                body
+        let whole = crate::mcp_answer::whole(&request.name, &serde_json::Map::new());
+        let encoded = (|| -> Result<(String, serde_json::Value, Option<Image>), ErrorData> {
+            let mut image = None;
+            let raw = match result {
+                Ok(value) if returns_image(&descriptor.name) => {
+                    let (body, attached) = detach_image(value.get())
+                        .map_err(|_| ErrorData::internal_error("encoding", None))?;
+                    image = attached;
+                    body
+                }
+                Ok(value) => value.get().as_bytes().to_vec(),
+                Err(error) => serde_json::to_vec(&ab_operations::Problem { error: &error })
+                    .map_err(|_| ErrorData::internal_error("encoding", None))?,
+            };
+            let bytes = self
+                .frontdoor
+                .encode(&raw)
+                .map_err(|_| ErrorData::internal_error("encoding", None))?;
+            let mut text = String::from_utf8(bytes)
+                .map_err(|_| ErrorData::internal_error("encoding", None))?;
+            let mut structured: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|_| ErrorData::internal_error("encoding", None))?;
+            if crate::mcp_answer::tokens(&structured) > crate::mcp_answer::MAX_TOKENS && !whole {
+                crate::mcp_answer::fit(&mut structured, crate::mcp_answer::MAX_TOKENS);
+                text = structured.to_string();
             }
-            Ok(value) => value.get().as_bytes().to_vec(),
-            Err(error) => serde_json::to_vec(&ab_operations::Problem { error: &error })
-                .map_err(|_| ErrorData::internal_error("encoding", None))?,
-        };
-        let bytes = self
-            .frontdoor
-            .encode(&raw)
-            .map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let mut text =
-            String::from_utf8(bytes).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let mut structured: serde_json::Value =
-            serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        if crate::mcp_answer::tokens(&structured) > crate::mcp_answer::MAX_TOKENS {
-            crate::mcp_answer::fit(&mut structured, crate::mcp_answer::MAX_TOKENS);
-            text = structured.to_string();
-        }
+            Ok((text, structured, image))
+        })();
         self.frontdoor.observe_mcp(
             principal,
             &request.name,
             Some(&descriptor.name),
             failure.as_deref(),
-            text.len(),
+            encoded.as_ref().map_or(0, |(text, _, _)| text.len()),
         );
+        let (text, structured, image) = encoded?;
         let mut items = vec![json!({"type":"text","text":text})];
         if let Some(Image { data, mime }) = image {
             items.push(json!({"type":"image","data":data,"mimeType":mime}));

@@ -416,8 +416,8 @@ pub(crate) fn calendar(db: &Connection, visibility: &Visibility, query: &Value) 
     let start_raw = start.to_string();
     let candidates = records(
         db,
-        "SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND coalesce(json_extract(payload,'$.data.all_day'),0)=0 AND julianday(json_extract(payload,'$.data.start'))<=julianday(?) AND julianday(json_extract(payload,'$.data.end'))>=julianday(?) UNION ALL SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND json_extract(payload,'$.data.all_day')=1 AND json_extract(payload,'$.data.start')<? AND json_extract(payload,'$.data.end')>? LIMIT 10001",
-        &[&end_raw, &start_raw, &civil_end, &civil_start],
+        "SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND coalesce(json_extract(payload,'$.data.all_day'),0)=0 AND julianday(json_extract(payload,'$.data.start'))<=julianday(?) AND julianday(json_extract(payload,'$.data.end'))>=julianday(?) UNION ALL SELECT payload FROM records WHERE collection='calendar.event' AND deleted=0 AND json_extract(payload,'$.data.all_day')=1 AND json_extract(payload,'$.data.start')<? AND (json_extract(payload,'$.data.end')>? OR json_extract(payload,'$.data.start')>=?) LIMIT 10001",
+        &[&end_raw, &start_raw, &civil_end, &civil_start, &civil_start],
     )?;
     if candidates.len() > 10000 {
         return Err(ErrorCode::Capacity.into());
