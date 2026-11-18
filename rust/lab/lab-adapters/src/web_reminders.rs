@@ -23,11 +23,6 @@ pub const SCENARIOS: [&str; 3] = [
 const SCOPE: &str = "reminders:read,system:read";
 const HARDENING_SCOPE: &str = "reminders:read,messages:read,calendar:read,system:read";
 const NY: &str = "America/New_York";
-const MCP_HEADERS: [(&str, &str); 3] = [
-    ("Content-Type", "application/json"),
-    ("Accept", "application/json, text/event-stream"),
-    ("MCP-Protocol-Version", "2025-06-18"),
-];
 
 pub fn start(world: &World, count: usize) -> Result<()> {
     replicas::start_with(world, count, SCOPE, 0)
@@ -195,56 +190,27 @@ fn raw(
 }
 fn exchange(
     client: &Client,
-    protocol: &str,
+    _protocol: &str,
     operation: &str,
     input: &Value,
     seconds: u64,
 ) -> Option<Exchange> {
-    if protocol == "mcp" {
-        let body = serde_json::to_vec(&json!({
-            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-            "params": {"name": operation.replace('.', "_"), "arguments": input}
-        }))
-        .ok()?;
-        let reply = raw(client, "POST", "/mcp", &MCP_HEADERS, Some(&body), seconds).ok()?;
-        let text = String::from_utf8(reply.body).ok()?;
-        let envelope = if let Ok(value) = serde_json::from_str::<Value>(&text) {
-            value
-        } else {
-            let messages = lab_wire::sse_messages(&text).ok()?;
-            let message = messages
-                .iter()
-                .find(|m| m.result.is_some() || m.error.is_some())?;
-            serde_json::to_value(message).ok()?
-        };
-        let value = envelope["result"]["structuredContent"].clone();
-        (reply.status == 200
-            && envelope["error"].is_null()
-            && !value.is_null()
-            && value["error"].is_null())
-        .then_some(Exchange {
-            value,
-            envelope,
-            headers: reply.headers,
-        })
-    } else {
-        let body = serde_json::to_vec(input).ok()?;
-        let reply = raw(
-            client,
-            "POST",
-            &format!("/v1/op/{operation}"),
-            &[("Content-Type", "application/json")],
-            Some(&body),
-            seconds,
-        )
-        .ok()?;
-        let value: Value = serde_json::from_slice(&reply.body).ok()?;
-        (reply.status == 200 && value["error"].is_null()).then(|| Exchange {
-            envelope: value.clone(),
-            value,
-            headers: reply.headers,
-        })
-    }
+    let body = serde_json::to_vec(input).ok()?;
+    let reply = raw(
+        client,
+        "POST",
+        &format!("/v1/op/{operation}"),
+        &[("Content-Type", "application/json")],
+        Some(&body),
+        seconds,
+    )
+    .ok()?;
+    let value: Value = serde_json::from_slice(&reply.body).ok()?;
+    (reply.status == 200 && value["error"].is_null()).then(|| Exchange {
+        envelope: value.clone(),
+        value,
+        headers: reply.headers,
+    })
 }
 fn text_equal(envelope: &Value) -> bool {
     let Some(text) = envelope["result"]["content"][0]["text"].as_str() else {

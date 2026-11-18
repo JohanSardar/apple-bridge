@@ -213,6 +213,10 @@ _Avoid_: draft, pending send
 Derived, non-authoritative tables in State that answer one view (chats, thread, collection) quickly.
 _Avoid_: cache, materialized view
 
+**Operation name**:
+The `app.verb_object` name an agent uses for an operation over MCP, such as `reminders.list`. REST, the CLI and the Helper keep the catalog name, such as `reminders.items`.
+_Avoid_: alias, public name, tool name
+
 **Variant**:
 A browser-safe derivative blob of an attachment (thumb, display, video, poster, audio, live).
 _Avoid_: transcode, thumbnail cache

@@ -32,7 +32,7 @@ pub(crate) const ROUTES: &[Route] = &[
     },
     Route {
         collection: "mail.message",
-        summary: "Mail messages with sender, subject, date and mailbox; mail.body reads one in full.",
+        summary: "Mail messages with sender, subject, date and mailbox; mail.get_body reads one in full.",
         scope: "mail:read",
     },
     Route {
@@ -149,6 +149,8 @@ const PHRASES: &[(&str, &str)] = &[
     ("mark done", "complete"),
     ("mark as done", "complete"),
     ("text message", "text"),
+    ("reminder lists", "reminderlists"),
+    ("reminders lists", "reminderlists"),
 ];
 
 const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
@@ -159,48 +161,67 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
     ("conversation", &[("messages", 6)]),
     ("dm", &[("messages", 6)]),
     ("email", &[("mail", 8), ("mail.send", 10)]),
-    ("inbox", &[("mail", 8), ("records.query/mail.message", 10)]),
-    ("screentime", &[("usage.summary", 16), ("usage", 6)]),
-    ("usage", &[("usage.summary", 12)]),
-    ("spend", &[("usage.summary", 10)]),
-    ("spent", &[("usage.summary", 10)]),
-    ("phone", &[("usage.summary", 0)]),
-    ("app", &[("usage.summary", 2)]),
+    (
+        "inbox",
+        &[("mail", 8), ("bridge.list_records/mail.message", 10)],
+    ),
+    (
+        "screentime",
+        &[("screentime.summary", 16), ("screentime", 6)],
+    ),
+    ("usage", &[("screentime.summary", 12)]),
+    ("spend", &[("screentime.summary", 10)]),
+    ("spent", &[("screentime.summary", 10)]),
+    ("phone", &[("screentime.summary", 0)]),
+    ("app", &[("screentime.summary", 2)]),
     (
         "location",
-        &[("location.current", 12), ("iphone.location.current", 8)],
+        &[("location.get", 12), ("iphone.get_location", 8)],
     ),
     ("file", &[("files", 8)]),
     ("document", &[("files", 8), ("files.search", 4)]),
     ("folder", &[("files", 4)]),
-    ("voicemail", &[("records.query/voicemail.message", 18)]),
-    ("call", &[("records.query/phone.call", 14)]),
-    ("missed", &[("records.query/phone.call", 10)]),
-    ("voicememo", &[("records.query/voice_memos.recording", 18)]),
-    ("recording", &[("records.query/voice_memos.recording", 6)]),
+    (
+        "voicemail",
+        &[("bridge.list_records/voicemail.message", 18)],
+    ),
+    ("call", &[("bridge.list_records/phone.call", 14)]),
+    ("missed", &[("bridge.list_records/phone.call", 10)]),
+    (
+        "voicememo",
+        &[("bridge.list_records/voice_memos.recording", 18)],
+    ),
+    (
+        "recording",
+        &[("bridge.list_records/voice_memos.recording", 6)],
+    ),
     ("event", &[("calendar", 6)]),
     ("meeting", &[("calendar", 8), ("event", 0)]),
     ("appointment", &[("calendar", 8)]),
     ("calendar", &[("calendar", 6)]),
-    ("schedul", &[("calendar.agenda", 4)]),
-    ("busy", &[("calendar.agenda", 8)]),
-    ("free", &[("calendar.agenda", 6)]),
-    ("todo", &[("reminders", 8), ("reminders.items", 10)]),
+    ("schedul", &[("calendar.list", 4)]),
+    ("busy", &[("calendar.list", 8)]),
+    ("free", &[("calendar.list", 6)]),
+    ("todo", &[("reminders", 8), ("reminders.list", 10)]),
+    (
+        "reminderlists",
+        &[("reminders", 6), ("reminders.list_lists", 14)],
+    ),
     ("task", &[("reminders", 8)]),
     ("reminder", &[("reminders", 6)]),
     ("remind", &[("reminders.create", 12)]),
     ("contact", &[("contacts", 6)]),
-    ("person", &[("contacts.lookup", 8)]),
-    ("people", &[("contacts.lookup", 8)]),
-    ("number", &[("contacts.lookup", 8)]),
-    ("who", &[("contacts.lookup", 6)]),
-    ("birthday", &[("contacts.lookup", 4)]),
+    ("person", &[("contacts.search", 8)]),
+    ("people", &[("contacts.search", 8)]),
+    ("number", &[("contacts.search", 8)]),
+    ("who", &[("contacts.search", 6)]),
+    ("birthday", &[("contacts.search", 4)]),
     (
         "photo",
         &[
             ("photos", 6),
             ("photos.search", 8),
-            ("photos.contact_sheet", 7),
+            ("photos.preview_grid", 7),
         ],
     ),
     (
@@ -208,62 +229,62 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
         &[
             ("photos", 8),
             ("photos.search", 10),
-            ("photos.contact_sheet", 8),
+            ("photos.preview_grid", 8),
         ],
     ),
     ("pic", &[("photos", 8), ("photos.search", 10)]),
     ("image", &[("photos", 4)]),
     ("selfi", &[("photos", 8), ("photos.search", 10)]),
-    ("countr", &[("photos.places", 8)]),
-    ("travel", &[("photos.places", 8)]),
-    ("trip", &[("photos.places", 8)]),
-    ("visit", &[("photos.places", 6)]),
-    ("fre", &[("calendar.free_slots", 10)]),
+    ("countr", &[("photos.list_places", 8)]),
+    ("travel", &[("photos.list_places", 8)]),
+    ("trip", &[("photos.list_places", 8)]),
+    ("visit", &[("photos.list_places", 6)]),
+    ("fre", &[("calendar.list_free_slots", 10)]),
     ("arriv", &[("reminders.create", 10)]),
     ("leav", &[("reminders.create", 6)]),
-    ("slot", &[("calendar.free_slots", 12)]),
-    ("availabl", &[("calendar.free_slots", 10)]),
-    ("attachment", &[("messages.shared", 12)]),
-    ("pdf", &[("messages.shared", 10)]),
-    ("link", &[("messages.shared", 10)]),
-    ("shar", &[("messages.shared", 8)]),
+    ("slot", &[("calendar.list_free_slots", 12)]),
+    ("availabl", &[("calendar.list_free_slots", 10)]),
+    ("attachment", &[("messages.list_shared", 12)]),
+    ("pdf", &[("messages.list_shared", 10)]),
+    ("link", &[("messages.list_shared", 10)]),
+    ("shar", &[("messages.list_shared", 8)]),
     (
         "preview",
-        &[("photos.preview", 8), ("photos.contact_sheet", 8)],
+        &[("photos.preview", 8), ("photos.preview_grid", 9)],
     ),
     (
         "note",
         &[
             ("notes", 6),
             ("notes.list", 10),
-            ("records.query/notes.note", 9),
+            ("bridge.list_records/notes.note", 9),
         ],
     ),
     ("health", &[("health.summary", 10)]),
     ("step", &[("health.summary", 10)]),
     ("sleep", &[("health.summary", 6)]),
     ("heart", &[("health.summary", 8)]),
-    ("direction", &[("maps.directions", 10)]),
-    ("drive", &[("maps.eta", 8), ("maps.directions", 6)]),
-    ("route", &[("maps.directions", 8)]),
-    ("restaurant", &[("maps.nearby", 12)]),
-    ("nearby", &[("maps.nearby", 10)]),
-    ("alarm", &[("iphone.alarm.create", 6)]),
-    ("wake", &[("iphone.alarm.create", 10)]),
-    ("timer", &[("iphone.timer.start", 8)]),
+    ("direction", &[("maps.get_directions", 10)]),
+    ("drive", &[("maps.get_eta", 8), ("maps.get_directions", 6)]),
+    ("route", &[("maps.get_directions", 8)]),
+    ("restaurant", &[("maps.search_nearby", 12)]),
+    ("nearby", &[("maps.search_nearby", 10)]),
+    ("alarm", &[("iphone.create_alarm", 6)]),
+    ("wake", &[("iphone.create_alarm", 10)]),
+    ("timer", &[("iphone.start_timer", 8)]),
     ("notify", &[("iphone.notify", 6)]),
     ("notification", &[("iphone.notify", 6)]),
     ("react", &[("messages.react", 12)]),
     ("tapback", &[("messages.react", 12)]),
     ("speak", &[("speech.say", 12)]),
     ("say", &[("speech.say", 8)]),
-    ("ocr", &[("vision.ocr", 14)]),
+    ("ocr", &[("vision.read_text", 14)]),
     ("focus", &[("focus.set", 12)]),
-    ("battery", &[("iphone.device.status", 10)]),
-    ("block", &[("iphone.screentime.shield", 12)]),
-    ("limit", &[("iphone.screentime.schedule", 8)]),
-    ("screenshot", &[("capture.screenshot", 14)]),
-    ("unread", &[("messages", 2), ("messages.chats", 9)]),
+    ("battery", &[("iphone.get_status", 10)]),
+    ("block", &[("iphone.shield_apps", 12)]),
+    ("limit", &[("iphone.schedule_screentime", 8)]),
+    ("screenshot", &[("capture.take_screenshot", 14)]),
+    ("unread", &[("messages", 2), ("messages.list_chats", 9)]),
 ];
 
 const VERBS: &[(&str, &str)] = &[
@@ -454,19 +475,26 @@ pub(crate) fn find<'a>(
         .filter_map(|operation| {
             let points = score(
                 &words,
-                &operation.name,
+                &operation.public,
                 &operation.domain,
                 &operation.summary,
                 about(&operation.domain),
             );
-            (points > 0).then(|| (points, 0, operation.name.clone(), Hit::Operation(operation)))
+            (points > 0).then(|| {
+                (
+                    points,
+                    0,
+                    operation.public.clone(),
+                    Hit::Operation(operation),
+                )
+            })
         })
         .collect();
     for route in ROUTES {
         if principal.is_some_and(|p| !crate::mcp_registry::can(p, route.scope)) {
             continue;
         }
-        let name = format!("records.query/{}", route.collection);
+        let name = format!("bridge.list_records/{}", route.collection);
         let domain = route.collection.split('.').next().unwrap_or_default();
         let points = score(&words, &name, domain, route.summary, "");
         if points > 0 {

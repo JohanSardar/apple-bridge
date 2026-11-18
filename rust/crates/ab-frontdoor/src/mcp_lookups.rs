@@ -179,9 +179,9 @@ impl Call<'_> {
             "examined_messages": examined,
             "complete": complete,
             "next": if complete {
-                "These are all shared items of this kind in the chat, newest first. To get a file's bytes, apple_read blobs.read with record_id (the attachment_id) and digest."
+                "These are all shared items of this kind in the chat, newest first. To get a file's bytes, apple_read bridge.read_blob with record_id (the attachment_id) and digest."
             } else {
-                "Newest first; older messages were not examined. Raise scan or limit to look further back. To get a file's bytes, apple_read blobs.read with record_id (the attachment_id) and digest."
+                "Newest first; older messages were not examined. Raise scan or limit to look further back. To get a file's bytes, apple_read bridge.read_blob with record_id (the attachment_id) and digest."
             },
         }))
     }

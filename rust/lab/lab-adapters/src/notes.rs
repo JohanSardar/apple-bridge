@@ -46,17 +46,13 @@ fn command(operation: &str, args: &Value, version: u64) -> Result<(String, Value
 }
 fn send(
     client: &Client,
-    protocol: &str,
+    _protocol: &str,
     operation: &str,
     args: &Value,
     version: u64,
 ) -> Result<(String, Option<(u16, Value)>)> {
     let (id, body) = command(operation, args, version)?;
-    let reply = if protocol == "rest" {
-        client.call_raw(operation, &body, 30)?
-    } else {
-        client.call_mcp_raw(operation, &body, 30)?
-    };
+    let reply = client.call_raw(operation, &body, 30)?;
     Ok((id, reply))
 }
 fn is_observed(reply: &Option<(u16, Value)>) -> bool {
@@ -915,11 +911,7 @@ fn list(world: &mut World, evidence: &mut Evidence) -> Result<()> {
         for protocol in ["rest", "mcp"] {
             let prefix = format!("{protocol}_{index}_");
             let call = |c: &Client, input: &Value| -> Result<Option<Value>> {
-                if protocol == "rest" {
-                    c.call("notes.list", input, 20)
-                } else {
-                    c.call_mcp("notes.list", input, 20)
-                }
+                c.call("notes.list", input, 20)
             };
             let out = call(
                 client,

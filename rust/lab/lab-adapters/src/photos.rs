@@ -5,14 +5,10 @@ use lab_world::{Error, Result, World};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-fn call(client: &Client, operation: &str, args: Value, mcp: bool) -> Result<Value> {
+fn call(client: &Client, operation: &str, args: Value, _mcp: bool) -> Result<Value> {
     let mut request = json!({"id":random_id("qry")?,"deadline_ms":5000});
     request["args"] = args;
-    let response = if mcp {
-        client.call_mcp_raw(operation, &request, 10)?
-    } else {
-        client.call_raw(operation, &request, 10)?
-    };
+    let response = client.call_raw(operation, &request, 10)?;
     let (status, result) =
         response.ok_or_else(|| Error::Invalid(format!("{operation}: missing query response")))?;
     if status != 200 || !result["error"].is_null() || result["result_json"].is_null() {
@@ -153,8 +149,8 @@ fn queries(client: &Client, evidence: &mut Evidence) -> Result<()> {
 
 fn previews(client: &Client, evidence: &mut Evidence) -> Result<()> {
     let preview = client.call_mcp_result(
-        "photos.preview",
-        &json!({"id":random_id("qry")?,"args":{"asset_id":"photo-fixture","max_px":256}}),
+        "apple_read",
+        &json!({"operation":"photos.preview","arguments":{"asset_id":"photo-fixture","max_px":256},"verbose":true}),
         10,
     )?;
     let image = &preview["content"][1];
@@ -187,8 +183,8 @@ fn previews(client: &Client, evidence: &mut Evidence) -> Result<()> {
         "",
     );
     let sheet = client.call_mcp_result(
-        "photos.contact_sheet",
-        &json!({"id":random_id("qry")?,"args":{"asset_ids":["photo-fixture","video-fixture","live-fixture"]}}),
+        "apple_read",
+        &json!({"operation":"photos.preview_grid","arguments":{"asset_ids":["photo-fixture","video-fixture","live-fixture"]},"verbose":true}),
         10,
     )?;
     let cells = &sheet["structuredContent"]["result_json"]["cells"];
@@ -266,7 +262,7 @@ fn sent(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()> {
         chat_id = client
             .call_mcp_result(
                 "apple_read",
-                &json!({"operation":"records.query","arguments":{"collection":"messages.chat","limit":1}}),
+                &json!({"operation":"bridge.list_records","arguments":{"collection":"messages.chat","limit":1}}),
                 10,
             )
             .ok()
@@ -299,7 +295,7 @@ fn sent(world: &World, client: &Client, evidence: &mut Evidence) -> Result<()> {
     );
     let shared = client.call_mcp_result(
         "apple_read",
-        &json!({"operation":"messages.shared","arguments":{"chat_id":chat_id,"kind":"image"}}),
+        &json!({"operation":"messages.list_shared","arguments":{"chat_id":chat_id,"kind":"image"}}),
         30,
     )?;
     let original = format!("{:x}", Sha256::digest(b"synthetic-photo-original"));

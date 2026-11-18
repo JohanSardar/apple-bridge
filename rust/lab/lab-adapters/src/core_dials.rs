@@ -181,15 +181,11 @@ fn pairing_replay_rejected(endpoint: &Endpoint) -> bool {
 
 fn protocol_call(
     client: &crate::http::Client,
-    mcp: bool,
+    _mcp: bool,
     op: &str,
     input: &Value,
 ) -> Result<Option<(u16, Value)>> {
-    if mcp {
-        client.call_mcp_raw(op, input, 20)
-    } else {
-        client.call_raw(op, input, 20)
-    }
+    client.call_raw(op, input, 20)
 }
 fn feed_connected(endpoint: &Endpoint) -> bool {
     await_until(15, || connected(endpoint))

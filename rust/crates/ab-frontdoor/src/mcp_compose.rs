@@ -569,7 +569,7 @@ impl Call<'_> {
                 if !filter.is_empty() {
                     arguments["filter"] = json!(filter);
                 }
-                page["next"] = json!({"tool": "apple_read", "arguments": {"operation": "messages.chats", "arguments": arguments}});
+                page["next"] = json!({"tool": "apple_read", "arguments": {"operation": "messages.list_chats", "arguments": arguments}});
             }
         }
         let mut value = json!({
@@ -671,7 +671,7 @@ impl Call<'_> {
         let mut more = Map::new();
         let mut failed = false;
         if want("photos") {
-            skipped.insert("photos".into(), json!("Photos has no text search; use apple_read with photos.search filters, then photos.contact_sheet to look at them."));
+            skipped.insert("photos".into(), json!("Photos has no text search; use apple_read with photos.search filters, then photos.preview_grid to look at them."));
         }
         if want("contacts") && after.is_none() {
             if !can(self.principal, "contacts:read") {
@@ -823,7 +823,7 @@ impl Call<'_> {
             (0, true) => "No matches in the sources searched; skipped lists sources that were not searched.".to_owned(),
             (0, false) if more.is_empty() && !failed => "Nothing was found, but a source you asked for was not searched: see skipped. Do not conclude there is no match.".to_owned(),
             (0, false) => "Nothing matched in what was searched, but the search did not finish: see more and skipped. Do not conclude there is no match.".to_owned(),
-            (_, true) => "Use the ids with apple_read, such as records.get or messages.thread, for full details.".to_owned(),
+            (_, true) => "Use the ids with apple_read, such as bridge.get_record or messages.list, for full details.".to_owned(),
             (_, false) if more.is_empty() => "These are all the matches in what was searched, but a source you asked for was not searched or failed: see skipped.".to_owned(),
             (_, false) => "There are more matches: pass sources with one key from more and its value as after for the next page.".to_owned(),
         };
@@ -1292,7 +1292,7 @@ impl Call<'_> {
             [] => Err(Problem::new("not_found", format!("no {}reminder is called {title}", if completed { "completed " } else { "open " }))
                 .operation(&operation.name)
                 .field("reminder")
-                .hint("Check the title with apple_read reminders.items, then pass it or the reminder's id.")),
+                .hint("Check the title with apple_read reminders.list, then pass it or the reminder's id.")),
             many => Err(Problem::new("ambiguous", format!("{} reminders match {title}", many.len()))
                 .operation(&operation.name)
                 .field("reminder")

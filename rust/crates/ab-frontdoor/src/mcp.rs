@@ -85,9 +85,7 @@ impl ServerHandler for Handler {
             )
         })?;
         let arguments = request.arguments.clone().unwrap_or_default();
-        let legacy_shape = matches!(request.name.as_ref(), "messages_send" | "notes_create")
-            && arguments.contains_key("args");
-        if crate::mcp_registry::COMPACT.contains(&request.name.as_ref()) && !legacy_shape {
+        if crate::mcp_registry::COMPACT.contains(&request.name.as_ref()) {
             let outcome = tokio::select! {
                 () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
                 outcome = crate::mcp_facade::call(&self.frontdoor, principal, &request.name, arguments) => outcome,
@@ -102,7 +100,7 @@ impl ServerHandler for Handler {
             );
             return encoded.map(|(response, _)| response);
         }
-        self.legacy(principal, request, context).await
+        Err(unknown_tool(principal, &request.name))
     }
 }
 impl Handler {
@@ -134,113 +132,36 @@ impl Handler {
             .map(|result| (CallToolResponse::Complete(result), size))
             .map_err(|_| ErrorData::internal_error("encoding", None))
     }
+}
 
-    async fn legacy(
-        &self,
-        principal: &Principal,
-        request: CallToolRequestParams,
-        context: RequestContext<RoleServer>,
-    ) -> Result<CallToolResponse, ErrorData> {
-        let descriptors =
-            tool_descriptors().map_err(|_| ErrorData::internal_error("catalog", None))?;
-        if request.name.starts_with("usage_")
-            && !descriptors
-                .iter()
-                .any(|d| d.name.replace('.', "_") == request.name)
-        {
-            return serde_json::from_value::<rmcp::model::CallToolResult>(json!({
-                "isError": true,
-                "structuredContent": {"error": Error::from(Code::Unsupported)},
-                "content": [{"type": "text", "text": "operation unsupported"}]
-            }))
-            .map(CallToolResponse::Complete)
-            .map_err(|_| ErrorData::internal_error("encoding", None));
-        }
-        let descriptor = descriptors
-            .iter()
-            .find(|d| d.name.replace('.', "_") == request.name)
-            .ok_or_else(|| {
-                let close = crate::mcp_registry::registry().map(|registry| {
-                    let mut names: Vec<String> = crate::mcp_registry::COMPACT
-                        .iter()
-                        .filter(|tool| distance_ok(tool, &request.name))
-                        .map(|tool| (*tool).to_owned())
-                        .collect();
-                    names.extend(registry.closest(&request.name, Some(principal)));
-                    names
-                });
-                ErrorData::invalid_params(
-                    format!("unknown tool {:?}", request.name),
-                    Some(json!({
-                        "closest": close.unwrap_or_default(),
-                        "hint": "List tools with tools/list, or find an operation with apple_describe and run it with apple_read or apple_change.",
-                    })),
-                )
-            })?;
-        let input = serde_json::to_vec(&request.arguments.unwrap_or_default())
-            .map_err(|_| ErrorData::invalid_params("invalid input", None))?;
-        let started = std::time::Instant::now();
-        let result = tokio::select! {
-            () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
-            result = self.frontdoor.service.invoke(principal, &descriptor.name, &input) => result,
-        };
-        let is_error = result.is_err();
-        let failure = result.as_ref().err().map(|error| {
-            serde_json::to_value(&error.code)
-                .ok()
-                .and_then(|code| code.as_str().map(str::to_owned))
-                .unwrap_or_else(|| "error".into())
-        });
-
-        let whole = crate::mcp_answer::whole(&request.name, &serde_json::Map::new());
-        let encoded = (|| -> Result<(String, serde_json::Value, Option<Image>), ErrorData> {
-            let mut image = None;
-            let raw = match result {
-                Ok(value) if returns_image(&descriptor.name) => {
-                    let (body, attached) = detach_image(value.get())
-                        .map_err(|_| ErrorData::internal_error("encoding", None))?;
-                    image = attached;
-                    body
-                }
-                Ok(value) => value.get().as_bytes().to_vec(),
-                Err(error) => serde_json::to_vec(&ab_operations::Problem { error: &error })
-                    .map_err(|_| ErrorData::internal_error("encoding", None))?,
-            };
-            let bytes = self
-                .frontdoor
-                .encode(&raw)
-                .map_err(|_| ErrorData::internal_error("encoding", None))?;
-            let mut text = String::from_utf8(bytes)
-                .map_err(|_| ErrorData::internal_error("encoding", None))?;
-            let mut structured: serde_json::Value = serde_json::from_str(&text)
-                .map_err(|_| ErrorData::internal_error("encoding", None))?;
-            if crate::mcp_answer::tokens(&structured) > crate::mcp_answer::MAX_TOKENS && !whole {
-                crate::mcp_answer::fit(&mut structured, crate::mcp_answer::MAX_TOKENS);
-                text = structured.to_string();
-            }
-            Ok((text, structured, image))
-        })();
-        self.frontdoor.observe_mcp(
-            principal,
-            &request.name,
-            Some(&descriptor.name),
-            failure.as_deref(),
-            encoded.as_ref().map_or(0, |(text, _, _)| text.len()),
-        );
-        let (text, structured, image) = encoded?;
-        let mut items = vec![json!({"type":"text","text":text})];
-        if let Some(Image { data, mime }) = image {
-            items.push(json!({"type":"image","data":data,"mimeType":mime}));
-        }
-        let mut value = json!({"isError":is_error,"content":items,"structuredContent":structured});
-        if descriptor.read_model {
-            value["_meta"] =
-                json!({"bridge/read_model_ms": started.elapsed().as_secs_f64()*1000.0});
-        }
-        serde_json::from_value::<rmcp::model::CallToolResult>(value)
-            .map(CallToolResponse::Complete)
-            .map_err(|_| ErrorData::internal_error("encoding", None))
+fn unknown_tool(principal: &Principal, name: &str) -> ErrorData {
+    let mut tools: Vec<String> = crate::mcp_registry::COMPACT
+        .iter()
+        .filter(|tool| distance_ok(tool, name))
+        .map(|tool| (*tool).to_owned())
+        .collect();
+    let operations: Vec<serde_json::Value> = crate::mcp_registry::registry()
+        .map(|registry| {
+            registry
+                .closest(name, Some(principal))
+                .into_iter()
+                .map(|operation| {
+                    json!({"tool": crate::mcp_check::tool_for(operation), "operation": operation.public})
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if tools.is_empty() && operations.is_empty() {
+        tools.push("apple_describe".into());
     }
+    ErrorData::invalid_params(
+        format!("unknown tool {name:?}"),
+        Some(json!({
+            "closest": tools,
+            "did_you_mean": operations,
+            "hint": "Operations run through apple_read or apple_change with operation set to a name from their operation list.",
+        })),
+    )
 }
 
 fn distance_ok(tool: &str, wanted: &str) -> bool {
@@ -282,23 +203,6 @@ pub(crate) fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_
     Ok((serde_json::to_vec(&value)?, image))
 }
 
-#[cfg(test)]
-fn annotated_tools(descriptors: &[ab_catalog::OperationDescriptor]) -> serde_json::Value {
-    let mut tools = ab_catalog::mcp_tools(descriptors)["tools"].take();
-    for tool in tools.as_array_mut().into_iter().flatten() {
-        let command = descriptors.iter().any(|descriptor| {
-            (descriptor.kind == ab_catalog::OperationKind::Command
-                || descriptor.scope.ends_with(":write"))
-                && tool["name"].as_str() == Some(descriptor.name.replace('.', "_").as_str())
-        });
-        tool["annotations"] = if command {
-            json!({"readOnlyHint": false, "destructiveHint": true, "openWorldHint": true})
-        } else {
-            json!({"readOnlyHint": true, "openWorldHint": false})
-        };
-    }
-    tools
-}
 pub fn server_info() -> serde_json::Value {
     json!({
         "protocolVersion":"2025-03-26",
@@ -431,19 +335,6 @@ pub fn golden_router(frontdoor: Arc<Frontdoor>) -> axum::Router {
         .with_state(frontdoor)
 }
 
-fn tool_descriptors() -> Result<Vec<ab_catalog::OperationDescriptor>, Error> {
-    let descriptors = ab_catalog::operations().map_err(|_| Code::Corrupt)?;
-    #[cfg(feature = "lab-queries")]
-    let descriptors = {
-        let mut descriptors = descriptors;
-        for name in ["test.echo", "test.sleep", "test.blob"] {
-            descriptors.push(ab_operations::descriptor_for(name)?);
-        }
-        descriptors
-    };
-    Ok(descriptors)
-}
-
 #[cfg(test)]
 mod image_tests {
     #[test]
@@ -465,38 +356,6 @@ mod image_tests {
         assert_eq!(image, None);
         assert!(super::returns_image("photos.contact_sheet"));
         assert!(!super::returns_image("photos.fetch"));
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod annotation_tests {
-    #[test]
-    fn reads_and_commands_say_which_they_are() -> Result<(), Box<dyn std::error::Error>> {
-        let descriptors = super::tool_descriptors().map_err(|_| "catalog")?;
-        let tools = super::annotated_tools(&descriptors);
-        let tool = |name: &str| {
-            tools
-                .as_array()
-                .and_then(|all| all.iter().find(|tool| tool["name"] == name))
-                .cloned()
-                .unwrap_or_default()
-        };
-        assert_eq!(tool("records_query")["annotations"]["readOnlyHint"], true);
-        assert_eq!(tool("photos_search")["annotations"]["readOnlyHint"], true);
-        for operation in descriptors
-            .iter()
-            .filter(|operation| operation.scope == "photos:write")
-        {
-            let name = operation.name.replace('.', "_");
-            assert_eq!(tool(&name)["annotations"]["readOnlyHint"], false);
-            assert_eq!(tool(&name)["annotations"]["destructiveHint"], true);
-        }
-        assert_eq!(tool("messages_send")["annotations"]["readOnlyHint"], false);
-        assert_eq!(
-            tool("messages_send")["annotations"]["destructiveHint"],
-            true
-        );
         Ok(())
     }
 }

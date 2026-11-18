@@ -56,11 +56,18 @@ fn load() -> Option<Registry> {
     }
     operations.extend(blob_operations());
     operations.extend(composite_operations());
+    for operation in &mut operations {
+        if let Some(public) = crate::mcp_names::renamed(&operation.name) {
+            public.clone_into(&mut operation.public);
+        }
+        operation.domain = operation
+            .public
+            .split('.')
+            .next()
+            .unwrap_or_default()
+            .to_owned();
+    }
     let mut domains = ab_catalog::agent_domains().ok()?;
-    domains.push((
-        "usage".into(),
-        "Screen Time: app usage per device and day, estimated from app focus.".into(),
-    ));
     domains.sort();
     let mut tools: Vec<Value> = serde_json::from_str(include_str!("mcp_tools.json")).ok()?;
     let change = change_schema();
@@ -99,7 +106,7 @@ fn patch(operation: &mut AgentOperation) {
     if operation.name == "calendar.create_event" {
         operation.arguments["properties"]["calendar"] = json!({"type":"string","description":"Calendar name, such as Work, instead of calendar_id. A name that matches no calendar or several returns the candidates."});
         operation.arguments["properties"]["calendar_id"]["description"] = json!(
-            "Calendar to add it to: a cal_ ID from calendar.calendars. Or give calendar with its name."
+            "Calendar to add it to: a cal_ ID from calendar.list_calendars. Or give calendar with its name."
         );
         if let Some(required) = operation.arguments["required"].as_array_mut() {
             required.retain(|field| field != "calendar_id");
@@ -114,13 +121,13 @@ fn patch(operation: &mut AgentOperation) {
             "Window end, after start: RFC 3339 timestamp, or YYYY-MM-DD for midnight in the Mac's time zone."
         );
         operation.arguments["properties"]["calendar_id"]["description"] = json!(
-            "Only events in this calendar (a cal_ ID from calendar.calendars). Omit for all calendars."
+            "Only events in this calendar (a cal_ ID from calendar.list_calendars). Omit for all calendars."
         );
     }
     if BY_TITLE.contains(&operation.name.as_str()) {
         operation.arguments["properties"]["reminder"] = json!({"type":"string","description":"The reminder's title, instead of id and expected_version. It must match one reminder; otherwise you get the candidates."});
         operation.arguments["properties"]["id"]["description"] =
-            json!("The reminder's rmd_ ID from reminders.items. Or give reminder with its title.");
+            json!("The reminder's rmd_ ID from reminders.list. Or give reminder with its title.");
         if let Some(required) = operation.arguments["required"].as_array_mut() {
             required.retain(|field| field != "id" && field != "expected_version");
         }
@@ -128,11 +135,86 @@ fn patch(operation: &mut AgentOperation) {
     }
 }
 
+fn text_search(name: &str, scope: &str, summary: &str, example: &str) -> AgentOperation {
+    AgentOperation {
+        name: name.into(),
+        public: name.into(),
+        domain: name.split('.').next().unwrap_or_default().into(),
+        kind: OperationKind::Read,
+        changes: false,
+        scope: scope.into(),
+        summary: summary.into(),
+        detail: String::new(),
+        returns: "records with id, version and data, plus next for the next page.".into(),
+        arguments: json!({"type":"object","additionalProperties":false,"properties":{
+            "text":{"type":"string","minLength":1,"description":"Words to find."},
+            "limit":{"type":"integer","minimum":1,"maximum":100,"description":"Most matches to return. Default 20."},
+            "after":{"type":"string","description":"The next value from the previous page."}
+        },"required":["text"]}),
+        example: json!({"text": example}),
+        version: VersionRule::None,
+        unavailable: None,
+        annotations: json!({"readOnlyHint":true,"openWorldHint":false}),
+    }
+}
+
+pub(crate) fn preset(name: &str, arguments: &Value) -> Option<(&'static str, Value)> {
+    let mut mapped = arguments.as_object().cloned().unwrap_or_default();
+    let (target, collection) = match name {
+        crate::mcp_names::NOTES_SEARCH => ("search", "notes.note"),
+        crate::mcp_names::MAIL_SEARCH => ("search", "mail.message"),
+        crate::mcp_names::NOTES_GET => ("records.get", "notes.note"),
+        _ => return None,
+    };
+    if target == "search" {
+        mapped.entry("limit").or_insert(json!(20));
+    }
+    mapped.insert("collection".into(), json!(collection));
+    Some((target, Value::Object(mapped)))
+}
+
+fn search_operations() -> Vec<AgentOperation> {
+    vec![
+        text_search(
+            crate::mcp_names::NOTES_SEARCH,
+            "notes:read",
+            "Find notes whose title or text contains these words, including notes written on the iPhone.",
+            "passport",
+        ),
+        text_search(
+            crate::mcp_names::MAIL_SEARCH,
+            "mail:read",
+            "Find mail messages whose sender, subject or text contains these words.",
+            "invoice",
+        ),
+        AgentOperation {
+            name: crate::mcp_names::NOTES_GET.into(),
+            public: crate::mcp_names::NOTES_GET.into(),
+            domain: "notes".into(),
+            kind: OperationKind::Read,
+            changes: false,
+            scope: "notes:read".into(),
+            summary: "Read one note in full: its title and whole plain text.".into(),
+            detail: String::new(),
+            returns: "records: the note with id, version and data (title, plain_text, folder_id, modified_at).".into(),
+            arguments: json!({"type":"object","additionalProperties":false,"properties":{
+                "id":{"type":"string","minLength":1,"description":"The note's nte_ ID from notes.list or notes.search."}
+            },"required":["id"]}),
+            example: json!({"id":"nte_01J9Z8Y7X6W5V4T3S2R1Q0P9N8"}),
+            version: VersionRule::None,
+            unavailable: None,
+            annotations: json!({"readOnlyHint":true,"openWorldHint":false}),
+        },
+    ]
+}
+
 fn composite_operations() -> Vec<AgentOperation> {
     let read = json!({"readOnlyHint":true,"openWorldHint":false});
-    vec![
+    let mut operations = search_operations();
+    operations.extend([
         AgentOperation {
             name: USAGE_SUMMARY.into(),
+            public: USAGE_SUMMARY.into(),
             domain: "usage".into(),
             kind: OperationKind::Read,
             changes: false,
@@ -154,6 +236,7 @@ fn composite_operations() -> Vec<AgentOperation> {
         },
         AgentOperation {
             name: CALENDARS.into(),
+            public: CALENDARS.into(),
             domain: "calendar".into(),
             kind: OperationKind::Read,
             changes: false,
@@ -169,6 +252,7 @@ fn composite_operations() -> Vec<AgentOperation> {
         },
         AgentOperation {
             name: crate::mcp_lookups::FREE_SLOTS.into(),
+            public: crate::mcp_lookups::FREE_SLOTS.into(),
             domain: "calendar".into(),
             kind: OperationKind::Read,
             changes: false,
@@ -193,6 +277,7 @@ fn composite_operations() -> Vec<AgentOperation> {
         },
         AgentOperation {
             name: crate::mcp_lookups::SHARED.into(),
+            public: crate::mcp_lookups::SHARED.into(),
             domain: "messages".into(),
             kind: OperationKind::Read,
             changes: false,
@@ -212,19 +297,13 @@ fn composite_operations() -> Vec<AgentOperation> {
             unavailable: None,
             annotations: read,
         },
-    ]
+    ]);
+    operations
 }
 
 pub(crate) fn change_schema() -> Value {
     json!({"type":"object","properties":{
-        "status":{"type":"string","enum":["done","partial","pending","awaiting_approval","failed","indeterminate"]},
-        "request_id":{"type":"string"},
-        "operation":{"type":"string"},
-        "ids":{"type":"array","items":{"type":"string"}},
-        "record":{"type":"object"},
-        "parts":{"type":"array","items":{"type":"object"}},
-        "verification":{"type":"string"},
-        "next":{"type":"string"}
+        "status":{"type":"string","enum":["done","partial","pending","awaiting_approval","failed","indeterminate"]}
     }})
 }
 
@@ -239,6 +318,7 @@ fn blob_operations() -> Vec<AgentOperation> {
     vec![
         AgentOperation {
             name: BLOB_READ.into(),
+            public: BLOB_READ.into(),
             domain: "blobs".into(),
             kind: OperationKind::Read,
             changes: false,
@@ -254,6 +334,7 @@ fn blob_operations() -> Vec<AgentOperation> {
         },
         AgentOperation {
             name: BLOB_STAGE.into(),
+            public: BLOB_STAGE.into(),
             domain: "blobs".into(),
             kind: OperationKind::Command,
             changes: true,
@@ -274,10 +355,16 @@ fn blob_operations() -> Vec<AgentOperation> {
 
 impl Registry {
     pub fn find(&self, name: &str) -> Option<&AgentOperation> {
-        let normal = normal_name(name);
         self.operations
             .iter()
-            .find(|operation| operation.name == normal || operation.name.replace('.', "_") == name)
+            .find(|operation| operation.name == name)
+    }
+
+    pub fn named(&self, name: &str) -> Option<&AgentOperation> {
+        let name = name.trim();
+        self.operations
+            .iter()
+            .find(|operation| operation.public == name)
     }
 
     pub fn example(&self, tool: &str) -> Value {
@@ -320,9 +407,28 @@ impl Registry {
                 if let Some(fields) = tool.as_object_mut() {
                     fields.remove("scope");
                 }
+                let changes = match tool["name"].as_str() {
+                    Some("apple_read") => Some(false),
+                    Some("apple_change") => Some(true),
+                    _ => None,
+                };
+                if let Some(changes) = changes {
+                    tool["inputSchema"]["properties"]["operation"]["enum"] =
+                        json!(self.names(principal, changes));
+                }
                 tool
             })
             .collect()
+    }
+
+    pub fn names<'a>(&'a self, principal: Option<&'a Principal>, changes: bool) -> Vec<&'a str> {
+        let mut names: Vec<&str> = self
+            .visible(principal)
+            .filter(|operation| (operation.changes && !operation.read_only()) == changes)
+            .map(|operation| operation.public.as_str())
+            .collect();
+        names.sort_unstable();
+        names
     }
 
     pub fn visible<'a>(
@@ -334,35 +440,60 @@ impl Registry {
             .filter(move |operation| principal.is_none_or(|p| allowed(p, operation)))
     }
 
-    pub fn closest(&self, name: &str, principal: Option<&Principal>) -> Vec<String> {
-        let wanted = normal_name(name).to_lowercase();
-        let mut scored: Vec<(usize, &str)> = self
+    pub fn closest<'a>(
+        &'a self,
+        name: &str,
+        principal: Option<&'a Principal>,
+    ) -> Vec<&'a AgentOperation> {
+        let mut found: Vec<&AgentOperation> = Vec::new();
+        let mut add = |operation: &'a AgentOperation| {
+            if !found.iter().any(|seen| seen.public == operation.public) {
+                found.push(operation);
+            }
+        };
+        if let Some(public) = crate::mcp_names::retired(name)
+            && let Some(operation) = self.named(public)
+        {
+            add(operation);
+        }
+        let wanted = crate::mcp_names::key(name);
+        for operation in self.visible(principal) {
+            if !wanted.is_empty() && crate::mcp_names::key(&operation.public) == wanted {
+                add(operation);
+            }
+        }
+        let lower = name.trim().to_lowercase();
+        let mut scored: Vec<(usize, &AgentOperation)> = self
             .visible(principal)
-            .map(|operation| (distance(&wanted, &operation.name), operation.name.as_str()))
+            .map(|operation| (distance(&lower, &operation.public), operation))
+            .filter(|(score, _)| *score <= lower.len().max(4) / 3 + 1)
             .collect();
-        scored.sort_unstable();
-        scored
-            .into_iter()
-            .take_while(|(score, _)| *score <= wanted.len().max(4) / 2 + 2)
-            .take(3)
-            .map(|(_, name)| name.to_owned())
-            .collect()
+        scored.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.public.cmp(&b.1.public)));
+        for (_, operation) in scored {
+            add(operation);
+        }
+        let words = lower.replace(['.', '_', '-', '/'], " ");
+        let (hits, _) = crate::mcp_find::find(self, principal, &words);
+        for hit in hits {
+            if let crate::mcp_find::Hit::Operation(operation) = hit {
+                add(operation);
+            }
+        }
+        found.truncate(3);
+        found
     }
 }
 
-pub(crate) fn normal_name(name: &str) -> String {
-    let trimmed = name.trim();
-    if trimmed.contains('.') {
-        return trimmed.to_owned();
-    }
-    let Some(registry) = registry() else {
-        return trimmed.to_owned();
-    };
-    registry
-        .operations
-        .iter()
-        .find(|operation| operation.name.replace('.', "_") == trimmed)
-        .map_or_else(|| trimmed.to_owned(), |operation| operation.name.clone())
+pub(crate) fn internal_name(public: &str) -> String {
+    registry()
+        .and_then(|registry| registry.named(public))
+        .map_or_else(String::new, |operation| operation.name.clone())
+}
+
+pub(crate) fn public_name(internal: &str) -> String {
+    registry()
+        .and_then(|registry| registry.find(internal))
+        .map_or_else(|| internal.to_owned(), |operation| operation.public.clone())
 }
 
 pub(crate) fn valid_id(id: &str) -> bool {

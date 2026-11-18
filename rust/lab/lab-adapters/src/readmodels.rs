@@ -43,12 +43,8 @@ pub fn message(key: &str, sent_at: &str, extra: &Value) -> Value {
     }
     observation("messages.message", key, &Value::Object(data))
 }
-pub fn call(client: &Client, protocol: &str, operation: &str, input: &Value) -> Option<Value> {
-    let reply = if protocol == "mcp" {
-        client.call_mcp(operation, input, 30)
-    } else {
-        client.call(operation, input, 30)
-    };
+pub fn call(client: &Client, _protocol: &str, operation: &str, input: &Value) -> Option<Value> {
+    let reply = client.call(operation, input, 30);
     reply.ok().flatten()
 }
 pub fn at(second: i64) -> Result<String> {

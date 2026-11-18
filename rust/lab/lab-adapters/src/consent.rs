@@ -366,7 +366,7 @@ pub(crate) fn agent_oauth(world: &World, site: &Site, owner: &Owner, evidence: &
         mcp(
             &first.access,
             "tools/call",
-            &json!({"name": "messages_chats", "arguments": {}}),
+            &json!({"name": "apple_read", "arguments": {"operation": "messages.list_chats"}}),
         ),
         "",
     );

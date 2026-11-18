@@ -21,10 +21,6 @@ const HEAVY: &[&str] = &[
     "thumbnail",
 ];
 
-pub(crate) fn tokens(value: &Value) -> usize {
-    serde_json::to_vec(value).map_or(0, |bytes| (bytes.len() * 10).div_ceil(35))
-}
-
 fn bytes_for(tokens: usize) -> usize {
     tokens * 35 / 10
 }
@@ -66,11 +62,11 @@ const WHOLE: &[&str] = &[
     "files.read",
     "blobs.read",
     "photos.fetch",
+    "notes.get",
 ];
 
 fn whole_operation(name: &str) -> bool {
-    WHOLE.contains(&crate::mcp_registry::normal_name(name).as_str())
-        || WHOLE.contains(&name.replace('_', ".").as_str())
+    WHOLE.contains(&crate::mcp_registry::internal_name(name).as_str())
 }
 
 pub(crate) fn whole(tool: &str, input: &Map<String, Value>) -> bool {

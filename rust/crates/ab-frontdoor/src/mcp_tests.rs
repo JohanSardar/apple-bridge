@@ -62,13 +62,8 @@ fn every_catalog_operation_has_an_agent_contract() -> Check {
         assert!(!operation.returns.is_empty(), "{}", descriptor.name);
         assert!(operation.example.is_object(), "{}", descriptor.name);
         assert_eq!(operation.scope, descriptor.scope, "{}", descriptor.name);
-        assert!(
-            registry.find(&descriptor.name.replace('.', "_")).is_some(),
-            "{}",
-            descriptor.name
-        );
     }
-    assert_eq!(registry.operations.len(), catalog.len() + 6);
+    assert_eq!(registry.operations.len(), catalog.len() + 9);
     let summaries: BTreeSet<&str> = registry
         .operations
         .iter()
@@ -517,28 +512,27 @@ fn surface() -> Result<Value, Box<dyn std::error::Error>> {
 fn whole_item_reads_are_never_trimmed() {
     let input = |value: Value| value.as_object().cloned().unwrap_or_default();
     for operation in [
-        "records.get",
-        "records_get",
-        "mail_body",
+        "bridge.get_record",
+        "mail.get_body",
         "files.read",
-        "blobs_read",
-        "photos.fetch",
-        "photos_fetch",
+        "bridge.read_blob",
+        "photos.download",
+        "notes.get",
     ] {
         assert!(
             crate::mcp_answer::whole("apple_read", &input(json!({"operation": operation}))),
             "{operation}"
         );
     }
-    for tool in ["records_get", "mail_body", "files_read", "photos_fetch"] {
+    for old in ["records.get", "records_get", "mail_body", "blobs.read"] {
         assert!(
-            crate::mcp_answer::whole(tool, &serde_json::Map::new()),
-            "{tool}"
+            !crate::mcp_answer::whole("apple_read", &input(json!({"operation": old}))),
+            "{old}"
         );
     }
     assert!(crate::mcp_answer::whole(
         "apple_read",
-        &input(json!({"reads": [{"operation": "notes.list"}, {"operation": "records_get"}]}))
+        &input(json!({"reads": [{"operation": "notes.list"}, {"operation": "bridge.get_record"}]}))
     ));
     assert!(!crate::mcp_answer::whole(
         "apple_read",
@@ -550,7 +544,10 @@ fn whole_item_reads_are_never_trimmed() {
     ));
     let long = "x".repeat(200_000);
     let mut record = json!({"records": [{"data": {"plain_text": long}}]});
-    if !crate::mcp_answer::whole("apple_read", &input(json!({"operation": "records_get"}))) {
+    if !crate::mcp_answer::whole(
+        "apple_read",
+        &input(json!({"operation": "bridge.get_record"})),
+    ) {
         crate::mcp_answer::fit(&mut record, crate::mcp_answer::MAX_TOKENS);
     }
     assert_eq!(
@@ -597,45 +594,60 @@ fn the_served_surface_matches_its_golden() -> Check {
 fn plain_requests_find_the_right_operation_first() -> Check {
     let registry = registry().ok_or("registry")?;
     let cases: &[(&str, &str)] = &[
-        ("screen time", "usage.summary"),
+        ("screen time", "screentime.summary"),
         (
             "how much time did I spend on my phone yesterday",
-            "usage.summary",
+            "screentime.summary",
         ),
-        ("app usage on my iPhone this week", "usage.summary"),
+        ("app usage on my iPhone this week", "screentime.summary"),
         ("send a text to Ana", "messages.send"),
         ("send an SMS", "messages.send"),
         ("reply to an iMessage", "messages.reply"),
-        ("read my unread messages", "messages.chats"),
+        ("read my unread messages", "messages.list_chats"),
         ("email my boss", "mail.send"),
-        ("check my inbox", "records.query/mail.message"),
-        ("get voicemail", "records.query/voicemail.message"),
-        ("listen to my voicemails", "records.query/voicemail.message"),
-        ("who called me", "records.query/phone.call"),
-        ("missed calls", "records.query/phone.call"),
-        ("voice memos", "records.query/voice_memos.recording"),
-        ("where am I", "location.current"),
+        ("check my inbox", "bridge.list_records/mail.message"),
+        ("get voicemail", "bridge.list_records/voicemail.message"),
+        (
+            "listen to my voicemails",
+            "bridge.list_records/voicemail.message",
+        ),
+        ("who called me", "bridge.list_records/phone.call"),
+        ("missed calls", "bridge.list_records/phone.call"),
+        ("voice memos", "bridge.list_records/voice_memos.recording"),
+        ("where am I", "location.get"),
         ("find a document", "files.search"),
         ("search my files", "files.search"),
         ("add an event to my calendar", "calendar.create_event"),
         ("schedule a meeting", "calendar.create_event"),
-        ("what is on my calendar tomorrow", "calendar.agenda"),
-        ("am I free on friday", "calendar.agenda"),
+        ("what is on my calendar tomorrow", "calendar.list"),
+        ("am I free on friday", "calendar.list"),
         ("move my dentist appointment", "calendar.update_event"),
-        ("list my calendars", "calendar.calendars"),
+        ("list my calendars", "calendar.list_calendars"),
         ("remind me to buy milk", "reminders.create"),
         ("mark the reminder as done", "reminders.complete"),
         ("delete a reminder", "reminders.delete"),
-        ("my to do list", "reminders.items"),
+        ("my to do list", "reminders.list"),
         ("write a note", "notes.create"),
         (
             "read the note I wrote on my phone",
-            "records.query/notes.note",
+            "bridge.list_records/notes.note",
         ),
         ("find a photo of a dog", "photos.search"),
         ("show me pictures from the beach", "photos.search"),
-        ("look up a phone number", "contacts.lookup"),
-        ("set an alarm", "iphone.alarm.create"),
+        ("look up a phone number", "contacts.search"),
+        ("set an alarm", "iphone.create_alarm"),
+        ("search my notes for the ferry", "notes.search"),
+        ("find a note about passports", "notes.search"),
+        ("search my email for the invoice", "mail.search"),
+        ("find an email from Marko", "mail.search"),
+        ("list my reminders", "reminders.list"),
+        ("list my reminder lists", "reminders.list_lists"),
+        ("check my screen time", "screentime.summary"),
+        ("add photos to an album", "photos.add_to_album"),
+        (
+            "remove the downloaded copy of an iCloud file",
+            "files.remove_local_copy",
+        ),
     ];
     let mut misses = Vec::new();
     for (query, wanted) in cases {
@@ -644,8 +656,8 @@ fn plain_requests_find_the_right_operation_first() -> Check {
             .iter()
             .take(3)
             .map(|hit| match hit {
-                crate::mcp_find::Hit::Operation(o) => o.name.clone(),
-                crate::mcp_find::Hit::Route(r) => format!("records.query/{}", r.collection),
+                crate::mcp_find::Hit::Operation(o) => o.public.clone(),
+                crate::mcp_find::Hit::Route(r) => format!("bridge.list_records/{}", r.collection),
             })
             .collect();
         if !names.iter().any(|name| name == wanted) {
@@ -937,19 +949,22 @@ fn looking_and_finding_rank_reads_above_capture() -> Check {
     let cases: &[(&str, &[&str])] = &[
         (
             "find a photo of my dog",
-            &["photos.search", "photos.contact_sheet"],
+            &["photos.search", "photos.preview_grid"],
         ),
         (
             "show me the photo of the beach",
-            &["photos.search", "photos.contact_sheet"],
+            &["photos.search", "photos.preview_grid"],
         ),
         (
             "look at my pictures from July",
-            &["photos.search", "photos.contact_sheet"],
+            &["photos.search", "photos.preview_grid"],
         ),
         ("read my notes", &["notes.list"]),
         ("show my notes", &["notes.list"]),
-        ("how many reminder lists do I have", &["reminders.lists"]),
+        (
+            "how many reminder lists do I have",
+            &["reminders.list_lists"],
+        ),
     ];
     let mut misses = Vec::new();
     for (query, wanted) in cases {
@@ -958,9 +973,11 @@ fn looking_and_finding_rank_reads_above_capture() -> Check {
             .iter()
             .take(5)
             .map(|hit| match hit {
-                crate::mcp_find::Hit::Operation(o) => (o.name.clone(), o.changes && !o.read_only()),
+                crate::mcp_find::Hit::Operation(o) => {
+                    (o.public.clone(), o.changes && !o.read_only())
+                }
                 crate::mcp_find::Hit::Route(r) => {
-                    (format!("records.query/{}", r.collection), false)
+                    (format!("bridge.list_records/{}", r.collection), false)
                 }
             })
             .collect();
@@ -1214,4 +1231,174 @@ mod original_review {
         assert_eq!(String::from_utf8(file.bytes).unwrap(), "camera-original");
         assert_eq!(file.name, "IMG_0001.HEIC");
     }
+}
+
+#[test]
+fn operation_names_are_consistent_and_unique() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let mut publics = BTreeSet::new();
+    let mut keys = BTreeSet::new();
+    let domains: BTreeSet<&str> = registry.domains.iter().map(|(d, _)| d.as_str()).collect();
+    for operation in &registry.operations {
+        let name = operation.public.as_str();
+        assert!(publics.insert(name), "{name} is used twice");
+        assert!(
+            keys.insert(crate::mcp_names::key(name)),
+            "{name} reads like another operation"
+        );
+        let (app, rest) = name.split_once('.').ok_or(name.to_owned())?;
+        assert_eq!(app, operation.domain, "{name}");
+        assert!(domains.contains(app), "{name} has no domain description");
+        assert!(
+            !rest.contains('.')
+                && rest.bytes().all(|b| b.is_ascii_lowercase() || b == b'_')
+                && !rest.starts_with('_'),
+            "{name} is not app.verb_object"
+        );
+        assert!(
+            ![
+                "items", "lists", "chats", "thread", "albums", "agenda", "range"
+            ]
+            .contains(&rest),
+            "{name} lists without list"
+        );
+    }
+    let used: BTreeSet<&str> = registry
+        .operations
+        .iter()
+        .map(|o| o.domain.as_str())
+        .collect();
+    assert_eq!(used, domains, "every described domain has operations");
+    for (old, new) in crate::mcp_names::RENAMED {
+        assert!(registry.find(old).is_some(), "{old} is not an operation");
+        assert!(registry.named(new).is_some(), "{new} is not served");
+        assert!(registry.named(old).is_none(), "{old} still resolves");
+    }
+    Ok(())
+}
+
+#[test]
+fn old_and_guessed_names_are_refused_with_the_new_name() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let first = |name: &str| {
+        registry
+            .closest(name, None)
+            .first()
+            .map(|o| o.public.clone())
+            .unwrap_or_default()
+    };
+    for (old, new) in crate::mcp_names::RENAMED {
+        assert!(registry.named(old).is_none(), "{old}");
+        assert_eq!(first(old), *new, "{old}");
+        assert_eq!(first(&old.replace('.', "_")), *new, "{old} as a tool name");
+    }
+    for (guess, wanted) in [
+        ("reminders.items", "reminders.list"),
+        ("reminders.lists", "reminders.list_lists"),
+        ("reminder.list", "reminders.list"),
+        ("Reminders.List", "reminders.list"),
+        ("notes.find", "notes.search"),
+        ("notes.query", "notes.search"),
+        ("mail.find", "mail.search"),
+        ("email.search", "mail.search"),
+        ("screen_time.summary", "screentime.summary"),
+        ("usage.summary", "screentime.summary"),
+        ("files.evict", "files.remove_local_copy"),
+        ("photos.album_add", "photos.add_to_album"),
+        ("iphone.alarms.list", "iphone.list_alarms"),
+        ("calendar.agenda", "calendar.list"),
+        ("contacts.lookup", "contacts.search"),
+        ("records.query", "bridge.list_records"),
+        ("search", "bridge.search"),
+        ("get_reminders", "reminders.list"),
+        ("list_reminders", "reminders.list"),
+        ("screentime.get_summary", "screentime.summary"),
+        ("search_notes", "notes.search"),
+    ] {
+        assert!(registry.named(guess).is_none(), "{guess} must not run");
+        assert_eq!(first(guess), wanted, "{guess}");
+    }
+    let lists: Vec<String> = registry
+        .closest("reminders.lists", None)
+        .iter()
+        .map(|o| o.public.clone())
+        .collect();
+    assert!(lists.contains(&"reminders.list".to_owned()), "{lists:?}");
+    Ok(())
+}
+
+#[test]
+fn the_tool_list_names_every_operation_an_agent_may_run() -> Check {
+    let registry = registry().ok_or("registry")?;
+    let enumerated = |tools: &[Value], tool: &str| -> Vec<String> {
+        tools
+            .iter()
+            .find(|t| t["name"] == tool)
+            .and_then(|t| t["inputSchema"]["properties"]["operation"]["enum"].as_array())
+            .map(|e| {
+                e.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let all = registry.tools(None);
+    let reads = enumerated(&all, "apple_read");
+    let changes = enumerated(&all, "apple_change");
+    assert_eq!(reads.len() + changes.len(), registry.operations.len());
+    for operation in &registry.operations {
+        let listed = if operation.changes && !operation.read_only() {
+            &changes
+        } else {
+            &reads
+        };
+        assert!(listed.contains(&operation.public), "{}", operation.public);
+    }
+    for wanted in [
+        "notes.search",
+        "mail.search",
+        "reminders.list",
+        "screentime.summary",
+    ] {
+        assert!(reads.iter().any(|name| name == wanted), "{wanted}");
+    }
+    let reader = principal("read", &["notes:read", "notes:write"]);
+    let tools = registry.tools(Some(&reader));
+    assert_eq!(enumerated(&tools, "apple_change"), Vec::<String>::new());
+    let notes = enumerated(&tools, "apple_read");
+    assert!(
+        notes
+            .iter()
+            .all(|name| name.starts_with("notes.") || name.starts_with("bridge.")),
+        "{notes:?}"
+    );
+    assert!(notes.contains(&"notes.search".to_owned()));
+    Ok(())
+}
+
+#[test]
+fn discovery_answers_carry_arguments_and_an_example() -> Check {
+    let registry = registry().ok_or("registry")?;
+    for operation in &registry.operations {
+        let entry = crate::mcp_facade::entry(operation);
+        assert_eq!(entry["operation"], operation.public.as_str());
+        assert!(entry["arguments"].as_str().is_some_and(|a| !a.is_empty()));
+        assert!(entry["example"].is_object(), "{}", operation.public);
+        for required in operation.required() {
+            assert!(
+                entry["arguments"].as_str().is_some_and(|a| a
+                    .split(", ")
+                    .any(|part| part.starts_with(&format!("{required}: ")))),
+                "{} {required}",
+                operation.public
+            );
+        }
+    }
+    let notes = registry.named("notes.search").ok_or("notes.search")?;
+    assert_eq!(
+        crate::mcp_facade::signature(&notes.arguments),
+        "after?: string, limit?: integer, text: string"
+    );
+    Ok(())
 }

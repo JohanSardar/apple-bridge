@@ -61,13 +61,6 @@ for mode in ('json', 'sse'):
             legacy = '\n'.join(line[5:].strip() for line in legacy.splitlines() if line.startswith('data:'))
         assert json.loads(legacy)['result']['protocolVersion'] == '2024-11-05', legacy
         checks += 1
-        status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','id':10,'method':'tools/call','params':{'name':'records_query','arguments':{}}}))
-        assert status == 200, data
-        if mode == 'sse':
-            data = '\n'.join(line[5:].strip() for line in data.decode().splitlines() if line.startswith('data:')).encode()
-        result = json.loads(data)['result']
-        assert result['structuredContent'] == json.loads(result['content'][0]['text'])
-        checks += 1
         def call(name, arguments, ident):
             status, data = request('/mcp', json.dumps({'jsonrpc':'2.0','id':ident,'method':'tools/call','params':{'name':name,'arguments':arguments}}))
             assert status == 200, (name, status, data)
@@ -79,28 +72,33 @@ for mode in ('json', 'sse'):
         body = listed[1].decode()
         if mode == 'sse':
             body = '\n'.join(line[5:].strip() for line in body.splitlines() if line.startswith('data:'))
-        served = [tool['name'] for tool in json.loads(body)['result']['tools']]
-        assert served[0] == 'apple_status' and len(served) == 13, served
+        tools = json.loads(body)['result']['tools']
+        served = [tool['name'] for tool in tools]
+        assert served[0] == 'apple_status' and 'records_query' not in served, served
+        listed_names = {tool['name']: tool['inputSchema']['properties']['operation'].get('enum', []) for tool in tools if tool['name'] in ('apple_read', 'apple_change')}
+        assert 'reminders.list' in listed_names['apple_read'] and 'reminders.items' not in listed_names['apple_read'], listed_names
         checks += 1
-        legacy_tools = json.loads((root / 'contracts/golden/mcp-legacy-tools.json').read_text())['tools']
-        assert len(legacy_tools) == 160
-        for index, tool in enumerate(legacy_tools):
-            reply = call(tool['name'], {'args': {}} if 'args' in tool['inputSchema'].get('properties', {}) else {}, 100 + index)
-            assert 'result' in reply, (tool['name'], reply)
-            text = json.loads(reply['result']['content'][0]['text'])
-            assert reply['result']['structuredContent'] == text, tool['name']
-            assert 'unknown tool' not in json.dumps(text), tool['name']
+        reply = call('records_query', {}, 100)
+        assert reply['error']['code'] == -32602 and 'apple_read' in json.dumps(reply['error']), reply
+        checks += 1
+        reply = call('apple_read', {'operation': 'reminders.items', 'arguments': {}}, 101)
+        error = reply['result']['structuredContent']['error']
+        assert reply['result']['isError'] and 'reminders.list' in json.dumps(error), error
+        checks += 1
+        reply = call('apple_read', {'operation': 'bridge.list_records', 'arguments': {}}, 102)
+        result = reply['result']
+        assert result['structuredContent'] == json.loads(result['content'][0]['text'])
         checks += 1
         reply = call('apple_describe', {'operation': 'reminders.complete'}, 400)
         contract = reply['result']['structuredContent']
-        assert contract['tool'] == 'apple_change' and 'expected_version' in contract['arguments']['required'], contract
+        assert contract['tool'] == 'apple_change' and contract['changes_data'], contract
         checks += 1
-        reply = call('apple_read', {'operation': 'reminders.items', 'arguments': {'smart': 'today', 'colour': 'red'}}, 401)
+        reply = call('apple_read', {'operation': 'reminders.list', 'arguments': {'smart': 'today', 'colour': 'red'}}, 401)
         error = reply['result']['structuredContent']['error']
         assert reply['result']['isError'] and error['field'] == 'colour' and error['example'], error
         checks += 1
         reply = call('no_such_tool', {}, 402)
-        assert reply['error']['code'] == -32602 and 'apple_describe' in json.dumps(reply['error']), reply
+        assert reply['error']['code'] == -32602 and 'apple_read' in reply['error']['data']['hint'], reply
         checks += 1
     finally:
         process.terminate()

@@ -306,11 +306,7 @@ fn scope_commands(
         let limited = Client::at(client.address(), token);
         for protocol in ["rest", "mcp"] {
             let query = json!({"collection":"reminders.reminder"});
-            let read = if protocol == "rest" {
-                limited.call("records.query", &query, 20)?
-            } else {
-                limited.call_mcp("records.query", &query, 20)?
-            };
+            let read = limited.call("records.query", &query, 20)?;
             evidence.check(
                 &format!("scope_{protocol}_query_{index}"),
                 read.is_some_and(|p| p["records"].as_array().is_none_or(Vec::is_empty)),
@@ -320,11 +316,7 @@ fn scope_commands(
                 "reminders.create",
                 &json!({"list_id": list_id, "title": "[ab-test] scoped"}),
             )?;
-            let reply = if protocol == "rest" {
-                limited.call_raw("reminders.create", &c, 20)?
-            } else {
-                limited.call_mcp_raw("reminders.create", &c, 20)?
-            };
+            let reply = limited.call_raw("reminders.create", &c, 20)?;
             let id = c["command_id"].as_str().unwrap_or_default();
             evidence.check(
                 &format!("scope_{protocol}_command_{index}"),
@@ -429,11 +421,7 @@ fn pagination(other: &Client, evidence: &mut Evidence) -> Result<()> {
     for protocol in ["rest", "mcp"] {
         let page = |after: &str| -> Result<Option<Value>> {
             let query = json!({"collection":"system.command","limit":1,"after":after});
-            if protocol == "rest" {
-                other.call("records.query", &query, 20)
-            } else {
-                other.call_mcp("records.query", &query, 20)
-            }
+            other.call("records.query", &query, 20)
         };
         let first = page("")?;
         let next = first

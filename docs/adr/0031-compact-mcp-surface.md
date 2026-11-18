@@ -44,3 +44,7 @@ An agent's `request_id` is scoped to that agent: the command ID is the readable 
 ## Revision: Safari, Shortcuts and Mac settings removed
 
 [ADR 0033](0033-remove-safari-shortcuts-and-mac-settings.md) removed those sources. `mcp-legacy-tools.json` now freezes 138 old tools, `apple_search` no longer names Safari, and the synonym table no longer maps browsing history, now playing or Time Machine to an operation.
+
+## Revision: agent operation names
+
+[ADR 0038](0038-agent-operation-names.md) renamed the operations agents see to `app.verb_object`, listed every name in the `apple_read` and `apple_change` schemas and removed the unlisted old tools and `mcp-legacy-tools.json`. Old names are refused with the new name as a hint. Catalog, REST, CLI and Helper names are unchanged.

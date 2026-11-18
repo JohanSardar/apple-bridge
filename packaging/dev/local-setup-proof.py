@@ -150,12 +150,12 @@ class Proof:
             self.link("claude")
             if expected:
                 collection = "reminders.list"
-                prompt = "Call the apple-bridge records_query tool with collection %s and limit 200. Reply with only the number of records it returned, as digits." % collection
-                tools = ["mcp__%s__records_query" % SERVER]
+                prompt = "Call the apple-bridge apple_read tool with operation bridge.list_records and arguments {\"collection\": \"%s\", \"limit\": 100}. Reply with only the number of records it returned, as digits." % collection
+                tools = ["mcp__%s__apple_read" % SERVER]
                 want = expected.get(collection, 0)
             else:
-                prompt = "Call the apple-bridge sources_status tool. Reply with only the number of records it returned, as digits."
-                tools = ["mcp__%s__sources_status" % SERVER]
+                prompt = "Call the apple-bridge apple_read tool with operation bridge.list_sources and arguments {}. Reply with only the number of records it returned, as digits."
+                tools = ["mcp__%s__apple_read" % SERVER]
                 want = 0
             (reply, failed, denied), watched = self.with_allow("claude", lambda: self.ask_claude(prompt, tools))
             got = re.sub(r"\D", "", reply)

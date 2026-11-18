@@ -1,6 +1,6 @@
 # Voicemail transcripts and audio
 
-`bridge read voicemail` reads `voicemail.message` records. MCP uses `records_query` (the `records.query` operation) with `{"collection":"voicemail.message"}`; both return the same `data` contract, subject to the existing `voicemail:read` authorization. Existing sender, date, duration, read, mailbox and type fields are unchanged.
+`bridge read voicemail` reads `voicemail.message` records. MCP uses `apple_read` with operation `bridge.list_records` (the `records.query` operation over REST) and `{"collection":"voicemail.message"}`; both return the same `data` contract, subject to the existing `voicemail:read` authorization. Existing sender, date, duration, read, mailbox and type fields are unchanged.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -20,7 +20,7 @@
 
 Transcript decoding shares a 1 MiB cumulative string/data/key-byte budget across plist parsing and UID resolution, in addition to depth and node limits. Each native-encoded observation is limited to 128 KiB, including JSON escaping and metadata. An over-budget transcript is omitted and marked `unsupported`; metadata and local audio remain. If the metadata alone cannot fit, the scan fails without establishing absence. A scan retains at most 4 MiB of encoded transcript-bearing data; excess transcripts are `pending`, not permanently unsupported. Unchanged acknowledged rows keep only fingerprints in reader memory and consume no later transcript budget. Further scans enrich pending rows even without source changes, without erasing already captured transcripts. Audio changes and temporary staging failures retry without caching missing audio. Corrupt digest-addressed staged files are atomically replaced with verified original bytes; only source races return a conflict.
 
-Download an authorized recording with `GET /v1/blobs/<audio.digest>?record=<record.id>` using the same credentials as the record read. An MCP client can use the gateway's authenticated blob endpoint after `records_query`. Audio bytes are not embedded in record JSON or MCP text. Blob availability follows the normal staging/replication lifecycle; do not treat metadata presence as successful playback or transcoding. AMR support depends on the player's codecs.
+Download an authorized recording with `GET /v1/blobs/<audio.digest>?record=<record.id>` using the same credentials as the record read. An MCP client can use the gateway's authenticated blob endpoint after `bridge.list_records`. Audio bytes are not embedded in record JSON or MCP text. Blob availability follows the normal staging/replication lifecycle; do not treat metadata presence as successful playback or transcoding. AMR support depends on the player's codecs.
 
 Source readiness reports `fields=metadata_and_local_assets`, `transcript=archived_if_present` and `audio=local_if_present`; this describes supported coverage, not a claim that every message has either asset. No permission requests, calls, voicemail mutations or on-demand iCloud downloads are performed.
 

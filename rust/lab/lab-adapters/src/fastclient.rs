@@ -1,4 +1,4 @@
-use crate::http::{Client, MCP_HEADERS, accepted, mcp_body, mcp_structured};
+use crate::http::{Client, accepted};
 use lab_world::{Error, Result};
 use serde_json::Value;
 use std::{
@@ -102,26 +102,18 @@ impl Fast {
         }
         Err(Error::Invalid("http: exhausted".into()))
     }
-    pub fn call(&self, protocol: &str, operation: &str, input: &Value) -> Option<Value> {
-        if protocol == "mcp" {
-            let body = mcp_body(operation, input).ok()?;
-            let (status, reply) = self.exchange("/mcp", &MCP_HEADERS, &body).ok()?;
-            self.count(&reply);
-            let (status, value) = mcp_structured(status, &reply).ok().flatten()?;
-            accepted(status, value)
-        } else {
-            let body = serde_json::to_vec(input).ok()?;
-            let (status, reply) = self
-                .exchange(
-                    &format!("/v1/op/{operation}"),
-                    &[("Content-Type", "application/json")],
-                    &body,
-                )
-                .ok()?;
-            self.count(&reply);
-            let value = serde_json::from_slice(&reply).ok()?;
-            accepted(status, value)
-        }
+    pub fn call(&self, _protocol: &str, operation: &str, input: &Value) -> Option<Value> {
+        let body = serde_json::to_vec(input).ok()?;
+        let (status, reply) = self
+            .exchange(
+                &format!("/v1/op/{operation}"),
+                &[("Content-Type", "application/json")],
+                &body,
+            )
+            .ok()?;
+        self.count(&reply);
+        let value = serde_json::from_slice(&reply).ok()?;
+        accepted(status, value)
     }
     fn count(&self, reply: &[u8]) {
         if reply.len() <= 32 && String::from_utf8_lossy(reply).trim() == "rate limited" {

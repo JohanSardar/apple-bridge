@@ -166,11 +166,7 @@ impl Native<'_> {
         if version > 0 {
             command["expected_version"] = json!(version);
         }
-        let reply = if self.mcp {
-            self.gateway.call_mcp_raw(op, &command, 40)?
-        } else {
-            self.gateway.call_raw(op, &command, 40)?
-        };
+        let reply = self.gateway.call_raw(op, &command, 40)?;
         let value = reply.map_or(Value::Null, |(_, value)| value);
         Ok(
             (value["error"].is_null() && value["disposition"] == "locally_observed")

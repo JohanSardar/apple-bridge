@@ -47,12 +47,12 @@ class Mcp:
 
 
 def reminders(grader):
-    found = grader.call('apple_read', {'operation': 'reminders.items', 'arguments': {'smart': 'all'}})
+    found = grader.call('apple_read', {'operation': 'reminders.list', 'arguments': {'smart': 'all'}})
     items = []
     for section in found.get('sections', []):
         for item in section.get('items', []):
             items.append(item['reminder'])
-    completed = grader.call('apple_read', {'operation': 'reminders.items', 'arguments': {'smart': 'completed'}})
+    completed = grader.call('apple_read', {'operation': 'reminders.list', 'arguments': {'smart': 'completed'}})
     for section in completed.get('sections', []):
         for item in section.get('items', []):
             items.append(item['reminder'])
@@ -65,7 +65,7 @@ def messages_with(grader, words):
 
 
 def notes(grader):
-    found = grader.call('apple_read', {'operation': 'records.query', 'arguments': {'collection': 'notes.note', 'limit': 200}})
+    found = grader.call('apple_read', {'operation': 'bridge.list_records', 'arguments': {'collection': 'notes.note', 'limit': 200}})
     return found.get('records', [])
 
 
@@ -75,7 +75,7 @@ def tasks(tag, sim_socket=None):
         return bool(match) and match[0]['data'].get('due', '').startswith('2026-11-12'), {'found': len(match)}
 
     def setup_complete(grader):
-        lists = grader.call('apple_read', {'operation': 'reminders.lists', 'arguments': {}})
+        lists = grader.call('apple_read', {'operation': 'reminders.list_lists', 'arguments': {}})
         list_id = lists['lists'][0]['list']['id']
         grader.call('apple_change', {'operation': 'reminders.create', 'arguments': {'list_id': list_id, 'title': f'{tag} call the plumber'}})
 
@@ -84,7 +84,7 @@ def tasks(tag, sim_socket=None):
         return bool(match) and match[0]['data'].get('completed') is True, {'found': len(match)}
 
     def setup_move(grader):
-        lists = grader.call('apple_read', {'operation': 'reminders.lists', 'arguments': {}})
+        lists = grader.call('apple_read', {'operation': 'reminders.list_lists', 'arguments': {}})
         list_id = lists['lists'][0]['list']['id']
         grader.call('apple_change', {'operation': 'reminders.create', 'arguments': {'list_id': list_id, 'title': f'{tag} renew passport', 'due': '2026-11-15', 'due_all_day': True}})
 
@@ -124,7 +124,7 @@ def tasks(tag, sim_socket=None):
 
     def screen_time_answer(grader, answer):
         yesterday = (datetime.datetime.now().astimezone() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-        found = grader.call('apple_read', {'operation': 'usage.summary', 'arguments': {'date': yesterday, 'device': 'iphone'}})
+        found = grader.call('apple_read', {'operation': 'screentime.summary', 'arguments': {'date': yesterday, 'device': 'iphone'}})
         device = (found.get('devices') or [{}])[0]
         seconds = device.get('total_seconds', -1)
         top = (device.get('top_apps') or [{}])[0].get('app', '?')

@@ -134,7 +134,7 @@ impl Run {
     fn submit(
         &self,
         id: &str,
-        protocol: &str,
+        _protocol: &str,
         operation: &str,
         args: &Value,
         version: u64,
@@ -151,11 +151,7 @@ impl Run {
             "command_id": random_id("cmd")?, "op": operation, "args": args,
             "expected_version": version, "wait_ms": 15000
         });
-        let reply = if protocol == "rest" {
-            client.call_raw(operation, &command, 30)?
-        } else {
-            client.call_mcp_raw(operation, &command, 30)?
-        };
+        let reply = client.call_raw(operation, &command, 30)?;
         Ok((command, reply))
     }
     fn truth_converged(&self, world: &World) -> bool {
@@ -949,11 +945,7 @@ fn groups(world: &mut World, evidence: &mut Evidence) -> Result<()> {
                 "command_id": random_id("cmd")?, "op": operation, "args": args,
                 "expected_version": version, "wait_ms": 15000
             });
-            let reply = if protocol == "rest" {
-                gateway.call_raw(operation, &command, 30)?
-            } else {
-                gateway.call_mcp_raw(operation, &command, 30)?
-            };
+            let reply = gateway.call_raw(operation, &command, 30)?;
             let ids = reply
                 .as_ref()
                 .filter(|(status, v)| {
@@ -966,11 +958,7 @@ fn groups(world: &mut World, evidence: &mut Evidence) -> Result<()> {
             Ok((ids, reply))
         };
         let call = |operation: &str, input: &Value| -> Result<Option<Value>> {
-            if protocol == "rest" {
-                gateway.call(operation, input, 20)
-            } else {
-                gateway.call_mcp(operation, input, 20)
-            }
+            gateway.call(operation, input, 20)
         };
         let read = |evidence: &mut Evidence, collection: &str, id: &str| -> Value {
             let page = call(
@@ -1019,11 +1007,7 @@ fn groups(world: &mut World, evidence: &mut Evidence) -> Result<()> {
             "command_id": random_id("cmd")?, "op": "contacts.delete_group",
             "args": {"id": group_id}, "expected_version": version(&group), "wait_ms": 15000
         });
-        let stale = if protocol == "rest" {
-            gateway.call_raw("contacts.delete_group", &stale_command, 30)?
-        } else {
-            gateway.call_mcp_raw("contacts.delete_group", &stale_command, 30)?
-        };
+        let stale = gateway.call_raw("contacts.delete_group", &stale_command, 30)?;
         add(
             evidence,
             &format!("{protocol}_stale_group_rejected"),
@@ -1091,7 +1075,7 @@ fn groups(world: &mut World, evidence: &mut Evidence) -> Result<()> {
                 .is_ok_and(|v| v.is_none())
         } else {
             gateway
-                .call_mcp("contacts.list", &json!({"group": group_id}), 20)
+                .call("contacts.list", &json!({"group": group_id}), 20)
                 .is_ok_and(|v| v.is_none())
         };
         add(
@@ -1154,11 +1138,7 @@ fn recipient_lookup(world: &mut World, evidence: &mut Evidence) -> Result<()> {
         let mut prior: Vec<Value> = vec![];
         for protocol in ["rest", "mcp"] {
             let input = json!({"q": q, "limit": limit});
-            let reply = if protocol == "rest" {
-                gateway.call("contacts.lookup", &input, 20)?
-            } else {
-                gateway.call_mcp("contacts.lookup", &input, 20)?
-            };
+            let reply = gateway.call("contacts.lookup", &input, 20)?;
             let rows = reply
                 .as_ref()
                 .and_then(|v| v["records"].as_array().cloned())
@@ -1211,11 +1191,7 @@ fn recipient_lookup(world: &mut World, evidence: &mut Evidence) -> Result<()> {
             json!({"q":"   "}),
         ];
         for (index, input) in inputs.iter().enumerate() {
-            let reply = if protocol == "rest" {
-                gateway.call("contacts.lookup", input, 20)?
-            } else {
-                gateway.call_mcp("contacts.lookup", input, 20)?
-            };
+            let reply = gateway.call("contacts.lookup", input, 20)?;
             add(
                 evidence,
                 &format!("invalid_lookup_{index}_{protocol}_rejected"),

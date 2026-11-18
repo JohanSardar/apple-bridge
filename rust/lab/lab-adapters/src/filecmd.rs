@@ -24,17 +24,12 @@ fn encode(content: &str) -> String {
 
 struct Session<'a> {
     client: &'a Client,
-    mcp: bool,
     prefix: &'a str,
 }
 
 impl Session<'_> {
     fn raw(&self, op: &str, input: &Value) -> Result<Option<(u16, Value)>> {
-        if self.mcp {
-            self.client.call_mcp_raw(op, input, 40)
-        } else {
-            self.client.call_raw(op, input, 40)
-        }
+        self.client.call_raw(op, input, 40)
     }
 
     fn check(&self, evidence: &mut Evidence, name: &str, ok: bool) -> bool {
@@ -83,7 +78,6 @@ fn steps(world: &World, mcp: bool, prefix: &str, evidence: &mut Evidence) -> Res
     let client = Client::new(&world, SCOPE)?;
     let session = Session {
         client: &client,
-        mcp,
         prefix,
     };
     if !session.check(evidence, "directory_fixture", fixture.is_ok()) {

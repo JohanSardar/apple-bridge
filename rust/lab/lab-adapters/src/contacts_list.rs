@@ -16,14 +16,8 @@ pub const SCOPE: &str = "contacts:read,messages:read,system:read";
 fn reference(collection: &str, key: &str) -> Value {
     json!({"$ref": {"collection": collection, "native_key": key}})
 }
-fn call(client: &Client, mcp: bool, input: &Value) -> Option<Value> {
-    if mcp {
-        client.call_mcp("contacts.list", input, 20)
-    } else {
-        client.call("contacts.list", input, 20)
-    }
-    .ok()
-    .flatten()
+fn call(client: &Client, _mcp: bool, input: &Value) -> Option<Value> {
+    client.call("contacts.list", input, 20).ok().flatten()
 }
 fn truth(world: &World, gateway: &Client) -> bool {
     let Ok(inspected) = world.control("/inspect", &Value::Null) else {

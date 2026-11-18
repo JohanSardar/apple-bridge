@@ -499,23 +499,23 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
         ("contacts_find", json!({"query": "Demo"})),
         ("apple_search", json!({"text": "synthetic"})),
         ("apple_read", json!({"operation": "notes.list"})),
-        ("apple_read", json!({"operation": "reminders.lists"})),
+        ("apple_read", json!({"operation": "reminders.list_lists"})),
         (
             "apple_read",
-            json!({"operation": "reminders.items", "arguments": {"smart": "today"}}),
+            json!({"operation": "reminders.list", "arguments": {"smart": "today"}}),
         ),
         (
             "apple_read",
-            json!({"operation": "reminders.items", "arguments": {"list": "Synthetic Errands"}}),
+            json!({"operation": "reminders.list", "arguments": {"list": "Synthetic Errands"}}),
         ),
-        ("apple_read", json!({"operation": "messages.chats"})),
+        ("apple_read", json!({"operation": "messages.list_chats"})),
         (
             "apple_read",
-            json!({"operation": "records.query", "arguments": {"collection": "mail.message"}}),
+            json!({"operation": "bridge.list_records", "arguments": {"collection": "mail.message"}}),
         ),
         (
             "apple_read",
-            json!({"operation": "search", "arguments": {"text": "synthetic", "collection": "notes.note"}}),
+            json!({"operation": "bridge.search", "arguments": {"text": "synthetic", "collection": "notes.note"}}),
         ),
     ];
     let mut answers = Vec::new();
@@ -542,15 +542,15 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
         ),
         (
             "apple_read",
-            json!({"operation": "records.query", "arguments": {"collection": "notes.note", "limit": 1000}}),
+            json!({"operation": "bridge.list_records", "arguments": {"collection": "notes.note", "limit": 1000}}),
         ),
         (
             "apple_read",
-            json!({"operation": "records.get", "arguments": {"collection": "notes.note", "id": answers[8]["notes"][0]["id"]}}),
+            json!({"operation": "bridge.get_record", "arguments": {"collection": "notes.note", "id": answers[8]["notes"][0]["id"]}}),
         ),
         (
             "apple_read",
-            json!({"operation": "reminders.items", "arguments": {"smart": "today"}, "view": "overdue", "offset": 20}),
+            json!({"operation": "reminders.list", "arguments": {"smart": "today"}, "view": "overdue", "offset": 20}),
         ),
     ];
     for (tool, arguments) in &everything {

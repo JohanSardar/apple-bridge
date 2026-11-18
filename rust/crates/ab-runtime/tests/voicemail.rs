@@ -133,7 +133,7 @@ async fn voicemail_reader_reaches_cli_mcp_and_authorized_audio_downloads() -> Ch
     };
     let initialized = mcp(json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"voicemail-test","version":"1"}}})).send().await?;
     assert!(initialized.status().is_success());
-    let response = mcp(json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"records_query","arguments":{"collection":"voicemail.message"}}})).send().await?;
+    let response = mcp(json!({"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"apple_read","arguments":{"operation":"bridge.list_records","arguments":{"collection":"voicemail.message"},"verbose":true}}})).send().await?;
     assert!(response.status().is_success());
     let response: Value = serde_json::from_slice(&response.bytes().await?)?;
     assert_ne!(response["result"]["isError"], true, "{response}");
