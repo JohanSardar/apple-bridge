@@ -835,7 +835,7 @@ impl Call<'_> {
                 count,
                 more.iter()
                     .find(|(source, _)| source.as_str() != "contacts")
-                    .map(|(source, after)| json!({"arguments": {"sources": [source], "after": after}})),
+                    .map(|(source, after)| json!({"arguments": {"text": query, "sources": [source], "after": after}})),
                 None,
                 "Pass sources to search fewer places, or more specific words.",
             ),

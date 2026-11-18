@@ -60,15 +60,34 @@ pub(crate) fn asks_for_more(input: &Map<String, Value>) -> bool {
             .is_some_and(|n| n > DEFAULT_ITEMS as u64)
 }
 
+const WHOLE: &[&str] = &[
+    "records.get",
+    "mail.body",
+    "files.read",
+    "blobs.read",
+    "photos.fetch",
+];
+
+fn whole_operation(name: &str) -> bool {
+    WHOLE.contains(&crate::mcp_registry::normal_name(name).as_str())
+        || WHOLE.contains(&name.replace('_', ".").as_str())
+}
+
 pub(crate) fn whole(tool: &str, input: &Map<String, Value>) -> bool {
-    matches!(
-        tool,
-        "blobs_read" | "files_read" | "mail_body" | "records_get"
-    ) || (tool == "apple_read"
-        && matches!(
-            input.get("operation").and_then(Value::as_str),
-            Some("records.get" | "mail.body" | "files.read" | "blobs.read")
-        ))
+    if tool != "apple_read" {
+        return whole_operation(tool);
+    }
+    input
+        .get("operation")
+        .and_then(Value::as_str)
+        .is_some_and(whole_operation)
+        || input
+            .get("reads")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|read| read["operation"].as_str())
+            .any(whole_operation)
 }
 
 pub(crate) fn budget(tool: &str, input: &Map<String, Value>) -> usize {
