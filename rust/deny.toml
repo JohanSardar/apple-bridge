@@ -1,3 +1,7 @@
+[advisories]
+ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained, not vulnerable. Apple Bridge does not use it; oauth2 5.0 (ab-trust) and rmcp 3.9 with schemars 1.2 pull it in. Dropping it needs releases of those crates without chrono, or replacing oauth2 in ab-trust and asking rmcp upstream to drop it." },
+]
 [licenses]
 allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0", "MPL-2.0", "CDLA-Permissive-2.0", "IJG"]
 [bans]
