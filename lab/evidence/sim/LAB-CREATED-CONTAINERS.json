@@ -1,0 +1,76 @@
+{
+ "impl": "rust",
+ "implementations": {
+  "gateway": "rust"
+ },
+ "scenario": "LAB-CREATED-CONTAINERS",
+ "level": "sim",
+ "passed": true,
+ "git_sha": "46410545e971677b00cc93ebb57d7683097fc047",
+ "at": "2026-11-18T03:58:31Z",
+ "hosts": [
+  "macos"
+ ],
+ "assertions": [
+  {
+   "name": "world_started",
+   "passed": true,
+   "detail": "gateway and SimApple peer ready"
+  },
+  {
+   "name": "calendar_created_and_recorded",
+   "passed": true,
+   "detail": "native identity recorded before cleanup"
+  },
+  {
+   "name": "reminder_list_created_and_recorded",
+   "passed": true,
+   "detail": "native identity recorded before cleanup"
+  },
+  {
+   "name": "notes_folder_created_and_recorded",
+   "passed": true,
+   "detail": "native identity recorded before cleanup"
+  },
+  {
+   "name": "skipped_cleanup_fails_check",
+   "passed": true,
+   "detail": "calendar=2 reminder_list=1 notes_folder=1 removal_failures=0"
+  },
+  {
+   "name": "failed_cleanup_fails_check",
+   "passed": true,
+   "detail": "calendar=2 reminder_list=1 notes_folder=1 removal_failures=3"
+  },
+  {
+   "name": "normal_path_created_containers_removed",
+   "passed": true,
+   "detail": "calendar=0 reminder_list=0 notes_folder=0 removal_failures=0"
+  },
+  {
+   "name": "foreign_container_never_removed",
+   "passed": true,
+   "detail": "reminder_list=1 removal_failures=1"
+  },
+  {
+   "name": "preexisting_containers_untouched",
+   "passed": true,
+   "detail": "calendar=1 reminder_list=1 notes_folder=1 removal_failures=0"
+  },
+  {
+   "name": "corrupt_record_fails_check",
+   "passed": true,
+   "detail": "the run record of created containers could not be read"
+  },
+  {
+   "name": "unreadable_record_fails_check",
+   "passed": true,
+   "detail": "the run record of created containers could not be read"
+  },
+  {
+   "name": "created_containers_removed",
+   "passed": true,
+   "detail": "calendar=0 reminder_list=0 notes_folder=0 removal_failures=0"
+  }
+ ]
+}

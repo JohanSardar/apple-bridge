@@ -62,6 +62,8 @@ struct AppleTruth {
                 } else if request["source"] as? String == "messages" {
                     guard verb == "observe" else { throw TruthFailure.invalid }
                     response = request["rich_counts"] as? Bool == true ? try MessagesRichTruth.observe(request) : try messages(request)
+                } else if request["source"] as? String == "containers" {
+                    response = try await CreatedContainers.run(verb, request)
                 } else if request["source"] as? String == "calendar" { response = try CalendarTruth.run(verb, request) } else if request["source"] as? String == "contacts" { do { response = try contacts(verb, request) } catch { response = ["status": "unverified", "reason": "contacts_native_error"] } } else { response = try await reminders(verb, request) }
                 }
             } catch {

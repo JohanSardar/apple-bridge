@@ -1,5 +1,6 @@
 use crate::{
     assertions::{await_until, record_multiset},
+    containers::{self, Kind, Ledger},
     http::random_id,
 };
 use lab_runner::{Evidence, Registry};
@@ -391,11 +392,27 @@ fn restart_real(world: &mut World, evidence: &mut Evidence) -> Result<()> {
 
 fn session_soak(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     let tag = format!("[ab-test {}]", random_id("soak")?);
-    let outcome = soak(world, evidence, &tag);
+    let list = containers::title(&tag);
+    let ledger = Ledger::of(world);
+    ledger.expect(Kind::ReminderList, &tag)?;
+    let created = truth(
+        world,
+        "fixture",
+        &json!({"action": "create_list", "list": list, "tag": tag}),
+    )?;
+    let owned = created["created"] == true
+        && created["id"]
+            .as_str()
+            .is_some_and(|id| ledger.created(Kind::ReminderList, &tag, id).is_ok());
+    evidence.check("soak_owned_list", owned, "tagged list created and recorded");
+    if !owned {
+        return Ok(());
+    }
+    let outcome = soak(world, evidence, &tag, &list);
     let cleaned = truth(
         world,
         "fixture",
-        &json!({"action": "cleanup", "list": "Bridge Test", "tag": tag}),
+        &json!({"action": "cleanup", "list": list, "tag": tag}),
     )
     .is_ok();
     if !cleaned {
@@ -403,7 +420,7 @@ fn session_soak(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     }
     outcome
 }
-fn soak(world: &World, evidence: &mut Evidence, tag: &str) -> Result<()> {
+fn soak(world: &World, evidence: &mut Evidence, tag: &str, list: &str) -> Result<()> {
     let Some(before) = helper_pid(world) else {
         return Ok(());
     };
@@ -424,7 +441,7 @@ fn soak(world: &World, evidence: &mut Evidence, tag: &str) -> Result<()> {
             let created = truth(
                 world,
                 "fixture",
-                &json!({"action": "create", "list": "Bridge Test", "tag": tag,
+                &json!({"action": "create", "list": list, "tag": tag,
                     "title": format!("{tag}{}", random_id("deadline")?)}),
             );
             if created.is_err() {

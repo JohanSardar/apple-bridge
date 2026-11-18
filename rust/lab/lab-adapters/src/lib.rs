@@ -14,6 +14,7 @@ pub mod commands;
 pub mod consent;
 pub mod contacts;
 pub mod contacts_list;
+pub mod containers;
 pub mod core;
 pub mod core_bulk;
 pub mod core_delegation;
@@ -292,6 +293,8 @@ pub fn registry() -> Registry {
     });
     registry.register("changes", live_latency::changes);
     registry.register("calendar_journey", calendar::calendar_journey);
+    registry.register(containers::SCENARIO, containers::scenario);
+    registry.register_settle(containers::settle);
     native_runner::register(&mut registry);
     registry.register("helper_ipc", helper_ipc::cases);
     helper_real::register(&mut registry);

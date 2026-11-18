@@ -67,6 +67,7 @@ pub struct Registry {
     real: BTreeMap<String, RealHandler>,
     simulated: BTreeSet<String>,
     standalone: BTreeMap<String, StandaloneHandler>,
+    settle: Option<Handler>,
 }
 #[must_use]
 pub fn supports_level(scenario: &Scenario, level: &str) -> bool {
@@ -89,6 +90,16 @@ impl Registry {
     }
     pub fn register_standalone(&mut self, id: &str, handler: StandaloneHandler) {
         self.standalone.insert(id.into(), handler);
+    }
+    pub fn register_settle(&mut self, handler: Handler) {
+        self.settle = Some(handler);
+    }
+    fn settle(&self, world: &mut World, evidence: &mut Evidence) {
+        if let Some(handler) = self.settle
+            && let Err(error) = handler(world, &Value::Null, evidence)
+        {
+            evidence.check("settle", false, &error.to_string());
+        }
     }
     #[must_use]
     pub fn has_step(&self, name: &str) -> bool {
@@ -146,6 +157,7 @@ impl Registry {
         {
             evidence.check("action", false, &error.to_string());
         }
+        self.settle(&mut world, &mut evidence);
         if evidence.assertions.is_empty() {
             evidence.check("assertions_present", false, "scenario made no assertions");
         }
@@ -191,6 +203,7 @@ impl Registry {
         {
             evidence.check("finish", false, &error.to_string());
         }
+        self.settle(world, &mut evidence);
         for step in &scenario.cleanup {
             if step.get("world").is_some() {
                 world.close();

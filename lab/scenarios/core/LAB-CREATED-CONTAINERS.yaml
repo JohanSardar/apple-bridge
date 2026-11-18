@@ -1,0 +1,6 @@
+id: LAB-CREATED-CONTAINERS
+feature: core.harness
+levels: [sim]
+given: [{world: {}}]
+when: [{LAB-CREATED-CONTAINERS: {}}]
+cleanup: [{world: {}}]
