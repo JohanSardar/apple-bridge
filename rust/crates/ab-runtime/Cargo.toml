@@ -56,4 +56,5 @@ required-features = ["replica-feed", "lab-harness"]
 [dev-dependencies]
 futures-util = "0.3"
 ab-session = { path = "../ab-session" }
+lab-demo = { path = "../../lab/lab-demo" }
 tempfile = "3"

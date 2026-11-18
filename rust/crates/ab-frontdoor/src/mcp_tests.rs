@@ -514,6 +514,54 @@ fn surface() -> Result<Value, Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn whole_item_reads_are_never_trimmed() {
+    let input = |value: Value| value.as_object().cloned().unwrap_or_default();
+    for operation in [
+        "records.get",
+        "records_get",
+        "mail_body",
+        "files.read",
+        "blobs_read",
+        "photos.fetch",
+        "photos_fetch",
+    ] {
+        assert!(
+            crate::mcp_answer::whole("apple_read", &input(json!({"operation": operation}))),
+            "{operation}"
+        );
+    }
+    for tool in ["records_get", "mail_body", "files_read", "photos_fetch"] {
+        assert!(
+            crate::mcp_answer::whole(tool, &serde_json::Map::new()),
+            "{tool}"
+        );
+    }
+    assert!(crate::mcp_answer::whole(
+        "apple_read",
+        &input(json!({"reads": [{"operation": "notes.list"}, {"operation": "records_get"}]}))
+    ));
+    assert!(!crate::mcp_answer::whole(
+        "apple_read",
+        &input(json!({"operation": "notes.list"}))
+    ));
+    assert!(!crate::mcp_answer::whole(
+        "messages_read",
+        &serde_json::Map::new()
+    ));
+    let long = "x".repeat(200_000);
+    let mut record = json!({"records": [{"data": {"plain_text": long}}]});
+    if !crate::mcp_answer::whole("apple_read", &input(json!({"operation": "records_get"}))) {
+        crate::mcp_answer::fit(&mut record, crate::mcp_answer::MAX_TOKENS);
+    }
+    assert_eq!(
+        record["records"][0]["data"]["plain_text"]
+            .as_str()
+            .map(str::len),
+        Some(200_000)
+    );
+}
+
+#[test]
 fn the_served_surface_matches_its_golden() -> Check {
     let expected: Value = serde_json::from_str(include_str!(
         "../../../../contracts/golden/mcp-surface.json"

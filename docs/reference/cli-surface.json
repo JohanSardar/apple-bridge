@@ -981,6 +981,10 @@
         {
           "command": "bridge stats --follow --timeout 5m --json",
           "summary": "Stream sync events as JSON lines for 5 minutes"
+        },
+        {
+          "command": "bridge stats --answers",
+          "summary": "See which MCP tools gave agents the largest answers"
         }
       ],
       "hidden": false,
@@ -990,7 +994,8 @@
         "Counts only, never content.",
         "--wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention, such as a missing permission, or when --timeout (default 10m) passes first; syncing continues either way.",
         "--follow keeps going until stopped or --timeout; in CI or under an agent it needs --timeout. Reaching --timeout exits 0 because watching was the task.",
-        "With --json, --wait and --follow print one JSON event per line; warnings arrive as {\"type\":\"warning\"} lines."
+        "With --json, --wait and --follow print one JSON event per line; warnings arrive as {\"type\":\"warning\"} lines.",
+        "--answers reads the gateway's MCP audit log: per tool and operation, the number of calls and the median and largest answer size. Sizes only, never content."
       ],
       "options": [
         {
@@ -1002,6 +1007,19 @@
           "required": false,
           "short": "-a",
           "summary": "Include sources with nothing synced",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--answers",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show the largest answers agents got over MCP, per tool, as sizes only",
           "type": "boolean",
           "value_hint": null,
           "values": []

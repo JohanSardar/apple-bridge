@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 mod mcp;
+mod mcp_answer;
 mod mcp_check;
 mod mcp_compose;
 mod mcp_facade;
@@ -10,6 +11,7 @@ mod mcp_photos;
 mod mcp_registry;
 #[cfg(test)]
 mod mcp_tests;
+mod mcp_views;
 pub mod web;
 pub mod web_connector;
 mod web_metadata;
@@ -47,6 +49,8 @@ pub struct AuditEntry {
     pub method: String,
     pub route: String,
     pub status: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub answer_bytes: Option<u64>,
 }
 pub trait Audit: Debug + Send + Sync {
     fn record(&self, entry: AuditEntry) -> Result<(), Error>;
@@ -110,6 +114,7 @@ impl Frontdoor {
         tool: &str,
         operation: Option<&str>,
         failure: Option<&str>,
+        answer_bytes: usize,
     ) {
         let operation = operation.unwrap_or(tool).to_owned();
         let key = (principal.id.clone(), operation.clone());
@@ -132,6 +137,7 @@ impl Frontdoor {
             method: "MCP".into(),
             route,
             status: if failure.is_some() { 422 } else { 200 },
+            answer_bytes: u64::try_from(answer_bytes).ok(),
         });
     }
     pub fn encode(&self, raw: &[u8]) -> Result<Vec<u8>, Error> {
@@ -275,6 +281,7 @@ async fn guard(
         method,
         route,
         status: response.status().as_u16(),
+        answer_bytes: None,
     }) {
         return problem(error);
     }

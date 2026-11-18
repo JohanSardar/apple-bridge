@@ -280,6 +280,7 @@ Show how much each source has synced, as counts only
 
 Options:
   -a, --all             Include sources with nothing synced
+  --answers             Show the largest answers agents got over MCP, per tool, as sizes only
   -f, --follow          Keep showing sync events until you stop it or --timeout passes
   --settle <DURATION>   A source counts as finished after this long without new records; 0 means at
                         once (default: 30s)
@@ -302,6 +303,9 @@ Examples:
   Stream sync events as JSON lines for 5 minutes
     bridge stats --follow --timeout 5m --json
 
+  See which MCP tools gave agents the largest answers
+    bridge stats --answers
+
 Notes:
   Counts only, never content.
   --wait exits 0 once every source has finished syncing. It exits 1 when a source needs attention,
@@ -311,6 +315,8 @@ Notes:
   Reaching --timeout exits 0 because watching was the task.
   With --json, --wait and --follow print one JSON event per line; warnings arrive as
   {"type":"warning"} lines.
+  --answers reads the gateway's MCP audit log: per tool and operation, the number of calls and the
+  median and largest answer size. Sizes only, never content.
 ```
 
 ## bridge down

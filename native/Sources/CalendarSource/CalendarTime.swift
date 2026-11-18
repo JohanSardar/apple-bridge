@@ -30,6 +30,13 @@ public enum CalendarTime {
         return String(format: "%04d-%02d-%02d", value.year!, value.month!, value.day!)
     }
 
+    public static func allDayEnd(_ end: Date, zone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let last = calendar.startOfDay(for: end.addingTimeInterval(-1))
+        return floating(calendar.date(byAdding: .day, value: 1, to: last) ?? end, zone: zone)
+    }
+
     public static func date(_ value: String, allDay: Bool, zone: TimeZone) throws -> Date {
         if !allDay, let date = parseTimestamp(value) { return date }
         guard allDay, value.count == 10 else { throw SourceFailure.invalid }

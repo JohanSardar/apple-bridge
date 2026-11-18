@@ -1,0 +1,340 @@
+{
+ "impl": "rust",
+ "scenario": "AGENT-SMALL-ANSWERS",
+ "level": "real-store",
+ "passed": true,
+ "git_sha": "612cd556 plus the uncommitted tree of this change",
+ "at": "2026-11-18T02:43:25Z",
+ "hosts": [
+  "owner's Mac: a private read-only SQLite backup of the live gateway's state.db, served by the branch's bridge binary outside any app bundle (no Helper, no window), deleted afterwards; the live gateway was not touched and Tailscale Serve status was byte-identical before and after"
+ ],
+ "privacy": "Sizes, counts and argument shapes only. No titles, names, addresses or text.",
+ "before": {
+  "source": "the same reads earlier on 2026-11-17 through the installed 0.1.9 build",
+  "notes.list_bytes": 1240473,
+  "reminders.items_today_bytes": 49290,
+  "unread_chats_bytes": 31866,
+  "calendar.agenda_today_bytes": 2300,
+  "calendar_today_missed_all_day_event": true
+ },
+ "after": [
+  {
+   "kind": "default",
+   "tool": "calendar_events",
+   "arguments": {},
+   "bytes": 845,
+   "tokens": 242,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 2,
+     "returned": 2,
+     "truncated": false,
+     "has_next": false,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "calendar_events",
+   "arguments": {
+    "date": "2026-11-17"
+   },
+   "bytes": 845,
+   "tokens": 242,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 2,
+     "returned": 2,
+     "truncated": false,
+     "has_next": false,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "messages_read",
+   "arguments": {},
+   "bytes": 6339,
+   "tokens": 1812,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 306,
+     "returned": 20,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "messages_read",
+   "arguments": {
+    "unread": true
+   },
+   "bytes": 1076,
+   "tokens": 308,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 2,
+     "returned": 2,
+     "truncated": false,
+     "has_next": false,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "notes.list"
+   },
+   "bytes": 6697,
+   "tokens": 1914,
+   "budget": 2000,
+   "cut": true,
+   "pages": [
+    {
+     "at": "top",
+     "total": 122,
+     "returned": 19,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "reminders.items",
+    "arguments": {
+     "smart": "today"
+    }
+   },
+   "bytes": 1560,
+   "tokens": 446,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "due_today",
+     "total": 0,
+     "returned": 0,
+     "truncated": false,
+     "has_next": false,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "reminders.lists"
+   },
+   "bytes": 903,
+   "tokens": 258,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 7,
+     "returned": 7,
+     "truncated": false,
+     "has_next": false,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "messages.chats"
+   },
+   "bytes": 6378,
+   "tokens": 1823,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": 306,
+     "returned": 20,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "records.query",
+    "arguments": {
+     "collection": "mail.message"
+    }
+   },
+   "bytes": 6508,
+   "tokens": 1860,
+   "budget": 2000,
+   "cut": true,
+   "pages": [
+    {
+     "at": "top",
+     "total": "more than 1000",
+     "returned": 17,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "apple_search",
+   "arguments": {
+    "text": "the"
+   },
+   "bytes": 6737,
+   "tokens": 1925,
+   "budget": 2000,
+   "cut": true,
+   "pages": [
+    {
+     "at": "top",
+     "total": "more than 27",
+     "returned": 27,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "default",
+   "tool": "contacts_find",
+   "arguments": {
+    "query": "a"
+   },
+   "bytes": 2913,
+   "tokens": 833,
+   "budget": 2000,
+   "cut": false,
+   "pages": [
+    {
+     "at": "top",
+     "total": "more than 10",
+     "returned": 10,
+     "truncated": true,
+     "has_next": true,
+     "has_narrow": true
+    }
+   ]
+  },
+  {
+   "kind": "verbose",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "notes.list",
+    "verbose": true
+   },
+   "bytes": 9511,
+   "tokens": 2718,
+   "budget": 8000,
+   "cut": true,
+   "pages": []
+  },
+  {
+   "kind": "verbose",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "reminders.items",
+    "arguments": {
+     "smart": "today"
+    },
+    "verbose": true
+   },
+   "bytes": 27151,
+   "tokens": 7758,
+   "budget": 8000,
+   "cut": true,
+   "pages": []
+  },
+  {
+   "kind": "verbose",
+   "tool": "apple_read",
+   "arguments": {
+    "operation": "messages.chats",
+    "verbose": true
+   },
+   "bytes": 27066,
+   "tokens": 7734,
+   "budget": 8000,
+   "cut": true,
+   "pages": []
+  }
+ ],
+ "assertions": [
+  {
+   "name": "default_answers_within_2000_tokens",
+   "passed": true
+  },
+  {
+   "name": "no_answer_over_8000_tokens",
+   "passed": true
+  },
+  {
+   "name": "no_silent_cuts",
+   "passed": true
+  },
+  {
+   "name": "all_day_event_today_listed",
+   "passed": true,
+   "detail": "1 all-day event covering today in the store, 1 listed by calendar_events {}"
+  },
+  {
+   "name": "notes_list_has_no_bodies",
+   "passed": true
+  },
+  {
+   "name": "reminders_today_split",
+   "passed": true,
+   "detail": {
+    "due_today": 0,
+    "overdue": 28,
+    "overdue_top": 3,
+    "upcoming": 0
+   }
+  },
+  {
+   "name": "answer_sizes_recorded",
+   "passed": true,
+   "detail": "15 audit lines carry answer_bytes; bridge stats --answers ranked 8 tool/operation pairs"
+  }
+ ],
+ "limits": [
+  "No Helper ran, so the Swift all-day end change was checked by CalendarChecks only; the store's existing all-day records use the old inclusive end and the read model now accepts both.",
+  "Default list answers that still exceed the budget drop items and say so in cut and page (notes.list returned 19 of 20; mail records.query 17; apple_search 27).",
+  "The Helper-level real scenario remains unrun; see features.yaml agent.answers."
+ ]
+}
