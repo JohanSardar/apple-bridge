@@ -2,7 +2,7 @@
   {
     "name": "apple_status",
     "title": "Apple Bridge status",
-    "description": "Shows your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Not needed before other calls; use it when a source is empty or refused.",
+    "description": "Your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Use it when a source is empty or refused.",
     "inputSchema": {"type": "object", "properties": {}},
     "outputSchema": {"type": "object", "properties": {"access": {"type": "object"}, "sources": {"type": "array"}, "time_zone": {"type": "string"}, "now": {"type": "string"}, "next": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -11,7 +11,7 @@
   {
     "name": "apple_describe",
     "title": "Find operations",
-    "description": "Look up what you can do. query: the best operations for a task in plain words, such as screen time yesterday, best first. operation: its exact arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation, one line each.",
+    "description": "Find what you can do. query: the best operations for a task in plain words, such as screen time yesterday, best first. operation: its arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation.",
     "inputSchema": {"type": "object", "properties": {
       "query": {"type": "string", "description": "The task in plain words."},
       "operation": {"type": "string", "description": "Operation name, such as reminders.create."},
@@ -24,12 +24,12 @@
   {
     "name": "apple_search",
     "title": "Search Apple data",
-    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and other synced records. Returns matches grouped by source with ids, which sources have more, and which were not searched. Photos: use photos_find.",
+    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and more. Matches are grouped by source with ids; more and skipped say which sources have more or were not searched. Photos: photos_find.",
     "inputSchema": {"type": "object", "required": ["text"], "properties": {
       "text": {"type": "string", "description": "Words to find."},
       "sources": {"type": "array", "items": {"type": "string"}, "description": "Only these sources, such as notes, mail, calendar or messages, or a collection such as notes.note. Default all you can read."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Matches per source. Default 10."},
-      "after": {"type": "string", "description": "The after value a source returned in more, to get its next page. Use with sources set to that one source."}
+      "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Matches per source. Default 5."},
+      "after": {"type": "string", "description": "A source's value from more, for its next page; set sources to that one source."}
     }},
     "outputSchema": {"type": "object", "properties": {"results": {"type": "object"}, "more": {"type": "object"}, "skipped": {"type": "object"}, "complete": {"type": "boolean"}, "next": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -38,14 +38,16 @@
   {
     "name": "apple_read",
     "title": "Read Apple data",
-    "description": "Run any read operation; reads never change anything. Common reads need no lookup, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; one record by id: records.get {\"id\":\"nte_…\"}. For others, apple_describe gives the arguments. Paging: pass next back as after, or next_cursor as cursor for Photos. reads runs up to 10 reads in one call.",
+    "description": "Run any read operation. Common reads, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; records.get {\"id\":\"nte_…\"}. apple_describe gives other arguments. reads runs up to 10 reads at once.",
     "inputSchema": {"type": "object", "properties": {
       "operation": {"type": "string", "description": "Read operation name, such as reminders.items."},
       "arguments": {"type": "object", "description": "The operation's arguments, as apple_describe lists them."},
       "fields": {"type": "array", "items": {"type": "string"}, "description": "Keep only these data fields in each record, such as title and due."},
       "reads": {"type": "array", "maxItems": 10, "items": {"type": "object", "properties": {"operation": {"type": "string", "description": "Read operation name."}, "arguments": {"type": "object", "description": "Its arguments."}}, "required": ["operation"]}, "description": "Instead of operation: up to 10 reads to run together. Each result or error comes back in results, in order."},
       "request_id": {"type": "string", "description": "Only for reads the owner must approve, such as location.current: repeat the call with the same request_id after approval."},
-      "verbose": {"type": "boolean", "description": "Return the full result with coverage and sync details. Default false."}
+      "verbose": {"type": "boolean", "description": "The full result with coverage and sync details."},
+      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."},
+      "view": {"type": "string", "enum": ["due_today", "overdue", "upcoming"], "description": "reminders.items smart today: one group in full."}
     }},
     "outputSchema": {"type": "object"},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -54,7 +56,7 @@
   {
     "name": "apple_change",
     "title": "Change Apple data",
-    "description": "Run any operation that changes data, such as calendar.update_event or reminders.complete; get its arguments from apple_describe. Waits up to 15 seconds and returns status: done (with ids and the changed record), partial (some parts happened: see parts), pending, awaiting_approval, failed or indeterminate. Updates and deletes need expected_version, the record's version from your read.",
+    "description": "Run any operation that changes data, such as calendar.update_event or reminders.complete; apple_describe gives its arguments. Waits up to 15 seconds; status is done (with ids and the changed record), partial (see parts), pending, awaiting_approval, failed or indeterminate. Updates and deletes need expected_version: the record's version.",
     "inputSchema": {"type": "object", "required": ["operation"], "properties": {
       "operation": {"type": "string", "description": "Operation name, such as reminders.complete."},
       "arguments": {"type": "object", "description": "The operation's arguments, including expected_version where needed."},
@@ -92,15 +94,17 @@
     "name": "messages_read",
     "title": "Read messages",
     "scope": "messages:read",
-    "description": "Read Messages. No arguments: recent chats with unread counts (unread: only unread chats). with: a person's chat by phone number, email or name, plus their group chats as other_chats. chat_id: that chat. In a chat, unread starts at the first unread message and before pages back. text: messages containing these words in any chat (unread: only unread ones). after pages chat lists and text results.",
+    "description": "Read Messages. No arguments: recent chats with unread counts (unread: unread chats of the last 30 days), without spam or unknown senders. with: a person's chat by number, email or name, plus group chats as other_chats. chat_id: that chat; unread starts at the first unread, before pages back. text: messages with these words in any chat; after pages them.",
     "inputSchema": {"type": "object", "properties": {
       "with": {"type": "string", "description": "Phone number, email or contact name of the other person."},
       "chat_id": {"type": "string", "description": "A cht_ chat ID from an earlier result."},
       "text": {"type": "string", "description": "Words to find in messages, across all chats. Not with with or chat_id."},
       "unread": {"type": "boolean", "description": "Only unread chats or messages; in a chat, start at the first unread message."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 200, "description": "Maximum chats or messages. Default 20."},
+      "limit": {"type": "integer", "minimum": 1, "maximum": 100, "description": "Maximum chats or messages. Default 20."},
+      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."},
+      "senders": {"type": "string", "enum": ["known", "all"], "description": "Chat lists: all adds spam, unknown senders and old unread."},
       "before": {"type": "string", "description": "In a chat: the before value from the previous result, for older messages."},
-      "after": {"type": "string", "description": "For chat lists and text results: the after value from the previous result, for the next page."}
+      "after": {"type": "string", "description": "For text results: the after value from the previous result."}
     }},
     "outputSchema": {"type": "object", "properties": {"chats": {"type": "array"}, "messages": {"type": "array"}, "chat_id": {"type": "string"}, "other_chats": {"type": "array"}, "before": {"type": "string"}, "after": {"type": "string"}, "next": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -110,7 +114,7 @@
     "name": "messages_send",
     "title": "Send a message",
     "scope": "messages:write",
-    "description": "Send an iMessage, SMS or RCS. to: phone number, email or contact name, used only if it matches one person and one chat (otherwise you get the candidates); or chat_id from messages_read, also for group chats. The text is sent exactly as given. done means the Messages app on the Mac shows it sent, not that it was delivered.",
+    "description": "Send an iMessage, SMS or RCS. to: phone number, email or contact name, used only if it matches one person and one chat (otherwise you get candidates); or chat_id from messages_read, also for groups. Text is sent exactly as given. done means the Mac's Messages app shows it sent, not that it was delivered.",
     "inputSchema": {"type": "object", "properties": {
       "to": {"type": "string", "description": "Phone number in international form, email, or a contact's name."},
       "chat_id": {"type": "string", "description": "An existing chat's cht_ ID. Use instead of to."},
@@ -127,7 +131,7 @@
     "name": "reminders_add",
     "title": "Add a reminder",
     "scope": "reminders:write",
-    "description": "Add a reminder. list: a list name or lst_ ID; default the first list in Reminders. Returns the new reminder's id. To complete, change or delete one, use apple_change with reminders.complete, reminders.update or reminders.delete and reminder set to its title.",
+    "description": "Add a reminder. list: a list name or lst_ ID; default the first list. Returns its id. To complete, change or delete one, use apple_change reminders.complete, reminders.update or reminders.delete with reminder set to its title.",
     "inputSchema": {"type": "object", "required": ["title"], "properties": {
       "title": {"type": "string", "description": "What to be reminded of."},
       "list": {"type": "string", "description": "List name, such as Groceries, or a lst_ ID."},
@@ -144,13 +148,15 @@
     "name": "calendar_events",
     "title": "List calendar events",
     "scope": "calendar:read",
-    "description": "List calendar events with start and end in UTC and in the Mac's time zone (start_local, end_local). Default today in the Mac's time zone. date for one day, or start and end for a range, not both; text to filter by title, notes or location; calendar by name or cal_ ID.",
+    "description": "List calendar events, start and end in UTC and the Mac's time zone (start_local, end_local); all-day events included. Default today. date for one day, or start and end for a range; text filters by title, notes or location; calendar by name or cal_ ID.",
     "inputSchema": {"type": "object", "properties": {
       "date": {"type": "string", "description": "One day as YYYY-MM-DD."},
       "start": {"type": "string", "description": "Range start, RFC 3339 or YYYY-MM-DD."},
       "end": {"type": "string", "description": "Range end, exclusive, RFC 3339 or YYYY-MM-DD."},
       "text": {"type": "string", "description": "Only events containing this text."},
-      "calendar": {"type": "string", "description": "Only this calendar: its name, such as Work, or cal_ ID."}
+      "calendar": {"type": "string", "description": "Only this calendar: its name, such as Work, or cal_ ID."},
+      "detail": {"type": "boolean", "description": "Include notes, attendees and alarms."},
+      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."}
     }},
     "outputSchema": {"type": "object", "properties": {"events": {"type": "array"}, "start": {"type": "string"}, "end": {"type": "string"}, "time_zone": {"type": "string"}}},
     "annotations": {"readOnlyHint": true, "openWorldHint": false},
@@ -160,7 +166,7 @@
     "name": "calendar_add",
     "title": "Add a calendar event",
     "scope": "calendar:write",
-    "description": "Add a calendar event. calendar: a calendar name, such as Work, or cal_ ID; default the first calendar you can add to. Times without an offset are in the Mac's time zone; a start date YYYY-MM-DD makes an all-day event. Returns the new event's id.",
+    "description": "Add a calendar event. calendar: a name, such as Work, or cal_ ID; default the first writable calendar. Times without an offset are in the Mac's time zone; a start date YYYY-MM-DD makes an all-day event. Returns its id.",
     "inputSchema": {"type": "object", "required": ["title", "start"], "properties": {
       "title": {"type": "string", "description": "Event title."},
       "start": {"type": "string", "description": "Start, such as 2026-11-12T15:00 or 2026-11-12T15:00:00-06:00, or a date YYYY-MM-DD for all day."},
@@ -178,7 +184,7 @@
     "name": "contacts_find",
     "title": "Find a contact",
     "scope": "contacts:read",
-    "description": "Find people by name (words in any order, accents and case ignored), part of a name, phone number or email. Returns up to 25 contacts with their phones, emails and con_ IDs.",
+    "description": "Find people by name (any word order, accents and case ignored), phone number or email. Returns up to 25 contacts with phones, emails and con_ IDs.",
     "inputSchema": {"type": "object", "required": ["query"], "properties": {
       "query": {"type": "string", "description": "A name such as Ana Novak, part of a name, a phone number or an email."},
       "limit": {"type": "integer", "minimum": 1, "maximum": 25, "description": "Maximum contacts. Default 10."}
@@ -191,7 +197,7 @@
     "name": "notes_create",
     "title": "Create a note",
     "scope": "notes:write",
-    "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns the new note's id.",
+    "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns its id.",
     "inputSchema": {"type": "object", "required": ["title"], "properties": {
       "title": {"type": "string", "description": "Note title."},
       "text": {"type": "string", "description": "Body as plain text."},
@@ -206,7 +212,7 @@
     "name": "screen_time",
     "title": "Screen Time",
     "scope": "usage:read",
-    "description": "Screen Time per device (Mac, iPhone, iPad): total and top apps, estimated from app focus. Default yesterday in the Mac's time zone; date for one day, or start and end.",
+    "description": "Screen Time per device (Mac, iPhone, iPad): total and top apps, estimated from app focus. Default yesterday; date for one day, or start and end.",
     "inputSchema": {"type": "object", "properties": {
       "date": {"type": "string", "description": "One day as YYYY-MM-DD. Default yesterday."},
       "start": {"type": "string", "description": "First day of a range, YYYY-MM-DD."},

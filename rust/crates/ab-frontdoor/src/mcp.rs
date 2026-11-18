@@ -92,13 +92,15 @@ impl ServerHandler for Handler {
                 () = context.ct.cancelled() => return Err(ErrorData::new(rmcp::model::ErrorCode(-32800), "cancelled", None)),
                 outcome = crate::mcp_facade::call(&self.frontdoor, principal, &request.name, arguments) => outcome,
             };
+            let (response, size) = self.compact_result(&outcome)?;
             self.frontdoor.observe_mcp(
                 principal,
                 &request.name,
                 outcome.operation.as_deref(),
                 outcome.class().as_deref(),
+                size,
             );
-            return self.compact_result(&outcome);
+            return Ok(response);
         }
         self.legacy(principal, request, context).await
     }
@@ -107,7 +109,7 @@ impl Handler {
     fn compact_result(
         &self,
         outcome: &crate::mcp_facade::Outcome,
-    ) -> Result<CallToolResponse, ErrorData> {
+    ) -> Result<(CallToolResponse, usize), ErrorData> {
         let raw = serde_json::to_vec(&outcome.value)
             .map_err(|_| ErrorData::internal_error("encoding", None))?;
         let bytes = self
@@ -127,8 +129,9 @@ impl Handler {
         if let Some(elapsed) = outcome.read_model_ms {
             value["_meta"] = json!({"bridge/read_model_ms": elapsed});
         }
+        let size = text.len();
         serde_json::from_value::<rmcp::model::CallToolResult>(value)
-            .map(CallToolResponse::Complete)
+            .map(|result| (CallToolResponse::Complete(result), size))
             .map_err(|_| ErrorData::internal_error("encoding", None))
     }
 
@@ -188,12 +191,7 @@ impl Handler {
                 .and_then(|code| code.as_str().map(str::to_owned))
                 .unwrap_or_else(|| "error".into())
         });
-        self.frontdoor.observe_mcp(
-            principal,
-            &request.name,
-            Some(&descriptor.name),
-            failure.as_deref(),
-        );
+
         let mut image = None;
         let raw = match result {
             Ok(value) if returns_image(&descriptor.name) => {
@@ -210,10 +208,21 @@ impl Handler {
             .frontdoor
             .encode(&raw)
             .map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let text =
+        let mut text =
             String::from_utf8(bytes).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let structured: serde_json::Value =
+        let mut structured: serde_json::Value =
             serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
+        if crate::mcp_answer::tokens(&structured) > crate::mcp_answer::MAX_TOKENS {
+            crate::mcp_answer::fit(&mut structured, crate::mcp_answer::MAX_TOKENS);
+            text = structured.to_string();
+        }
+        self.frontdoor.observe_mcp(
+            principal,
+            &request.name,
+            Some(&descriptor.name),
+            failure.as_deref(),
+            text.len(),
+        );
         let mut items = vec![json!({"type":"text","text":text})];
         if let Some(Image { data, mime }) = image {
             items.push(json!({"type":"image","data":data,"mimeType":mime}));

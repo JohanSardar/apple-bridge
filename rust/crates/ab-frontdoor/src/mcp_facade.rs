@@ -123,7 +123,9 @@ pub(crate) async fn call(
         "photos_show" => call.photos_show(&input).await,
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
     };
-    result.unwrap_or_else(|problem| Outcome::fail(&problem))
+    let mut outcome = result.unwrap_or_else(|problem| Outcome::fail(&problem));
+    crate::mcp_answer::fit(&mut outcome.value, crate::mcp_answer::budget(tool, &input));
+    outcome
 }
 
 pub(crate) fn text<'a>(input: &'a Map<String, Value>, key: &str) -> Option<&'a str> {
@@ -600,6 +602,7 @@ impl Call<'_> {
             mcp_check::local_dates(operation, arguments);
         }
         let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
+        Self::check_view(operation, input)?;
         if !operation.scope.is_empty() {
             self.require(&operation.scope, &operation.name)?;
         }
@@ -685,6 +688,24 @@ impl Call<'_> {
                 .run_change(operation, arguments, &request_id(input)?, verbose)
                 .await;
         }
+        if operation.name == "messages.chats"
+            && !verbose
+            && !arguments.contains_key("participants")
+            && !arguments.contains_key("after")
+        {
+            let filter = text(&arguments, "filter").unwrap_or_default().to_owned();
+            let everyone = !matches!(filter.as_str(), "" | "unread");
+            let value = self
+                .chat_list(
+                    if filter == "all" { "" } else { &filter },
+                    everyone,
+                    None,
+                    crate::mcp_views::read_window(input, &arguments),
+                    |_, _| json!({"tool": "apple_read", "arguments": {"operation": "messages.chats", "arguments": {"filter": "all"}}}),
+                )
+                .await?;
+            return Ok(Outcome::ok(value).named(&operation.name));
+        }
         if operation.name == BLOB_READ {
             return self
                 .blob_read(&arguments)
@@ -693,7 +714,7 @@ impl Call<'_> {
         }
         let started = std::time::Instant::now();
         let body = if operation.kind == OperationKind::Query {
-            let mut body = json!({"args": arguments});
+            let mut body = json!({"args": arguments.clone()});
             match operation.name.as_str() {
                 "photos.places" => body["deadline_ms"] = json!(45_000),
                 "photos.search" | "photos.get" => body["deadline_ms"] = json!(10_000),
@@ -709,7 +730,7 @@ impl Call<'_> {
             }
             body
         } else {
-            Value::Object(arguments)
+            Value::Object(arguments.clone())
         };
         let raw = self.invoke_raw(operation, &body).await?;
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
@@ -722,10 +743,11 @@ impl Call<'_> {
         } else {
             raw
         };
-        let value: Value =
+        let raw_value: Value =
             serde_json::from_str(&raw).map_err(|_| Problem::new("corrupt", "unreadable result"))?;
+        let value = &raw_value;
         let value = if operation.kind == OperationKind::Query {
-            let mut out = query_result(&value, verbose, fields.as_deref());
+            let mut out = query_result(value, verbose, fields.as_deref());
             if out["status"] == "awaiting_approval"
                 && let Some(Value::String(external)) = input.get("request_id")
             {
@@ -736,13 +758,19 @@ impl Call<'_> {
             }
             out
         } else if operation.name == "reminders.lists" && !verbose {
-            reminder_lists(&value)
+            reminder_lists(value)
         } else {
-            compact(&value, verbose, fields.as_deref())
+            compact(value, verbose, fields.as_deref())
         };
         let value = match value {
             Value::Object(_) => value,
             other => json!({ "items": other }),
+        };
+        let value = if verbose {
+            value
+        } else {
+            self.agent_view(operation, &arguments, &raw_value, value, input)
+                .await?
         };
         let read_model = ab_operations::descriptor_for(&operation.name).is_ok_and(|d| d.read_model);
         Ok(Outcome {
@@ -777,6 +805,7 @@ impl Call<'_> {
             mcp_check::local_dates(operation, arguments);
         }
         let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
+        Self::check_view(operation, input)?;
         if !operation.scope.is_empty() {
             self.require(&operation.scope, &operation.name)?;
         }
@@ -1146,13 +1175,29 @@ impl Call<'_> {
         let operation = self.operation("contacts.lookup")?;
         mcp_check::arguments(operation, Some(&json!({"q": query, "limit": limit})))?;
         let found = self
-            .invoke(operation, &json!({"q": query, "limit": limit}))
+            .invoke(
+                operation,
+                &json!({"q": query, "limit": (limit + 1).min(25)}),
+            )
             .await?;
-        let contacts = compact(&found["records"], false, None);
-        let count = contacts.as_array().map_or(0, Vec::len);
+        let mut contacts: Vec<Value> = found["records"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|person| crate::mcp_views::contact_card(&compact(person, false, None)))
+            .collect();
+        let more = contacts.len() as u64 > limit || (limit == 25 && contacts.len() == 25);
+        contacts.truncate(usize::try_from(limit).unwrap_or(25));
+        let count = contacts.len();
         Ok(Outcome::ok(json!({
             "contacts": contacts,
-            "next": if count == 0 { "Nobody matches. Try part of the name, or a phone number or email." } else { "Use a contact's name, phone or email with messages_send or messages_read." },
+            "page": crate::mcp_answer::cursor_page(
+                count,
+                more.then(|| json!({"limit": 25})),
+                None,
+                "Give more of the name, or a phone number or email.",
+            ),
+            "next": if count == 0 { "Nobody matches. Try part of the name, or a phone number or email." } else { "Use a contact's name, phone or email with messages_send or messages_read. Read every field of one with apple_read records.get and its id." },
         }))
         .named("contacts.lookup"))
     }
@@ -1439,16 +1484,27 @@ pub(crate) fn contact_handles(person: &Value) -> Vec<String> {
 }
 
 pub(crate) fn chat_summary(chat: &Value) -> Value {
+    let mut last = chat["last_message"].clone();
+    if let Some(text) = last["preview"]["text"].as_str() {
+        last["preview"]["text"] = json!(crate::mcp_answer::short(text));
+    }
+    if let Some(text) = last["preview"]["reaction"]["target_excerpt"].as_str() {
+        last["preview"]["reaction"]["target_excerpt"] = json!(crate::mcp_answer::short(text));
+    }
+    let everyone = chat["chat"]["data"]["participants"].as_array();
     let mut value = json!({
         "chat_id": chat["chat"]["id"],
         "title": chat["title"],
         "group": chat["chat"]["data"]["style"] == "group",
         "unread_count": chat["unread_count"],
         "last_activity_at": chat["last_activity_at"],
-        "last_message": chat["last_message"],
+        "last_message": last,
         "service": chat["chat"]["data"]["service"],
-        "participants": chat["chat"]["data"]["participants"].as_array().map_or(Value::Null, |p| json!(p)),
+        "participants": everyone.map_or(Value::Null, |p| json!(p.iter().take(8).collect::<Vec<_>>())),
     });
+    if let Some(everyone) = everyone.filter(|p| p.len() > 8) {
+        value["participant_count"] = json!(everyone.len());
+    }
     if let Some(fields) = value.as_object_mut() {
         fields.retain(|_, v| !v.is_null());
     }
