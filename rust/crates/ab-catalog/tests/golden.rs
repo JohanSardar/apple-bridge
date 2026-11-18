@@ -1,4 +1,4 @@
-use ab_catalog::{mcp_tools, openapi, operations};
+use ab_catalog::{openapi, operations};
 use serde_json::Value;
 
 type Result = std::result::Result<(), Box<dyn std::error::Error>>;
@@ -18,14 +18,5 @@ fn openapi_equal_go() -> Result {
     let expected: Value =
         serde_json::from_str(include_str!("../../../../contracts/golden/openapi.json"))?;
     assert_eq!(openapi(&operations()?), expected);
-    Ok(())
-}
-
-#[test]
-fn legacy_mcp_tool_list_is_unchanged() -> Result {
-    let expected: Value = serde_json::from_str(include_str!(
-        "../../../../contracts/golden/mcp-legacy-tools.json"
-    ))?;
-    assert_eq!(mcp_tools(&operations()?), expected);
     Ok(())
 }

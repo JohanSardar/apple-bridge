@@ -110,7 +110,10 @@ pub(crate) async fn call(
         "apple_read" => call.read(&input).await,
         "apple_change" => call.change(&input).await,
         "apple_command_status" => call.command_status(&input).await,
-        "apple_guide" => crate::mcp_guides::guide_tool(input.get("name").and_then(Value::as_str)),
+        "apple_guide" => crate::mcp_guides::guide_tool(
+            input.get("name").and_then(Value::as_str),
+            &json!(call.index()),
+        ),
         "messages_read" => call.messages_read(&input).await,
         "messages_send" => call.messages_send(&input).await,
         "reminders_add" => call.reminders_add(&input).await,
@@ -246,21 +249,37 @@ impl Call<'_> {
     }
 
     pub(crate) fn operation(&self, name: &str) -> Step<&AgentOperation> {
-        self.registry.find(name).ok_or_else(|| {
-            let close = self.registry.closest(name, Some(self.principal));
-            Problem::new("invalid", format!("unknown operation {name}"))
-                .field("operation")
-                .problem(format!("{name} is not an operation"))
-                .expected(json!({ "closest": close }))
-                .hint(if close.is_empty() {
-                    "Call apple_describe with a query describing the task.".to_owned()
-                } else {
-                    format!(
-                        "Did you mean {}? apple_describe with a query finds operations.",
-                        close[0]
-                    )
-                })
-        })
+        self.registry
+            .find(name)
+            .ok_or_else(|| Problem::new("corrupt", format!("operation {name} is missing")))
+    }
+
+    pub(crate) fn requested(&self, name: &str) -> Step<&AgentOperation> {
+        if let Some(operation) = self.registry.named(name) {
+            return Ok(operation);
+        }
+        let close = self.registry.closest(name, Some(self.principal));
+        let mut problem = Problem::new("invalid", format!("unknown operation {name}"))
+            .field("operation")
+            .problem(match crate::mcp_names::retired(name) {
+                Some(public) => format!("{name} was renamed to {public}"),
+                None => format!("{name} is not an operation"),
+            })
+            .expected(
+                json!({ "did_you_mean": close.iter().map(|o| entry(o)).collect::<Vec<_>>() }),
+            );
+        problem = match close.first() {
+            Some(best) => problem
+                .example(example_call(mcp_check::tool_for(best), best))
+                .hint(format!(
+                    "Did you mean {}? The operation list in apple_read and apple_change has every name.",
+                    best.public
+                )),
+            None => problem.hint(
+                "The operation list in apple_read and apple_change has every name; apple_describe with a query finds one for a task.",
+            ),
+        };
+        Err(problem)
     }
 
     pub(crate) async fn invoke(&self, operation: &AgentOperation, input: &Value) -> Step<Value> {
@@ -394,7 +413,7 @@ impl Call<'_> {
 
     fn describe(&self, input: &Map<String, Value>) -> Step<Outcome> {
         if let Some(name) = text(input, "operation") {
-            let operation = self.operation(name)?;
+            let operation = self.requested(name)?;
             return Ok(Outcome::ok(self.contract(operation)));
         }
         if let Some(domain) = text(input, "domain") {
@@ -409,24 +428,20 @@ impl Call<'_> {
                 .registry
                 .visible(Some(self.principal))
                 .filter(|o| o.domain == domain)
-                .map(|o| {
-                    json!({
-                        "operation": o.name,
-                        "summary": o.summary,
-                        "changes_data": o.changes && !o.read_only(),
-                        "required": o.required(),
-                    })
-                })
+                .map(entry)
                 .collect();
             let mut value = json!({
                 "domain": domain,
                 "about": about,
                 "operations": operations,
-                "next": "Call apple_describe with operation for the full contract.",
+                "next": "Run one with apple_read or apple_change as in its example. apple_describe with operation adds descriptions of each argument.",
             });
             let routes: Vec<String> = crate::mcp_find::ROUTES
                 .iter()
-                .filter(|r| source_of(r.collection) == domain && can(self.principal, r.scope))
+                .filter(|r| {
+                    (source_of(r.collection) == domain || domain == "bridge")
+                        && can(self.principal, r.scope)
+                })
                 .map(route_line)
                 .collect();
             if !routes.is_empty() {
@@ -439,7 +454,7 @@ impl Call<'_> {
             let matches: Vec<Value> = hits
                 .iter()
                 .map(|hit| match hit {
-                    crate::mcp_find::Hit::Operation(o) => json!(line(o)),
+                    crate::mcp_find::Hit::Operation(o) => entry(o),
                     crate::mcp_find::Hit::Route(r) => json!(route_line(r)),
                 })
                 .collect();
@@ -448,25 +463,30 @@ impl Call<'_> {
                 "operations": matches,
                 "total": total,
                 "truncated": total > matches.len(),
-                "next": if matches.is_empty() { "Nothing matched; try other words, a domain such as messages, or apple_describe with no arguments." } else { "Best first. Call apple_describe with operation for the full contract, or run it." },
+                "next": if matches.is_empty() { "Nothing matched; try other words, or apple_describe with a domain such as messages." } else { "Best first. Run one with apple_read or apple_change as in its example." },
             })));
         }
-        let mut lines: Vec<Value> = self
-            .registry
-            .visible(Some(self.principal))
-            .map(|o| json!(line(o)))
-            .collect();
-        lines.extend(
-            crate::mcp_find::ROUTES
-                .iter()
-                .filter(|r| can(self.principal, r.scope))
-                .map(|r| json!(route_line(r))),
-        );
         Ok(Outcome::ok(json!({
-            "count": lines.len(),
-            "operations": lines,
-            "next": "Read with apple_read, change with apple_change. Call apple_describe with operation for exact arguments.",
+            "naming": NAMING,
+            "domains": self.index(),
+            "next": "apple_describe with a domain gives each operation's summary, arguments and an example; with a query, the best operations for a task.",
         })))
+    }
+
+    pub(crate) fn index(&self) -> Map<String, Value> {
+        let mut domains = Map::new();
+        for (domain, about) in &self.registry.domains {
+            let names: Vec<&str> = self
+                .registry
+                .visible(Some(self.principal))
+                .filter(|o| &o.domain == domain)
+                .map(|o| o.public.as_str())
+                .collect();
+            if !names.is_empty() {
+                domains.insert(domain.clone(), json!({"about": about, "operations": names}));
+            }
+        }
+        domains
     }
 
     fn contract(&self, operation: &AgentOperation) -> Value {
@@ -484,7 +504,7 @@ impl Call<'_> {
             access["why_not"] = json!("this agent is read-only");
         }
         let mut value = json!({
-            "operation": operation.name,
+            "operation": operation.public,
             "domain": operation.domain,
             "summary": operation.summary,
             "changes_data": operation.changes && !operation.read_only(),
@@ -546,7 +566,7 @@ impl Call<'_> {
                     .and_then(Value::as_str)
                     .unwrap_or_default()
                     .to_owned();
-                if crate::mcp::returns_image(&mcp_registry::normal_name(&name)) {
+                if crate::mcp::returns_image(&mcp_registry::internal_name(&name)) {
                     results.push(json!({"operation": name, "error": Problem::new("invalid", format!("{name} returns an image")).field(format!("reads[{index}].operation")).hint("Call it on its own with operation, so the image can be shown.").to_json()["error"]}));
                     continue;
                 }
@@ -572,7 +592,7 @@ impl Call<'_> {
             return Err(Problem::new("invalid", "operation is required")
                 .field("operation")
                 .expected(json!(
-                    "a read operation name such as reminders.items, or reads with several"
+                    "a read operation name such as reminders.list, or reads with several"
                 ))
                 .hint("apple_describe with a query finds the operation for a task."));
         }
@@ -584,13 +604,35 @@ impl Call<'_> {
         let name = text(input, "operation").ok_or_else(|| {
             Problem::new("invalid", "operation is required")
                 .field("operation")
-                .expected(json!("a read operation name such as reminders.items"))
+                .expected(json!("a read operation name such as reminders.list"))
                 .hint("apple_describe lists the operations you can use.")
         })?;
-        let operation = self.operation(name)?;
+        let operation = self.requested(name)?;
+        if let Some(arguments) = input.get("arguments").cloned().or(Some(json!({})))
+            && mcp_registry::preset(&operation.name, &arguments).is_some()
+        {
+            let checked = mcp_check::arguments(operation, Some(&arguments))?;
+            self.require(&operation.scope, &operation.public)?;
+            let Some((target, mapped)) =
+                mcp_registry::preset(&operation.name, &Value::Object(checked))
+            else {
+                return Err(Problem::new("corrupt", "preset is missing"));
+            };
+            let mut inner = input.clone();
+            inner.insert(
+                "operation".into(),
+                json!(self.operation(target)?.public.clone()),
+            );
+            inner.insert("arguments".into(), mapped);
+            let outcome = Box::pin(self.read_one(&inner)).await?;
+            return Ok(Outcome {
+                operation: Some(operation.name.clone()),
+                ..outcome
+            });
+        }
         if operation.changes && !operation.read_only() {
             return Err(
-                Problem::new("invalid", format!("{} changes data", operation.name))
+                Problem::new("invalid", format!("{} changes data", operation.public))
                     .operation(&operation.name)
                     .field("operation")
                     .problem("apple_read only runs reads")
@@ -606,7 +648,7 @@ impl Call<'_> {
         let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
         Self::check_view(operation, input)?;
         if !operation.scope.is_empty() {
-            self.require(&operation.scope, &operation.name)?;
+            self.require(&operation.scope, &operation.public)?;
         }
         if operation.name == "reminders.items"
             && let Some(list) = text(&arguments, "list").filter(|l| !l.starts_with("lst_"))
@@ -626,7 +668,7 @@ impl Call<'_> {
         {
             return Err(mcp_check::refused(
                 self.principal,
-                &format!("{} {collection}", operation.name),
+                &format!("{} {collection}", operation.public),
                 &format!("{}:read", source_of(collection)),
                 false,
             ));
@@ -642,7 +684,7 @@ impl Call<'_> {
         {
             return Err(mcp_check::refused(
                 self.principal,
-                &format!("{} across every collection", operation.name),
+                &format!("{} across every collection", operation.public),
                 &format!("{source}:read"),
                 false,
             )
@@ -703,7 +745,7 @@ impl Call<'_> {
                     everyone,
                     None,
                     crate::mcp_views::read_window(input, &arguments),
-                    |_, _| json!({"tool": "apple_read", "arguments": {"operation": "messages.chats", "arguments": {"filter": "all"}}}),
+                    |_, _| json!({"tool": "apple_read", "arguments": {"operation": "messages.list_chats", "arguments": {"filter": "all"}}}),
                 )
                 .await?;
             return Ok(Outcome::ok(value).named(&operation.name));
@@ -791,10 +833,10 @@ impl Call<'_> {
                 .expected(json!("an operation name such as reminders.create"))
                 .hint("apple_describe lists the operations you can use.")
         })?;
-        let operation = self.operation(name)?;
+        let operation = self.requested(name)?;
         if !operation.changes {
             return Err(
-                Problem::new("invalid", format!("{} only reads", operation.name))
+                Problem::new("invalid", format!("{} only reads", operation.public))
                     .operation(&operation.name)
                     .field("operation")
                     .problem("apple_change only runs operations that change data")
@@ -809,7 +851,7 @@ impl Call<'_> {
         let mut arguments = mcp_check::arguments(operation, given.as_ref())?;
         Self::check_view(operation, input)?;
         if !operation.scope.is_empty() {
-            self.require(&operation.scope, &operation.name)?;
+            self.require(&operation.scope, &operation.public)?;
         }
         let id = request_id(input)?;
         let _turn = if BY_TITLE.contains(&operation.name.as_str()) {
@@ -1199,7 +1241,7 @@ impl Call<'_> {
                 None,
                 "Give more of the name, or a phone number or email.",
             ),
-            "next": if count == 0 { "Nobody matches. Try part of the name, or a phone number or email." } else { "Use a contact's name, phone or email with messages_send or messages_read. Read every field of one with apple_read records.get and its id." },
+            "next": if count == 0 { "Nobody matches. Try part of the name, or a phone number or email." } else { "Use a contact's name, phone or email with messages_send or messages_read. Read every field of one with apple_read bridge.get_record and its id." },
         }))
         .named("contacts.lookup"))
     }
@@ -1347,18 +1389,55 @@ impl Call<'_> {
     }
 }
 
-fn line(operation: &AgentOperation) -> String {
-    let kind = if operation.changes && !operation.read_only() {
-        "change"
+pub(crate) const NAMING: &str = "Operations are named app.verb or app.verb_object, such as notes.search, reminders.list or photos.add_to_album. list lists items, search finds text, get reads one. bridge.* covers Apple Bridge itself: any synced collection, one record, file bytes and earlier changes.";
+
+pub(crate) fn entry(operation: &AgentOperation) -> Value {
+    let mut value = json!({
+        "operation": operation.public,
+        "summary": operation.summary,
+        "arguments": signature(&operation.arguments),
+        "example": operation.example,
+    });
+    if operation.changes && !operation.read_only() {
+        value["changes_data"] = json!(true);
+    }
+    value
+}
+
+pub(crate) fn signature(schema: &Value) -> String {
+    let required: Vec<&str> = schema["required"]
+        .as_array()
+        .map(|r| r.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    let mut parts = Vec::new();
+    for (name, field) in schema["properties"].as_object().into_iter().flatten() {
+        let kind = field["enum"].as_array().map_or_else(
+            || field["type"].as_str().unwrap_or("any").to_owned(),
+            |options| {
+                options
+                    .iter()
+                    .map(|o| o.as_str().map_or_else(|| o.to_string(), str::to_owned))
+                    .collect::<Vec<_>>()
+                    .join("|")
+            },
+        );
+        let mark = if required.contains(&name.as_str()) {
+            ""
+        } else {
+            "?"
+        };
+        parts.push(format!("{name}{mark}: {kind}"));
+    }
+    if parts.is_empty() {
+        "none".to_owned()
     } else {
-        "read"
-    };
-    format!("{} ({kind}): {}", operation.name, operation.summary)
+        parts.join(", ")
+    }
 }
 
 fn route_line(route: &crate::mcp_find::Route) -> String {
     format!(
-        "records.query {{\"collection\":\"{}\"}} (read): {}",
+        "bridge.list_records {{\"collection\":\"{}\"}} (read): {}",
         route.collection, route.summary
     )
 }
@@ -1572,7 +1651,7 @@ pub(crate) fn message_summary(message: &Value) -> Value {
                 .collect::<Vec<_>>()
         );
         value["attachments_next"] = json!(
-            "Fetch an attachment with apple_read blobs.read, passing its digest and its id as record_id."
+            "Fetch an attachment with apple_read bridge.read_blob, passing its digest and its id as record_id."
         );
     }
     if let Some(reactions) = message["reactions"].as_array().filter(|r| !r.is_empty()) {
@@ -1790,7 +1869,7 @@ pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
     }
     let evidence = &record["evidence"];
     if let Some(blob) = evidence["blob_id"].as_str() {
-        value["files"] = json!([{"query_id": blob, "digest": evidence["digest"], "size": evidence["size"], "fetch": "apple_read blobs.read"}]);
+        value["files"] = json!([{"query_id": blob, "digest": evidence["digest"], "size": evidence["size"], "fetch": "apple_read bridge.read_blob"}]);
     }
     if let Some(fields) = evidence.as_object() {
         let result: Map<String, Value> = fields
@@ -1961,7 +2040,7 @@ pub(crate) fn reminder_lists(value: &Value) -> Value {
             .count(),
         "lists": lists,
         "smart_counts": smart,
-        "next": "Read a list with reminders.items and list set to its title, or smart set to today.",
+        "next": "Read a list with reminders.list and list set to its title, or smart set to today.",
     });
     if let Some(tags) = value["tags"].as_array().filter(|t| !t.is_empty()) {
         out["tags"] = json!(tags);
@@ -1993,7 +2072,7 @@ fn query_result(value: &Value, verbose: bool, fields: Option<&[String]>) -> Valu
             .map(|b| json!({"query_id": value["id"], "digest": b["digest"], "size": b["size"]}))
             .collect::<Vec<_>>());
         out["files_next"] = json!(
-            "Fetch the bytes with apple_read operation blobs.read, passing digest and query_id."
+            "Fetch the bytes with apple_read operation bridge.read_blob, passing digest and query_id."
         );
     }
     out

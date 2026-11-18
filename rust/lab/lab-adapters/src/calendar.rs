@@ -244,7 +244,6 @@ struct Run<'a> {
     world: &'a mut World,
     evidence: &'a mut Evidence,
     prefix: &'a str,
-    mcp: bool,
     tag: String,
     gateway: Client,
     observed: Observed,
@@ -357,13 +356,9 @@ impl Run<'_> {
         true
     }
     fn status(&self, id: &str) -> Option<Value> {
-        let reply = if self.mcp {
-            self.gateway
-                .call_mcp_raw("commands.status", &json!({"command_id": id}), 20)
-        } else {
-            self.gateway
-                .call_raw("commands.status", &json!({"command_id": id}), 20)
-        };
+        let reply = self
+            .gateway
+            .call_raw("commands.status", &json!({"command_id": id}), 20);
         reply
             .ok()
             .flatten()
@@ -371,11 +366,7 @@ impl Run<'_> {
             .filter(|value| value["command"].is_object())
     }
     fn call(&self, op: &str, body: &Value) -> Result<Option<(u16, Value)>> {
-        if self.mcp {
-            self.gateway.call_mcp_raw(op, body, 40)
-        } else {
-            self.gateway.call_raw(op, body, 40)
-        }
+        self.gateway.call_raw(op, body, 40)
     }
     fn submit(&mut self, op: &str, args: &Value, expected: u64) -> Option<String> {
         let Ok(id) = random_id("cmd") else {
@@ -453,7 +444,7 @@ fn protocol(
     world: &mut World,
     evidence: &mut Evidence,
     scenario: &str,
-    mcp: bool,
+    _mcp: bool,
     prefix: &str,
 ) -> Option<()> {
     let gateway = Client::new(world, SCOPE).ok()?;
@@ -463,7 +454,6 @@ fn protocol(
         world,
         evidence,
         prefix,
-        mcp,
         tag: tag.clone(),
         gateway,
         observed,
@@ -614,7 +604,7 @@ impl Run<'_> {
                 "no_scope_leak_query",
                 matches!(&page, Ok(Some(v)) if empty(v, "records") && empty(v, "aliases")),
             );
-            let agenda = scoped.call_mcp(
+            let agenda = scoped.call(
                 "calendar.agenda",
                 &json!({"start": "2026-10-01T00:00:00Z", "end": "2026-12-01T00:00:00Z"}),
                 20,

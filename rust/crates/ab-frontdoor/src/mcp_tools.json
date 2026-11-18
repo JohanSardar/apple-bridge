@@ -3,259 +3,812 @@
     "name": "apple_status",
     "title": "Apple Bridge status",
     "description": "Your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Use it when a source is empty or refused.",
-    "inputSchema": {"type": "object", "properties": {}},
-    "outputSchema": {"type": "object", "properties": {"access": {"type": "object"}, "sources": {"type": "array"}, "time_zone": {"type": "string"}, "now": {"type": "string"}, "next": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "example": {}
   },
   {
     "name": "apple_describe",
     "title": "Find operations",
-    "description": "Find what you can do. query: the best operations for a task in plain words, such as screen time yesterday, best first. operation: its arguments, an example call, the access it needs and what it returns. domain: that domain's operations. No arguments: every operation.",
-    "inputSchema": {"type": "object", "properties": {
-      "query": {"type": "string", "description": "The task in plain words."},
-      "operation": {"type": "string", "description": "Operation name, such as reminders.create."},
-      "domain": {"type": "string", "description": "Domain name, such as reminders or messages."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"operations": {"type": "array"}, "total": {"type": "integer"}, "operation": {"type": "string"}, "arguments": {"type": "object"}, "example": {"type": "object"}, "next": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"query": "screen time yesterday"}
+    "description": "Find what you can do. query: the best operations for a task in plain words, such as search notes, each with arguments and an example call. domain: that domain's operations. operation: one operation's full contract. No arguments: a short overview.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The task in plain words."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation name, such as reminders.list."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Domain name, such as reminders or messages."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "query": "screen time yesterday"
+    }
   },
   {
     "name": "apple_search",
     "title": "Search Apple data",
-    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and more. Matches are grouped by source with ids; more and skipped say which sources have more or were not searched. Photos: photos_find.",
-    "inputSchema": {"type": "object", "required": ["text"], "properties": {
-      "text": {"type": "string", "description": "Words to find."},
-      "sources": {"type": "array", "items": {"type": "string"}, "description": "Only these sources, such as notes, mail, calendar or messages, or a collection such as notes.note. Default all you can read."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Matches per source. Default 5."},
-      "after": {"type": "string", "description": "A source's value from more, for its next page; set sources to that one source."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"results": {"type": "object"}, "more": {"type": "object"}, "skipped": {"type": "object"}, "complete": {"type": "boolean"}, "next": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"text": "passport", "sources": ["notes", "mail"]}
+    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and more, grouped by source with ids; more and skipped say which sources have more or were not searched. Photos: photos_find.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Words to find."
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only these sources, such as notes, mail, calendar or messages, or a collection such as notes.note. Default all you can read."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Matches per source. Default 5."
+        },
+        "after": {
+          "type": "string",
+          "description": "A source's value from more, for its next page; set sources to that one source."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "text": "passport",
+      "sources": [
+        "notes",
+        "mail"
+      ]
+    }
   },
   {
     "name": "apple_read",
     "title": "Read Apple data",
-    "description": "Run any read operation. Common reads, arguments optional: reminders.lists {}; reminders.items {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.list {}; records.get {\"id\":\"nte_…\"}. apple_describe gives other arguments. reads runs up to 10 reads at once.",
-    "inputSchema": {"type": "object", "properties": {
-      "operation": {"type": "string", "description": "Read operation name, such as reminders.items."},
-      "arguments": {"type": "object", "description": "The operation's arguments, as apple_describe lists them."},
-      "fields": {"type": "array", "items": {"type": "string"}, "description": "Keep only these data fields in each record, such as title and due."},
-      "reads": {"type": "array", "maxItems": 10, "items": {"type": "object", "properties": {"operation": {"type": "string", "description": "Read operation name."}, "arguments": {"type": "object", "description": "Its arguments."}}, "required": ["operation"]}, "description": "Instead of operation: up to 10 reads to run together. Each result or error comes back in results, in order."},
-      "request_id": {"type": "string", "description": "Only for reads the owner must approve, such as location.current: repeat the call with the same request_id after approval."},
-      "verbose": {"type": "boolean", "description": "The full result with coverage and sync details."},
-      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."},
-      "view": {"type": "string", "enum": ["due_today", "overdue", "upcoming"], "description": "reminders.items smart today: one group in full."}
-    }},
-    "outputSchema": {"type": "object"},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"operation": "reminders.items", "arguments": {"smart": "today"}}
+    "description": "Run a read operation. Common, arguments optional unless shown: reminders.list {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.search {\"text\":\"ferry\"}; mail.search {\"text\":\"invoice\"}. apple_describe gives other arguments. reads runs up to 10 reads at once.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "type": "string",
+          "description": "Read operation name."
+        },
+        "arguments": {
+          "type": "object",
+          "description": "Its arguments."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Keep only these data fields in each record."
+        },
+        "reads": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "type": "string",
+                "description": "A name from operation."
+              },
+              "arguments": {
+                "type": "object",
+                "description": "Its arguments."
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "description": "Instead of operation: up to 10 reads, results in order."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "For reads the owner must approve: repeat with the same request_id after approval."
+        },
+        "verbose": {
+          "type": "boolean",
+          "description": "The full result with sync details."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "From page.next."
+        },
+        "view": {
+          "type": "string",
+          "enum": [
+            "due_today",
+            "overdue",
+            "upcoming"
+          ],
+          "description": "reminders.list smart today: one group in full."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "operation": "reminders.list",
+      "arguments": {
+        "smart": "today"
+      }
+    }
   },
   {
     "name": "apple_change",
     "title": "Change Apple data",
-    "description": "Run any operation that changes data, such as calendar.update_event or reminders.complete; apple_describe gives its arguments. Waits up to 15 seconds; status is done (with ids and the changed record), partial (see parts), pending, awaiting_approval, failed or indeterminate. Updates and deletes need expected_version: the record's version.",
-    "inputSchema": {"type": "object", "required": ["operation"], "properties": {
-      "operation": {"type": "string", "description": "Operation name, such as reminders.complete."},
-      "arguments": {"type": "object", "description": "The operation's arguments, including expected_version where needed."},
-      "request_id": {"type": "string", "description": "Your ID for this change, letters, digits and ._:- up to 120 characters. Reuse it to retry safely. Default: a new one."},
-      "verbose": {"type": "boolean", "description": "Include the full history and the Mac's raw result. Default false."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": true},
-    "example": {"operation": "reminders.complete", "arguments": {"reminder": "Call the plumber"}}
+    "description": "Run an operation that changes data; apple_describe gives its arguments. Waits up to 15 seconds; status is done (with ids and the changed record), partial (see parts), pending, awaiting_approval, failed or indeterminate. Updates and deletes need expected_version: the record's version.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "operation"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "description": "Operation name."
+        },
+        "arguments": {
+          "type": "object",
+          "description": "Its arguments, with expected_version where needed."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Your ID for this change: up to 120 letters, digits and ._:-. Reuse it to retry safely."
+        },
+        "verbose": {
+          "type": "boolean",
+          "description": "Include the full history and the Mac's raw result."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "example": {
+      "operation": "reminders.complete",
+      "arguments": {
+        "reminder": "Call the plumber"
+      }
+    }
   },
   {
     "name": "apple_command_status",
     "title": "Check a change",
     "description": "Check a change that came back pending or indeterminate by its request_id. Returns the same result as apple_change.",
-    "inputSchema": {"type": "object", "required": ["request_id"], "properties": {
-      "request_id": {"type": "string", "description": "The request_id from apple_change or another changing tool."},
-      "verbose": {"type": "boolean", "description": "Include the full history and the Mac's raw result. Default false."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"request_id": "groceries-2026-11-12"}
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "request_id"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "description": "The request_id from apple_change or another changing tool."
+        },
+        "verbose": {
+          "type": "boolean",
+          "description": "Include the full history and the Mac's raw result."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "request_id": "groceries-2026-11-12"
+    }
   },
   {
     "name": "apple_guide",
     "title": "Read a guide",
-    "description": "Read a short how-to: core (start here), setup, messages, reminders-calendar, photos or files. No name lists them.",
-    "inputSchema": {"type": "object", "properties": {
-      "name": {"type": "string", "enum": ["core", "setup", "messages", "reminders-calendar", "photos", "files"], "description": "Guide to read."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"name": {"type": "string"}, "text": {"type": "string"}, "guides": {"type": "array"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"name": "messages"}
+    "description": "Read a how-to. No name: a short overview of the tools and operation names. Guides: core, setup, messages, reminders-calendar, photos, files.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "core",
+            "setup",
+            "messages",
+            "reminders-calendar",
+            "photos",
+            "files"
+          ],
+          "description": "Guide to read."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "name": "messages"
+    }
   },
   {
     "name": "messages_read",
     "title": "Read messages",
     "scope": "messages:read",
-    "description": "Read Messages. No arguments: recent chats with unread counts (unread: unread chats of the last 30 days), without spam or unknown senders. with: a person's chat by number, email or name, plus group chats as other_chats. chat_id: that chat; unread starts at the first unread, before pages back. text: messages with these words in any chat; after pages them.",
-    "inputSchema": {"type": "object", "properties": {
-      "with": {"type": "string", "description": "Phone number, email or contact name of the other person."},
-      "chat_id": {"type": "string", "description": "A cht_ chat ID from an earlier result."},
-      "text": {"type": "string", "description": "Words to find in messages, across all chats. Not with with or chat_id."},
-      "unread": {"type": "boolean", "description": "Only unread chats or messages; in a chat, start at the first unread message."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 100, "description": "Maximum chats or messages. Default 20."},
-      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."},
-      "senders": {"type": "string", "enum": ["known", "all"], "description": "Chat lists: all adds spam, unknown senders and old unread."},
-      "before": {"type": "string", "description": "In a chat: the before value from the previous result, for older messages."},
-      "after": {"type": "string", "description": "For text results: the after value from the previous result."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"chats": {"type": "array"}, "messages": {"type": "array"}, "chat_id": {"type": "string"}, "other_chats": {"type": "array"}, "before": {"type": "string"}, "after": {"type": "string"}, "next": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"with": "Ana Novak"}
+    "description": "Read Messages. No arguments: recent chats with unread counts, without spam or unknown senders (unread: unread chats of the last 30 days). with: a person's chat by number, email or name, group chats as other_chats. chat_id: that chat; unread starts at the first unread, before pages back. text: messages with these words in any chat.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "with": {
+          "type": "string",
+          "description": "Phone number, email or contact name of the other person."
+        },
+        "chat_id": {
+          "type": "string",
+          "description": "A cht_ chat ID from an earlier result."
+        },
+        "text": {
+          "type": "string",
+          "description": "Words to find in messages, across all chats. Not with with or chat_id."
+        },
+        "unread": {
+          "type": "boolean",
+          "description": "Only unread chats or messages; in a chat, start at the first unread message."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum chats or messages. Default 20."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "From page.next."
+        },
+        "senders": {
+          "type": "string",
+          "enum": [
+            "known",
+            "all"
+          ],
+          "description": "Chat lists: all adds spam, unknown senders and old unread."
+        },
+        "before": {
+          "type": "string",
+          "description": "In a chat: the before value from the previous result, for older messages."
+        },
+        "after": {
+          "type": "string",
+          "description": "For text results: the after value from the previous result."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "with": "Ana Novak"
+    }
   },
   {
     "name": "messages_send",
     "title": "Send a message",
     "scope": "messages:write",
-    "description": "Send an iMessage, SMS or RCS. to: phone number, email or contact name, used only if it matches one person and one chat (otherwise you get candidates); or chat_id from messages_read, also for groups. Text is sent exactly as given. done means the Mac's Messages app shows it sent, not that it was delivered.",
-    "inputSchema": {"type": "object", "properties": {
-      "to": {"type": "string", "description": "Phone number in international form, email, or a contact's name."},
-      "chat_id": {"type": "string", "description": "An existing chat's cht_ ID. Use instead of to."},
-      "text": {"type": "string", "description": "Message text, sent exactly as given. Optional with photos."},
-      "photos": {"type": "array", "minItems": 1, "maxItems": 10, "items": {"type": "string"}, "description": "asset_ids from photos_find; attaches the photo files."},
-      "service": {"type": "string", "enum": ["iMessage", "SMS", "RCS"], "description": "Only for a number or email without an existing chat. Default iMessage."},
-      "request_id": {"type": "string", "description": "Your ID for this send; repeating it never sends twice."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": false, "destructiveHint": true, "idempotentHint": true, "openWorldHint": true},
-    "example": {"to": "Ana Novak", "text": "On my way"}
+    "description": "Send an iMessage, SMS or RCS. to: phone number, email or contact name, used only if it matches one person and one chat, otherwise you get candidates; or chat_id from messages_read, also for groups. Text is sent exactly as given. done means the Mac shows it sent, not that it was delivered.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "Phone number in international form, email, or a contact's name."
+        },
+        "chat_id": {
+          "type": "string",
+          "description": "An existing chat's cht_ ID. Use instead of to."
+        },
+        "text": {
+          "type": "string",
+          "description": "Message text, sent exactly as given. Optional with photos."
+        },
+        "photos": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "string"
+          },
+          "description": "asset_ids from photos_find; attaches the photo files."
+        },
+        "service": {
+          "type": "string",
+          "enum": [
+            "iMessage",
+            "SMS",
+            "RCS"
+          ],
+          "description": "Only for a number or email without an existing chat. Default iMessage."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Your ID for this send; repeating it never sends twice."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true
+    },
+    "example": {
+      "to": "Ana Novak",
+      "text": "On my way"
+    }
   },
   {
     "name": "reminders_add",
     "title": "Add a reminder",
     "scope": "reminders:write",
-    "description": "Add a reminder. list: a list name or lst_ ID; default the first list. Returns its id. To complete, change or delete one, use apple_change reminders.complete, reminders.update or reminders.delete with reminder set to its title.",
-    "inputSchema": {"type": "object", "required": ["title"], "properties": {
-      "title": {"type": "string", "description": "What to be reminded of."},
-      "list": {"type": "string", "description": "List name, such as Groceries, or a lst_ ID."},
-      "due": {"type": "string", "description": "Due time as RFC 3339, such as 2026-11-12T09:00:00-06:00, or a date YYYY-MM-DD."},
-      "notes": {"type": "string", "description": "Extra notes."},
-      "priority": {"type": "integer", "minimum": 0, "maximum": 9, "description": "0 none, 1 high, 5 medium, 9 low."},
-      "request_id": {"type": "string", "description": "Your ID for this change; repeating it never adds twice."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-    "example": {"title": "Buy oat milk", "list": "Groceries", "due": "2026-11-12"}
+    "description": "Add a reminder. list: a list name or lst_ ID; default the first list. Returns its id. To complete, change or delete it: apple_change reminders.complete, reminders.update or reminders.delete with reminder set to its title.",
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "What to be reminded of."
+        },
+        "list": {
+          "type": "string",
+          "description": "List name, such as Groceries, or a lst_ ID."
+        },
+        "due": {
+          "type": "string",
+          "description": "Due time as RFC 3339, such as 2026-11-12T09:00:00-06:00, or a date YYYY-MM-DD."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Extra notes."
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9,
+          "description": "0 none, 1 high, 5 medium, 9 low."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Your ID for this change; repeating it never adds twice."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "title": "Buy oat milk",
+      "list": "Groceries",
+      "due": "2026-11-12"
+    }
   },
   {
     "name": "calendar_events",
     "title": "List calendar events",
     "scope": "calendar:read",
-    "description": "List calendar events, start and end in UTC and the Mac's time zone (start_local, end_local); all-day events included. Default today. date for one day, or start and end for a range; text filters by title, notes or location; calendar by name or cal_ ID.",
-    "inputSchema": {"type": "object", "properties": {
-      "date": {"type": "string", "description": "One day as YYYY-MM-DD."},
-      "start": {"type": "string", "description": "Range start, RFC 3339 or YYYY-MM-DD."},
-      "end": {"type": "string", "description": "Range end, exclusive, RFC 3339 or YYYY-MM-DD."},
-      "text": {"type": "string", "description": "Only events containing this text."},
-      "calendar": {"type": "string", "description": "Only this calendar: its name, such as Work, or cal_ ID."},
-      "detail": {"type": "boolean", "description": "Include notes, attendees and alarms."},
-      "offset": {"type": "integer", "minimum": 0, "description": "From page.next."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"events": {"type": "array"}, "start": {"type": "string"}, "end": {"type": "string"}, "time_zone": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"date": "2026-11-12"}
+    "description": "List calendar events, all-day ones included, with start_local and end_local in the Mac's time zone. Default today; date for one day, or start and end; text filters by title, notes or location; calendar by name or cal_ ID.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "One day as YYYY-MM-DD."
+        },
+        "start": {
+          "type": "string",
+          "description": "Range start, RFC 3339 or YYYY-MM-DD."
+        },
+        "end": {
+          "type": "string",
+          "description": "Range end, exclusive, RFC 3339 or YYYY-MM-DD."
+        },
+        "text": {
+          "type": "string",
+          "description": "Only events containing this text."
+        },
+        "calendar": {
+          "type": "string",
+          "description": "Only this calendar: its name, such as Work, or cal_ ID."
+        },
+        "detail": {
+          "type": "boolean",
+          "description": "Include notes, attendees and alarms."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "From page.next."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "date": "2026-11-12"
+    }
   },
   {
     "name": "calendar_add",
     "title": "Add a calendar event",
     "scope": "calendar:write",
     "description": "Add a calendar event. calendar: a name, such as Work, or cal_ ID; default the first writable calendar. Times without an offset are in the Mac's time zone; a start date YYYY-MM-DD makes an all-day event. Returns its id.",
-    "inputSchema": {"type": "object", "required": ["title", "start"], "properties": {
-      "title": {"type": "string", "description": "Event title."},
-      "start": {"type": "string", "description": "Start, such as 2026-11-12T15:00 or 2026-11-12T15:00:00-06:00, or a date YYYY-MM-DD for all day."},
-      "end": {"type": "string", "description": "End, after start. Default one hour after start, or the same day for all day."},
-      "calendar": {"type": "string", "description": "Calendar name or cal_ ID."},
-      "location": {"type": "string", "description": "Location text."},
-      "notes": {"type": "string", "description": "Notes text."},
-      "request_id": {"type": "string", "description": "Your ID for this change; repeating it never adds twice."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-    "example": {"title": "Dentist", "start": "2026-11-12T15:00", "end": "2026-11-12T16:00", "calendar": "Personal"}
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "title",
+        "start"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Event title."
+        },
+        "start": {
+          "type": "string",
+          "description": "Start, such as 2026-11-12T15:00 or 2026-11-12T15:00:00-06:00, or a date YYYY-MM-DD for all day."
+        },
+        "end": {
+          "type": "string",
+          "description": "End, after start. Default one hour after start, or the same day for all day."
+        },
+        "calendar": {
+          "type": "string",
+          "description": "Calendar name or cal_ ID."
+        },
+        "location": {
+          "type": "string",
+          "description": "Location text."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notes text."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Your ID for this change; repeating it never adds twice."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "title": "Dentist",
+      "start": "2026-11-12T15:00",
+      "end": "2026-11-12T16:00",
+      "calendar": "Personal"
+    }
   },
   {
     "name": "contacts_find",
     "title": "Find a contact",
     "scope": "contacts:read",
     "description": "Find people by name (any word order, accents and case ignored), phone number or email. Returns up to 25 contacts with phones, emails and con_ IDs.",
-    "inputSchema": {"type": "object", "required": ["query"], "properties": {
-      "query": {"type": "string", "description": "A name such as Ana Novak, part of a name, a phone number or an email."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 25, "description": "Maximum contacts. Default 10."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"contacts": {"type": "array"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"query": "Ana Novak"}
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "A name such as Ana Novak, part of a name, a phone number or an email."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25,
+          "description": "Maximum contacts. Default 10."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "query": "Ana Novak"
+    }
   },
   {
     "name": "notes_create",
     "title": "Create a note",
     "scope": "notes:write",
     "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns its id.",
-    "inputSchema": {"type": "object", "required": ["title"], "properties": {
-      "title": {"type": "string", "description": "Note title."},
-      "text": {"type": "string", "description": "Body as plain text."},
-      "folder": {"type": "string", "description": "Folder name or fld_ ID."},
-      "request_id": {"type": "string", "description": "Your ID for this change; repeating it never creates twice."}
-    }},
-    "outputSchema": {"$ref": "#change"},
-    "annotations": {"readOnlyHint": false, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false},
-    "example": {"title": "Packing", "text": "Passport\nCharger"}
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Note title."
+        },
+        "text": {
+          "type": "string",
+          "description": "Body as plain text."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Folder name or fld_ ID."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Your ID for this change; repeating it never creates twice."
+        }
+      }
+    },
+    "outputSchema": {
+      "$ref": "#change"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "title": "Packing",
+      "text": "Passport\nCharger"
+    }
   },
   {
     "name": "screen_time",
     "title": "Screen Time",
     "scope": "usage:read",
     "description": "Screen Time per device (Mac, iPhone, iPad): total and top apps, estimated from app focus. Default yesterday; date for one day, or start and end.",
-    "inputSchema": {"type": "object", "properties": {
-      "date": {"type": "string", "description": "One day as YYYY-MM-DD. Default yesterday."},
-      "start": {"type": "string", "description": "First day of a range, YYYY-MM-DD."},
-      "end": {"type": "string", "description": "Last day of a range, inclusive."},
-      "device": {"type": "string", "description": "Only this device, by part of its name, such as iPhone."},
-      "top": {"type": "integer", "minimum": 1, "maximum": 50, "description": "Top apps per device. Default 5."}
-    }},
-    "outputSchema": {"type": "object", "properties": {"total": {"type": "string"}, "top_apps": {"type": "array"}, "devices": {"type": "array"}, "start": {"type": "string"}, "end": {"type": "string"}}},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"date": "2026-11-09"}
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "One day as YYYY-MM-DD. Default yesterday."
+        },
+        "start": {
+          "type": "string",
+          "description": "First day of a range, YYYY-MM-DD."
+        },
+        "end": {
+          "type": "string",
+          "description": "Last day of a range, inclusive."
+        },
+        "device": {
+          "type": "string",
+          "description": "Only this device, by part of its name, such as iPhone."
+        },
+        "top": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Top apps per device. Default 5."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "date": "2026-11-09"
+    }
   },
   {
     "name": "photos_find",
     "title": "Find photos",
     "scope": "photos:read",
     "description": "Find photos by date, type, album, favorite or place: a numbered grid only for you to scan (never show it), with each number's asset_id. One match returns the photo itself.",
-    "inputSchema": {"type": "object", "properties": {
-      "start": {"type": "string", "description": "Taken on or after, RFC 3339 or YYYY-MM-DD."},
-      "end": {"type": "string", "description": "Taken before, RFC 3339 or YYYY-MM-DD."},
-      "type": {"type": "string", "enum": ["image", "video", "audio", "live_photo", "screenshot", "panorama", "hdr", "depth", "slow_motion", "timelapse"], "description": "Only this kind."},
-      "album_id": {"type": "string", "description": "Only this album, from photos.albums."},
-      "favorite": {"type": "boolean", "description": "Only favorites."},
-      "near": {"type": "object", "properties": {"lat": {"type": "number", "description": "Latitude."}, "lon": {"type": "number", "description": "Longitude."}}, "required": ["lat", "lon"], "description": "Near this point, with radius_m."},
-      "radius_m": {"type": "number", "description": "Meters from near, up to 100000."},
-      "cursor": {"type": "string", "description": "next_cursor from the last result, same filters."},
-      "limit": {"type": "integer", "minimum": 1, "maximum": 30, "description": "Default 20."},
-      "places": {"type": "boolean", "description": "Instead list places photos were taken, with dates, counts and an asset_id each."}
-    }},
-    "outputSchema": {"type": "object"},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"start": "2026-07-01", "end": "2026-08-01", "type": "image"}
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "description": "Taken on or after, RFC 3339 or YYYY-MM-DD."
+        },
+        "end": {
+          "type": "string",
+          "description": "Taken before, RFC 3339 or YYYY-MM-DD."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "live_photo",
+            "screenshot",
+            "panorama",
+            "hdr",
+            "depth",
+            "slow_motion",
+            "timelapse"
+          ],
+          "description": "Only this kind."
+        },
+        "album_id": {
+          "type": "string",
+          "description": "Only this album, from photos.list_albums."
+        },
+        "favorite": {
+          "type": "boolean",
+          "description": "Only favorites."
+        },
+        "near": {
+          "type": "object",
+          "properties": {
+            "lat": {
+              "type": "number",
+              "description": "Latitude."
+            },
+            "lon": {
+              "type": "number",
+              "description": "Longitude."
+            }
+          },
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "description": "Near this point, with radius_m."
+        },
+        "radius_m": {
+          "type": "number",
+          "description": "Meters from near, up to 100000."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "next_cursor from the last result, same filters."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "description": "Default 20."
+        },
+        "places": {
+          "type": "boolean",
+          "description": "Instead list places photos were taken, with dates, counts and an asset_id each."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "start": "2026-07-01",
+      "end": "2026-08-01",
+      "type": "image"
+    }
   },
   {
     "name": "photos_show",
     "title": "Show a photo",
     "scope": "photos:read",
     "description": "The photo itself, to show the person: full frame and resolution, nothing drawn on it.",
-    "inputSchema": {"type": "object", "required": ["asset_id"], "properties": {
-      "asset_id": {"type": "string", "description": "From photos_find."},
-      "save": {"type": "boolean", "description": "Also save the original file on the Mac; returns its path as file."}
-    }},
-    "outputSchema": {"type": "object"},
-    "annotations": {"readOnlyHint": true, "openWorldHint": false},
-    "example": {"asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"}
+    "inputSchema": {
+      "type": "object",
+      "required": [
+        "asset_id"
+      ],
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "description": "From photos_find."
+        },
+        "save": {
+          "type": "boolean",
+          "description": "Also save the original file on the Mac; returns its path as file."
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "example": {
+      "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
+    }
   }
 ]

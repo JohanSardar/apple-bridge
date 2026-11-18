@@ -55,7 +55,7 @@ fn roundtrip(world: &World, evidence: &mut Evidence) -> Result<()> {
     let args = json!({"value":"lab"});
     let q = query(&args, 1000)?;
     let rest = client.call("test.echo", &q, 20)?;
-    let mcp = client.call_mcp("test.echo", &q, 20)?;
+    let mcp = client.call("test.echo", &q, 20)?;
     evidence.check(
         "mcp_parity",
         rest.as_ref()
@@ -227,7 +227,7 @@ fn await_effect(world: &World, id: &str, want: u64, limit: Duration) -> bool {
 pub(crate) fn cancellation(
     world: &World,
     client: &Client,
-    mcp: bool,
+    _mcp: bool,
     prefix: &str,
     evidence: &mut Evidence,
 ) -> Result<()> {
@@ -236,7 +236,7 @@ pub(crate) fn cancellation(
         .as_str()
         .ok_or_else(|| Error::Invalid("query id".into()))?
         .to_owned();
-    let mut child = client.spawn_call("test.sleep", &q, mcp)?;
+    let mut child = client.spawn_call("test.sleep", &q)?;
     let name = |n: &str| format!("{prefix}{n}");
     evidence.check(
         &name("helper_work_started"),

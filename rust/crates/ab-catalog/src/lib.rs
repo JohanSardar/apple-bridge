@@ -73,12 +73,6 @@ pub fn json_schema(descriptor: &OperationDescriptor) -> &Value {
     &descriptor.input
 }
 
-pub fn mcp_tools(descriptors: &[OperationDescriptor]) -> Value {
-    let mut tools: Vec<Value> = descriptors.iter().map(|d| json!({"name": d.name.replace('.', "_"), "description": format!("{} (operation version {})", d.description, d.version), "inputSchema": json_schema(d)})).collect();
-    tools.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
-    json!({"tools": tools, "ttlMs": 0, "cacheScope": "public"})
-}
-
 pub fn openapi(descriptors: &[OperationDescriptor]) -> Value {
     let mut paths = serde_json::Map::new();
     paths.insert("/v1/blobs".into(), json!({"post": {"operationId": "stageMessageUpload", "description": "Stage bytes for messages.send and use upload_id in files.", "requestBody": {"required": true, "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}}, "responses": {"200": {"description": "Private upload reference", "content": {"application/json": {"schema": {"type": "object", "properties": {"upload_id": {"type": "string"}}}}}}}}}));

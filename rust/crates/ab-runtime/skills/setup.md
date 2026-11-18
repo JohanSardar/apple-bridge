@@ -27,7 +27,7 @@ The installer needs no Node, Homebrew or sudo. Use the absolute path in the curr
 ~/.local/bin/bridge link claude
 ```
 
-Use your own client name: `codex`, `cursor`, `gemini`, `vscode`, `zed`, `goose`, `opencode`, or `claude-desktop`. For any other client, `bridge link other` prints the MCP config. Reload your MCP configuration, then call `apple_status` (the `sources.status` operation). The first tool call asks the owner once through the Mac's Allow panel. Say: "Click Allow on your Mac." Never approve it yourself.
+Use your own client name: `codex`, `cursor`, `gemini`, `vscode`, `zed`, `goose`, `opencode`, or `claude-desktop`. For any other client, `bridge link other` prints the MCP config. Reload your MCP configuration, then call `apple_status` (the `bridge.list_sources` operation). The first tool call asks the owner once through the Mac's Allow panel. Say: "Click Allow on your Mac." Never approve it yourself.
 
 ### Grok Bot, with a tool that runs on the Mac
 
@@ -49,7 +49,7 @@ On the Mac run `bridge tailscale`; its output gives a private `/connect` URL. Re
 
 Run `bridge permissions status --json`, which never prompts. For a requested source, run `bridge permissions request <name>` on the Mac; only the owner grants it. Or run `bridge permissions guide --yes` for the guided setup. The guide refreshes the Helper after changed permissions. Never approve prompts or UI for them.
 
-From your actual configured MCP client, call `apple_status` (the `sources.status` operation), then a harmless read of a permitted source the owner asked to use. Report a real result or the exact permission or reachability failure. `bridge stats --wait --timeout 2m` shows sync counts, not proof that a remote connector works. Retry a safe read after a permission refresh; never automatically retry a write whose outcome is unknown.
+From your actual configured MCP client, call `apple_status` (the `bridge.list_sources` operation), then a harmless read of a permitted source the owner asked to use. Report a real result or the exact permission or reachability failure. `bridge stats --wait --timeout 2m` shows sync counts, not proof that a remote connector works. Retry a safe read after a permission refresh; never automatically retry a write whose outcome is unknown.
 
 For a failure: `bridge status --json`, `bridge doctor`, and `bridge permissions status --json` distinguish gateway health, the private route and permissions. Keep private data and credentials out of diagnostics. `bridge up` is detached from the terminal but does not restart after logout, reboot or a crash; the app's Launch at Login is a separate owner choice. A network change should reconnect the Tailscale route while the gateway stays up. Do not promise uptime when the Mac is asleep or offline.
 

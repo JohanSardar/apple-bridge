@@ -406,7 +406,7 @@ pub fn oauth(world: &mut World, owner: &Owner, evidence: &mut Evidence) -> Resul
             &origin,
             &access,
             "tools/call",
-            &json!({"name": "messages_chats", "arguments": {}}),
+            &json!({"name": "apple_read", "arguments": {"operation": "messages.list_chats"}}),
         ),
         "",
     );

@@ -149,20 +149,12 @@ impl Client {
         Ok(Some((reply.status, value)))
     }
     #[must_use]
-    pub fn read_model_ms(&self, operation: &str, input: &Value, mcp: bool) -> Option<f64> {
-        let (path, headers, body) = if mcp {
-            (
-                "/mcp".to_owned(),
-                MCP_HEADERS.to_vec(),
-                mcp_body(operation, input).ok()?,
-            )
-        } else {
-            (
-                format!("/v1/op/{operation}"),
-                vec![("Content-Type", "application/json")],
-                serde_json::to_vec(input).ok()?,
-            )
-        };
+    pub fn read_model_ms(&self, operation: &str, input: &Value) -> Option<f64> {
+        let (path, headers, body) = (
+            format!("/v1/op/{operation}"),
+            vec![("Content-Type", "application/json")],
+            serde_json::to_vec(input).ok()?,
+        );
         let mut command = Command::new("curl");
         command
             .args([
@@ -189,11 +181,7 @@ impl Client {
         child.stdin.take()?.write_all(&body).ok()?;
         let output = child.wait_with_output().ok()?;
         let text = String::from_utf8_lossy(&output.stdout).into_owned();
-        let (head, payload) = text.split_once("\r\n\r\n")?;
-        if mcp {
-            let value: Value = serde_json::from_str(payload).ok()?;
-            return value["result"]["_meta"]["bridge/read_model_ms"].as_f64();
-        }
+        let (head, _) = text.split_once("\r\n\r\n")?;
         head.lines()
             .find_map(|line| {
                 let (name, value) = line.split_once(':')?;
@@ -203,20 +191,12 @@ impl Client {
             .parse()
             .ok()
     }
-    pub fn spawn_call(&self, operation: &str, input: &Value, mcp: bool) -> Result<Child> {
-        let (path, headers, body) = if mcp {
-            (
-                "/mcp".to_owned(),
-                MCP_HEADERS.to_vec(),
-                mcp_body(operation, input)?,
-            )
-        } else {
-            (
-                format!("/v1/op/{operation}"),
-                vec![("Content-Type", "application/json")],
-                serde_json::to_vec(input)?,
-            )
-        };
+    pub fn spawn_call(&self, operation: &str, input: &Value) -> Result<Child> {
+        let (path, headers, body) = (
+            format!("/v1/op/{operation}"),
+            vec![("Content-Type", "application/json")],
+            serde_json::to_vec(input)?,
+        );
         let mut command = Command::new("curl");
         command
             .args([
@@ -244,34 +224,16 @@ impl Client {
         }
         Ok(child)
     }
-    pub fn call_mcp(&self, operation: &str, input: &Value, seconds: u64) -> Result<Option<Value>> {
-        Ok(self
-            .call_mcp_raw(operation, input, seconds)?
-            .and_then(|(status, value)| accepted(status, value)))
-    }
-    pub fn call_mcp_raw(
-        &self,
-        operation: &str,
-        input: &Value,
-        seconds: u64,
-    ) -> Result<Option<(u16, Value)>> {
-        let body = mcp_body(operation, input)?;
-        let reply = self.request("POST", "/mcp", &MCP_HEADERS, Some(&body), seconds)?;
-        mcp_structured(reply.status, &reply.body)
-    }
-
-    pub fn call_mcp_result(&self, operation: &str, input: &Value, seconds: u64) -> Result<Value> {
-        let body = mcp_body(operation, input)?;
+    pub fn call_mcp_result(&self, tool: &str, input: &Value, seconds: u64) -> Result<Value> {
+        let body = serde_json::to_vec(&json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool, "arguments": input}
+        }))?;
         let reply = self.request("POST", "/mcp", &MCP_HEADERS, Some(&body), seconds)?;
         mcp_result(&reply.body)
     }
-}
-pub(crate) fn mcp_structured(status: u16, body: &[u8]) -> Result<Option<(u16, Value)>> {
-    let content = mcp_result(body)?["structuredContent"].clone();
-    if content.is_null() {
-        return Ok(None);
-    }
-    Ok(Some((status, content)))
 }
 pub(crate) fn mcp_result(body: &[u8]) -> Result<Value> {
     let text = String::from_utf8(body.to_vec())
@@ -294,14 +256,6 @@ pub(crate) const MCP_HEADERS: [(&str, &str); 3] = [
     ("Accept", "application/json, text/event-stream"),
     ("MCP-Protocol-Version", "2025-06-18"),
 ];
-pub(crate) fn mcp_body(operation: &str, input: &Value) -> Result<Vec<u8>> {
-    Ok(serde_json::to_vec(&json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {"name": operation.replace('.', "_"), "arguments": input}
-    }))?)
-}
 pub(crate) fn accepted(status: u16, value: Value) -> Option<Value> {
     (value["error"].is_null() && status == 200).then_some(value)
 }

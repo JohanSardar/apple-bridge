@@ -74,7 +74,12 @@ impl Problem {
         error.insert("code".into(), json!(self.code));
         error.insert("message".into(), json!(self.message));
         let optional = [
-            ("operation", self.operation.clone().map(Value::String)),
+            (
+                "operation",
+                self.operation
+                    .as_deref()
+                    .map(|name| Value::String(crate::mcp_registry::public_name(name))),
+            ),
             ("field", self.field.clone().map(Value::String)),
             ("problem", self.issue.clone().map(Value::String)),
             ("expected", self.expected.clone()),
@@ -95,7 +100,7 @@ impl Problem {
 
 pub(crate) fn example_call(tool: &str, operation: &AgentOperation) -> Value {
     if tool == "apple_read" || tool == "apple_change" {
-        json!({"tool": tool, "arguments": {"operation": operation.name, "arguments": operation.example}})
+        json!({"tool": tool, "arguments": {"operation": operation.public, "arguments": operation.example}})
     } else {
         json!({"tool": tool, "arguments": operation.example})
     }
@@ -160,7 +165,7 @@ pub(crate) fn arguments(
     {
         return Err(Problem::new(
             "invalid",
-            format!("{} has a problem with expected_version", operation.name),
+            format!("{} has a problem with expected_version", operation.public),
         )
         .operation(&operation.name)
         .field("expected_version")
@@ -201,7 +206,7 @@ fn check_object(
     let invalid = |field: &str| {
         Problem::new(
             "invalid",
-            format!("{} has a problem with {field}", operation.name),
+            format!("{} has a problem with {field}", operation.public),
         )
         .operation(&operation.name)
         .field(field.to_owned())
@@ -214,11 +219,11 @@ fn check_object(
                 if closed {
                     let valid: Vec<&String> = properties.keys().collect();
                     return Err(invalid(&here)
-                        .problem(format!("{here} is not an argument of {}", operation.name))
+                        .problem(format!("{here} is not an argument of {}", operation.public))
                         .expected(json!({ "valid_fields": valid }))
                         .hint(format!(
                             "Remove {here}. apple_describe with operation {} shows every argument.",
-                            operation.name
+                            operation.public
                         )));
                 }
                 continue;
@@ -256,7 +261,7 @@ fn lookup_hint(operation: &AgentOperation) -> String {
         .as_str()
         .unwrap_or_default();
     description.find(" from ").map_or_else(
-        || "records.get with the record's collection and id".to_owned(),
+        || "bridge.get_record with the record's collection and id".to_owned(),
         |at| description[at + 6..].trim_end_matches('.').to_owned(),
     )
 }
@@ -281,7 +286,7 @@ fn check_value(
     let fail = |problem: String| {
         Problem::new(
             "invalid",
-            format!("{} has a problem with {path}", operation.name),
+            format!("{} has a problem with {path}", operation.public),
         )
         .operation(&operation.name)
         .field(path.to_owned())
@@ -503,7 +508,7 @@ fn invalid_problem(problem: Problem, operation: Option<&AgentOperation>) -> Prob
     let Some(operation) = operation else {
         return problem.problem("Apple Bridge rejected these arguments");
     };
-    let name = &operation.name;
+    let name = &operation.public;
     let rules = if operation.detail.is_empty() {
         String::new()
     } else {
@@ -565,6 +570,7 @@ pub(crate) fn check_tool(
     let schema = &schema;
     let operation = AgentOperation {
         name: tool.into(),
+        public: tool.into(),
         domain: TOOL_DOMAIN.into(),
         kind: ab_catalog::OperationKind::Read,
         changes: false,
@@ -641,13 +647,13 @@ const LISTINGS: &[(&str, &str)] = &[
     ("att", "messages_read, from a message's attachments"),
     ("con", "contacts_find"),
     ("evt", "calendar_events"),
-    ("cal", "apple_read calendar.calendars"),
-    ("rem", "apple_read reminders.items"),
-    ("lst", "apple_read reminders.lists"),
+    ("cal", "apple_read calendar.list_calendars"),
+    ("rem", "apple_read reminders.list"),
+    ("lst", "apple_read reminders.list_lists"),
     ("not", "apple_read notes.list or apple_search"),
     ("fld", "apple_read notes.list"),
     ("qry", "the read that returned it"),
-    ("dev", "apple_read usage.summary"),
+    ("dev", "apple_read screentime.summary"),
 ];
 
 pub(crate) fn not_found_hint(problem: Problem, input: &Value) -> Problem {

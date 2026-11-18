@@ -7,13 +7,9 @@ use lab_runner::Evidence;
 use lab_world::{Result, World};
 use serde_json::{Value, json};
 
-fn submit(client: &Client, command: &Value, mcp: bool) -> Value {
+fn submit(client: &Client, command: &Value, _mcp: bool) -> Value {
     let op = command["op"].as_str().unwrap_or_default();
-    let reply = if mcp {
-        client.call_mcp_raw(op, command, 40)
-    } else {
-        client.call_raw(op, command, 40)
-    };
+    let reply = client.call_raw(op, command, 40);
     reply.ok().flatten().map_or(Value::Null, |(_, value)| value)
 }
 
@@ -104,19 +100,11 @@ pub fn parity(
                 "command observed once",
             );
             results.push(reply["disposition"].as_str().unwrap_or_default().to_owned());
-            let read = if mcp {
-                gateway.call_mcp(
+            let read = gateway.call(
                     "records.get",
                     &json!({"collection": created["collection"], "id": created["id"], "include_deleted": true}),
                     20,
-                )
-            } else {
-                gateway.call(
-                    "records.get",
-                    &json!({"collection": created["collection"], "id": created["id"], "include_deleted": true}),
-                    20,
-                )
-            };
+                );
             match read.ok().flatten().and_then(|page| {
                 let list = page["records"].as_array()?;
                 (list.len() == 1).then(|| list[0].clone())

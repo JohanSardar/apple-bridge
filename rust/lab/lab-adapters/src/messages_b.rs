@@ -192,13 +192,9 @@ impl Run<'_> {
         };
         Self::command(op, &args, version)
     }
-    fn submit(&self, command: &Value, mcp: bool) -> Value {
+    fn submit(&self, command: &Value, _mcp: bool) -> Value {
         let op = command["op"].as_str().unwrap_or_default();
-        let reply = if mcp {
-            self.client.call_mcp_raw(op, command, 40)
-        } else {
-            self.client.call_raw(op, command, 40)
-        };
+        let reply = self.client.call_raw(op, command, 40);
         reply.ok().flatten().map_or(Value::Null, |(_, value)| value)
     }
     fn succeeded(value: &Value) -> bool {

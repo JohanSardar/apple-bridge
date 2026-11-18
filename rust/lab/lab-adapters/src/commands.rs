@@ -36,13 +36,9 @@ fn id_of(command: &Value) -> String {
         .unwrap_or_default()
         .to_owned()
 }
-fn submit(client: &Client, command: &Value, mcp: bool) -> Result<Value> {
+fn submit(client: &Client, command: &Value, _mcp: bool) -> Result<Value> {
     let op = command["op"].as_str().unwrap_or_default();
-    let reply = if mcp {
-        client.call_mcp_raw(op, command, 40)?
-    } else {
-        client.call_raw(op, command, 40)?
-    };
+    let reply = client.call_raw(op, command, 40)?;
     Ok(reply.map_or(Value::Null, |(_, value)| value))
 }
 fn status(client: &Client, command: &Value, resolve: bool) -> Result<Value> {

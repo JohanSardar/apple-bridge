@@ -2,7 +2,7 @@
 
 Photos is optional. `bridge permissions guide` offers its own Photos step; skipping or declining it does not disable another source. Status checks, gateway startup and read operations never request access. A missing grant fails closed. Limited-library access is reported explicitly.
 
-`bridge read photos --limit 20 --json` reads the current library, not a synced collection. REST `/v1/op/photos.search`, MCP `photos_search`, local agents and remote replicas use the same live query path. The Mac must be awake and connected. Photos does not participate in `records.query`, full-text search, background import, blob replication or library counts in `bridge stats`.
+`bridge read photos --limit 20 --json` reads the current library, not a synced collection. REST `/v1/op/photos.search`, MCP `apple_read` with `photos.search`, local agents and remote replicas use the same live query path. The Mac must be awake and connected. Photos does not participate in `records.query`, full-text search, background import, blob replication or library counts in `bridge stats`.
 
 ## Operations
 
@@ -39,6 +39,8 @@ Place search uses explicit coordinates, not Photos' inferred place names. Use th
 ## Looking at photos
 
 Public PhotoKit has no search by what a photo shows, so an agent finds a photo by looking. Narrow the library with `photos.search` first (dates, type, album, favorite, place). Pass up to 30 of the resulting IDs to `photos.contact_sheet` and look at the numbered grid, then open a match larger with `photos.preview`. About 20 thumbnails per sheet keeps each one recognisable.
+
+This page uses the catalog names that REST and `bridge call` take. Over MCP the agent names them `photos.preview_grid` (`photos.contact_sheet`), `photos.download` (`photos.fetch`), `photos.release_download` (`photos.release`), and the album changes `photos.create_album`, `photos.rename_album`, `photos.add_to_album`, `photos.remove_from_album` and `photos.delete_album` ([ADR 0038](../adr/0038-agent-operation-names.md)).
 
 Over MCP both operations return the picture as an `image` content item that the agent can view, after a text item with the metadata. The text and `structuredContent` replace `image_base64` with a note, so the image is not sent twice. REST and `bridge call` return `image_base64` and `mime_type` under `result_json`. Each image fits one 256 KiB native frame, so the Helper lowers JPEG quality and then the scale until it is at most 172 KiB. `width` and `height` report the delivered size, which can be smaller than requested for a large preview or sheet.
 

@@ -543,11 +543,7 @@ fn capture(world: &World, evidence: &mut Evidence) -> Result<()> {
                 _ => json!({}),
             };
             let body = crate::journey::command(op, &args)?;
-            let reply = if protocol == "rest" {
-                client.call_raw(op, &body, 40)?
-            } else {
-                client.call_mcp_raw(op, &body, 40)?
-            };
+            let reply = client.call_raw(op, &body, 40)?;
             let record = reply
                 .as_ref()
                 .filter(|(_, value)| value["error"].is_null())

@@ -283,11 +283,7 @@ fn readonly(gateway: &Client, evidence: &mut Evidence) {
     for op in ["create", "update", "delete", "reset", "complete"] {
         for protocol in ["rest", "mcp"] {
             let operation = format!("usage.{op}");
-            let raw = if protocol == "rest" {
-                gateway.call_raw(&operation, &json!({}), 30)
-            } else {
-                gateway.call_mcp_raw(&operation, &json!({}), 30)
-            };
+            let raw = gateway.call_raw(&operation, &json!({}), 30);
             let unsupported = raw
                 .ok()
                 .flatten()

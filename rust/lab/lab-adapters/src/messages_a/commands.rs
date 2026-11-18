@@ -48,18 +48,10 @@ impl Api {
         Self { client, mcp: false }
     }
     fn call(&self, op: &str, input: &Value) -> Option<Value> {
-        if self.mcp {
-            self.client.call_mcp(op, input, 40).ok().flatten()
-        } else {
-            self.client.call(op, input, 40).ok().flatten()
-        }
+        self.client.call(op, input, 40).ok().flatten()
     }
     fn raw(&self, op: &str, input: &Value) -> Value {
-        let reply = if self.mcp {
-            self.client.call_mcp_raw(op, input, 40)
-        } else {
-            self.client.call_raw(op, input, 40)
-        };
+        let reply = self.client.call_raw(op, input, 40);
         reply.ok().flatten().map_or(Value::Null, |(_, value)| value)
     }
     fn status(&self, id: &str, resolve: bool) -> Option<Value> {

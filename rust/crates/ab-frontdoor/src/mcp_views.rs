@@ -53,9 +53,9 @@ impl Call<'_> {
             || !smart_today
             || !view.as_str().is_some_and(|v| VIEWS.contains(&v))
         {
-            return Err(Problem::new("invalid", "view only splits reminders.items with smart today")
+            return Err(Problem::new("invalid", "view only splits reminders.list with smart today")
                 .field("view")
-                .expected(json!({"view": VIEWS, "with": {"operation": "reminders.items", "arguments": {"smart": "today"}}})));
+                .expected(json!({"view": VIEWS, "with": {"operation": "reminders.list", "arguments": {"smart": "today"}}})));
         }
         Ok(())
     }
@@ -164,7 +164,7 @@ impl Call<'_> {
             .collect();
         upcoming.sort_by_key(|entry| entry.0);
         let upcoming: Vec<Value> = upcoming.into_iter().map(|(_, card)| card).collect();
-        let call = |view: &str| json!({"tool": "apple_read", "arguments": {"operation": "reminders.items", "arguments": {"smart": "today"}, "view": view}});
+        let call = |view: &str| json!({"tool": "apple_read", "arguments": {"operation": "reminders.list", "arguments": {"smart": "today"}, "view": view}});
         if let Some(view) = input.get("view").and_then(Value::as_str) {
             let chosen = match view {
                 "overdue" => overdue,
@@ -330,7 +330,7 @@ fn notes_view(raw: &Value, window: Window) -> Value {
         "page": page,
         "folders": folders,
         "folders_page": folder_page,
-        "next": "Read one note's full text with apple_read records.get and its id.",
+        "next": "Read one note's full text with apple_read notes.get and its id.",
     })
 }
 

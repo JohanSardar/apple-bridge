@@ -31,13 +31,9 @@ fn versioned(op: &str, args: &Value, version: u64) -> Result<Value> {
     }
     Ok(c)
 }
-fn submit(client: &Client, command: &Value, mcp: bool) -> Result<Value> {
+fn submit(client: &Client, command: &Value, _mcp: bool) -> Result<Value> {
     let op = command["op"].as_str().unwrap_or_default();
-    let reply = if mcp {
-        client.call_mcp_raw(op, command, 40)?
-    } else {
-        client.call_raw(op, command, 40)?
-    };
+    let reply = client.call_raw(op, command, 40)?;
     Ok(reply.map_or(Value::Null, |(_, value)| value))
 }
 fn title_of(record: &Value) -> &str {

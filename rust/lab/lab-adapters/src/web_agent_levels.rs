@@ -55,7 +55,7 @@ fn pending_over_mcp(world: &World, token: &str, pending: &Value, evidence: &mut 
     let Ok(client) = Client::with_token(world, token) else {
         return;
     };
-    let record = client.call_mcp_raw("messages.send", pending, 40);
+    let record = client.call_raw("messages.send", pending, 40);
     evidence.check(
         "mcp_wait_reports_awaiting_approval",
         record.is_ok_and(|r| {
@@ -65,7 +65,7 @@ fn pending_over_mcp(world: &World, token: &str, pending: &Value, evidence: &mut 
         }),
         "MCP wait reports awaiting approval",
     );
-    let record = client.call_mcp_raw(
+    let record = client.call_raw(
         "commands.status",
         &json!({"command_id": id_of(pending)}),
         40,

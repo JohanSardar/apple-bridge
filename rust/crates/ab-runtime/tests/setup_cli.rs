@@ -805,10 +805,18 @@ fn json_reads_apply_the_limit_even_when_the_operation_has_none() -> Check {
 fn skills_are_in_the_binary_and_name_only_real_operations() -> Check {
     let list = bridge().args(["skills", "list"]).output()?;
     assert!(text(&list.stdout).contains("core"));
-    let operations: Vec<String> = ab_catalog::operations()?
-        .into_iter()
-        .map(|descriptor| descriptor.name)
+    let surface: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../contracts/golden/mcp-surface.json"
+    ))?;
+    let operations: Vec<String> = surface["tools"]
+        .as_array()
+        .ok_or("tools")?
+        .iter()
+        .filter_map(|tool| tool["inputSchema"]["properties"]["operation"]["enum"].as_array())
+        .flatten()
+        .filter_map(|name| name.as_str().map(str::to_owned))
         .collect();
+    assert!(operations.iter().any(|name| name == "reminders.list"));
     for skill in [
         "core",
         "setup",
@@ -837,10 +845,11 @@ fn skills_are_in_the_binary_and_name_only_real_operations() -> Check {
     }
     let core = text(&bridge().args(["skills", "get", "core"]).output()?.stdout);
     for name in [
-        "sources.status",
-        "records.query",
-        "messages.chats",
-        "search",
+        "bridge.list_sources",
+        "bridge.list_records",
+        "messages.list_chats",
+        "notes.search",
+        "mail.search",
     ] {
         assert!(core.contains(name), "{name}");
     }

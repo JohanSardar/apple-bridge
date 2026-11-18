@@ -1,15 +1,13 @@
 {
   "domains": {
     "audio": "Transcribe speech in an audio file on the Mac.",
-    "blobs": "Fetch bytes a read returned (attachments, captures, query outputs) and stage file bytes for a message.",
+    "bridge": "Apple Bridge itself: search or page any synced collection, fetch one record or a file's bytes, earlier changes, source status and version.",
     "calendar": "Calendar events and calendars.",
     "capture": "Take a screenshot, camera photo or audio recording on the Mac, or play a system sound.",
-    "commands": "Look up changes this agent made earlier.",
     "contacts": "People in Contacts, their details and groups.",
     "files": "Files in folders the owner opted in.",
     "focus": "Turn Do Not Disturb on or off.",
     "health": "Health samples captured from the iPhone, summarised by day or week.",
-    "helper": "Version of the Apple Bridge helper app.",
     "iphone": "The owner's paired iPhone: alarms, timers, notifications, location, motion, Health logging, Screen Time.",
     "location": "The Mac's current location and address lookups.",
     "mail": "Mail messages: read bodies, send, draft, move, flag, delete.",
@@ -19,10 +17,9 @@
     "pdf": "Read, search and annotate PDF documents.",
     "photos": "The Photos library, read live: search, look at, download, favorite and organise albums.",
     "print": "Print a PDF.",
-    "records": "Any synced collection: list, fetch one record, full-text search.",
     "reminders": "Reminders and reminder lists.",
+    "screentime": "Screen Time: app usage per device and day, estimated from app focus.",
     "speech": "Text to speech.",
-    "status": "Which sources are ready and how fresh the synced copy is.",
     "vision": "Read text in images."
   },
   "params": {
@@ -40,7 +37,7 @@
     "limit": "Maximum items to return.",
     "after": "Cursor for the next page: pass the next value from the previous page. Omit for the first page.",
     "expected_version": "The version of the record you are changing, from the version field of the read that returned it. If someone changed it since, the call fails with conflict and returns the current record.",
-    "device_id": "The paired iPhone, written iphone: followed by its ID. Get it from iphone.devices.",
+    "device_id": "The paired iPhone, written iphone: followed by its ID. Get it from iphone.list_devices.",
     "lat": "Latitude in degrees, -90 to 90.",
     "lon": "Longitude in degrees, -180 to 180.",
     "data_base64": "The file's bytes, base64 encoded, 8 MiB at most. Give this or blob, not both.",
@@ -75,15 +72,15 @@
     "part_index": "Which part of a multi-part message, counting from 0. Default 0.",
     "label": "Label such as home, work or mobile.",
     "value": "The value.",
-    "files": "Attachments, up to 10. Each has a name and either data (base64 bytes) or an upload_id from blobs.stage.",
+    "files": "Attachments, up to 10. Each has a name and either data (base64 bytes) or an upload_id from bridge.stage_blob.",
     "files.name": "File name shown to the recipient, without slashes.",
     "files.data": "File bytes, base64 encoded. Give this or upload_id.",
-    "files.upload_id": "ID from blobs.stage. Give this or data.",
+    "files.upload_id": "ID from bridge.stage_blob. Give this or data.",
     "asset_id": "A photo or video ID from photos.search or photos.get.",
     "asset_ids": "Photo or video IDs from photos.search.",
-    "album_id": "An album ID from photos.albums.",
+    "album_id": "An album ID from photos.list_albums.",
     "title": "The title.",
-    "transfer_id": "The transfer ID that photos.fetch returned.",
+    "transfer_id": "The transfer ID that photos.download returned.",
     "text": "The text."
   },
   "operations": {
@@ -138,7 +135,7 @@
       "p": {
         "start": "Window start as an RFC 3339 timestamp, such as 2026-11-12T00:00:00-06:00.",
         "end": "Window end as an RFC 3339 timestamp, after start.",
-        "calendar_id": "Only events in this calendar (a cal_ ID from records.query on calendar.calendar). Omit for all calendars."
+        "calendar_id": "Only events in this calendar (a cal_ ID from calendar.list_calendars). Omit for all calendars."
       },
       "x": {
         "start": "2026-11-12T00:00:00-06:00",
@@ -163,7 +160,7 @@
       "s": "Create a calendar event.",
       "r": "The new event's ID (evt_) in ids, and the event in record.",
       "p": {
-        "calendar_id": "Calendar to add it to: a cal_ ID from records.query on calendar.calendar.",
+        "calendar_id": "Calendar to add it to: a cal_ ID from calendar.list_calendars.",
         "title": "Event title.",
         "start": "Start: RFC 3339 timestamp, or YYYY-MM-DD when all_day is true.",
         "end": "End, after start: RFC 3339 timestamp, or YYYY-MM-DD when all_day is true.",
@@ -198,7 +195,7 @@
       "s": "Change fields of a calendar event; for a repeating event choose this occurrence or this and future ones.",
       "r": "The event ID in ids and the updated event in record.",
       "p": {
-        "id": "The event's evt_ ID from calendar.agenda or calendar.range.",
+        "id": "The event's evt_ ID from calendar.list or calendar.list_grouped.",
         "span": "this changes only this occurrence; future changes it and every later one.",
         "calendar_id": "Move the event to this calendar (cal_ ID).",
         "title": "New title.",
@@ -232,7 +229,7 @@
       "s": "Delete a calendar event, or this and all later occurrences of a repeating one.",
       "r": "The deleted event's ID in ids.",
       "p": {
-        "id": "The event's evt_ ID from calendar.agenda or calendar.range.",
+        "id": "The event's evt_ ID from calendar.list or calendar.list_grouped.",
         "span": "this deletes only this occurrence; future deletes it and every later one."
       },
       "v": "required",
@@ -279,7 +276,7 @@
       "s": "List reminders in one list, a smart list such as today, or with a tag.",
       "r": "sections of reminders, each with id (rmd_), version and data (title, completed, due, list_id), plus subtasks and attachments.",
       "p": {
-        "list": "A list ID (lst_) from reminders.lists.",
+        "list": "A list ID (lst_) from reminders.list_lists.",
         "smart": "A smart list instead of a list: today, scheduled, all, flagged, completed or assigned.",
         "tag": "Only reminders with this tag, without the hash sign.",
         "sort": "Order: manual (default), due, created, priority or title.",
@@ -311,7 +308,7 @@
       "s": "Read the messages in one chat, with reactions, attachments and reply counts.",
       "r": "items: messages (msg_ IDs) with text, sender, sent_at and attachments (att_); before and after cursors for paging.",
       "p": {
-        "chat_id": "The chat's cht_ ID from messages.chats or messages.search.",
+        "chat_id": "The chat's cht_ ID from messages.list_chats or messages.search.",
         "anchor": "Where to start: latest (default), oldest, unread, or a msg_ ID.",
         "before": "Cursor for older messages: the before value from the previous page.",
         "after": "Cursor for newer messages: the after value from the previous page.",
@@ -342,7 +339,7 @@
         "text": "Words the message or attachment name starts with, up to 512 characters.",
         "kind": "Only messages with photos, links, documents or locations.",
         "unread": "Only unread messages.",
-        "from_contact_id": "Only messages from this contact (con_ ID from contacts.lookup).",
+        "from_contact_id": "Only messages from this contact (con_ ID from contacts.search).",
         "from_handle_id": "Only messages from this handle (hdl_ ID).",
         "limit": "Messages per page, 1 to 200. Default 50."
       },
@@ -461,7 +458,7 @@
       "s": "Add a reminder to a list, optionally with alerts at a time or on arriving at or leaving a place.",
       "r": "The new reminder's ID (rmd_) in ids and the reminder in record.",
       "p": {
-        "list_id": "List to add it to: a lst_ ID from reminders.lists.",
+        "list_id": "List to add it to: a lst_ ID from reminders.list_lists.",
         "title": "What to be reminded of.",
         "notes": "Extra notes.",
         "url": "A link stored on the reminder.",
@@ -498,7 +495,7 @@
       "s": "Change a reminder's title, notes, due date, alerts, priority or list.",
       "r": "The reminder ID in ids and the updated reminder in record.",
       "p": {
-        "id": "The reminder's rmd_ ID from reminders.items.",
+        "id": "The reminder's rmd_ ID from reminders.list.",
         "list_id": "Move it to this list (lst_ ID).",
         "title": "New title.",
         "notes": "New notes; empty string clears them.",
@@ -528,7 +525,7 @@
       "s": "Mark a reminder as done.",
       "r": "The reminder ID in ids and the completed reminder in record.",
       "p": {
-        "id": "The reminder's rmd_ ID from reminders.items."
+        "id": "The reminder's rmd_ ID from reminders.list."
       },
       "v": "required",
       "x": {
@@ -540,7 +537,7 @@
       "s": "Mark a completed reminder as not done again.",
       "r": "The reminder ID in ids and the reopened reminder in record.",
       "p": {
-        "id": "The reminder's rmd_ ID from reminders.items with show_completed true."
+        "id": "The reminder's rmd_ ID from reminders.list with show_completed true."
       },
       "v": "required",
       "x": {
@@ -552,7 +549,7 @@
       "s": "Delete a reminder.",
       "r": "The deleted reminder's ID in ids.",
       "p": {
-        "id": "The reminder's rmd_ ID from reminders.items."
+        "id": "The reminder's rmd_ ID from reminders.list."
       },
       "v": "required",
       "x": {
@@ -627,7 +624,7 @@
       "s": "Change fields of a contact; lists such as phones replace the old list.",
       "r": "The contact ID in ids and the updated contact in record.",
       "p": {
-        "id": "The contact's con_ ID from contacts.lookup or contacts.list.",
+        "id": "The contact's con_ ID from contacts.search or contacts.list.",
         "given_name": "First name.",
         "family_name": "Last name.",
         "middle_name": "Middle name.",
@@ -826,7 +823,7 @@
       "s": "Send a text or files to an existing chat, or to one phone number or email.",
       "r": "The sent message's ID (msg_) in ids once the Messages app shows it. That proves it left this Mac, not that it was delivered.",
       "p": {
-        "chat_id": "An existing chat's cht_ ID from messages.chats. Give this, or handles with service.",
+        "chat_id": "An existing chat's cht_ ID from messages.list_chats. Give this, or handles with service.",
         "handles": "Exactly one phone number in international form or email, for a new conversation. Needs service.",
         "service": "iMessage, SMS or RCS. Only with handles; a chat_id already has its service.",
         "text": "Message text, up to 65536 characters. Give text, files or both.",
@@ -900,7 +897,7 @@
       "s": "Mark a chat as read.",
       "r": "The chat ID in ids.",
       "p": {
-        "id": "The chat's cht_ ID from messages.chats."
+        "id": "The chat's cht_ ID from messages.list_chats."
       },
       "v": "optional",
       "x": {
@@ -911,7 +908,7 @@
       "s": "Mark a chat as unread.",
       "r": "The chat ID in ids.",
       "p": {
-        "id": "The chat's cht_ ID from messages.chats."
+        "id": "The chat's cht_ ID from messages.list_chats."
       },
       "v": "optional",
       "x": {
@@ -1122,7 +1119,7 @@
     },
     "files.read": {
       "s": "Read a file from an opted-in folder.",
-      "r": "The file's size and digest, and its bytes as a blob to fetch with blobs.read.",
+      "r": "The file's size and digest, and its bytes as a blob to fetch with bridge.read_blob.",
       "a": {
         "root": {
           "type": "string",
@@ -1146,7 +1143,7 @@
       "s": "Rename a reminder list.",
       "r": "The list ID in ids.",
       "p": {
-        "id": "The list's lst_ ID from reminders.lists.",
+        "id": "The list's lst_ ID from reminders.list_lists.",
         "title": "New name."
       },
       "v": "required",
@@ -1170,7 +1167,7 @@
       "s": "Delete a reminder list and the reminders in it.",
       "r": "The deleted list's ID in ids.",
       "p": {
-        "id": "The list's lst_ ID from reminders.lists."
+        "id": "The list's lst_ ID from reminders.list_lists."
       },
       "v": "required",
       "x": {
@@ -1233,7 +1230,7 @@
     },
     "speech.synthesize": {
       "s": "Turn text into spoken audio and return it as a WAV file.",
-      "r": "A WAV file as a blob to fetch with blobs.read.",
+      "r": "A WAV file as a blob to fetch with bridge.read_blob.",
       "a": {
         "text": {
           "type": "string",
@@ -1323,12 +1320,12 @@
     },
     "mail.body": {
       "s": "Read the full body of one mail message.",
-      "r": "The message body as text, or a blob to fetch with blobs.read when it is large.",
+      "r": "The message body as text, or a blob to fetch with bridge.read_blob when it is large.",
       "a": {
         "message_id": {
           "type": "string",
           "minLength": 1,
-          "description": "The message's mml_ ID from records.query or search on mail.message."
+          "description": "The message's mml_ ID from mail.search."
         }
       },
       "q": [
@@ -1354,7 +1351,7 @@
     },
     "maps.snapshot": {
       "s": "Render a map image of an area with optional markers.",
-      "r": "A PNG image as a blob to fetch with blobs.read.",
+      "r": "A PNG image as a blob to fetch with bridge.read_blob.",
       "a": {
         "center": {
           "type": "object",
@@ -1632,7 +1629,7 @@
             "walking",
             "cycling"
           ],
-          "description": "driving, walking or cycling. Use maps.eta for transit."
+          "description": "driving, walking or cycling. Use maps.get_eta for transit."
         }
       },
       "q": [
@@ -1705,8 +1702,8 @@
       "s": "Move a mail message to another mailbox.",
       "r": "The message ID in ids.",
       "p": {
-        "id": "The message's mml_ ID.",
-        "account": "Account name of the destination mailbox, from records.query on mail.mailbox.",
+        "id": "The message's mml_ ID from mail.search.",
+        "account": "Account name of the destination mailbox, from bridge.list_records on mail.mailbox.",
         "mailbox": "Destination mailbox name, such as Archive."
       },
       "v": "optional",
@@ -1720,7 +1717,7 @@
       "s": "Flag or unflag a mail message.",
       "r": "The message ID in ids.",
       "p": {
-        "id": "The message's mml_ ID.",
+        "id": "The message's mml_ ID from mail.search.",
         "flagged": "True to flag, false to unflag."
       },
       "v": "optional",
@@ -1733,7 +1730,7 @@
       "s": "Mark a mail message read or unread.",
       "r": "The message ID in ids.",
       "p": {
-        "id": "The message's mml_ ID.",
+        "id": "The message's mml_ ID from mail.search.",
         "read": "True for read, false for unread."
       },
       "v": "optional",
@@ -1746,7 +1743,7 @@
       "s": "Move a mail message to the Trash.",
       "r": "The message ID in ids.",
       "p": {
-        "id": "The message's mml_ ID."
+        "id": "The message's mml_ ID from mail.search."
       },
       "v": "optional",
       "x": {
@@ -1755,7 +1752,7 @@
     },
     "pdf.annotate": {
       "s": "Add notes or highlights to a PDF and get the annotated copy.",
-      "r": "The annotated PDF as a blob to fetch with blobs.read. The original is unchanged.",
+      "r": "The annotated PDF as a blob to fetch with bridge.read_blob. The original is unchanged.",
       "p": {
         "annotations": "Up to 100 annotations.",
         "annotations.page": "Page number, from 1.",
@@ -1793,12 +1790,12 @@
     },
     "capture.camera_photo": {
       "s": "Take a photo with the Mac's camera.",
-      "r": "The photo as a blob to fetch with blobs.read.",
+      "r": "The photo as a blob to fetch with bridge.read_blob.",
       "x": {}
     },
     "capture.record_audio": {
       "s": "Record audio from the Mac's microphone.",
-      "r": "The recording as a blob to fetch with blobs.read.",
+      "r": "The recording as a blob to fetch with bridge.read_blob.",
       "p": {
         "seconds": "Length in seconds, 1 to 60."
       },
@@ -1808,7 +1805,7 @@
     },
     "capture.screenshot": {
       "s": "Take a screenshot of a display or a window.",
-      "r": "The image as a blob to fetch with blobs.read.",
+      "r": "The image as a blob to fetch with bridge.read_blob.",
       "p": {
         "display": "Display number, from 1. Omit for the main display.",
         "window": "Window number instead of a display."
@@ -1832,7 +1829,7 @@
       "s": "Cancel an alarm Apple Bridge set on the iPhone.",
       "r": "Confirmation from the phone.",
       "p": {
-        "id": "The alarm's UUID from iphone.alarm.create or iphone.alarm.list."
+        "id": "The alarm's UUID from iphone.create_alarm or iphone.list_alarms."
       },
       "x": {
         "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
@@ -1966,7 +1963,7 @@
       "s": "End a task's Live Activity on the iPhone lock screen.",
       "r": "Confirmation from the phone.",
       "p": {
-        "task_id": "The task_id used with iphone.live.start.",
+        "task_id": "The task_id used with iphone.start_live_activity.",
         "title": "Final title, up to 128 characters.",
         "status": "Final status line, up to 256 characters.",
         "progress": "Final progress from 0 to 1."
@@ -2000,7 +1997,7 @@
       "s": "Update a task's Live Activity on the iPhone lock screen.",
       "r": "Confirmation from the phone.",
       "p": {
-        "task_id": "The task_id used with iphone.live.start.",
+        "task_id": "The task_id used with iphone.start_live_activity.",
         "title": "Title, up to 128 characters.",
         "status": "Status line, up to 256 characters.",
         "progress": "Progress from 0 to 1."
@@ -2116,7 +2113,7 @@
       "s": "Cancel a timer Apple Bridge started on the iPhone.",
       "r": "Confirmation from the phone.",
       "p": {
-        "id": "The timer's UUID from iphone.timer.start or iphone.alarm.list."
+        "id": "The timer's UUID from iphone.start_timer or iphone.list_alarms."
       },
       "x": {
         "device_id": "iphone:01J9Z8Y7X6W5V4T3S2R1Q0P9N8",
@@ -2139,7 +2136,7 @@
     },
     "mac.screen_record": {
       "s": "Record the Mac's screen as a video.",
-      "r": "The video as a blob to fetch with blobs.read.",
+      "r": "The video as a blob to fetch with bridge.read_blob.",
       "p": {
         "seconds": "Length in seconds, 1 to 30."
       },
@@ -2166,7 +2163,7 @@
         "start": "Taken on or after this time: RFC 3339 timestamp or YYYY-MM-DD.",
         "end": "Taken before this time: RFC 3339 timestamp or YYYY-MM-DD.",
         "type": "Only this kind: image, video, audio, live_photo, screenshot, panorama, hdr, depth, slow_motion or timelapse.",
-        "album_id": "Only photos in this album (from photos.albums).",
+        "album_id": "Only photos in this album (from photos.list_albums).",
         "favorite": "Only favorites.",
         "near": "Only photos taken near this point. Use with radius_m.",
         "radius_m": "Distance from near in meters, up to 100000.",
@@ -2194,7 +2191,7 @@
     },
     "photos.get": {
       "s": "Get one photo's details, location and downloadable resources.",
-      "r": "Metadata, location and resources (original, edited, Live Photo video) with resource_index and resource_key for photos.fetch.",
+      "r": "Metadata, location and resources (original, edited, Live Photo video) with resource_index and resource_key for photos.download.",
       "x": {
         "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
       }
@@ -2256,7 +2253,7 @@
       "x": {
         "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
       },
-      "d": "Start with asset_id, then poll with transfer_id until ready, read with transfer_id, offset and length, check the SHA-256, and call photos.release. Poll within 120 seconds or the transfer is dropped."
+      "d": "Start with asset_id, then poll with transfer_id until ready, read with transfer_id, offset and length, check the SHA-256, and call photos.release_download. Poll within 120 seconds or the transfer is dropped."
     },
     "photos.release": {
       "s": "Finish a photo download and delete its temporary copy.",

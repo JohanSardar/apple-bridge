@@ -626,12 +626,8 @@ struct Page {
     events: Vec<Value>,
     calendars: Vec<Value>,
 }
-fn range(client: &Client, mcp: bool, input: &Value) -> Option<Page> {
-    let reply = if mcp {
-        client.call_mcp("calendar.range", input, 20)
-    } else {
-        client.call("calendar.range", input, 20)
-    };
+fn range(client: &Client, _mcp: bool, input: &Value) -> Option<Page> {
+    let reply = client.call("calendar.range", input, 20);
     let value = reply.ok().flatten()?;
     Some(Page {
         events: value["events"].as_array().cloned().unwrap_or_default(),
@@ -914,10 +910,7 @@ fn range_perf(world: &World, observed: &Observed, evidence: &mut Evidence) -> Re
         let mut values = vec![];
         let mut missing = 0;
         for _ in 0..100 {
-            match observed
-                .gateway
-                .read_model_ms("calendar.range", &query, mcp)
-            {
+            match observed.gateway.read_model_ms("calendar.range", &query) {
                 Some(value) => values.push(value),
                 None => missing += 1,
             }

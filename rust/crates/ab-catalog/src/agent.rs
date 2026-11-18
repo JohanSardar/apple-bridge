@@ -13,6 +13,7 @@ pub enum VersionRule {
 #[derive(Debug, Clone, Serialize)]
 pub struct AgentOperation {
     pub name: String,
+    pub public: String,
     pub domain: String,
     pub kind: OperationKind,
     pub changes: bool,
@@ -145,6 +146,7 @@ fn build(
     };
     AgentOperation {
         name: descriptor.name.clone(),
+        public: descriptor.name.clone(),
         domain: domain_of(name).to_owned(),
         kind: descriptor.kind,
         changes,
