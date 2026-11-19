@@ -1608,17 +1608,16 @@ impl Call<'_> {
             ]))
             .await?;
         let next_cursor = found.value["next_cursor"].clone();
-        let places = places_by_id(&found.value["assets"]);
         let assets = found.value["assets"]
             .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(|asset| {
-                let id = asset["asset_id"]
-                    .as_str()
-                    .or_else(|| asset["id"].as_str())?;
-                Some((id, asset))
-            });
+            .cloned()
+            .unwrap_or_default();
+        let assets = assets.into_iter().filter_map(|asset| {
+            let id = asset["asset_id"]
+                .as_str()
+                .or_else(|| asset["id"].as_str())?;
+            Some((id.to_owned(), asset))
+        });
         let mut previews = futures_util::stream::iter(assets.map(|(id, asset)| async move {
             let result = self
                 .read_one(&Map::from_iter([
@@ -1640,7 +1639,7 @@ impl Call<'_> {
             if let Some(local) = crate::mcp_facade::local_time_of(asset["created_at"].as_str()) {
                 photo["taken_at_local"] = json!(local);
             }
-            if let Some(place) = places.get(id) {
+            if let Some(place) = asset.get("place").filter(|value| !value.is_null()) {
                 photo["place"] = place.clone();
             }
             match preview {
@@ -1674,22 +1673,6 @@ impl Call<'_> {
         }
         .named("photos.search"))
     }
-}
-
-fn places_by_id(assets: &Value) -> Map<String, Value> {
-    assets
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(|asset| {
-            let id = asset["asset_id"]
-                .as_str()
-                .or_else(|| asset["id"].as_str())?;
-            asset["place"]
-                .is_string()
-                .then(|| (id.to_owned(), asset["place"].clone()))
-        })
-        .collect()
 }
 
 pub(crate) fn chat_title(names: &[String]) -> String {

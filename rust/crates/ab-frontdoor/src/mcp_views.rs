@@ -82,6 +82,7 @@ impl Call<'_> {
         };
         match shape {
             "notes.list" => Ok(notes_view(raw, window)),
+            "replica.status" => Ok(replica_view(raw)),
             "reminders.items" => {
                 let names = self.list_names().await;
                 if arguments.get("smart").and_then(Value::as_str) == Some("today") {
@@ -262,6 +263,27 @@ fn reminder_cards(raw: &Value, names: &HashMap<String, String>) -> Vec<Value> {
             card
         })
         .collect()
+}
+
+fn replica_view(raw: &Value) -> Value {
+    let mut replica = raw["replica"].clone();
+    if let Some(blobs) = replica["blobs"].as_object_mut()
+        && let Some(Value::Object(entries)) = blobs.remove("entries")
+    {
+        let mut counts = std::collections::BTreeMap::<&str, usize>::from([
+            ("failed", 0),
+            ("missing", 0),
+            ("offloaded", 0),
+            ("over_cap", 0),
+            ("pending", 0),
+            ("present", 0),
+        ]);
+        for state in entries.values().filter_map(|entry| entry["state"].as_str()) {
+            *counts.entry(state).or_default() += 1;
+        }
+        blobs.insert("counts".into(), json!(counts));
+    }
+    json!({"replica": replica})
 }
 
 fn notes_view(raw: &Value, window: Window) -> Value {
