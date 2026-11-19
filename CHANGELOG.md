@@ -4,6 +4,19 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-11-19
+
+### Changed
+
+- `photos_find` attaches each available photo as a separate image. Use `photos_show` for the full-resolution photo.
+- Message threads keep their requested window, overdue reminders default to a larger page, and Notes list previews are shorter.
+- The default unread chat list excludes spam, unknown senders and chats with no activity in the last 30 days.
+
+### Fixed
+
+- Messages explains when an attachment is offloaded. Copying verifies the bytes against the digest of the local file, and reconnecting resumes work on outstanding copies.
+- Calendar day windows include overlapping all-day events in the Mac's time zone, including when callers supply an explicit offset.
+
 ## [0.1.11] - 2026-11-18
 
 ### Changed

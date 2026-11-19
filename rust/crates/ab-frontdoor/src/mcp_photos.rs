@@ -54,7 +54,10 @@ impl Call<'_> {
         }
         Ok(Outcome {
             value,
-            image: Some((STANDARD.encode(&shown), "image/jpeg".into())),
+            images: vec![crate::mcp::Image {
+                data: STANDARD.encode(&shown),
+                mime: "image/jpeg".into(),
+            }],
             ..Outcome::default()
         }
         .named("photos.fetch"))

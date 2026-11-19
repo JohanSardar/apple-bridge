@@ -262,7 +262,7 @@ impl MessagesReader {
                 declared,
             },
         );
-        data["blob"] = json!({"state":"present","digest":digest});
+        data["blob"] = json!({"state":"present","digest":digest,"size":size});
         let mut handles = vec![(digest.clone(), guid.to_owned())];
         if self.facts.is_some() {
             handles.extend(self.derive(reader, data, guid, &digest, live));

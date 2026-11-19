@@ -34,7 +34,7 @@ impl ab_applepeer::Backend for Backend {
                 .await
                 .entries()
                 .values()
-                .any(|entry| entry.state == ab_blobs::BlobState::Pending)
+                .any(|entry| entry.state == ab_blobs::BlobState::Pending || entry.rearmable())
             {
                 for value in checkpoints.values_mut() {
                     let mut checkpoint: serde_json::Value =
@@ -457,9 +457,6 @@ async fn transfer(
         let next = offset
             .checked_add(u64::try_from(bytes.len()).map_err(|_| ab_blobs::Error::Corrupt)?)
             .ok_or(ab_blobs::Error::Corrupt)?;
-        if size > 0 && (next > size || done && next != size) {
-            return Err(ab_blobs::Error::Corrupt);
-        }
         mutate(blobs, |store| store.chunk(digest, offset, &bytes)).await?;
         offset = next;
         if done {
@@ -589,7 +586,7 @@ mod tests {
         let bytes = vec![7_u8; 40_000];
         let digest = digest_of(&bytes);
         let home = tempfile::tempdir()?;
-        seed(home.path(), &digest, bytes.len(), 0)?;
+        seed(home.path(), &digest, bytes.len() + 1_024, 0)?;
         let blobs = open(home.path())?;
         let mut cooldown = RearmCooldown::default();
         cooldown.session(ab_operations::peer::PeerSession(1));

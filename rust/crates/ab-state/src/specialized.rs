@@ -444,13 +444,21 @@ pub(crate) fn calendar(db: &Connection, visibility: &Visibility, query: &Value) 
                 continue;
             }
         }
-        let (Some(first), Some(last)) = (
+        let all_day = b(&fields, "all_day");
+        let (Some(first), Some(mut last)) = (
             instant(s(&fields, "start"), &zone),
             instant(s(&fields, "end"), &zone),
         ) else {
             coverage_notes.push("An event has an unsupported date range");
             continue;
         };
+        if all_day && last == first {
+            last = first
+                .to_zoned(zone.clone())
+                .tomorrow()
+                .map_err(|_| ErrorCode::Invalid)?
+                .timestamp();
+        }
         if last <= first {
             coverage_notes.push("An event has an unsupported date range");
             continue;
@@ -458,7 +466,7 @@ pub(crate) fn calendar(db: &Connection, visibility: &Visibility, query: &Value) 
         if first >= end || last <= start {
             continue;
         }
-        nodes.push((record, first, last, b(&fields, "all_day"), 0usize));
+        nodes.push((record, first, last, all_day, 0usize));
     }
     if nodes.len() > 10000 {
         return Err(ErrorCode::Capacity.into());

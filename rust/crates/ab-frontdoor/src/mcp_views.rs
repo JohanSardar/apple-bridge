@@ -8,7 +8,7 @@ use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 
 const OVERDUE_TOP: usize = 3;
-const NOTE_PREVIEW: usize = 100;
+const NOTE_PREVIEW: usize = 64;
 const UPCOMING_TOP: usize = 5;
 const UPCOMING_DAYS: i64 = 7;
 const VIEWS: &[&str] = &["due_today", "overdue", "upcoming"];
@@ -68,7 +68,13 @@ impl Call<'_> {
         shaped: Value,
         input: &Map<String, Value>,
     ) -> Step<Value> {
-        let window = read_window(input, arguments);
+        let mut window = read_window(input, arguments);
+        if operation.name == "reminders.items"
+            && input.contains_key("view")
+            && !input.contains_key("limit")
+        {
+            window.limit = mcp_answer::MAX_ITEMS;
+        }
         let shape = if input.contains_key("fields") {
             ""
         } else {
@@ -76,6 +82,7 @@ impl Call<'_> {
         };
         match shape {
             "notes.list" => Ok(notes_view(raw, window)),
+            "replica.status" => Ok(replica_view(raw)),
             "reminders.items" => {
                 let names = self.list_names().await;
                 if arguments.get("smart").and_then(Value::as_str) == Some("today") {
@@ -164,14 +171,14 @@ impl Call<'_> {
             .collect();
         upcoming.sort_by_key(|entry| entry.0);
         let upcoming: Vec<Value> = upcoming.into_iter().map(|(_, card)| card).collect();
-        let call = |view: &str| json!({"tool": "apple_read", "arguments": {"operation": "reminders.list", "arguments": {"smart": "today"}, "view": view}});
+        let call = |view: &str| json!({"tool": "apple_read", "arguments": {"operation": "reminders.list", "arguments": arguments, "view": view}});
         if let Some(view) = input.get("view").and_then(Value::as_str) {
             let chosen = match view {
                 "overdue" => overdue,
                 "upcoming" => upcoming,
                 _ => due_today,
             };
-            let (items, page) = page(chosen, window, "Pass list for one list, or tag.");
+            let (items, page) = page(chosen, window, "Pass view due_today, overdue, or upcoming.");
             return Ok(
                 json!({"date": today.to_string(), "view": view, "reminders": items, "page": page}),
             );
@@ -258,6 +265,27 @@ fn reminder_cards(raw: &Value, names: &HashMap<String, String>) -> Vec<Value> {
         .collect()
 }
 
+fn replica_view(raw: &Value) -> Value {
+    let mut replica = raw["replica"].clone();
+    if let Some(blobs) = replica["blobs"].as_object_mut()
+        && let Some(Value::Object(entries)) = blobs.remove("entries")
+    {
+        let mut counts = std::collections::BTreeMap::<&str, usize>::from([
+            ("failed", 0),
+            ("missing", 0),
+            ("offloaded", 0),
+            ("over_cap", 0),
+            ("pending", 0),
+            ("present", 0),
+        ]);
+        for state in entries.values().filter_map(|entry| entry["state"].as_str()) {
+            *counts.entry(state).or_default() += 1;
+        }
+        blobs.insert("counts".into(), json!(counts));
+    }
+    json!({"replica": replica})
+}
+
 fn notes_view(raw: &Value, window: Window) -> Value {
     let folders: Vec<Value> = raw["folders"]
         .as_array()
@@ -294,11 +322,10 @@ fn notes_view(raw: &Value, window: Window) -> Value {
                     let mut card = json!({
                         "id": record["id"],
                         "version": record["version"],
-                        "title": data["title"],
+                        "title": data["title"].as_str().map(short),
                         "folder": names.get(folder).copied().unwrap_or(folder),
                         "modified_at": data["modified_at"],
                         "preview": item["preview"].as_str().filter(|p| !p.is_empty()).map(|p| mcp_answer::clip(p.trim(), NOTE_PREVIEW).0),
-                        "section": section["title"],
                     });
                     for flag in ["pinned", "locked"] {
                         if data[flag] == true || item[flag] == true {

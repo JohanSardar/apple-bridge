@@ -787,14 +787,27 @@ fn message_results_keep_text_exactly_and_name_attachments() {
     let message = json!({
         "collection": "messages.message", "id": "msg_1", "version": 1,
         "data": {"chat_id": "cht_1", "text": "  Ferry at 9\n", "sent_at": "2026-11-10T12:00:00Z", "is_from_me": false},
-        "attachments": [{"id": "att_1", "version": 1, "data": {"filename": "map.png", "mime_type": "image/png", "size": 10, "blob": {"digest": "d", "state": "available"}}}],
+        "attachments": [
+            {"collection": "messages.attachment", "id": "att_1", "version": 1, "data": {"filename": "map.png", "mime_type": "image/png", "size": 10, "blob": {"digest": "d", "state": "available"}}},
+            {"collection": "messages.attachment", "id": "att_2", "version": 1, "data": {"filename": "missing.png", "mime_type": "image/png", "blob": {"state": "pending"}}}
+        ],
     });
     let summary = crate::mcp_facade::message_summary(&message);
     assert_eq!(summary["text"], "  Ferry at 9\n");
     assert_eq!(summary["attachments"][0]["filename"], "map.png");
     assert_eq!(summary["attachments"][0]["digest"], "d");
+    assert_eq!(summary["attachments"][1]["state"], "offloaded");
+    assert!(summary["attachments"][1].get("digest").is_none());
+    assert_eq!(
+        summary["attachments"][1]["availability"],
+        "This attachment isn't downloaded to this Mac. Opening the chat in Messages downloads it."
+    );
     let compacted = compact(&message, false, None);
     assert_eq!(compacted["attachments"][0]["id"], "att_1");
+    assert_eq!(
+        compacted["attachments"][1]["data"]["blob"]["state"],
+        "offloaded"
+    );
 }
 
 #[test]

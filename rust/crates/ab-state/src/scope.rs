@@ -71,7 +71,11 @@ impl<Role> State<Role> {
             return Ok(None);
         };
         let mut allowed = std::collections::HashSet::new();
-        for record in known_records(&self.db, "SELECT payload FROM records WHERE deleted=0", &[])? {
+        for record in known_records(
+            &self.db,
+            "SELECT r.payload FROM records r WHERE r.deleted=0 AND EXISTS(SELECT 1 FROM blob_refs b WHERE b.owner='record:'||r.id)",
+            &[],
+        )? {
             if allows(visibility, &record)? {
                 let mut stmt = self
                     .db

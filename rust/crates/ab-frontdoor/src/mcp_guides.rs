@@ -3,11 +3,11 @@ use serde_json::{Value, json};
 
 pub(crate) const INSTRUCTIONS: &str = "Apple Bridge reads and changes the owner's Apple data on their Mac: Messages, Mail, Contacts, Calendar, Reminders, Notes, Photos, Files and more. The data is private; share only what the task needs.
 
-How to work: answer simple reads with one call, no lookup first. Arguments not shown are optional.
-1. Operations are named app.verb_object; apple_read and apple_change list every name. Reminders: apple_read reminders.list with list (a name) or smart (today). Notes: notes.search with text. Mail: mail.search. Today's events: calendar_events. Chats: messages_read. People: contacts_find. Screen Time: screen_time. Photos: photos_find; show one with photos_show, never the grid. Adding: messages_send, reminders_add, calendar_add, notes_create. Contact, chat, list and calendar names are matched.
+Use one call for simple reads. Unshown arguments are optional.
+1. Operations are named app.verb_object; apple_read and apple_change list every name. Reminders: apple_read reminders.list with list (a name) or smart (today). Notes: notes.search with text. Mail: mail.search. Today's events: calendar_events. Chats: messages_read. People: contacts_find. Screen Time: screen_time. Photos: photos_find shows individual photos. Keep grids private. Adding: messages_send, reminders_add, calendar_add, notes_create. Contact, chat, list and calendar names are matched.
 2. To find text anywhere, use apple_search. If it says the search is incomplete, do not conclude there is no match.
 3. For anything else, apple_describe with a plain query like \"flag mail\" returns operations with arguments and an example; run one with apple_read (up to 10 batched) or apple_change.
-4. Lists give 20 items a page; pass page.next for more. apple_status explains empty or refused sources.
+4. Most lists give 20 items a page; pass page.next for more. apple_status explains empty or refused sources.
 5. Pass a record's version as expected_version to update or delete it.
 6. A change waits up to 15 seconds and returns status: done, partial, pending, awaiting_approval, failed or indeterminate. On pending, call apple_command_status with the request_id. On awaiting_approval, tell the owner what you asked for. Never repeat a partial or indeterminate change, with any request_id. Reusing a request_id never acts twice.
 7. Errors give code, field, problem, expected, example and hint. Follow the hint.

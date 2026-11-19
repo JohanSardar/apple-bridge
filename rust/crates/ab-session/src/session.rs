@@ -291,15 +291,6 @@ fn open(frame: &IpcFrame) -> Result<(u64, u64), Error> {
     ))
 }
 
-fn committed_map(frame: &IpcFrame) -> Result<BTreeMap<String, (String, String)>, Error> {
-    Ok(Session::from_open(frame)
-        .map_err(|_| Error::Invalid)?
-        .checkpoints
-        .into_iter()
-        .map(|(source, checkpoint)| (source, (checkpoint.generation, checkpoint.checkpoint)))
-        .collect())
-}
-
 fn rejected(command_id: &str, code: &str) -> Result<IpcFrame, Error> {
     let error =
         RawValue::from_string(serde_json::json!({"code": code, "message": code}).to_string())?;
@@ -499,11 +490,17 @@ pub fn serve_attached(
                 return Err(error);
             }
         };
-    let committed = committed_map(&opened)?;
+    let checkpoints = Session::from_open(&opened)
+        .map_err(|_| Error::Invalid)?
+        .checkpoints;
     let mut capture_state = capture::State::default();
     if let Some(capture) = &capture {
-        capture.open(&mut capture_state, &committed)?;
+        capture.open(&mut capture_state, &checkpoints)?;
     }
+    let committed = checkpoints
+        .into_iter()
+        .map(|(source, point)| (source, (point.generation, point.checkpoint)))
+        .collect();
     let mut flights = Flights::default();
     flights.open(
         u64::try_from(opened.byte_credit).map_err(|_| Error::Invalid)?,

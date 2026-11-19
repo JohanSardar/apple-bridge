@@ -8,12 +8,12 @@ Photos is read live from the Mac's library. It has no text search and is not par
 - Every asset from `photos.search` and `photos_find` has `place`, such as "Mykonos, Greece" or "Chicago, Illinois, United States", when the photo has a location.
 - Where were photos taken: `photos_find` with `places: true` (or `photos.list_places`) and `start`/`end` lists each place with its city, US state, country, dates, photo count and one `asset_id`, plus `countries` and `us_states` rollups. For a photo from every place, show each place's `asset_id` with `photos_show`. If `complete` is false, Apple's place lookup paused; call again a minute later for the rest.
 - `photos.list_albums` lists albums; `photos.get` shows one asset's details and resources.
-- To find a photo by what it shows, look at it: `photos_find` (or `photos.preview_grid` with about 20 IDs) returns a numbered grid of small thumbnails; read the numbers against `cells`. Images come back as image content. Each image costs time and tokens and its pixels go to your provider, so look only at what the task needs.
+- Use `photos_find` to see matches as individual, full-frame photos. Each result's `image` points to its attached image, counted from one. Use `photos.preview_grid` with selected IDs only when you need to scan many photos yourself.
 
 ## Showing and sending photos
 
-- The numbered grid and `photos.preview` are your own low-resolution index. Never show them to the person or describe their blur, crop or numbers as the photo.
-- To show a photo, call `photos_show` with its `asset_id`: it returns the photo itself, full frame and full resolution as Photos shows it, with nothing drawn on it. Show that image as it is.
+- Show the person the individual images from `photos_find` as they are. Keep any numbered grid out of the reply.
+- For full resolution, pass the `asset_id` to `photos_show`. It returns the whole photo as Photos shows it.
 - `photos_show` with `save: true` also saves the original file on the Mac and returns `file`, its path, for desktop agents to open or attach.
 - To send a photo in Messages, pass its `asset_id` in `photos` to `messages_send`; the photo file is attached as Photos shows it, as if dragged in from Photos.
 
