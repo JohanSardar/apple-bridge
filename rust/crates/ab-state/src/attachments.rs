@@ -10,13 +10,12 @@ fn availability(blob: &mut Value, entries: &Value) {
     let digest = digest(Some(blob));
     let entry = digest.and_then(|digest| entries.get(digest));
     let source_state = state(Some(blob));
+    let claims_local = matches!(source_state, "present" | "available");
     let (state, reason) = match entry.and_then(|entry| entry["state"].as_str()) {
         Some("present") => ("present", None),
         _ if source_state == "offloaded" => ("offloaded", None),
-        Some("pending") | None if digest.is_some() && source_state == "present" => {
-            ("pending", None)
-        }
-        None if source_state == "present" => ("missing", Some("attachment_digest_unavailable")),
+        Some("pending") | None if digest.is_some() && claims_local => ("pending", None),
+        None if claims_local => ("missing", Some("attachment_digest_unavailable")),
         Some("failed" | "over_cap") => {
             let Some(entry) = entry else { return };
             (
@@ -69,7 +68,7 @@ pub(crate) fn counts(db: &Connection, entries: &Value) -> Result<Value> {
     let mut counts = [0_u64; 4];
     let mut failures = BTreeMap::<String, u64>::new();
     let mut stmt = db.prepare_cached(
-        "SELECT json_extract(payload,'$.data.blob') FROM records WHERE collection='messages.attachment' AND source='messages' AND deleted=0",
+        "SELECT json_extract(CAST(payload AS TEXT),'$.data.blob') FROM records WHERE collection='messages.attachment' AND source='messages' AND deleted=0",
     )?;
     for row in stmt.query_map([], |row| row.get::<_, Option<String>>(0))? {
         let mut blob = row?.map_or(Ok(Value::Null), |raw| serde_json::from_str(&raw))?;

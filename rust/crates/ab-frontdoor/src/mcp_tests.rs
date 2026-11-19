@@ -789,7 +789,8 @@ fn message_results_keep_text_exactly_and_name_attachments() {
         "data": {"chat_id": "cht_1", "text": "  Ferry at 9\n", "sent_at": "2026-11-10T12:00:00Z", "is_from_me": false},
         "attachments": [
             {"collection": "messages.attachment", "id": "att_1", "version": 1, "data": {"filename": "map.png", "mime_type": "image/png", "size": 10, "blob": {"digest": "d", "state": "available"}}},
-            {"collection": "messages.attachment", "id": "att_2", "version": 1, "data": {"filename": "missing.png", "mime_type": "image/png", "blob": {"state": "pending"}}}
+            {"collection": "messages.attachment", "id": "att_2", "version": 1, "data": {"filename": "missing.png", "mime_type": "image/png", "blob": {"state": "offloaded"}}},
+            {"collection": "messages.attachment", "id": "att_3", "version": 1, "data": {"filename": "copying.png", "blob": {"digest": "d2", "state": "pending"}}}
         ],
     });
     let summary = crate::mcp_facade::message_summary(&message);
@@ -800,7 +801,12 @@ fn message_results_keep_text_exactly_and_name_attachments() {
     assert!(summary["attachments"][1].get("digest").is_none());
     assert_eq!(
         summary["attachments"][1]["availability"],
-        "This attachment isn't downloaded to this Mac. Opening the chat in Messages downloads it."
+        "This attachment isn't downloaded to this Mac."
+    );
+    assert_eq!(summary["attachments"][2]["state"], "pending");
+    assert_eq!(
+        summary["attachments"][2]["availability"],
+        "Apple Bridge is still copying this attachment."
     );
     let compacted = compact(&message, false, None);
     assert_eq!(compacted["attachments"][0]["id"], "att_1");
