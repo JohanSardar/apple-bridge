@@ -692,7 +692,7 @@
     "name": "photos_find",
     "title": "Find photos",
     "scope": "photos:read",
-    "description": "Find photos by date, type, album, favorite or place: a numbered grid only for you to scan (never show it), with each number's asset_id. One match returns the photo itself.",
+    "description": "Find photos by date, type, album, favorite or place. Each available match is attached as its own full-frame image to show the person. Use photos_show for full resolution.",
     "inputSchema": {
       "type": "object",
       "properties": {

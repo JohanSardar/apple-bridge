@@ -15,7 +15,7 @@ use serde_json::{Map, Value, json};
 pub(crate) struct Outcome {
     pub value: Value,
     pub is_error: bool,
-    pub image: Option<(String, String)>,
+    pub images: Vec<crate::mcp::Image>,
     pub read_model_ms: Option<f64>,
     pub operation: Option<String>,
 }
@@ -127,7 +127,14 @@ pub(crate) async fn call(
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
     };
     let mut outcome = result.unwrap_or_else(|problem| Outcome::fail(&problem));
-    if !crate::mcp_answer::whole(tool, &input) {
+    let complete_window = !outcome.is_error
+        && (tool == "photos_find"
+            || outcome.operation.as_deref() == Some("messages.thread") && !flag(&input, "verbose")
+            || outcome.operation.as_deref() == Some("reminders.items")
+                && input.contains_key("view")
+                && !flag(&input, "verbose")
+                && !input.contains_key("fields"));
+    if !complete_window && !crate::mcp_answer::whole(tool, &input) {
         crate::mcp_answer::fit(&mut outcome.value, crate::mcp_answer::budget(tool, &input));
     }
     outcome
@@ -691,6 +698,10 @@ impl Call<'_> {
             .field("collection"));
         }
         let verbose = flag(input, "verbose");
+        if operation.name == "messages.thread" && !verbose && !input.contains_key("offset") {
+            let limit = crate::mcp_views::read_window(input, &arguments).limit;
+            arguments.insert("limit".into(), json!(limit));
+        }
         let fields: Option<Vec<String>> = input.get("fields").and_then(Value::as_array).map(|f| {
             f.iter()
                 .filter_map(Value::as_str)
@@ -743,9 +754,16 @@ impl Call<'_> {
                 .chat_list(
                     if filter == "all" { "" } else { &filter },
                     everyone,
-                    None,
+                    (filter == "unread").then(|| crate::mcp_compose::days_ago(crate::mcp_compose::UNREAD_DAYS)),
                     crate::mcp_views::read_window(input, &arguments),
-                    |_, _| json!({"tool": "apple_read", "arguments": {"operation": "messages.list_chats", "arguments": {"filter": "all"}}}),
+                    "Pass participants for exact phone numbers or emails. For a person by name, call messages_read with the with argument.",
+                    || {
+                        if filter == "unread" {
+                            json!({"tool": "messages_read", "arguments": {"unread": true, "senders": "all"}})
+                        } else {
+                            json!({"tool": "apple_read", "arguments": {"operation": "messages.list_chats", "arguments": {"filter": "all"}}})
+                        }
+                    },
                 )
                 .await?;
             return Ok(Outcome::ok(value).named(&operation.name));
@@ -778,11 +796,11 @@ impl Call<'_> {
         };
         let raw = self.invoke_raw(operation, &body).await?;
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
-        let mut image = None;
+        let mut images = Vec::new();
         let raw = if crate::mcp::returns_image(&operation.name) {
             let (body, attached) = crate::mcp::detach_image(&raw)
                 .map_err(|_| Problem::new("corrupt", "unreadable image result"))?;
-            image = attached.map(|i| (i.data, i.mime));
+            images.extend(attached);
             String::from_utf8(body).map_err(|_| Problem::new("corrupt", "unreadable result"))?
         } else {
             raw
@@ -819,7 +837,7 @@ impl Call<'_> {
         let read_model = ab_operations::descriptor_for(&operation.name).is_ok_and(|d| d.read_model);
         Ok(Outcome {
             value,
-            image,
+            images,
             read_model_ms: read_model.then_some(elapsed),
             ..Outcome::default()
         }
@@ -1650,9 +1668,15 @@ pub(crate) fn message_summary(message: &Value) -> Value {
                 .map(attachment_summary)
                 .collect::<Vec<_>>()
         );
-        value["attachments_next"] = json!(
-            "Fetch an attachment with apple_read bridge.read_blob, passing its digest and its id as record_id."
-        );
+        if value["attachments"].as_array().is_some_and(|items| {
+            items
+                .iter()
+                .any(|item| item["state"] == "present" && item["digest"].is_string())
+        }) {
+            value["attachments_next"] = json!(
+                "Fetch an available attachment with apple_read bridge.read_blob, passing its digest and its id as record_id."
+            );
+        }
     }
     if let Some(reactions) = message["reactions"].as_array().filter(|r| !r.is_empty()) {
         value["reactions"] = json!(
@@ -1692,6 +1716,7 @@ fn attachment_summary(attachment: &Value) -> Value {
         "digest": data["blob"]["digest"].as_str().or_else(|| data["digest"].as_str()).map_or(Value::Null, |d| json!(d)),
         "state": data["blob"]["state"],
     });
+    explain_offloaded(&mut value);
     if data["hidden"] == true {
         value["hidden"] = json!(true);
     }
@@ -1702,6 +1727,15 @@ fn attachment_summary(attachment: &Value) -> Value {
         fields.retain(|_, v| !v.is_null());
     }
     value
+}
+
+fn explain_offloaded(blob: &mut Value) {
+    if matches!(blob["state"].as_str(), Some("offloaded" | "pending")) && blob["digest"].is_null() {
+        blob["state"] = json!("offloaded");
+        blob["availability"] = json!(
+            "This attachment isn't downloaded to this Mac. Opening the chat in Messages downloads it."
+        );
+    }
 }
 
 const INTERNAL: &[&str] = &[
@@ -2171,6 +2205,11 @@ fn record(map: &Map<String, Value>, fields: Option<&[String]>) -> Value {
                 || value.as_array().is_some_and(Vec::is_empty)
                 || value.as_object().is_some_and(Map::is_empty))
         });
+        if map["collection"] == "messages.attachment"
+            && let Some(blob) = object.get_mut("blob")
+        {
+            explain_offloaded(blob);
+        }
         if map["collection"] == "calendar.event" && object.get("all_day") != Some(&json!(true)) {
             for key in ["start", "end"] {
                 if let Some(local) = local_time_of(object.get(key).and_then(Value::as_str)) {

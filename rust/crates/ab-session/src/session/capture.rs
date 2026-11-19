@@ -269,7 +269,7 @@ impl Capture {
     pub(super) fn open(
         &self,
         state: &mut State,
-        committed: &BTreeMap<String, (String, String)>,
+        committed: &BTreeMap<String, ab_wire::messages::Checkpoint>,
     ) -> Result<(), Error> {
         let Some(store) = &self.store else {
             return Ok(());
@@ -279,18 +279,25 @@ impl Capture {
                 continue;
             };
             let point = committed.get(source);
-            if !record.native.is_empty() && point.is_some_and(|(g, _)| *g == record.generation) {
+            if !record.native.is_empty()
+                && point.is_some_and(|point| point.generation == record.generation)
+            {
                 state.bound.insert(
                     source.clone(),
                     (record.native.clone(), record.generation.clone()),
                 );
             }
-            if point.is_some_and(|(g, c)| *g == record.generation && *c == record.checkpoint)
-                && self.lock(source)?.resume(&record.token)
-            {
-                state
-                    .saved
-                    .insert(source.clone(), (record.checkpoint, record.token));
+            if let Some(point) = point.filter(|point| {
+                point.generation == record.generation && point.checkpoint == record.checkpoint
+            }) {
+                let mut reader = self.lock(source)?;
+                let refresh_blobs = point.refresh_blobs
+                    && (reader.handle_prefix().is_some() || reader.blobs().is_some());
+                if !refresh_blobs && reader.resume(&record.token) {
+                    state
+                        .saved
+                        .insert(source.clone(), (record.checkpoint, record.token));
+                }
             }
         }
         Ok(())

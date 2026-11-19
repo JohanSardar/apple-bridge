@@ -95,7 +95,8 @@ pub(crate) fn budget(tool: &str, input: &Map<String, Value>) -> usize {
         .and_then(|arguments| arguments.get("limit"))
         .and_then(Value::as_u64)
         .is_some_and(|n| n > DEFAULT_ITEMS as u64);
-    if single || documentation || batch || wide || asks_for_more(input) {
+    let expanded_view = tool == "apple_read" && input.contains_key("view");
+    if single || documentation || batch || wide || expanded_view || asks_for_more(input) {
         MAX_TOKENS
     } else {
         DEFAULT_TOKENS
@@ -369,15 +370,14 @@ pub(crate) fn fit(value: &mut Value, budget: usize) {
     }
     let mut cut = json!({
         "reason": format!("This answer is kept under about {budget} tokens."),
-        "next": "Ask for fewer items with limit, narrow the request, keep only some fields with fields, or read one item by id for its full text.",
+        "next": "Follow page.next where available, or narrow your request using the documented arguments.",
     });
     if !dropped.is_empty() {
         cut["dropped_items"] = Value::Object(dropped);
     }
     if unpaged {
-        cut["unpaged"] = json!(
-            "Some dropped items are in a list without page; ask without verbose, or with a smaller limit or narrower arguments, to see them."
-        );
+        cut["unpaged"] =
+            json!("Some dropped items have no continuation. Narrow the request to see them.");
     }
     if !shortened.is_empty() {
         cut["shortened_text"] = Value::Array(shortened);

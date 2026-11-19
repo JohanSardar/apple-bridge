@@ -119,8 +119,12 @@ impl Handler {
         let structured: serde_json::Value =
             serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
         let mut items = vec![json!({"type":"text","text":text})];
-        if let Some((data, mime)) = &outcome.image {
-            items.push(json!({"type":"image","data":data,"mimeType":mime}));
+        for image in &outcome.images {
+            let mut content = json!({"type":"image","data":image.data,"mimeType":image.mime});
+            if outcome.operation.as_deref() == Some("photos.contact_sheet") {
+                content["annotations"] = json!({"audience":["assistant"]});
+            }
+            items.push(content);
         }
         let mut value =
             json!({"isError":outcome.is_error,"content":items,"structuredContent":structured});
