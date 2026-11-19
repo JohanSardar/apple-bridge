@@ -114,6 +114,7 @@ const REARM_COOLDOWN_CAP: std::time::Duration = std::time::Duration::from_mins(3
 struct Cooling {
     at: std::time::Instant,
     failures: u32,
+    handle: String,
 }
 
 struct RearmCooldown {
@@ -160,23 +161,20 @@ impl RearmCooldown {
         &mut self,
         blobs: &Arc<Mutex<ab_blobs::Store>>,
         digest: &ab_blobs::Digest,
+        handle: String,
         attempt: &Attempt,
     ) {
-        if attempt.standing == Standing::Present {
+        let rearmable = blobs
+            .lock()
+            .await
+            .entries()
+            .get(digest.as_str())
+            .is_some_and(ab_blobs::Entry::rearmable);
+        if !rearmable {
             self.digests.remove(digest.as_str());
             return;
         }
-        let exhausted = attempt.transferred
-            && blobs
-                .lock()
-                .await
-                .entries()
-                .get(digest.as_str())
-                .is_some_and(|entry| {
-                    entry.state == ab_blobs::BlobState::Failed
-                        && entry.reason == "ipc_retry_exhausted"
-                });
-        if exhausted {
+        if attempt.transferred {
             let failures = self
                 .digests
                 .get(digest.as_str())
@@ -186,9 +184,25 @@ impl RearmCooldown {
                 Cooling {
                     at: std::time::Instant::now(),
                     failures: failures.saturating_add(1),
+                    handle,
                 },
             );
+        } else if let Some(cooling) = self.digests.get_mut(digest.as_str()) {
+            cooling.handle = handle;
         }
+    }
+
+    fn ready(&self) -> Vec<(ab_blobs::Digest, String)> {
+        self.digests
+            .iter()
+            .filter(|(_, cooling)| cooling.at.elapsed() >= self.window(cooling.failures))
+            .filter_map(|(digest, cooling)| {
+                Some((
+                    ab_blobs::Digest::try_from(digest.clone()).ok()?,
+                    cooling.handle.clone(),
+                ))
+            })
+            .collect()
     }
 }
 
@@ -199,29 +213,34 @@ pub async fn hydrate(
     mut stop: watch::Receiver<bool>,
 ) -> Result<(), crate::Error> {
     let mut cooldown = RearmCooldown::default();
+    let mut retry = tokio::time::interval(std::time::Duration::from_secs(5));
+    retry.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
-        let job = tokio::select! {
+        let (session, handles) = tokio::select! {
             _ = stop.changed() => return Ok(()),
-            capture = jobs.recv() => match capture { Some(capture) => capture, None => return Ok(()) },
+            _ = retry.tick() => {
+                let Some(session) = commands.session() else { continue };
+                cooldown.session(session);
+                (session, cooldown.ready())
+            },
+            capture = jobs.recv() => {
+                let Some(job) = capture else { return Ok(()) };
+                let handles = job.capture.blob_handles.into_iter().filter_map(|(digest, handle)| {
+                    Some((
+                        ab_blobs::Digest::try_from(digest).ok()?,
+                        serde_json::from_str::<String>(handle.get()).ok()?,
+                    ))
+                }).collect::<Vec<_>>();
+                (job.session, handles)
+            },
         };
-        if commands.session() != Some(job.session) {
+        if handles.is_empty() || commands.session() != Some(session) {
             continue;
         }
-        cooldown.session(job.session);
-        let source = crate::helper_blobs::HelperBlobs(commands.clone(), job.session);
-        let total = job.capture.blob_handles.len();
-        let handles = job
-            .capture
-            .blob_handles
-            .into_iter()
-            .filter_map(|(digest, handle)| {
-                Some((
-                    ab_blobs::Digest::try_from(digest).ok()?,
-                    serde_json::from_str::<String>(handle.get()).ok()?,
-                ))
-            })
-            .collect::<Vec<_>>();
-        let live = || commands.session() == Some(job.session);
+        cooldown.session(session);
+        let source = crate::helper_blobs::HelperBlobs(commands.clone(), session);
+        let total = handles.len();
+        let live = || commands.session() == Some(session);
         let Some(tally) = offer(&blobs, &source, &mut cooldown, &mut stop, &live, handles).await?
         else {
             return Ok(());
@@ -240,11 +259,14 @@ async fn offer<S: ab_blobs::BlobRead>(
 ) -> Result<Option<Tally>, crate::Error> {
     let mut tally = Tally::default();
     for (digest, handle) in handles {
+        if !live() {
+            break;
+        }
         let rearmed = cooldown.rearm(blobs, &digest).await?;
         let Some(attempt) = attempt(blobs, source, stop, live, &handle, &digest).await? else {
             return Ok(None);
         };
-        cooldown.note(blobs, &digest, &attempt).await;
+        cooldown.note(blobs, &digest, handle).await;
         let rearmable = blobs
             .lock()
             .await
@@ -402,7 +424,7 @@ impl Tally {
             > 0)
         .then(|| {
             format!(
-                "Helper blob transfer incomplete: capture of {total} blobs, {} not served by the Helper on a fresh attempt, {} failed on a fresh attempt for another reason, {} waiting for their next fresh attempt after earlier retries were exhausted, {} not retryable (corrupt or over capacity), {} not in the manifest, {} recovered after an earlier failure. An exhausted blob gets one fresh attempt when the Helper offers it again, at most once per backoff window (one minute, doubling to thirty) and at once after a Helper restart.",
+                "Helper blob transfer incomplete: capture of {total} blobs, {} not served by the Helper on a fresh attempt, {} failed on a fresh attempt for another reason, {} waiting for their next fresh attempt after earlier retries were exhausted, {} not retryable (corrupt or over capacity), {} not in the manifest, {} recovered after an earlier failure. An exhausted blob is retried after a cooldown while its Helper session is active, and on a fresh offer after reconnecting.",
                 self.unserved,
                 self.failed_after_retry,
                 self.cooling,
@@ -627,7 +649,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn exhausted_blob_recovers_at_the_next_offer_once_the_backoff_has_passed() -> Check {
+    async fn exhausted_blob_recovers_after_backoff_without_another_capture() -> Check {
         let bytes = vec![9_u8; 1_000];
         let digest = digest_of(&bytes);
         let home = tempfile::tempdir()?;
@@ -641,12 +663,20 @@ mod tests {
             1
         );
         helper.serving.store(true, Ordering::SeqCst);
-        assert_eq!(
-            run(&blobs, &helper, &mut cooldown, &digest)
-                .await?
-                .recovered,
-            1
-        );
+        let handles = cooldown.ready();
+        let (_stop, mut stopped) = watch::channel(false);
+        let tally = offer(
+            &blobs,
+            &helper,
+            &mut cooldown,
+            &mut stopped,
+            &|| true,
+            handles,
+        )
+        .await?
+        .ok_or("stopped")?;
+        assert_eq!(tally.recovered, 1);
+        assert!(cooldown.ready().is_empty());
         assert_eq!(
             state(&blobs, &digest).await,
             Some(ab_blobs::BlobState::Present)

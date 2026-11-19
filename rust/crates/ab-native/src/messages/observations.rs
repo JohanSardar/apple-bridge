@@ -270,18 +270,23 @@ impl Reader {
         Ok(items)
     }
     fn attachment_blob(&self, row: &Row) -> Value {
-        let path = self.attachment_path(row.text("filename"));
-        let meta = path.as_ref().and_then(|p| fs::metadata(p).ok());
-        let state = match meta.as_ref() {
-            Some(meta) if meta.is_file() && !dataless(meta) => "present",
-            _ if !row.text("filename").is_empty() => "offloaded",
-            _ => "missing",
-        };
-        let mut blob = json!({"state": state});
-        if state == "present" {
-            blob["handle"] = json!(row.text("guid"));
+        let filename = row.text("filename");
+        if filename.is_empty() {
+            return json!({"state":"missing","reason":"missing_filename"});
         }
-        blob
+        match self
+            .resolve_attachment_path(filename)
+            .and_then(fs::metadata)
+        {
+            Ok(meta) if meta.is_file() && !dataless(&meta) => {
+                json!({"state":"present","handle":row.text("guid")})
+            }
+            Ok(meta) if dataless(&meta) => json!({"state":"offloaded"}),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                json!({"state":"offloaded"})
+            }
+            _ => json!({"state":"failed","reason":"source_read_failed"}),
+        }
     }
 
     fn mime(&self, row: &Row) -> String {

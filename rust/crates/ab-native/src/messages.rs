@@ -943,24 +943,29 @@ impl Reader {
         Ok((batches, rows.len() < 128))
     }
     pub fn attachment_path(&self, value: &str) -> Option<PathBuf> {
+        self.resolve_attachment_path(value).ok()
+    }
+    fn resolve_attachment_path(&self, value: &str) -> std::io::Result<PathBuf> {
+        use std::io::ErrorKind;
         if value.is_empty() {
-            return None;
+            return Err(ErrorKind::InvalidInput.into());
         }
         let path = if let Some(suffix) = value.strip_prefix("~/") {
             self.home.join(suffix)
         } else {
             PathBuf::from(value)
         };
-        let root = fs::canonicalize(&self.root).ok()?;
-        let resolved = fs::canonicalize(&path)
-            .or_else(|_| {
-                path.parent()
-                    .and_then(|p| fs::canonicalize(p).ok())
-                    .map(|p| p.join(path.file_name().unwrap_or_default()))
-                    .ok_or(std::io::ErrorKind::NotFound)
-            })
-            .ok()?;
-        (resolved.starts_with(&root) && resolved != root).then_some(resolved)
+        let root = fs::canonicalize(&self.root)
+            .map_err(|error| std::io::Error::new(ErrorKind::PermissionDenied, error))?;
+        let resolved = fs::canonicalize(&path).or_else(|_| {
+            let parent = path.parent().ok_or(ErrorKind::InvalidInput)?;
+            fs::canonicalize(parent).map(|parent| parent.join(path.file_name().unwrap_or_default()))
+        })?;
+        if resolved.starts_with(&root) && resolved != root {
+            Ok(resolved)
+        } else {
+            Err(ErrorKind::PermissionDenied.into())
+        }
     }
     pub fn media_source(&self, guid: &str) -> Result<Option<MediaSource>> {
         if !self.has("attachment", &["guid", "filename"]) {

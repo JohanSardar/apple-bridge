@@ -779,6 +779,7 @@ impl Call<'_> {
             let mut body = json!({"args": arguments.clone()});
             match operation.name.as_str() {
                 "photos.places" => body["deadline_ms"] = json!(45_000),
+                "photos.preview" => body["deadline_ms"] = json!(20_000),
                 "photos.search" | "photos.get" => body["deadline_ms"] = json!(10_000),
                 _ => {}
             }
@@ -1716,8 +1717,9 @@ fn attachment_summary(attachment: &Value) -> Value {
         "size": data["size"],
         "digest": data["blob"]["digest"].as_str().or_else(|| data["digest"].as_str()).map_or(Value::Null, |d| json!(d)),
         "state": data["blob"]["state"],
+        "reason": data["blob"]["reason"],
     });
-    explain_offloaded(&mut value);
+    explain_attachment(&mut value);
     if data["hidden"] == true {
         value["hidden"] = json!(true);
     }
@@ -1730,13 +1732,26 @@ fn attachment_summary(attachment: &Value) -> Value {
     value
 }
 
-fn explain_offloaded(blob: &mut Value) {
-    if matches!(blob["state"].as_str(), Some("offloaded" | "pending")) && blob["digest"].is_null() {
-        blob["state"] = json!("offloaded");
-        blob["availability"] = json!(
-            "This attachment isn't downloaded to this Mac. Opening the chat in Messages downloads it."
-        );
-    }
+fn explain_attachment(blob: &mut Value) {
+    let explanation = match (blob["state"].as_str(), blob["reason"].as_str()) {
+        (Some("present"), _) => return,
+        (Some("offloaded"), _) => "This attachment isn't downloaded to this Mac.",
+        (Some("pending"), _) => "Apple Bridge is still copying this attachment.",
+        (_, Some("missing_filename")) => "Messages has no file path for this attachment.",
+        (_, Some("attachment_digest_unavailable")) => {
+            "Apple Bridge has no verified copy of this attachment."
+        }
+        (_, Some("source_read_failed")) => {
+            "Apple Bridge could not read this attachment on the Mac."
+        }
+        (Some("failed"), Some("ipc_retry_exhausted")) => {
+            "The Mac did not serve this attachment after repeated attempts. Apple Bridge will retry."
+        }
+        (Some("over_cap"), _) => "This attachment exceeds Apple Bridge's local storage allowance.",
+        (Some("missing"), _) => "Apple Bridge cannot find a file for this attachment.",
+        _ => "Apple Bridge could not copy this attachment.",
+    };
+    blob["availability"] = json!(explanation);
 }
 
 const INTERNAL: &[&str] = &[
@@ -2209,7 +2224,7 @@ fn record(map: &Map<String, Value>, fields: Option<&[String]>) -> Value {
         if map["collection"] == "messages.attachment"
             && let Some(blob) = object.get_mut("blob")
         {
-            explain_offloaded(blob);
+            explain_attachment(blob);
         }
         if map["collection"] == "calendar.event" && object.get("all_day") != Some(&json!(true)) {
             for key in ["start", "end"] {

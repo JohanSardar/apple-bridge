@@ -251,7 +251,7 @@ impl MessagesReader {
             None => Self::digest(reader, guid),
         };
         let Ok((digest, size)) = found else {
-            data["blob"] = json!({"state":"missing"});
+            data["blob"] = json!({"state":"failed","reason":"source_read_failed"});
             return Vec::new();
         };
         self.blobs.remember(
