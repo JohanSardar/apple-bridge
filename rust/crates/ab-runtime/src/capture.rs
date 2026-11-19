@@ -666,7 +666,7 @@ mod tests {
         .await?
         .ok_or("stopped")?;
         assert_eq!(tally.recovered, 1);
-        assert!(cooldown.ready().is_empty());
+        assert_eq!(cooldown.ready(), Vec::<(ab_blobs::Digest, String)>::new());
         assert_eq!(
             state(&blobs, &digest).await,
             Some(ab_blobs::BlobState::Present)
