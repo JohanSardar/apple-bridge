@@ -44,7 +44,7 @@ pub(crate) fn project_record(record: &mut Record, entries: &Value) -> Result<()>
 
 fn project_data(data: &mut Value, entries: &Value) {
     if let Some(fields) = data.as_object_mut() {
-        availability(fields.entry("blob").or_default(), entries);
+        availability(fields.entry("blob").or_insert(Value::Null), entries);
     }
 }
 
