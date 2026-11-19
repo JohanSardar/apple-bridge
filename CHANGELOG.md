@@ -4,6 +4,13 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-11-19
+
+### Fixed
+
+- Photo searches give each preview time to render and retry a preview if the Mac fails to answer.
+- The gateway retries interrupted attachment copies even when Messages has no new changes. Attachment reads report the copy state and explain failures. Replica status counts every Messages attachment, including records that have no copy to track.
+
 ## [0.1.12] - 2026-11-19
 
 ### Changed

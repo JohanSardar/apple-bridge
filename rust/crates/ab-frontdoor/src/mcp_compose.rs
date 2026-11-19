@@ -1619,12 +1619,17 @@ impl Call<'_> {
             Some((id.to_owned(), asset))
         });
         let mut previews = futures_util::stream::iter(assets.map(|(id, asset)| async move {
-            let result = self
-                .read_one(&Map::from_iter([
-                    ("operation".into(), json!("photos.preview")),
-                    ("arguments".into(), json!({"asset_id": id, "max_px": 1024})),
-                ]))
-                .await;
+            let request = Map::from_iter([
+                ("operation".into(), json!("photos.preview")),
+                ("arguments".into(), json!({"asset_id": id, "max_px": 1024})),
+            ]);
+            let mut result = self.read_one(&request).await;
+            if result
+                .as_ref()
+                .is_err_and(|problem| matches!(problem.code.as_str(), "deadline" | "unavailable"))
+            {
+                result = self.read_one(&request).await;
+            }
             (id, asset, result)
         }))
         .buffered(6);

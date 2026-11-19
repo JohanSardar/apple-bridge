@@ -115,6 +115,10 @@
     [
       "last_error",
       "string"
+    ],
+    [
+      "messages_attachments",
+      "map[string]any"
     ]
   ],
   "DialStatus": [

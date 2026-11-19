@@ -106,6 +106,10 @@ impl<Role> State<Role> {
             }
         }
         status["blobs"] = serde_json::json!({"entries":entries,"bytes":bytes,"backlog":backlog,"resumed_bytes":resumed,"corruptions":corruptions});
+        if visibility.get("messages") == Some(&true) || visibility.get("admin") == Some(&true) {
+            status["messages_attachments"] =
+                crate::attachments::counts(&self.db, &status["blobs"]["entries"])?;
+        }
         Ok(Some(status))
     }
     pub(crate) fn replica_status_result(&self, visibility: &Visibility) -> Result<Value> {

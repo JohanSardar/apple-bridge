@@ -1,4 +1,99 @@
-use serde_json::Value;
+use crate::{Collection, Connection, Record, Result};
+use serde_json::{Value, json};
+use std::collections::BTreeMap;
+
+fn availability(blob: &mut Value, entries: &Value) {
+    if !blob.is_object() {
+        *blob = json!({"state":"missing","reason":"attachment_metadata_unavailable"});
+        return;
+    }
+    let digest = digest(Some(blob));
+    let entry = digest.and_then(|digest| entries.get(digest));
+    let source_state = state(Some(blob));
+    let claims_local = matches!(source_state, "present" | "available");
+    let (state, reason) = match entry.and_then(|entry| entry["state"].as_str()) {
+        Some("present") => ("present", None),
+        _ if source_state == "offloaded" => ("offloaded", None),
+        Some("pending") => ("pending", None),
+        None if digest.is_some() && claims_local => ("pending", None),
+        None if claims_local || source_state == "pending" => {
+            ("missing", Some("attachment_digest_unavailable"))
+        }
+        Some("offloaded") => ("offloaded", None),
+        Some(state @ ("failed" | "over_cap" | "disk_full" | "missing")) => {
+            let Some(entry) = entry else { return };
+            let reason = if entry["corruptions"].as_u64().is_some_and(|n| n > 0) {
+                Some("digest_mismatch")
+            } else {
+                entry["reason"].as_str().filter(|reason| !reason.is_empty())
+            };
+            (state, reason)
+        }
+        _ => return,
+    };
+    if let Some(reason) = reason {
+        blob["reason"] = json!(reason);
+    } else if let Some(fields) = blob.as_object_mut() {
+        fields.remove("reason");
+    }
+    blob["state"] = json!(state);
+}
+
+pub(crate) fn project_record(record: &mut Record, entries: &Value) -> Result<()> {
+    if record.collection == Collection::MessagesAttachment && !record.deleted {
+        let mut data: Value = serde_json::from_str(record.data.get())?;
+        project_data(&mut data, entries);
+        record.data = serde_json::value::to_raw_value(&data)?;
+    }
+    Ok(())
+}
+
+fn project_data(data: &mut Value, entries: &Value) {
+    if let Some(fields) = data.as_object_mut() {
+        availability(fields.entry("blob").or_insert(Value::Null), entries);
+    }
+}
+
+pub(crate) fn project_items(result: &mut Value, entries: &Value) {
+    for item in result["items"].as_array_mut().into_iter().flatten() {
+        if item["collection"] == "messages.attachment" {
+            project_data(&mut item["data"], entries);
+        }
+        for attachment in item
+            .get_mut("attachments")
+            .and_then(Value::as_array_mut)
+            .into_iter()
+            .flatten()
+        {
+            project_data(&mut attachment["data"], entries);
+        }
+    }
+}
+
+pub(crate) fn counts(db: &Connection, entries: &Value) -> Result<Value> {
+    let mut counts = [0_u64; 4];
+    let mut failures = BTreeMap::<String, u64>::new();
+    let mut stmt = db.prepare_cached(
+        "SELECT json_extract(CAST(payload AS TEXT),'$.data.blob') FROM records WHERE collection='messages.attachment' AND source='messages' AND deleted=0",
+    )?;
+    for row in stmt.query_map([], |row| row.get::<_, Option<String>>(0))? {
+        let mut blob = row?.map_or(Ok(Value::Null), |raw| serde_json::from_str(&raw))?;
+        availability(&mut blob, entries);
+        counts[match state(Some(&blob)) {
+            "present" => 0,
+            "offloaded" => 1,
+            "pending" => 2,
+            other => {
+                let reason = blob["reason"].as_str().unwrap_or(other);
+                *failures.entry(reason.to_owned()).or_default() += 1;
+                3
+            }
+        }] += 1;
+    }
+    Ok(
+        json!({"present":counts[0],"offloaded":counts[1],"pending":counts[2],"failed":counts[3],"total":counts.iter().sum::<u64>(),"failure_reasons":failures}),
+    )
+}
 
 const KEPT_FIELDS: [&str; 2] = ["media", "derivatives"];
 

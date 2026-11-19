@@ -680,7 +680,11 @@ impl<Role> State<Role> {
                 }
                 break;
             }
-            out.records.push(project(record, visibility)?);
+            let mut record = project(record, visibility)?;
+            if let Some(status) = &self.replica_status {
+                attachments::project_record(&mut record, &status["blobs"]["entries"])?;
+            }
+            out.records.push(record);
         }
         drop(rows);
         drop(stmt);

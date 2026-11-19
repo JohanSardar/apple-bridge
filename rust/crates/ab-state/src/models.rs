@@ -319,6 +319,13 @@ impl<Role> State<Role> {
             "calendar.agenda" => agenda(&tx, visibility, query)?,
             _ => return Err(ErrorCode::Unsupported.into()),
         };
+        if matches!(
+            operation,
+            "messages.thread" | "messages.search" | "messages.collection"
+        ) && let Some(status) = &self.replica_status
+        {
+            crate::attachments::project_items(&mut out, &status["blobs"]["entries"]);
+        }
         out["cursor"] = serde_json::to_value(head(&tx)?)?;
         Ok(out)
     }
