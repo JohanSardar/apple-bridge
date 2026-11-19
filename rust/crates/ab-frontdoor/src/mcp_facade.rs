@@ -1669,9 +1669,10 @@ pub(crate) fn message_summary(message: &Value) -> Value {
                 .collect::<Vec<_>>()
         );
         if value["attachments"].as_array().is_some_and(|items| {
-            items
-                .iter()
-                .any(|item| item["state"] == "present" && item["digest"].is_string())
+            items.iter().any(|item| {
+                matches!(item["state"].as_str(), Some("present" | "available"))
+                    && item["digest"].is_string()
+            })
         }) {
             value["attachments_next"] = json!(
                 "Fetch an available attachment with apple_read bridge.read_blob, passing its digest and its id as record_id."

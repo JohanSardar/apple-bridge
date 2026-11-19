@@ -1657,15 +1657,15 @@ impl Call<'_> {
             "photos": photos,
             "next": "Each attached image is an individual, full-frame photo. Show it as it is. Call photos_show with asset_id for the full-resolution photo.",
         });
-        if next_cursor.is_string() {
-            value["next_cursor"] = next_cursor;
-        }
         if photos.is_empty() {
             value["next"] = if next_cursor.is_string() {
                 json!("No matches on this page. Pass next_cursor as cursor with the same filters.")
             } else {
                 json!("No photos match these filters. Try a wider date range or fewer filters.")
             };
+        }
+        if next_cursor.is_string() {
+            value["next_cursor"] = next_cursor;
         }
         Ok(Outcome {
             value,

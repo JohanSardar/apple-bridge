@@ -257,17 +257,7 @@ impl Reader {
                 "NULL"
             };
             for row in self.query(&format!("SELECT a.ROWID AS row_position,a.*,{message} AS message_guid FROM attachment a ORDER BY a.ROWID DESC"),&[])? {
-                let path=self.attachment_path(row.text("filename"));
-                let meta=path.as_ref().and_then(|p|fs::metadata(p).ok());
-                let state = match meta.as_ref() {
-                    Some(meta) if meta.is_file() && !dataless(meta) => "present",
-                    _ if !row.text("filename").is_empty() => "offloaded",
-                    _ => "missing",
-                };
-                let mut blob = json!({"state": state});
-                if state == "present" {
-                    blob["handle"] = json!(row.text("guid"));
-                }
+                let blob = self.attachment_blob(&row);
                 let mut data=json!({"filename":if row.text("filename").is_empty(){self.cwd_name.clone()}else{std::path::Path::new(row.text("filename")).file_name().map_or_else(||"/".into(),|s|s.to_string_lossy().into_owned())},"mime_type":self.mime(&row),"uti":row.text("uti"),"size":row.int("total_bytes"),"blob":blob,"is_sticker":row.flag("is_sticker"),"hidden":row.flag("hide_attachment"),"genmoji":!row.text("emoji_image_content_identifier").is_empty()});
                 if !row.text("message_guid").is_empty(){data["message_id"]=reference("message",row.text("message_guid"));}
                 if !row.text("emoji_image_short_description").is_empty(){data["description"]=json!(row.text("emoji_image_short_description"));}
@@ -279,6 +269,21 @@ impl Reader {
         }
         Ok(items)
     }
+    fn attachment_blob(&self, row: &Row) -> Value {
+        let path = self.attachment_path(row.text("filename"));
+        let meta = path.as_ref().and_then(|p| fs::metadata(p).ok());
+        let state = match meta.as_ref() {
+            Some(meta) if meta.is_file() && !dataless(meta) => "present",
+            _ if !row.text("filename").is_empty() => "offloaded",
+            _ => "missing",
+        };
+        let mut blob = json!({"state": state});
+        if state == "present" {
+            blob["handle"] = json!(row.text("guid"));
+        }
+        blob
+    }
+
     fn mime(&self, row: &Row) -> String {
         if row.text("uti").starts_with("dyn.age81")
             && let Some(path) = self.attachment_path(row.text("filename"))
