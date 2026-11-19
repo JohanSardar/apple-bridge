@@ -1748,6 +1748,10 @@ fn explain_attachment(blob: &mut Value) {
             "The Mac did not serve this attachment after repeated attempts. Apple Bridge will retry."
         }
         (Some("over_cap"), _) => "This attachment exceeds Apple Bridge's local storage allowance.",
+        (Some("disk_full"), _) => {
+            "Apple Bridge ran out of disk space while copying this attachment."
+        }
+        (_, Some("digest_mismatch")) => "The copied bytes did not match the attachment on the Mac.",
         (Some("missing"), _) => "Apple Bridge cannot find a file for this attachment.",
         _ => "Apple Bridge could not copy this attachment.",
     };

@@ -120,7 +120,7 @@ struct Cooling {
 struct RearmCooldown {
     base: std::time::Duration,
     session: Option<ab_operations::peer::PeerSession>,
-    digests: std::collections::HashMap<String, Cooling>,
+    digests: BTreeMap<ab_blobs::Digest, Cooling>,
 }
 impl Default for RearmCooldown {
     fn default() -> Self {
@@ -132,7 +132,7 @@ impl RearmCooldown {
         Self {
             base,
             session: None,
-            digests: std::collections::HashMap::new(),
+            digests: BTreeMap::new(),
         }
     }
     fn window(&self, failures: u32) -> std::time::Duration {
@@ -153,7 +153,7 @@ impl RearmCooldown {
     ) -> Result<bool, crate::Error> {
         let cooling = self
             .digests
-            .get(digest.as_str())
+            .get(digest)
             .is_some_and(|cooling| cooling.at.elapsed() < self.window(cooling.failures));
         Ok(!cooling && rearm(blobs, digest).await?)
     }
@@ -163,7 +163,7 @@ impl RearmCooldown {
         digest: &ab_blobs::Digest,
         handle: String,
         attempt: &Attempt,
-    ) {
+    ) -> bool {
         let rearmable = blobs
             .lock()
             .await
@@ -171,37 +171,33 @@ impl RearmCooldown {
             .get(digest.as_str())
             .is_some_and(ab_blobs::Entry::rearmable);
         if !rearmable {
-            self.digests.remove(digest.as_str());
-            return;
+            self.digests.remove(digest);
+            return false;
         }
         if attempt.transferred {
             let failures = self
                 .digests
-                .get(digest.as_str())
+                .get(digest)
                 .map_or(0, |cooling| cooling.failures);
             self.digests.insert(
-                digest.as_str().to_owned(),
+                digest.clone(),
                 Cooling {
                     at: std::time::Instant::now(),
                     failures: failures.saturating_add(1),
                     handle,
                 },
             );
-        } else if let Some(cooling) = self.digests.get_mut(digest.as_str()) {
+        } else if let Some(cooling) = self.digests.get_mut(digest) {
             cooling.handle = handle;
         }
+        true
     }
 
     fn ready(&self) -> Vec<(ab_blobs::Digest, String)> {
         self.digests
             .iter()
             .filter(|(_, cooling)| cooling.at.elapsed() >= self.window(cooling.failures))
-            .filter_map(|(digest, cooling)| {
-                Some((
-                    ab_blobs::Digest::try_from(digest.clone()).ok()?,
-                    cooling.handle.clone(),
-                ))
-            })
+            .map(|(digest, cooling)| (digest.clone(), cooling.handle.clone()))
             .collect()
     }
 }
@@ -266,13 +262,7 @@ async fn offer<S: ab_blobs::BlobRead>(
         let Some(attempt) = attempt(blobs, source, stop, live, &handle, &digest).await? else {
             return Ok(None);
         };
-        cooldown.note(blobs, &digest, handle).await;
-        let rearmable = blobs
-            .lock()
-            .await
-            .entries()
-            .get(digest.as_str())
-            .is_some_and(ab_blobs::Entry::rearmable);
+        let rearmable = cooldown.note(blobs, &digest, handle, &attempt).await;
         tally.record(Outcome::of(&attempt, rearmed, rearmable));
     }
     Ok(Some(tally))

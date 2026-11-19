@@ -14,14 +14,20 @@ fn availability(blob: &mut Value, entries: &Value) {
     let (state, reason) = match entry.and_then(|entry| entry["state"].as_str()) {
         Some("present") => ("present", None),
         _ if source_state == "offloaded" => ("offloaded", None),
-        Some("pending") | None if digest.is_some() && claims_local => ("pending", None),
-        None if claims_local => ("missing", Some("attachment_digest_unavailable")),
-        Some("failed" | "over_cap") => {
+        Some("pending") => ("pending", None),
+        None if digest.is_some() && claims_local => ("pending", None),
+        None if claims_local || source_state == "pending" => {
+            ("missing", Some("attachment_digest_unavailable"))
+        }
+        Some("offloaded") => ("offloaded", None),
+        Some(state @ ("failed" | "over_cap" | "disk_full" | "missing")) => {
             let Some(entry) = entry else { return };
-            (
-                entry["state"].as_str().unwrap_or("failed"),
-                entry["reason"].as_str().filter(|reason| !reason.is_empty()),
-            )
+            let reason = if entry["corruptions"].as_u64().is_some_and(|n| n > 0) {
+                Some("digest_mismatch")
+            } else {
+                entry["reason"].as_str().filter(|reason| !reason.is_empty())
+            };
+            (state, reason)
         }
         _ => return,
     };
