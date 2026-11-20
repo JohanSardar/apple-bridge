@@ -2,10 +2,11 @@
 
 use serde_json::{Value, json};
 use std::{
-    io::{Read, Write},
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Read, Write},
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
-    process::{Command, Output, Stdio},
+    process::{Child, ChildStdout, Command, Output, Stdio},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -40,6 +41,71 @@ pub fn bridge() -> Command {
         command.env_remove(variable);
     }
     command
+}
+
+pub struct Terminal {
+    host: Child,
+    output: BufReader<ChildStdout>,
+    slave: File,
+}
+
+impl Terminal {
+    pub fn open() -> Result<Self, Box<dyn std::error::Error>> {
+        let mut host = Command::new("python3")
+            .args([
+                "-c",
+                "import os,pty,select,sys
+master,slave=pty.openpty()
+print(os.ttyname(slave),flush=True)
+while True:
+ ready=select.select([master,0],[],[])[0]
+ if master in ready:
+  sys.stdout.buffer.write(os.read(master,65536));sys.stdout.buffer.flush()
+ elif 0 in ready:
+  break",
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+        let mut output = BufReader::new(host.stdout.take().ok_or("terminal output")?);
+        let mut path = String::new();
+        output.read_line(&mut path)?;
+        let slave = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path.trim())?;
+        Ok(Self {
+            host,
+            output,
+            slave,
+        })
+    }
+
+    pub fn attach(&self, command: &mut Command) -> std::io::Result<()> {
+        command
+            .env_remove("SSH_CONNECTION")
+            .env_remove("SSH_TTY")
+            .stdin(self.slave.try_clone()?)
+            .stderr(self.slave.try_clone()?);
+        Ok(())
+    }
+
+    pub fn read(mut self) -> std::io::Result<String> {
+        drop(self.host.stdin.take());
+        let mut text = String::new();
+        self.output.read_to_string(&mut text)?;
+        self.host.wait()?;
+        Ok(text)
+    }
+}
+
+impl Drop for Terminal {
+    fn drop(&mut self) {
+        if self.host.try_wait().ok().flatten().is_none() {
+            let _ = self.host.kill();
+            let _ = self.host.wait();
+        }
+    }
 }
 
 pub fn run(home: &Path, arguments: &[&str]) -> Result<Output, std::io::Error> {

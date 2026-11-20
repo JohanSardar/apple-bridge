@@ -8,12 +8,12 @@ pub(super) fn validate_query(operation: &str, query: &Value) -> Result<()> {
         "messages.search" => "text kind from_handle_id from_contact_id unread after limit",
         "messages.handles" => "ids",
         "reminders.lists" => "time_zone",
-        "reminders.items" => "time_zone list smart tag show_completed sort",
-        "calendar.agenda" => "start end calendar_id",
+        "reminders.items" => "time_zone list smart tag show_completed sort limit offset",
+        "calendar.agenda" => "start end calendar_id limit offset",
         "calendar.range" => "start end calendars time_zone text",
         "contacts.lookup" => "q limit name handle",
         "contacts.list" => "group sort display_order",
-        "notes.list" => "folder sort time_zone",
+        "notes.list" => "folder sort time_zone limit offset",
         "health.summary" => "period date time_zone device_id",
         "replica.status" | "sources.status" => "",
         _ => return Err(ErrorCode::Unsupported.into()),
@@ -31,6 +31,7 @@ pub(super) fn validate_query(operation: &str, query: &Value) -> Result<()> {
         }
         let valid = match key.as_str() {
             "limit" => value.as_i64().is_some(),
+            "offset" => value.as_u64().is_some(),
             "unread" | "show_completed" => value.is_boolean(),
             "participants" | "ids" | "calendars" => value.as_array().is_some_and(|items| {
                 items

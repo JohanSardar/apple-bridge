@@ -143,7 +143,7 @@ async fn an_ask_first_photos_write_waits_for_approval_and_never_persists_library
             f.gateway
                 .decide(
                     &owner(),
-                    &request.id,
+                    &query_id(&pending),
                     true,
                     &OwnerReview {
                         binding: "",
@@ -180,6 +180,55 @@ async fn an_ask_first_photos_write_waits_for_approval_and_never_persists_library
             );
         }
     }
+}
+
+#[tokio::test]
+async fn photo_mutation_ids_and_previews_are_scoped_to_the_caller() {
+    let f = fixture();
+    let first = principal("agent:first", "agent", "approve", &["photos:write"]);
+    let second = principal("agent:second", "agent", "approve", &["photos:write"]);
+    let mut add = query("photos.album_create", &json!({"title":"first album"}));
+    add.id = "qry_shared_album".into();
+    let pending = f
+        .gateway
+        .query(&first, add.clone())
+        .await
+        .expect("first approval");
+    let first_id = query_id(&pending);
+    add.args = raw(&json!({"title":"second album"})).expect("args");
+    let pending = f
+        .gateway
+        .query(&second, add.clone())
+        .await
+        .expect("second approval");
+    let second_id = query_id(&pending);
+    assert_ne!(first_id, second_id);
+    let previews = f.gateway.approvals().expect("previews");
+    for (id, title) in [(&first_id, "first album"), (&second_id, "second album")] {
+        let preview = previews
+            .iter()
+            .find(|row| &row.command.id == id)
+            .expect("preview");
+        let args: Value = serde_json::from_str(preview.command.args.get()).expect("args");
+        assert_eq!(args["title"], title);
+    }
+    f.gateway
+        .decide(
+            &owner(),
+            &first_id,
+            true,
+            &OwnerReview {
+                binding: "",
+                accepted_unpreviewable: false,
+            },
+        )
+        .await
+        .expect("approve first photo mutation");
+    assert_eq!(
+        state_of(&f.gateway.query(&second, add).await.expect("still pending")),
+        "awaiting_approval"
+    );
+    assert_eq!(queries_reaching_native(&f), 0);
 }
 
 #[tokio::test]
@@ -496,11 +545,12 @@ async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
         &json!({"title":"synthetic-private-title"}),
     );
     request.id = "qry_photos_preview".into();
-    f.gateway.query(&p, request.clone()).await.expect("pending");
-    let stored = f.gateway.state.command(&request.id).expect("record");
+    let pending = f.gateway.query(&p, request.clone()).await.expect("pending");
+    let id = query_id(&pending);
+    let stored = f.gateway.state.command(&id).expect("record");
     assert_eq!(
         f.gateway
-            .decide_phone(&request.id, &stored.request_hash, true)
+            .decide_phone(&id, &stored.request_hash, true)
             .await
             .expect_err("browser only")
             .code,
@@ -508,12 +558,12 @@ async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
     );
     f.gateway
         .photos_previews
-        .remove(&request.id)
+        .remove(&id)
         .expect("simulate restart");
     assert!(f.gateway.approval_review(&stored).await.is_err());
     assert_eq!(
         f.gateway
-            .decide(&owner(), &request.id, true, &review)
+            .decide(&owner(), &id, true, &review)
             .await
             .expect_err("preview unavailable")
             .code,
@@ -551,20 +601,20 @@ async fn photos_approval_requires_a_live_exact_preview_and_browser_decision() {
     f.gateway
         .photos_previews
         .remember(
-            &request.id,
+            &id,
             &serde_json::value::to_raw_value(&json!({"title":"different"})).expect("args"),
         )
         .expect("simulate corrupt preview");
     assert_eq!(
         f.gateway
-            .decide(&owner(), &request.id, true, &review)
+            .decide(&owner(), &id, true, &review)
             .await
             .expect_err("digest mismatch")
             .code,
         Code::Corrupt
     );
     f.gateway
-        .decide(&owner(), &request.id, false, &review)
+        .decide(&owner(), &id, false, &review)
         .await
         .expect("deny without private preview");
     assert!(f.gateway.query(&p, request).await.is_err());
@@ -601,19 +651,15 @@ async fn delegated_ask_first_photos_write_uses_the_same_owner_gate() {
         })),
     };
     let input = br#"{"id":"qry_forwarded_photos","args":{"asset_id":"synthetic-asset","favorite":true},"deadline_ms":5000}"#;
-    assert_eq!(
-        state_of(
-            &service
-                .invoke(&p, "photos.favorite", input)
-                .await
-                .expect("pending")
-        ),
-        "awaiting_approval"
-    );
+    let pending = service
+        .invoke(&p, "photos.favorite", input)
+        .await
+        .expect("pending");
+    assert_eq!(state_of(&pending), "awaiting_approval");
     f.gateway
         .decide(
             &owner(),
-            "qry_forwarded_photos",
+            &query_id(&pending),
             true,
             &OwnerReview {
                 binding: "",

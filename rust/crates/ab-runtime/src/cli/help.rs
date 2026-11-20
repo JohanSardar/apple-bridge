@@ -45,20 +45,6 @@ const GROUPS: &[(&str, &[&str])] = &[
     ),
 ];
 
-pub const DEPRECATED: &[(&str, &str)] = &[
-    (
-        "agents level",
-        "bridge agents update <AGENT> --level <LEVEL>",
-    ),
-    ("connectors pending", "bridge connectors list"),
-    ("web lock", "bridge web sessions revoke --all"),
-    ("web devices", "bridge web sessions list"),
-    ("shortcuts install-pack", "bridge shortcuts install"),
-    ("revoke", "bridge tokens revoke"),
-    ("scope", "bridge tokens update"),
-    ("setup", "bridge selftest messages"),
-];
-
 const AGENT_FIELDS: &[(&str, &str, bool)] = &[
     ("id", "string", false),
     ("name", "string", false),
@@ -162,7 +148,7 @@ pub const LEAVES: &[Leaf] = &[
             "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
             "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
             "Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.",
-            "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow; keep them private.",
+            "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow in a local terminal; keep them private.",
         ],
         schema: LINK_FIELDS,
     },
@@ -258,13 +244,13 @@ pub const LEAVES: &[Leaf] = &[
         examples: &[
             ("Walk through each permission", "bridge permissions guide"),
             (
-                "Request two permissions from a script",
+                "Request two permissions in a terminal on the Mac",
                 "bridge permissions guide --only contacts,calendar",
             ),
         ],
         notes: &[
             "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
-            "Without a terminal, pass --only with the permissions to request. Without it, the list with each status is printed and the command exits 2.",
+            "Without a local terminal or with --non-interactive, exits 2 with terminal_required and requests nothing. Use bridge permissions status --json to see what is missing.",
         ],
         schema: &[
             ("permissions", "object", false),
@@ -317,7 +303,6 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
-            "With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope without records, as in earlier releases.",
             "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
             "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
             "Uses a temporary read-only credential that's revoked when the read ends.",
@@ -341,7 +326,6 @@ pub const LEAVES: &[Leaf] = &[
         ],
         notes: &[
             "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
-            "With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.",
             "Piped, rows are tab-separated with a header line, even when nothing matches.",
         ],
         schema: &[
@@ -353,6 +337,10 @@ pub const LEAVES: &[Leaf] = &[
         path: "call",
         examples: &[
             ("List the operations you can call", "bridge call --list"),
+            (
+                "Inspect one operation offline",
+                "bridge call --describe sources.status",
+            ),
             ("Check every source's state", "bridge call sources.status"),
             (
                 "Pass arguments on stdin",
@@ -362,7 +350,7 @@ pub const LEAVES: &[Leaf] = &[
         notes: &[
             "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
             "A write whose result can't be confirmed is reported as unknown_outcome with its operation ID; inspect it before trying again. Writes are never retried.",
-            "The result is the operation's own output; see its output schema in bridge call --list --json.",
+            "The result is the operation's own output; inspect its input and output schemas with bridge call --describe <OPERATION>.",
         ],
         schema: &[],
     },
@@ -463,14 +451,6 @@ pub const LEAVES: &[Leaf] = &[
         schema: CREDENTIAL_CHANGE_FIELDS,
     },
     Leaf {
-        path: "agents level",
-        examples: &[],
-        notes: &[
-            "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version.",
-        ],
-        schema: AGENT_FIELDS,
-    },
-    Leaf {
         path: "tokens create",
         examples: &[
             (
@@ -551,12 +531,6 @@ pub const LEAVES: &[Leaf] = &[
         schema: &[("accepted", "boolean", false), ("outcome", "string", false)],
     },
     Leaf {
-        path: "connectors pending",
-        examples: &[],
-        notes: &[],
-        schema: &[],
-    },
-    Leaf {
         path: "web enroll",
         examples: &[
             ("Add a passkey on this Mac", "bridge web enroll"),
@@ -592,18 +566,6 @@ pub const LEAVES: &[Leaf] = &[
         examples: &[("Sign out every browser", "bridge web sessions revoke --all")],
         notes: &["Asks first; without a terminal, pass --yes."],
         schema: &[("revoked", "number", false), ("outcome", "string", false)],
-    },
-    Leaf {
-        path: "web lock",
-        examples: &[],
-        notes: &[],
-        schema: &[],
-    },
-    Leaf {
-        path: "web devices",
-        examples: &[],
-        notes: &[],
-        schema: &[],
     },
     Leaf {
         path: "pair",
@@ -719,12 +681,6 @@ pub const LEAVES: &[Leaf] = &[
         schema: &[],
     },
     Leaf {
-        path: "shortcuts install-pack",
-        examples: &[],
-        notes: &[],
-        schema: &[],
-    },
-    Leaf {
         path: "completion",
         examples: &[(
             "Add completion to zsh",
@@ -762,29 +718,6 @@ pub const LEAVES: &[Leaf] = &[
         ],
     },
     Leaf {
-        path: "revoke",
-        examples: &[],
-        notes: &[],
-        schema: &[
-            ("id", "string", false),
-            ("kind", "string", false),
-            ("outcome", "string", false),
-            ("next", "array", false),
-        ],
-    },
-    Leaf {
-        path: "scope",
-        examples: &[],
-        notes: &[],
-        schema: &[
-            ("id", "string", false),
-            ("scopes", "array", false),
-            ("previous", "array", false),
-            ("outcome", "string", false),
-            ("next", "array", false),
-        ],
-    },
-    Leaf {
         path: "setup",
         examples: &[],
         notes: &["This sends real messages to your own chat through the Helper."],
@@ -793,14 +726,12 @@ pub const LEAVES: &[Leaf] = &[
 ];
 
 pub fn leaf(path: &str) -> Option<&'static Leaf> {
+    let path = if path.starts_with("link ") {
+        "link"
+    } else {
+        path
+    };
     LEAVES.iter().find(|leaf| leaf.path == path)
-}
-
-pub fn deprecated(path: &str) -> Option<&'static str> {
-    DEPRECATED
-        .iter()
-        .find(|(old, _)| *old == path)
-        .map(|(_, replacement)| *replacement)
 }
 
 pub fn find(path: &[String]) -> Option<Command> {
@@ -994,9 +925,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
     let key = path_key(path);
     let mut lines = vec![usage(path, &command)];
     lines.extend(ui::wrap(&summary(&command), width, "", ""));
-    if let Some(replacement) = deprecated(&key) {
-        lines.push(format!("Deprecated: use {replacement}."));
-    }
+
     let children: Vec<&Command> = command
         .get_subcommands()
         .filter(|child| !child.is_hide_set())
@@ -1058,14 +987,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         lines.push("Global options: see bridge --help".to_owned());
     }
     let leaf = leaf(&key);
-    let examples: &[(&str, &str)] = if root {
-        &[
-            ("Start Apple Bridge on this Mac", "bridge up"),
-            ("Then connect your agent", "bridge link claude"),
-        ]
-    } else {
-        leaf.map_or(&[], |leaf| leaf.examples)
-    };
+    let examples = examples(&key, leaf);
     if !examples.is_empty() {
         lines.push(String::new());
         lines.push(ui::heading("Examples:"));
@@ -1078,6 +1000,7 @@ pub fn render_with(path: &[String], width: usize) -> String {
         }
     }
     if let Some(leaf) = leaf
+        && leaf.path == key
         && !leaf.notes.is_empty()
     {
         lines.push(String::new());
@@ -1091,6 +1014,26 @@ pub fn render_with(path: &[String], width: usize) -> String {
     let mut text = lines.join("\n");
     text.push('\n');
     text
+}
+
+fn examples(key: &str, leaf: Option<&Leaf>) -> Vec<(&'static str, std::borrow::Cow<'static, str>)> {
+    let examples: &[(&str, &str)] = if key.is_empty() {
+        &[
+            ("Start Apple Bridge on this Mac", "bridge up"),
+            ("Then connect your agent", "bridge link claude"),
+        ]
+    } else if key.starts_with("link ") {
+        return vec![(
+            "Preview the configuration",
+            format!("bridge {key} --print").into(),
+        )];
+    } else {
+        leaf.map_or(&[], |leaf| leaf.examples)
+    };
+    examples
+        .iter()
+        .map(|(summary, command)| (*summary, (*command).into()))
+        .collect()
 }
 
 fn option_json(argument: &Arg) -> Value {
@@ -1129,9 +1072,8 @@ pub fn document(path: &[String]) -> Value {
         "summary": summary(&command),
         "usage": usage(path, &command),
         "aliases": command.get_all_aliases().collect::<Vec<_>>(),
-        "deprecated": deprecated(&key),
         "hidden": command.is_hide_set(),
-        "lifecycle": if deprecated(&key).is_some() { "deprecated" } else if command.is_hide_set() { "hidden" } else { "stable" },
+        "lifecycle": if command.is_hide_set() { "hidden" } else { "stable" },
         "subcommands": command.get_subcommands().filter(|child| !child.is_hide_set()).map(|child| json!({"name": child.get_name(), "summary": summary(child)})).collect::<Vec<_>>(),
         "arguments": positionals(&command).into_iter().map(|argument| json!({
             "name": argument.get_value_names().and_then(|names| names.first()).map(ToString::to_string),
@@ -1140,8 +1082,8 @@ pub fn document(path: &[String]) -> Value {
             "summary": argument.get_help().map(ToString::to_string).unwrap_or_default(),
         })).collect::<Vec<_>>(),
         "options": local_options(&command, path.is_empty()).into_iter().map(option_json).collect::<Vec<_>>(),
-        "examples": leaf.map(|leaf| leaf.examples.iter().map(|(summary, command)| json!({"summary": summary, "command": command})).collect::<Vec<_>>()).unwrap_or_default(),
-        "notes": leaf.map(|leaf| leaf.notes.to_vec()).unwrap_or_default(),
+        "examples": examples(&key, leaf).into_iter().map(|(summary, command)| json!({"summary": summary, "command": command})).collect::<Vec<_>>(),
+        "notes": leaf.filter(|leaf| leaf.path == key).map(|leaf| leaf.notes.to_vec()).unwrap_or_default(),
         "result_schema": result_schema(&key, leaf),
         "learn_more": learn_more(path),
     })
@@ -1149,7 +1091,7 @@ pub fn document(path: &[String]) -> Value {
 
 fn result_schema(key: &str, leaf: Option<&Leaf>) -> Value {
     if key == "call" {
-        return json!({"from": "operation", "see": "bridge call --list --json", "field": "output"});
+        return json!({"from": "operation", "see": "bridge call --describe <OPERATION>", "field": "output"});
     }
     let Some(leaf) = leaf.filter(|leaf| !leaf.schema.is_empty()) else {
         return Value::Null;
@@ -1407,11 +1349,7 @@ pub fn markdown() -> String {
             continue;
         };
         if command.is_hide_set()
-            && deprecated(&path_key(&path)).is_none()
-            && !matches!(
-                path_key(&path).as_str(),
-                "start" | "connect" | "install-credentials"
-            )
+            && !matches!(path_key(&path).as_str(), "start" | "install-credentials")
         {
             continue;
         }
@@ -1495,7 +1433,10 @@ mod tests {
             }
             let key = path.join(" ");
             let leaf = leaf(&key).unwrap_or_else(|| panic!("no help metadata for {key}"));
-            assert!(!leaf.examples.is_empty(), "{key} has no examples");
+            assert!(
+                !examples(&key, Some(leaf)).is_empty(),
+                "{key} has no examples"
+            );
             assert!(render(&path).contains("Learn more: "), "{key}");
         }
     }

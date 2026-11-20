@@ -3,9 +3,10 @@ use super::{
     failure::{Reason, Step},
     gateway,
     modes::Modes,
-    tree::{LinkArgs, LinkClient, LinkScope, UnlinkArgs},
+    tree::{DEFAULT_LINK_NAME, LinkArgs, LinkClient, LinkScope, LinkTarget, UnlinkArgs},
     ui,
 };
+use clap::ValueEnum;
 use serde_json::{Value, json};
 use std::{
     fmt::Write as _,
@@ -290,12 +291,25 @@ fn print_grok_connection(answer: &Value, url: &str, name: &str) -> Outcome {
     Ok(())
 }
 
-async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
-    if args.print {
-        let command = format!(
-            "bridge link grok-bot --json --home {}",
-            ui::shell_quote(&home.to_string_lossy())
-        );
+async fn grok_bot(
+    home: &Path,
+    name: &str,
+    print: bool,
+    timeout: Option<&str>,
+    limit: Duration,
+) -> Outcome {
+    let mut retry = vec!["bridge", "link", "grok-bot", "--json", "--name", name];
+    if let Some(timeout) = timeout {
+        retry.extend(["--timeout", timeout]);
+    }
+    if print {
+        let home = home.to_string_lossy();
+        retry.extend(["--home", &home]);
+        let command = retry
+            .iter()
+            .map(|part| ui::shell_quote(part))
+            .collect::<Vec<_>>()
+            .join(" ");
         if Modes::get().json {
             ui::json_document(json!({"client": "Grok Bot", "command": command}));
         } else {
@@ -306,6 +320,7 @@ async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
         );
         return Ok(());
     }
+    Modes::get().require_native_interaction("the Grok Bot connection", &retry)?;
     let url = super::connect::turn_on(home, false).await?;
     let ticket = crate::connector::ask_for_tailnet_agent(home, "Grok Bot")
         .await
@@ -346,7 +361,7 @@ async fn grok_bot(home: &Path, args: &LinkArgs, limit: Duration) -> Outcome {
                 })?;
         match answer["state"].as_str() {
             Some("allowed") => {
-                print_grok_connection(&answer, &url, &args.name)?;
+                print_grok_connection(&answer, &url, name)?;
                 return Ok(());
             }
             Some("denied") => {
@@ -816,41 +831,77 @@ fn print_setup(setup: &Setup, name: &str) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
-    let given = args
-        .timeout
-        .as_deref()
+    use LinkTarget as Target;
+    let (client, named, tool, scope) = match &args.client {
+        Target::Claude(args) => (LinkClient::Claude, None, Some(&args.tool), args.scope),
+        Target::Codex(args) => (LinkClient::Codex, None, Some(args), LinkScope::User),
+        Target::Gemini(args) => (LinkClient::Gemini, None, Some(args), LinkScope::User),
+        Target::Vscode(args) => (LinkClient::Vscode, None, Some(args), LinkScope::User),
+        Target::GrokBot(args) => (LinkClient::GrokBot, None, Some(args), LinkScope::User),
+        Target::Cursor(args) => (LinkClient::Cursor, Some(args), None, LinkScope::User),
+        Target::Zed(args) => (LinkClient::Zed, Some(args), None, LinkScope::User),
+        Target::Goose(args) => (LinkClient::Goose, Some(args), None, LinkScope::User),
+        Target::Opencode(args) => (LinkClient::Opencode, Some(args), None, LinkScope::User),
+        Target::Other(args) => (LinkClient::Other, Some(args), None, LinkScope::User),
+        Target::ClaudeApp(_) => (LinkClient::ClaudeDesktop, None, None, LinkScope::User),
+    };
+    let named = named.or(tool.map(|args| &args.named));
+    let name = named.map_or(DEFAULT_LINK_NAME, |args| args.name.as_str());
+    let print = match &args.client {
+        Target::ClaudeApp(args) => args.print,
+        _ => named.is_some_and(|args| args.output.print),
+    };
+    let timeout = tool.and_then(|args| args.timeout.as_deref());
+    let given = timeout
         .map(|text| commands::duration("--timeout", text))
         .transpose()?;
     let deadline = Deadline::new(given);
+    if client == LinkClient::GrokBot {
+        return grok_bot(
+            home,
+            name,
+            print,
+            timeout,
+            given.unwrap_or(Duration::from_mins(5)),
+        )
+        .await;
+    }
     let launch = Launch::for_home(home);
-    if args.no_login || args.no_open {
-        ui::note(
-            "--no-login and --no-open do nothing now. bridge link no longer signs in or opens a browser.",
-        );
-    }
-    if args.client == LinkClient::GrokBot {
-        return grok_bot(home, args, given.unwrap_or(Duration::from_mins(5))).await;
-    }
-    let Some(setup) = setup(args.client, &args.name, args.scope, &launch) else {
-        print_other(&args.name, &launch);
+    let Some(setup) = setup(client, name, scope, &launch) else {
+        print_other(name, &launch);
         return Ok(());
     };
-    if args.print {
-        print_setup(&setup, &args.name);
+    if print {
+        print_setup(&setup, name);
         return Ok(());
+    }
+    if client == LinkClient::Claude || matches!(setup, Setup::Open { .. }) {
+        let value = client.to_possible_value();
+        let client_name = value
+            .as_ref()
+            .map_or("", clap::builder::PossibleValue::get_name);
+        let mut retry = vec!["bridge", "link", client_name, "--name", name];
+        if client == LinkClient::Claude {
+            retry.extend(["--scope", scope.as_str()]);
+        }
+        if let Some(timeout) = timeout {
+            retry.extend(["--timeout", timeout]);
+        }
+        Modes::get().require_native_interaction("the agent connection", &retry)?;
     }
     let running = gateway::running_address(home).await.is_ok();
     let (title, added, after, place) = match &setup {
         Setup::Tool(tool) => (
             tool.title,
-            add_with_tool(tool, &args.name, &launch, &deadline)?,
+            add_with_tool(tool, name, &launch, &deadline)?,
             "",
             shown(tool.program, &tool.add),
         ),
         Setup::File(file) => (
             file.title,
-            add_to_file(file, &args.name, &launch)?,
+            add_to_file(file, name, &launch)?,
             file.after,
             file.path.display().to_string(),
         ),
@@ -863,7 +914,7 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         ui::json_document(json!({
             "outcome": added.outcome(),
             "client": title,
-            "name": args.name,
+            "name": name,
             "command": launch.command,
             "args": launch.args,
             "where": place,
@@ -871,21 +922,21 @@ pub async fn link(home: &Path, args: &LinkArgs) -> Outcome {
         }));
         return Ok(());
     }
-    piped_result(&args.name);
+    piped_result(name);
     match added {
         Added::Already => ui::receipt(
             "Already added",
-            &format!("{} to {title}", args.name),
-            &format!("{} is already in {title}.", args.name),
+            &format!("{name} to {title}"),
+            &format!("{name} is already in {title}."),
         ),
-        Added::Updated => ui::done("Updated", &format!("{} in {title}", args.name)),
-        Added::New => ui::done("Added", &format!("{} to {title}", args.name)),
+        Added::Updated => ui::done("Updated", &format!("{name} in {title}")),
+        Added::New => ui::done("Added", &format!("{name} to {title}")),
         Added::Opened => ui::done("Opened", title),
     }
     if !after.is_empty() {
         ui::note(after);
     }
-    if args.client == LinkClient::Claude && args.scope == LinkScope::Project {
+    if client == LinkClient::Claude && scope == LinkScope::Project {
         ui::note(
             "Claude Code asks you to approve project servers the first time it starts in this folder.",
         );

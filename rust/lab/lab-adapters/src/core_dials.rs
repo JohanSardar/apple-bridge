@@ -45,8 +45,6 @@ pub fn start(world: &mut World, count: usize) -> Result<()> {
         "pair",
         "--peer-addr",
         &peer,
-        "--name",
-        "replica0",
         "--scope",
         replicas::SCOPE,
         "--dial-replica",
@@ -77,7 +75,17 @@ pub fn start(world: &mut World, count: usize) -> Result<()> {
         thread::sleep(Duration::from_millis(50));
     }
     *lock(&CODE) = code;
-    let token = replicas::cli(&home, &["token", "create", "--scope", replicas::SCOPE])?;
+    let token = replicas::cli(
+        &home,
+        &[
+            "token",
+            "create",
+            "--expires-in",
+            "1h",
+            "--scope",
+            replicas::SCOPE,
+        ],
+    )?;
     let log = fs::File::create(world.directory.join("replica0.log"))?;
     let child = Command::new(binary)
         .args(["start", "--role", "replica", "--home"])
@@ -167,15 +175,16 @@ fn pairing_replay_rejected(endpoint: &Endpoint) -> bool {
         .and_then(|v| v["enrollment"]["listen"].as_str().map(str::to_owned))
         .unwrap_or_else(|| "127.0.0.1:0".to_owned());
     Command::new(binary)
-        .args(["join", &code, "--listen", &listen, "--home"])
+        .args(["join", &code, "--listen", &listen, "--json", "--home"])
         .arg(&endpoint.home)
         .env("APPLE_BRIDGE_SECRET_STORE", "file")
         .output()
         .is_ok_and(|output| {
             !output.status.success()
                 && String::from_utf8_lossy(&output.stderr)
-                    .to_lowercase()
-                    .contains("unauthorized")
+                    .lines()
+                    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+                    .any(|error| error["reason"] == "permission_denied")
         })
 }
 
@@ -189,6 +198,10 @@ fn protocol_call(
 }
 fn feed_connected(endpoint: &Endpoint) -> bool {
     await_until(15, || connected(endpoint))
+}
+
+fn admitted_id(reply: Option<&(u16, Value)>) -> Option<&str> {
+    reply?.1["command"]["command_id"].as_str()
 }
 
 fn round(
@@ -209,10 +222,10 @@ fn round(
     let first_command = make()?;
     let op = first_command["op"].as_str().unwrap_or_default().to_owned();
     let first = protocol_call(&client, mcp, &op, &first_command)?;
-    let first_id = first_command["command_id"].as_str().unwrap_or_default();
     evidence.check(
         &format!("feed_command_{protocol}"),
-        locally_observed(first.as_ref()) && effects(world, first_id) == Some(1),
+        locally_observed(first.as_ref())
+            && admitted_id(first.as_ref()).is_some_and(|id| effects(world, id) == Some(1)),
         "command over the gateway dialed feed took one effect",
     );
     evidence.check(
@@ -236,29 +249,27 @@ fn round(
         feed_connected(endpoint),
         "the feed reconnects",
     );
-    let retry = protocol_call(&client, mcp, &op, &dropped)?;
-    evidence.check(
-        &format!("original_id_retry_one_effect_{protocol}"),
-        locally_observed(retry.as_ref())
-            && retry
-                .as_ref()
-                .is_some_and(|(_, v)| v["command"]["command_id"] == dropped_id.as_str())
-            && effects(world, &dropped_id) == Some(1),
-        "retry with the original id takes exactly one effect",
-    );
     let status = protocol_call(
         &client,
         mcp,
         "commands.status",
         &json!({"command_id": dropped_id}),
     )?;
+    let retry = protocol_call(&client, mcp, &op, &dropped)?;
+    let retry_id = admitted_id(retry.as_ref());
+    evidence.check(
+        &format!("original_id_retry_one_effect_{protocol}"),
+        locally_observed(retry.as_ref())
+            && retry_id.is_some_and(|id| {
+                admitted_id(status.as_ref()) == Some(id) && effects(world, id) == Some(1)
+            }),
+        "retry with the original request resolves to the same command with one effect",
+    );
     evidence.check(
         &format!("feed_status_{protocol}"),
-        status.as_ref().is_some_and(|(_, v)| {
-            v["error"].is_null()
-                && v["command"]["command_id"] == dropped_id.as_str()
-                && Some(&v["disposition"]) == retry.as_ref().map(|(_, r)| &r["disposition"])
-        }),
+        locally_observed(status.as_ref())
+            && retry_id.is_some()
+            && admitted_id(status.as_ref()) == retry_id,
         "status by the original id matches the retry",
     );
     world.partition()?;
@@ -387,7 +398,19 @@ fn unpaired_rejected(world: &World, endpoint: &Endpoint) -> bool {
         return false;
     }
     let home = world.directory.join("unpaired-dial");
-    if replicas::cli(&home, &["token", "create", "--scope", "system:read"]).is_err() {
+    if replicas::cli(
+        &home,
+        &[
+            "token",
+            "create",
+            "--expires-in",
+            "1h",
+            "--scope",
+            "system:read",
+        ],
+    )
+    .is_err()
+    {
         return false;
     }
     let outcome = pinned_client(&proxy, &home, &pin).and_then(|stream| {
@@ -403,8 +426,11 @@ pub fn revoke(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<(
     labcore::finish_hook(world, &Value::Null, evidence)?;
     let endpoint = replica()?;
     let before = replica_state(&endpoint);
-    let revoked =
-        replica_identity(&endpoint).is_some_and(|id| world.gateway_cli(&["revoke", &id]).is_ok());
+    let revoked = replica_identity(&endpoint).is_some_and(|id| {
+        world
+            .gateway_cli(&["tokens", "revoke", &id, "--yes"])
+            .is_ok()
+    });
     evidence.check(
         "revoke_gateway_dial_replica",
         revoked,

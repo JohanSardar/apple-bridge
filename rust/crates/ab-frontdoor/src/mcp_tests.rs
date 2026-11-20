@@ -1,6 +1,6 @@
 use crate::{
     mcp_check,
-    mcp_facade::{change_result, compact},
+    mcp_facade::compact,
     mcp_guides::{GUIDES, INSTRUCTIONS},
     mcp_registry::{COMPACT, registry},
 };
@@ -298,10 +298,20 @@ fn what_an_agent_loads_on_connect_fits_the_budget() -> Check {
         INSTRUCTIONS.len()
     );
     assert!(
-        tokens <= 6000,
+        tokens <= 5500,
         "tools/list and instructions are about {tokens} tokens ({bytes} bytes)"
     );
-    assert_eq!(names(&registry.tools(None)), COMPACT);
+    let advertised = names(&registry.tools(None));
+    assert_eq!(advertised, COMPACT);
+    for (current, retired) in [
+        ("apple_change_status", "apple_command_status"),
+        ("calendar_list", "calendar_events"),
+        ("notes_add", "notes_create"),
+        ("screen_time_read", "screen_time"),
+    ] {
+        assert!(advertised.iter().any(|name| name == current));
+        assert!(!advertised.iter().any(|name| name == retired));
+    }
     Ok(())
 }
 
@@ -319,7 +329,7 @@ fn each_access_level_sees_only_the_tools_it_can_use() -> Check {
         "apple_change",
         "messages_send",
         "reminders_add",
-        "notes_create",
+        "notes_add",
     ] {
         assert!(!read.contains(&tool.to_owned()), "{tool}");
     }
@@ -328,7 +338,7 @@ fn each_access_level_sees_only_the_tools_it_can_use() -> Check {
         "apple_describe",
         "apple_read",
         "messages_read",
-        "calendar_events",
+        "calendar_list",
     ] {
         assert!(read.contains(&tool.to_owned()), "{tool}");
     }
@@ -339,7 +349,7 @@ fn each_access_level_sees_only_the_tools_it_can_use() -> Check {
     assert!(narrow.contains(&"reminders_add".to_owned()));
     assert!(narrow.contains(&"apple_change".to_owned()));
     assert!(!narrow.contains(&"messages_send".to_owned()));
-    assert!(!narrow.contains(&"calendar_events".to_owned()));
+    assert!(!narrow.contains(&"calendar_list".to_owned()));
     let reader = principal("read", &["reminders:read"]);
     assert!(
         registry
@@ -390,14 +400,14 @@ fn unknown_fields_and_bad_dates_get_actionable_errors() -> Check {
 }
 
 #[test]
-fn legacy_args_wrappers_are_accepted() -> Check {
+fn legacy_args_wrappers_are_rejected() -> Check {
     let registry = registry().ok_or("registry")?;
     let ocr = registry.find("vision.ocr").ok_or("ocr")?;
-    let flat =
-        mcp_check::arguments(ocr, Some(&ocr.example)).map_err(|p| p.to_json().to_string())?;
-    let wrapped = mcp_check::arguments(ocr, Some(&json!({"args": ocr.example})))
-        .map_err(|p| p.to_json().to_string())?;
-    assert_eq!(flat, wrapped);
+    mcp_check::arguments(ocr, Some(&ocr.example)).map_err(|p| p.to_json().to_string())?;
+    let error = mcp_check::arguments(ocr, Some(&json!({"args": ocr.example})))
+        .err()
+        .ok_or("accepted legacy args")?;
+    assert!(error.hint.is_some());
     Ok(())
 }
 
@@ -425,6 +435,31 @@ fn reads_are_compact_unless_verbose() {
     assert_eq!(compact(&page, true, None), page);
 }
 
+fn command_record(mut record: Value) -> Value {
+    let mut fields = json!({
+        "principal": "agent:synthetic",
+        "source": "messages",
+        "request_hash": "synthetic",
+        "admission_era": "synthetic",
+        "created_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "commit_seq": 1,
+        "cursor": {"epoch": "synthetic", "subscription_revision": 1, "sequence": 1},
+        "history": [],
+    });
+    if let (Some(fields), Some(record)) = (fields.as_object_mut(), record.as_object_mut()) {
+        fields.append(record);
+    }
+    fields
+}
+
+fn change_result(record: &Value, verbose: bool) -> Value {
+    let record = command_record(record.clone());
+    let request_id = record["command"]["command_id"].as_str().unwrap_or_default();
+    crate::mcp_facade::change_result(&record, request_id, verbose)
+        .unwrap_or_else(|problem| panic!("{}", problem.to_json()))
+}
+
 #[test]
 fn a_change_returns_a_finished_compact_result() {
     let done = json!({
@@ -433,7 +468,7 @@ fn a_change_returns_a_finished_compact_result() {
         "command": {"command_id": "req-1", "op": "messages.send", "args": {"chat_id": "cht_1", "text": "hi"}},
         "observed_record_ids": ["msg_1"],
         "evidence": {"fingerprint": "x", "native_key": "y"},
-        "history": [{"state": "admitted"}, {"state": "observed"}],
+        "history": [{"state": "admitted", "at": "2026-01-01T00:00:00Z"}, {"state": "observed", "at": "2026-01-01T00:00:01Z"}],
     });
     let result = change_result(&done, false);
     assert_eq!(result["status"], "done");
@@ -721,7 +756,7 @@ fn a_partly_sent_message_says_what_happened_and_not_to_repeat() {
 fn listed_tools_reject_unknown_fields_and_wrong_types() -> Check {
     let registry = registry().ok_or("registry")?;
     let check = |tool: &str, input: Value| {
-        let schema = registry.tool_schema(tool).cloned().unwrap_or_default();
+        let schema = registry.tool_schema(tool).unwrap_or_default();
         mcp_check::check_tool(
             tool,
             &schema,
@@ -852,117 +887,6 @@ fn record_ids_name_their_collection() -> Check {
 }
 
 #[test]
-fn a_title_is_bound_to_its_request_id() {
-    crate::mcp_compose::bind_selector("agent:bind", "req-1", "  Buy MILK ");
-    assert_eq!(
-        crate::mcp_compose::selector("agent:bind", "req-1").as_deref(),
-        Some("buy milk")
-    );
-    assert_eq!(crate::mcp_compose::selector("agent:other", "req-1"), None);
-    assert_eq!(crate::mcp_compose::selector("agent:bind", "req-2"), None);
-}
-
-#[tokio::test]
-async fn title_changes_with_one_request_id_take_turns() {
-    let first = crate::mcp_compose::request_turn("agent:turns", "req-1").await;
-    let other = tokio::time::timeout(
-        std::time::Duration::from_millis(50),
-        crate::mcp_compose::request_turn("agent:turns", "req-2"),
-    )
-    .await;
-    assert!(other.is_ok());
-    let waiting = tokio::time::timeout(
-        std::time::Duration::from_millis(50),
-        crate::mcp_compose::request_turn("agent:turns", "req-1"),
-    )
-    .await;
-    assert!(waiting.is_err());
-    drop(first);
-    let next = tokio::time::timeout(
-        std::time::Duration::from_millis(50),
-        crate::mcp_compose::request_turn("agent:turns", "req-1"),
-    )
-    .await;
-    assert!(next.is_ok());
-}
-
-#[test]
-fn usage_tally_reads_rows_shaped_like_the_real_store() {
-    let row = |device: &str, day: &str, bundle: &str, seconds: f64| {
-        json!({"collection": "usage.app_day", "data": {
-            "device_id": device,
-            "day": day,
-            "bundle_id": bundle,
-            "seconds_estimated": seconds,
-            "clipped_seconds": 12.5,
-            "sessions": 4.0,
-            "usage_class": "app",
-            "uncertainty": "focus estimates, not active interaction",
-        }})
-    };
-    let mut gone = row(
-        "mac",
-        "2026-11-09@America/Chicago",
-        "com.google.Chrome",
-        9000.0,
-    );
-    gone["deleted"] = json!(true);
-    let rows = vec![
-        row(
-            "mac",
-            "2026-11-09@America/Chicago",
-            "com.google.Chrome",
-            20_000.4,
-        ),
-        row(
-            "mac",
-            "2026-11-09@America/Chicago",
-            "com.apple.Safari",
-            12_345.6,
-        ),
-        row(
-            "mac",
-            "2026-11-09@America/Chicago",
-            "com.t3tools.t3code",
-            6_066.5,
-        ),
-        row(
-            "mac",
-            "2026-11-08@America/Chicago",
-            "com.google.Chrome",
-            3_600.0,
-        ),
-        row(
-            "mac",
-            "2026-11-10@America/Chicago",
-            "com.google.Chrome",
-            1_800.0,
-        ),
-        row(
-            "iphone",
-            "2026-11-09@America/Chicago",
-            "com.apple.MobileSMS",
-            1_836.2,
-        ),
-        gone,
-    ];
-    let (apps, days) = crate::mcp_compose::usage_tally(&rows, "mac", "2026-11-09", "2026-11-09");
-    assert_eq!(apps["com.google.Chrome"], 20_000);
-    assert_eq!(apps["com.apple.Safari"], 12_346);
-    assert_eq!(apps.values().sum::<u64>(), 38_413);
-    assert_eq!(days.len(), 1);
-    assert_eq!(days["2026-11-09"], 38_413);
-    let (apps, days) = crate::mcp_compose::usage_tally(&rows, "mac", "2026-11-08", "2026-11-10");
-    assert_eq!(apps["com.google.Chrome"], 25_400);
-    assert_eq!(
-        days.keys().map(String::as_str).collect::<Vec<_>>(),
-        ["2026-11-08", "2026-11-09", "2026-11-10"]
-    );
-    let (apps, _) = crate::mcp_compose::usage_tally(&rows, "iphone", "2026-11-09", "2026-11-09");
-    assert_eq!(apps["com.apple.MobileSMS"], 1_836);
-}
-
-#[test]
 fn looking_and_finding_rank_reads_above_capture() -> Check {
     let registry = registry().ok_or("registry")?;
     let cases: &[(&str, &[&str])] = &[
@@ -1019,7 +943,7 @@ fn looking_and_finding_rank_reads_above_capture() -> Check {
 
 #[test]
 fn a_request_id_belongs_to_the_agent_that_used_it() {
-    let scoped = crate::mcp_facade::scoped_id;
+    let scoped = ab_operations::scoped_command_id;
     let ana = scoped("agent:gateway/agt_ana", "groceries-2026-11-12");
     let bob = scoped("agent:gateway/agt_bob", "groceries-2026-11-12");
     assert_ne!(ana, bob);
@@ -1039,7 +963,7 @@ fn a_request_id_belongs_to_the_agent_that_used_it() {
 #[test]
 fn a_read_only_agent_is_told_the_truth_about_write_scopes() {
     let reader = principal("read", &["notes:read"]);
-    let problem = mcp_check::refused(&reader, "notes_create", "notes:write", false).to_json();
+    let problem = mcp_check::refused(&reader, "notes_add", "notes:write", false).to_json();
     let hint = problem["error"]["hint"].as_str().unwrap_or_default();
     assert!(hint.contains("read-only"), "{hint}");
     assert!(hint.contains("bridge agents create"), "{hint}");
@@ -1069,27 +993,6 @@ fn reminder_lists_come_back_small_with_counts() {
     assert!(shown["lists"][1].get("sections").is_none());
 }
 
-#[test]
-fn every_request_id_can_be_checked_including_query_prefixed_ones() {
-    let agent = "agent:gateway/agt_ana";
-    for id in ["send-1", "qry_retry", "qry_qry_retry"] {
-        let scoped = crate::mcp_facade::scoped_id(agent, id);
-        let candidates = crate::mcp_facade::status_ids(agent, id);
-        assert!(candidates.contains(&scoped), "{id}: {candidates:?}");
-        assert!(candidates.contains(&id.to_owned()), "{id}: {candidates:?}");
-        if !id.starts_with("qry_") {
-            assert!(
-                candidates.contains(&format!("qry_{scoped}")),
-                "{id}: {candidates:?}"
-            );
-        }
-        assert!(
-            crate::mcp_facade::legacy_ids(id).contains(&id.to_owned()),
-            "{id}"
-        );
-    }
-}
-
 #[allow(clippy::unwrap_used)]
 mod original_review {
     use super::*;
@@ -1097,10 +1000,14 @@ mod original_review {
     use ab_operations::{
         Code, Command, CommandTarget, Cursor, Error, ForwardReply, GatewayRoute, GatewayTransport,
         Identity, ReadQuery, ReadStore, RemoteGateway, Service, Task, Visibility,
+        local::{ActionResolver, CommandRecord, GatewayState, LocalGateway, PreparedAction},
+        peer::{ApplePeer, IpcFrame},
     };
+    use axum::{body::Body, http::Request};
     use base64::{Engine, engine::general_purpose::STANDARD};
     use serde_json::value::RawValue;
     use std::sync::Arc;
+    use tower::ServiceExt;
     #[derive(Debug)]
     struct Expiring(Option<jiff::Timestamp>);
     impl Identity for Expiring {
@@ -1148,8 +1055,8 @@ mod original_review {
         fn json(&self, raw: &[u8]) -> Result<Vec<u8>, Error> {
             Ok(raw.to_vec())
         }
-        fn command_hash(&self, _: &Command) -> Result<String, Error> {
-            Ok("hash".into())
+        fn command_hash(&self, command: &Command) -> Result<String, Error> {
+            Ok(ab_trust::fingerprint(command.args.get().as_bytes()))
         }
         fn fingerprint(&self, _: &[u8]) -> String {
             "hash".into()
@@ -1180,15 +1087,14 @@ mod original_review {
                 let query = &input["native_query"];
                 let args = &query["args"];
                 let result = match query["op"].as_str().unwrap() {
+                    "photos.get" => json!({"type":"image", "width":20, "height":10}),
                     "photos.fetch" if args["transfer_id"].is_null() => {
-                        json!({"transfer_id": if args["resource_index"] == 0 {"original"} else {"edited"}})
+                        assert_eq!(args["rendition"], "display");
+                        json!({"transfer_id": "display"})
                     }
                     "photos.fetch" => {
-                        let bytes = if args["transfer_id"] == "original" {
-                            b"camera-original".as_slice()
-                        } else {
-                            b"edited-render".as_slice()
-                        };
+                        assert_eq!(args["transfer_id"], "display");
+                        let bytes = b"display-img";
                         json!({"state":"ready", "size":bytes.len(), "bytes":STANDARD.encode(bytes),
                             "digest":ab_trust::fingerprint(bytes), "eof":true})
                     }
@@ -1204,7 +1110,7 @@ mod original_review {
         }
     }
     #[tokio::test]
-    async fn s1_edited_asset_saves_camera_original() {
+    async fn photos_show_allows_read_only_display_and_refuses_save() {
         let identity = Arc::new(Expiring(None));
         let principal = identity.authenticate("synthetic").unwrap();
         let store = Arc::new(Quiet);
@@ -1221,6 +1127,338 @@ mod original_review {
                 codec,
             })),
         });
+        for public in [false, true] {
+            let frontdoor = Frontdoor::new(
+                service.clone(),
+                Config {
+                    hosts: vec!["localhost".into()],
+                    origins: vec![],
+                    public,
+                    requests_per_second: 100,
+                },
+                Arc::new(NoAudit),
+            );
+            let router = axum::Router::new()
+                .route("/mcp", axum::routing::post(crate::mcp::handle))
+                .with_state(frontdoor);
+            let request = async |method, params| {
+                let request = Request::post("/mcp")
+                    .header("Host", "localhost")
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json, text/event-stream")
+                    .header("MCP-Protocol-Version", "2025-03-26")
+                    .extension(principal.clone())
+                    .body(Body::from(
+                        json!({"jsonrpc":"2.0","id":1,"method":method,"params":params}).to_string(),
+                    ))
+                    .unwrap();
+                let response = router.clone().oneshot(request).await.unwrap();
+                let status = response.status();
+                let content_type = if public {
+                    "text/event-stream"
+                } else {
+                    "application/json"
+                };
+                let actual_type = response.headers()["content-type"].clone();
+                let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
+                    .await
+                    .unwrap();
+                let body = std::str::from_utf8(&bytes).unwrap();
+                assert_eq!(status, 200, "{method}: {body}");
+                assert!(actual_type.to_str().unwrap().starts_with(content_type));
+                let payload = if public {
+                    body.lines()
+                        .find_map(|line| line.strip_prefix("data: "))
+                        .unwrap()
+                } else {
+                    body
+                };
+                serde_json::from_str::<Value>(payload).unwrap()
+            };
+            let listing = request("tools/list", json!({})).await;
+            assert_eq!(listing["result"]["cacheScope"], "private");
+            let tools = listing["result"]["tools"].as_array().unwrap();
+            assert!(tools.iter().any(|tool| tool["name"] == "photos_show"));
+            assert!(!tools.iter().any(|tool| tool["name"] == "apple_change"));
+            let show = |arguments| {
+                request(
+                    "tools/call",
+                    json!({"name":"photos_show","arguments":arguments}),
+                )
+            };
+            let response = show(json!({"asset_id":"synthetic","save":true})).await;
+            let denied = &response["result"];
+            assert_eq!(denied["isError"], true);
+            assert_eq!(denied["structuredContent"]["error"]["field"], "save");
+            assert_eq!(denied["content"].as_array().unwrap().len(), 1);
+            let response = show(json!({"asset_id":"synthetic"})).await;
+            let shown = &response["result"];
+            let structured = &shown["structuredContent"];
+            assert_eq!(structured["asset_id"], "synthetic");
+            assert!(structured.get("file").is_none());
+            assert!(shown.get("isError").is_none());
+            let text: Value =
+                serde_json::from_str(shown["content"][0]["text"].as_str().unwrap()).unwrap();
+            assert_eq!(&text, structured);
+            assert_eq!(shown["content"][1]["type"], "image");
+            assert_eq!(shown["content"][1]["data"], STANDARD.encode(b"display-img"));
+        }
+    }
+
+    #[tokio::test]
+    async fn mcp_rejects_duplicate_json_keys_before_dispatch() {
+        let identity = Arc::new(Expiring(None));
+        let store = Arc::new(Quiet);
+        let codec = Arc::new(Plain);
+        let local = LocalGateway::new(
+            Arc::new(Admitted(
+                serde_json::from_value(command_record(json!({
+                    "state":"awaiting_approval",
+                    "command":{"command_id":"synthetic","op":"messages.send","args":{}}
+                })))
+                .unwrap(),
+            )),
+            identity.clone(),
+            codec.clone(),
+            store.clone(),
+            store.clone(),
+        );
+        let router = Frontdoor::new(
+            Arc::new(Service {
+                store,
+                identity,
+                codec,
+                target: CommandTarget::Local(Arc::new(local)),
+            }),
+            Config {
+                hosts: vec!["localhost".into()],
+                origins: vec![],
+                public: false,
+                requests_per_second: 100,
+            },
+            Arc::new(NoAudit),
+        )
+        .router();
+        for arguments in [
+            r#"{"asset_id":"first","asset_id":"second"}"#,
+            r#"{"asset_id":"first","Asset_ID":"second"}"#,
+            r#"{"asset_id":"first","nested":[{"name":"first","\u006eame":"second"}]}"#,
+        ] {
+            let body = format!(
+                r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"photos_show","arguments":{arguments}}}}}"#
+            );
+            let request = Request::post("/mcp")
+                .header("Host", "localhost")
+                .header("Authorization", "Bearer synthetic")
+                .header("Content-Type", "Application/JSON; charset=utf-8")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2025-03-26")
+                .body(Body::from(body))
+                .unwrap();
+            let response = router.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), 400, "{arguments}");
+            let bytes = axum::body::to_bytes(response.into_body(), 1 << 20)
+                .await
+                .unwrap();
+            let error: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(error["error"]["code"], -32700);
+            assert!(
+                error["error"]["message"]
+                    .as_str()
+                    .unwrap()
+                    .contains("duplicate object keys")
+            );
+        }
+    }
+
+    #[derive(Debug)]
+    struct Admitted(CommandRecord);
+
+    impl GatewayState for Admitted {
+        fn admission_era(&self) -> Result<String, Error> {
+            panic!("replay must finish before admission")
+        }
+        fn command(&self, id: &str) -> Result<CommandRecord, Error> {
+            if id == self.0.command.id {
+                Ok(self.0.clone())
+            } else {
+                Err(Code::NotFound.into())
+            }
+        }
+        fn commands(&self) -> Result<Vec<CommandRecord>, Error> {
+            panic!("replay needs one command")
+        }
+        fn transition(
+            &self,
+            _: Option<ab_operations::domain::CommandState>,
+            _: CommandRecord,
+        ) -> Result<CommandRecord, Error> {
+            panic!("replay must not transition")
+        }
+        fn update_parts(&self, _: CommandRecord) -> Result<CommandRecord, Error> {
+            panic!("replay must not update parts")
+        }
+        fn head(&self) -> Result<Cursor, Error> {
+            panic!("replay needs no cursor")
+        }
+        fn observed_record_id(&self, _: &str, _: &str, _: &Cursor) -> Result<String, Error> {
+            panic!("replay needs no record lookup")
+        }
+    }
+
+    impl ApplePeer for Quiet {
+        fn available(&self) -> bool {
+            false
+        }
+        fn exchange(&self, _: IpcFrame) -> Task<'_, IpcFrame> {
+            panic!("replay must not stage photos or dispatch messages")
+        }
+        fn captured(&self, _: &str, _: &str, _: &str, _: &str) -> Result<Cursor, Error> {
+            panic!("replay needs no capture")
+        }
+        fn capture_revision(&self) -> tokio::sync::watch::Receiver<u64> {
+            panic!("replay needs no capture")
+        }
+    }
+
+    impl ActionResolver for Quiet {
+        fn resolve(&self, _: &Principal, _: &Command) -> Result<PreparedAction, Error> {
+            panic!("replay must not prepare an action")
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct NewChat(std::sync::atomic::AtomicUsize);
+
+    impl ReadStore for NewChat {
+        fn head(&self) -> Result<Cursor, Error> {
+            Quiet.head()
+        }
+        fn read(&self, visibility: &Visibility, query: &ReadQuery) -> Result<Box<RawValue>, Error> {
+            Quiet.read(visibility, query)
+        }
+        fn read_model(
+            &self,
+            _: &Visibility,
+            operation: &str,
+            _: &Value,
+        ) -> Result<Box<RawValue>, Error> {
+            assert_eq!(operation, "messages.chats");
+            self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            Ok(serde_json::value::to_raw_value(&json!({
+                "chats":[{"chat":{"id":"cht_just_created","data":{"participants":["+12025550100"],"service":"iMessage"}}}]
+            })).unwrap())
+        }
+        fn changes(
+            &self,
+            visibility: &Visibility,
+            cursor: &Cursor,
+        ) -> Result<Option<Box<RawValue>>, Error> {
+            Quiet.changes(visibility, cursor)
+        }
+    }
+
+    #[tokio::test]
+    async fn photo_send_to_replays_after_the_first_send_creates_a_chat() {
+        let identity = Arc::new(Expiring(None));
+        let mut principal = identity.authenticate("synthetic").unwrap();
+        principal
+            .grants
+            .extend(["messages:write".into(), "messages:read".into()]);
+        principal.level = "approve".into();
+        let request_id = "photo-to-request";
+        let mut input = json!({
+            "to":"+12025550100", "text":"first", "photos":["synthetic-a"], "service":"iMessage", "request_id":request_id
+        });
+        let args = json!({"asset_ids":["synthetic-a"], "to":"+12025550100", "text":"first", "service":"iMessage"});
+        let command = command_record(json!({
+            "state": "observed",
+            "principal": principal.id,
+            "request_hash": ab_trust::fingerprint(args.to_string().as_bytes()),
+            "command": {
+                "command_id": ab_operations::scoped_command_id(&principal.id, request_id),
+                "op": "messages.send",
+                "args": {"files":[{"name":"synthetic.jpg","upload_id":"uploaded"}], "handles":["+12025550100"],"text":"first","service":"iMessage"}
+            }
+        }));
+        let store = Arc::new(NewChat::default());
+        let codec = Arc::new(Plain);
+        let local = LocalGateway::new(
+            Arc::new(Admitted(serde_json::from_value(command).unwrap())),
+            identity.clone(),
+            codec.clone(),
+            Arc::new(Quiet),
+            Arc::new(Quiet),
+        );
+        let frontdoor = Frontdoor::new(
+            Arc::new(Service {
+                store: store.clone(),
+                identity,
+                codec,
+                target: CommandTarget::Local(Arc::new(local)),
+            }),
+            Config {
+                hosts: vec![],
+                origins: vec![],
+                public: false,
+                requests_per_second: 100,
+            },
+            Arc::new(NoAudit),
+        );
+        let send = |input: &Value| {
+            crate::mcp_facade::call(
+                &frontdoor,
+                &principal,
+                "messages_send",
+                input.as_object().unwrap().clone(),
+            )
+        };
+        let replay = send(&input).await;
+        assert_eq!(replay.value["status"], "done", "{}", replay.value);
+        assert_eq!(replay.value["request_id"], request_id);
+        input["service"] = json!("SMS");
+        let changed = send(&input).await;
+        assert_eq!(
+            changed.value["error"]["code"], "id_reused",
+            "{}",
+            changed.value
+        );
+        assert_eq!(store.0.load(std::sync::atomic::Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn photo_send_replay_requires_the_original_asset_text_and_recipient() {
+        let identity = Arc::new(Expiring(None));
+        let mut principal = identity.authenticate("synthetic").unwrap();
+        principal.grants.push("messages:write".into());
+        principal.level = "approve".into();
+        let request_id = "photo-request";
+        let args = json!({"asset_ids":["synthetic-a"], "chat_id":"cht_synthetic", "text":"first"});
+        let command = command_record(json!({
+            "state": "awaiting_approval",
+            "principal": principal.id,
+            "request_hash": ab_trust::fingerprint(args.to_string().as_bytes()),
+            "command": {
+                "command_id": ab_operations::scoped_command_id(&principal.id, request_id),
+                "op": "messages.send",
+                "args": {"files":[{"name":"synthetic.jpg","upload_id":"uploaded"}], "chat_id":"cht_synthetic","text":"first"}
+            }
+        }));
+        let store = Arc::new(Quiet);
+        let codec = Arc::new(Plain);
+        let local = LocalGateway::new(
+            Arc::new(Admitted(serde_json::from_value(command).unwrap())),
+            identity.clone(),
+            codec.clone(),
+            store.clone(),
+            store.clone(),
+        );
+        let service = Arc::new(Service {
+            store,
+            identity,
+            codec,
+            target: CommandTarget::Local(Arc::new(local)),
+        });
         let frontdoor = Frontdoor::new(
             service,
             Config {
@@ -1231,24 +1469,41 @@ mod original_review {
             },
             Arc::new(NoAudit),
         );
-        let call = crate::mcp_facade::Call {
-            frontdoor: &frontdoor,
-            principal: &principal,
-            registry: registry().unwrap(),
-        };
-        let file = call
-            .photo_original(
-                "edited-fixture",
-                &json!({"type":"image", "resources":[
-                    {"index":0,"type":1,"filename":"IMG_0001.HEIC"},
-                    {"index":1,"type":5,"filename":"FullSizeRender.jpeg"}
-                ]}),
-                1000,
+        let send = |chat, text, asset| {
+            let input =
+                json!({"chat_id":chat, "text":text, "photos":[asset], "request_id":request_id});
+            crate::mcp_facade::call(
+                &frontdoor,
+                &principal,
+                "messages_send",
+                input.as_object().unwrap().clone(),
             )
-            .await
-            .unwrap_or_else(|p| panic!("{}", p.to_json()));
-        assert_eq!(String::from_utf8(file.bytes).unwrap(), "camera-original");
-        assert_eq!(file.name, "IMG_0001.HEIC");
+        };
+        let replay = send("cht_synthetic", "first", "synthetic-a").await;
+        assert_eq!(
+            replay.value["status"], "awaiting_approval",
+            "{}",
+            replay.value
+        );
+        assert_eq!(replay.value["request_id"], request_id);
+        assert!(
+            replay.value["next"]
+                .as_str()
+                .unwrap()
+                .contains("request_id photo-request.")
+        );
+        for (chat, text, asset) in [
+            ("cht_synthetic", "first", "synthetic-b"),
+            ("cht_synthetic", "second", "synthetic-a"),
+            ("cht_other", "first", "synthetic-a"),
+        ] {
+            let changed = send(chat, text, asset).await;
+            assert_eq!(
+                changed.value["error"]["code"], "id_reused",
+                "{}",
+                changed.value
+            );
+        }
     }
 }
 

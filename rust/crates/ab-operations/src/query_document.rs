@@ -45,7 +45,7 @@ impl LocalQueryStore {
         length: u64,
     ) -> Result<Vec<u8>, Error> {
         let (scope, blobs) = self.state.with(|s| s.query_blob_grant(&p.id, id))?;
-        p.authorize(&scope).map_err(|_| Code::Forbidden)?;
+        p.authorize_blob(&scope)?;
         if !blobs
             .as_array()
             .is_some_and(|a| a.iter().any(|b| b["digest"] == digest))

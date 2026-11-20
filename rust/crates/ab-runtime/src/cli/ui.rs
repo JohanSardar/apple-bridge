@@ -5,7 +5,6 @@ use super::{
 };
 use serde_json::{Value, json};
 use std::{
-    collections::BTreeSet,
     io::{BufRead, Write},
     sync::Mutex,
 };
@@ -15,7 +14,6 @@ const MIN_WIDTH: usize = 40;
 
 static WARNINGS: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
 static STREAMING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-static DEPRECATIONS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 static CANCEL_NOTE: Mutex<Option<String>> = Mutex::new(None);
 static PRINTED_STDERR: Mutex<bool> = Mutex::new(false);
 
@@ -567,7 +565,7 @@ pub fn stream_warnings() {
 }
 
 fn warning_line(reason: &str, message: &str) {
-    outln(&json!({"type": "warning", "reason": reason, "message": message}).to_string());
+    outln(&json!({"event": "warning", "reason": reason, "message": message}).to_string());
 }
 
 pub fn warn(reason: &str, text: &str) {
@@ -601,18 +599,6 @@ pub fn warn(reason: &str, text: &str) {
                 err_line(line);
             }
         }
-    }
-}
-
-pub fn deprecated(old: &str, replacement: &str) {
-    let fresh = DEPRECATIONS
-        .lock()
-        .is_ok_and(|mut seen| seen.insert(old.to_owned()));
-    if fresh {
-        warn(
-            "deprecated",
-            &format!("{old} is deprecated. Use {replacement}."),
-        );
     }
 }
 
@@ -859,6 +845,14 @@ pub fn exact_json(value: &Value) {
 }
 
 pub fn table(headers: &[&str], rows: &[Vec<String>]) {
+    render_table(headers, rows, false);
+}
+
+pub fn wrapped_table(headers: &[&str], rows: &[Vec<String>]) {
+    render_table(headers, rows, true);
+}
+
+fn render_table(headers: &[&str], rows: &[Vec<String>], wrap_tail: bool) {
     let modes = Modes::get();
     if !modes.stdout_table() {
         outln(&headers.join("\t"));
@@ -876,6 +870,9 @@ pub fn table(headers: &[&str], rows: &[Vec<String>]) {
         .iter()
         .map(|row| row.iter().map(|cell| clean(cell)).collect())
         .collect();
+    if wrap_tail && headers.len() > 1 && render_wrapped_tail(headers, &cleaned, modes.width()) {
+        return;
+    }
     let mut widths: Vec<usize> = headers.iter().map(|header| display_width(header)).collect();
     for row in &cleaned {
         for (index, cell) in row.iter().enumerate() {
@@ -922,19 +919,10 @@ pub fn table(headers: &[&str], rows: &[Vec<String>]) {
     }
 }
 
-pub fn wrapped_table(headers: &[&str], rows: &[Vec<String>]) {
-    let modes = Modes::get();
-    if !modes.stdout_table() || headers.len() < 2 {
-        table(headers, rows);
-        return;
-    }
-    let cleaned: Vec<Vec<String>> = rows
-        .iter()
-        .map(|row| row.iter().map(|cell| clean(cell)).collect())
-        .collect();
+fn render_wrapped_tail(headers: &[&str], cleaned: &[Vec<String>], width: usize) -> bool {
     let last = headers.len() - 1;
     let mut widths: Vec<usize> = headers.iter().map(|header| display_width(header)).collect();
-    for row in &cleaned {
+    for row in cleaned {
         for (index, cell) in row.iter().enumerate().take(last) {
             if let Some(width) = widths.get_mut(index) {
                 *width = (*width).max(display_width(cell));
@@ -946,10 +934,9 @@ pub fn wrapped_table(headers: &[&str], rows: &[Vec<String>]) {
         .take(last)
         .map(|width| width + 3)
         .sum::<usize>();
-    let room = modes.width().saturating_sub(fixed);
+    let room = width.saturating_sub(fixed);
     if room < 16 {
-        table(headers, rows);
-        return;
+        return false;
     }
     let indent = " ".repeat(fixed);
     let line = |cells: &[String]| {
@@ -972,9 +959,10 @@ pub fn wrapped_table(headers: &[&str], rows: &[Vec<String>]) {
             .map(|header| (*header).to_owned())
             .collect::<Vec<_>>(),
     );
-    for row in &cleaned {
+    for row in cleaned {
         line(row);
     }
+    true
 }
 
 pub fn mask_secret(secret: &str) {

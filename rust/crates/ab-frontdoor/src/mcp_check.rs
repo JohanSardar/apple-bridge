@@ -142,15 +142,6 @@ pub(crate) fn arguments(
         .as_object()
         .cloned()
         .unwrap_or_default();
-    if !properties.contains_key("args")
-        && let Some(Value::Object(inner)) = fields.remove("args")
-    {
-        let outer = std::mem::take(&mut fields);
-        fields = inner;
-        if let Some(version) = outer.get("expected_version") {
-            fields.insert("expected_version".into(), version.clone());
-        }
-    }
     if operation.kind != ab_catalog::OperationKind::Command
         && properties.contains_key("time_zone")
         && !fields.contains_key("time_zone")
@@ -451,14 +442,14 @@ pub(crate) fn from_error(
             .hint("Do not retry. Tell the owner it is not available yet."),
         Code::Indeterminate => problem
             .problem("nobody can tell whether this change happened")
-            .hint("Do not retry with a new request_id. Check apple_command_status with the same request_id, or tell the owner."),
+            .hint("Do not retry with a new request_id. Check apple_change_status with the same request_id, or tell the owner."),
         Code::IdReused => problem
             .field("request_id")
             .problem("this request_id was already used for a different request")
             .hint("Use a new request_id for a new change. Reuse a request_id only to repeat exactly the same call."),
         Code::Deadline => problem
             .problem("the Mac did not answer in time")
-            .hint("Retry a read. For a change, check apple_command_status before trying again."),
+            .hint("Retry a read. For a change, check apple_change_status before trying again."),
         Code::Expired => expired_problem(problem, operation),
         Code::TooLarge => problem
             .problem("the input is too large")
@@ -646,7 +637,7 @@ const LISTINGS: &[(&str, &str)] = &[
     ("msg", "messages_read"),
     ("att", "messages_read, from a message's attachments"),
     ("con", "contacts_find"),
-    ("evt", "calendar_events"),
+    ("evt", "calendar_list"),
     ("cal", "apple_read calendar.list_calendars"),
     ("rem", "apple_read reminders.list"),
     ("lst", "apple_read reminders.list_lists"),

@@ -4,6 +4,8 @@ use crate::approval_review::{OwnerReview, Preview, phone_decision_hash};
 use crate::{GatewayStore, LocalQueryStore};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use std::sync::Mutex as StdMutex;
+#[path = "local_security/admission_tests.rs"]
+mod admission_tests;
 #[path = "local_security/photos_tests.rs"]
 mod photos_tests;
 
@@ -30,7 +32,15 @@ impl Codec for TestCodec {
         Ok(bytes.to_vec())
     }
     fn command_hash(&self, c: &Command) -> Result<String, Error> {
-        Ok(ab_trust::fingerprint(c.id.as_bytes()))
+        ab_trust::wire::gojson::CommandHash {
+            op: &c.op,
+            args: c.args.get().as_bytes(),
+            version: c.expected_version,
+            expires: GoTime::parse(&c.expires_at).map_err(|_| Code::Invalid)?,
+            era: &c.admission_era,
+        }
+        .digest()
+        .map_err(|_| Code::Invalid.into())
     }
     fn fingerprint(&self, bytes: &[u8]) -> String {
         ab_trust::fingerprint(bytes)
@@ -64,7 +74,8 @@ impl ApplePeer for TestPeer {
                 self.0.staged.lock().map_err(|_| Code::Corrupt)?.push(bytes);
             }
             self.0.frames.lock().map_err(|_| Code::Corrupt)?.push(args);
-            if f.id == "qry_location_failure" || f.id == "qry_photos_failure" {
+            if f.id.starts_with("qry_location_failure.") || f.id.starts_with("qry_photos_failure.")
+            {
                 return Ok(IpcFrame {
                     t: "QueryError".into(),
                     code: "unavailable".into(),
@@ -106,7 +117,12 @@ impl ApplePeer for TestPeer {
 #[derive(Debug)]
 struct NativeActions;
 impl ActionResolver for NativeActions {
-    fn serialization_key(&self, _: &Principal, c: &Command) -> Result<String, Error> {
+    fn serialization_key_validated(
+        &self,
+        _: &Principal,
+        c: &Command,
+        _: &crate::command_contract::Validated,
+    ) -> Result<String, Error> {
         Ok(c.op.clone())
     }
     fn resolve(&self, _: &Principal, c: &Command) -> Result<PreparedAction, Error> {
@@ -192,6 +208,11 @@ fn state_of(raw: &RawValue) -> String {
     let value: Value = serde_json::from_str(raw.get()).expect("record");
     value["state"].as_str().unwrap_or_default().to_owned()
 }
+fn query_id(raw: &RawValue) -> String {
+    let value: Value = serde_json::from_str(raw.get()).expect("query result");
+    value["id"].as_str().expect("query ID").into()
+}
+
 fn queries_reaching_native(f: &Fixture) -> usize {
     f.peer.0.frames.lock().expect("frames").len()
 }
@@ -226,12 +247,12 @@ async fn capture_asks_only_an_ask_first_agent_and_a_full_agent_captures_at_once(
                     continue;
                 } else {
                     assert_eq!(state_of(&answer.expect("pending")), "awaiting_approval");
-                    let row = f.gateway.state.command(id).expect("row");
+                    let row = f.gateway.state.principal_command(&p.id, id).expect("row");
                     let review = f.gateway.approval_review(&row).await.expect("review");
                     f.gateway
                         .decide(
                             &owner(),
-                            id,
+                            &row.command.id,
                             false,
                             &OwnerReview {
                                 binding: &review.binding,
@@ -284,15 +305,13 @@ async fn current_location_reads_at_once_unless_the_agent_asks_first() {
                 "a request ID reads once"
             );
             let other = principal("agent:other", "agent", level, &["location:read"]);
-            assert_eq!(
-                f.gateway
-                    .query(&other, request)
-                    .await
-                    .expect_err("identity bound")
-                    .code,
-                Code::IdReused
-            );
-            assert_eq!(queries_reaching_native(&f), 1);
+            let other_result = f
+                .gateway
+                .query(&other, request)
+                .await
+                .expect("independent read");
+            assert_ne!(query_id(&result), query_id(&other_result));
+            assert_eq!(queries_reaching_native(&f), 2);
             assert!(
                 !serde_json::to_string(&f.gateway.state.commands().expect("ledger"))
                     .expect("ledger JSON")
@@ -329,6 +348,7 @@ async fn current_location_asks_once_per_query_for_a_local_or_remote_ask_first_ag
                 .query(&p, request.clone())
                 .await
                 .expect("pending approval");
+            let approval_id = query_id(&pending);
             let pending: Value = serde_json::from_str(pending.get()).expect("pending JSON");
             assert_eq!(pending["state"], "awaiting_approval", "{remote} {level}");
             assert!(pending["result_json"].is_null());
@@ -338,7 +358,7 @@ async fn current_location_asks_once_per_query_for_a_local_or_remote_ask_first_ag
                 accepted_unpreviewable: false,
             };
             f.gateway
-                .decide(&owner(), &request.id, true, &review)
+                .decide(&owner(), &approval_id, true, &review)
                 .await
                 .expect("owner approves");
             assert_eq!(
@@ -383,7 +403,7 @@ async fn current_location_asks_once_per_query_for_a_local_or_remote_ask_first_ag
                 "awaiting_approval"
             );
             f.gateway
-                .decide(&owner(), &request.id, false, &review)
+                .decide(&owner(), &query_id(&next), false, &review)
                 .await
                 .expect("owner declines");
             assert!(f.gateway.query(&p, request).await.is_err());
@@ -415,16 +435,15 @@ async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
     Arc::get_mut(&mut f.gateway).expect("exclusive").clock = clock.clone();
     let mut request = query("location.current", &json!({}));
     request.id = "qry_bound_location".into();
-    f.gateway.query(&p, request.clone()).await.expect("pending");
+    let first = f.gateway.query(&p, request.clone()).await.expect("pending");
     let other = principal("agent:other", "agent", "approve", &["location:read"]);
-    assert_eq!(
-        f.gateway
-            .query(&other, request.clone())
-            .await
-            .expect_err("identity bound")
-            .code,
-        Code::IdReused
-    );
+    let second = f
+        .gateway
+        .query(&other, request.clone())
+        .await
+        .expect("independent approval");
+    assert_eq!(state_of(&second), "awaiting_approval");
+    assert_ne!(query_id(&first), query_id(&second));
     let mut changed = request.clone();
     changed.deadline_ms += 1;
     assert_eq!(
@@ -440,9 +459,16 @@ async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
         accepted_unpreviewable: false,
     };
     f.gateway
-        .decide(&owner(), &request.id, true, &review)
+        .decide(&owner(), &query_id(&first), true, &review)
         .await
         .expect("approved");
+    let still_pending = f
+        .gateway
+        .query(&other, request.clone())
+        .await
+        .expect("still pending");
+    assert_eq!(query_id(&still_pending), query_id(&second));
+    assert_eq!(state_of(&still_pending), "awaiting_approval");
     *clock.0.lock().expect("clock") = jiff::Timestamp::now()
         .checked_add(jiff::SignedDuration::from_mins(11))
         .expect("later");
@@ -458,16 +484,79 @@ async fn current_location_approval_is_bound_to_identity_request_and_expiry() {
 }
 
 #[tokio::test]
+async fn legacy_query_approvals_are_found_only_for_the_original_principal() {
+    let first = principal(
+        "agent:first",
+        "agent",
+        "approve",
+        &["location:read", "photos:write"],
+    );
+    let second = principal(
+        "agent:second",
+        "agent",
+        "approve",
+        &["location:read", "photos:write"],
+    );
+    for (operation, args) in [
+        ("location.current", json!({})),
+        (
+            "photos.favorite",
+            json!({"asset_id":"synthetic-asset","favorite":true}),
+        ),
+    ] {
+        let source = fixture();
+        let mut request = query(operation, &args);
+        request.id = "qry_legacy_shared".into();
+        source
+            .gateway
+            .query(&first, request.clone())
+            .await
+            .expect("pending");
+        let mut legacy = source
+            .gateway
+            .state
+            .principal_command(&first.id, &request.id)
+            .expect("record");
+        let f = fixture();
+        legacy.admission_era = f.gateway.state.admission_era().expect("era");
+        legacy.command.id.clone_from(&request.id);
+        if operation == "location.current" {
+            legacy.command.args = raw(&request).expect("legacy arguments");
+            legacy.request_hash = f.gateway.codec.command_hash(&legacy.command).expect("hash");
+        }
+        f.gateway
+            .state
+            .transition(None, legacy)
+            .expect("legacy record");
+        let previous = f
+            .gateway
+            .query(&first, request.clone())
+            .await
+            .expect("legacy approval");
+        assert_eq!(state_of(&previous), "awaiting_approval");
+        assert_eq!(query_id(&previous), request.id);
+        let independent = f
+            .gateway
+            .query(&second, request.clone())
+            .await
+            .expect("independent approval");
+        assert_eq!(state_of(&independent), "awaiting_approval");
+        assert_ne!(query_id(&independent), request.id);
+        assert_eq!(queries_reaching_native(&f), 0);
+    }
+}
+
+#[tokio::test]
 async fn failed_location_dispatch_also_consumes_approval() {
     let f = fixture();
     let p = principal("agent:location", "agent", "approve", &["location:read"]);
     let mut request = query("location.current", &json!({}));
     request.id = "qry_location_failure".into();
-    f.gateway.query(&p, request.clone()).await.expect("pending");
+    let pending = f.gateway.query(&p, request.clone()).await.expect("pending");
     f.gateway
         .decide(
             &owner(),
-            &request.id,
+            &query_id(&pending),
             true,
             &OwnerReview {
                 binding: "",
@@ -592,7 +681,7 @@ async fn forwarded_current_location_uses_the_same_single_use_owner_gate() {
         f.gateway
             .decide(
                 &owner(),
-                "qry_forwarded_location",
+                &query_id(&pending),
                 true,
                 &OwnerReview {
                     binding: "",
@@ -899,8 +988,12 @@ async fn pending_with_upload(f: &Fixture, name: &str, bytes: &[u8]) -> (String, 
         .await
         .expect("submit");
     assert_eq!(state_of(&raw), "awaiting_approval");
-    let record = f.gateway.state.command(&id).expect("row");
-    (id, record)
+    let record = f
+        .gateway
+        .state
+        .principal_command(&agent().id, &id)
+        .expect("row");
+    (record.command.id.clone(), record)
 }
 
 #[tokio::test]
@@ -944,7 +1037,11 @@ async fn an_inline_attachment_is_reviewed_from_its_decoded_bytes() {
         )
         .await
         .expect("submit");
-    let record = f.gateway.state.command(id).expect("row");
+    let record = f
+        .gateway
+        .state
+        .principal_command(&agent().id, id)
+        .expect("row");
     let review = f.gateway.approval_review(&record).await.expect("review");
     assert_eq!(review.attachments[0].media_type, "text/plain");
     assert_eq!(
@@ -1172,12 +1269,16 @@ async fn a_command_without_attachments_decides_as_before() {
         )
         .await
         .expect("submit");
-    let record = f.gateway.state.command(id).expect("row");
+    let record = f
+        .gateway
+        .state
+        .principal_command(&agent().id, id)
+        .expect("row");
     let review = f.gateway.approval_review(&record).await.expect("review");
     assert!(review.attachments.is_empty() && review.binding.is_empty());
     let decided = f
         .gateway
-        .decide_phone(id, &record.request_hash, true)
+        .decide_phone(&record.command.id, &record.request_hash, true)
         .await
         .expect("plain");
     assert_ne!(state_of(&decided), "awaiting_approval");

@@ -22,6 +22,12 @@ fn convert<A: Serialize, B: DeserializeOwned>(value: &A) -> Result<B, Error> {
         .map_err(|_| Code::Corrupt.into())
 }
 fn state_error(error: &ab_state::Error) -> Error {
+    if let ab_state::Error::MissingScope(scope) = error {
+        return Error::missing_scope(scope);
+    }
+    if matches!(error, ab_state::Error::IdReused) {
+        return Code::IdReused.into();
+    }
     if let ab_state::Error::Contract(code) = error
         && let Ok(code) = convert::<_, Code>(code)
     {
@@ -116,17 +122,25 @@ impl GatewayState for GatewayStore {
         if !c.op.starts_with("calendar.") {
             return Ok(key);
         }
-        let target = crate::command_contract::validate(c)?;
-        if target.id.is_empty() {
+        self.serialization_key_validated(p, c, &crate::command_contract::validate(c)?, key)
+    }
+    fn serialization_key_validated(
+        &self,
+        p: &crate::Principal,
+        c: &crate::Command,
+        target: &crate::command_contract::Validated,
+        key: String,
+    ) -> Result<String, Error> {
+        if !c.op.starts_with("calendar.") || target.id.is_empty() {
             return Ok(key);
         }
-        let visibility = crate::adapters::visibility(&p.visibility());
+        let visibility = crate::adapters::write_visibility(&p.visibility());
         let Ok(result) = self.with(|s| {
             s.read(
                 &visibility,
                 &ab_state::ReadQuery {
                     collection: "calendar.event".into(),
-                    id: target.id,
+                    id: target.id.clone(),
                     ..Default::default()
                 },
             )
@@ -149,14 +163,35 @@ impl GatewayState for GatewayStore {
         ))
     }
 
+    fn reminder_target(&self, title: &str, completed: bool) -> Result<(String, u64), Error> {
+        let record = self.with(|state| state.reminder_target(title, completed))?;
+        Ok((record.id.as_str().into(), record.version))
+    }
+
     fn admission_era(&self) -> Result<String, Error> {
         self.with(|s| s.admission_era())
     }
     fn command(&self, id: &str) -> Result<CommandRecord, Error> {
         convert(&self.with(|s| s.command(id))?)
     }
+    fn principal_command(&self, principal: &str, id: &str) -> Result<CommandRecord, Error> {
+        convert(&self.with(|s| s.principal_command(principal, id))?)
+    }
+    fn admit(&self, request_id: &str, record: CommandRecord) -> Result<CommandRecord, Error> {
+        let record = convert(&record)?;
+        convert(&self.with(|s| s.admit_command(request_id, record))?)
+    }
     fn commands(&self) -> Result<Vec<CommandRecord>, Error> {
         convert(&self.with(|s| s.commands())?)
+    }
+    fn visible_commands(
+        &self,
+        principal: &crate::Principal,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Vec<CommandRecord>, Error> {
+        let visibility = crate::adapters::write_visibility(&principal.visibility());
+        convert(&self.with(|s| s.visible_commands(&principal.id, &visibility, offset, limit))?)
     }
     fn transition(
         &self,

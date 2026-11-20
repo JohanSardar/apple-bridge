@@ -118,7 +118,10 @@ async fn voicemail_reader_reaches_cli_mcp_and_authorized_audio_downloads() -> Ch
     let text = String::from_utf8(output.stdout)?;
     assert!(text.contains("Synthetic voicemail"));
     assert!(text.contains(&digest));
-    let token = bridge(&home, &["token", "create", "--scope", "voicemail:read"])?;
+    let token = bridge(
+        &home,
+        &["token", "create", "--yes", "--scope", "voicemail:read"],
+    )?;
     assert!(token.status.success());
     let token = String::from_utf8(token.stdout)?;
     let client = reqwest::Client::builder().no_proxy().build()?;
@@ -153,7 +156,10 @@ async fn voicemail_reader_reaches_cli_mcp_and_authorized_audio_downloads() -> Ch
         .send()
         .await?;
     assert_eq!(denied.status(), reqwest::StatusCode::UNAUTHORIZED);
-    let unrelated = bridge(&home, &["token", "create", "--scope", "contacts:read"])?;
+    let unrelated = bridge(
+        &home,
+        &["token", "create", "--yes", "--scope", "contacts:read"],
+    )?;
     assert!(unrelated.status.success());
     let unrelated = String::from_utf8(unrelated.stdout)?;
     let denied = client

@@ -1,8 +1,21 @@
 use crate::{
-    Args, Command, Error, Timestamp, Value, arr, b, base64, check, decode, n, p, s, timestamp,
+    Args, Command, Error, Timestamp, Value, Violation, arr, b, base64, check, decode, n, p, s,
+    timestamp,
 };
 use sha2::{Digest, Sha256};
-pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
+fn require(ok: bool, field: impl Into<String>, expected: &'static str) -> Result<(), Violation> {
+    if ok {
+        Ok(())
+    } else {
+        Err(Violation::invalid(
+            field,
+            "field does not meet the operation requirements",
+            expected,
+        ))
+    }
+}
+
+pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Violation> {
     let op = c.op.as_str();
     if op.starts_with("contacts.") {
         return contacts(c);
@@ -24,9 +37,18 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
     } else if op == "pdf.annotate" {
         pdf(c, &a)?;
     } else if op == "focus.set" {
-        check(p(&a, "on") && s(&a, "mode") == "Do Not Disturb")?;
+        require(p(&a, "on"), "args.on", "a boolean")?;
+        require(
+            s(&a, "mode") == "Do Not Disturb",
+            "args.mode",
+            "Do Not Disturb",
+        )?;
         if !s(&a, "until").is_empty() {
-            check(b(&a, "on") && s(&a, "until").parse::<Timestamp>().is_ok_and(|t| t > now))?;
+            require(
+                b(&a, "on") && s(&a, "until").parse::<Timestamp>().is_ok_and(|t| t > now),
+                "args.until",
+                "a future timestamp when enabling Do Not Disturb",
+            )?;
         }
     } else if op.starts_with("iphone.") {
         iphone(c, &a, now)?;
@@ -40,7 +62,11 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
     ) {
         capture(op, &a)?;
     } else if matches!(op, "speech.say" | "capture.play_sound") {
-        check(!p(&a, "volume") || (0.0..=1.0).contains(&n(&a, "volume")))?;
+        require(
+            !p(&a, "volume") || (0.0..=1.0).contains(&n(&a, "volume")),
+            "args.volume",
+            "a number from 0 to 1",
+        )?;
         check(if op == "speech.say" {
             !s(&a, "text").trim().is_empty()
                 && s(&a, "text").len() <= 2048
@@ -66,46 +92,106 @@ pub(crate) fn validate(c: &Command, now: Timestamp) -> Result<Args, Error> {
                 .contains(&s(&a, "name"))
         })?;
     } else {
-        return Err(Error::Unsupported);
+        return Err(Error::Unsupported.into());
     }
     Ok(a)
 }
-fn document_input(a: &Args) -> Result<(), Error> {
-    check(!a.contains_key("file"))?;
+fn document_input(a: &Args) -> Result<(), Violation> {
+    require(
+        !a.contains_key("file"),
+        "args.file",
+        "a blob reference or inline Base64 input",
+    )?;
     let inputs = usize::from(!s(a, "data_base64").is_empty()) + usize::from(p(a, "blob"));
-    check(inputs == 1)?;
+    require(
+        inputs == 1,
+        "args.blob",
+        "exactly one of blob or data_base64",
+    )?;
     if !s(a, "data_base64").is_empty() {
-        let data = base64(s(a, "data_base64"))?;
-        check(!data.is_empty() && data.len() <= 8 << 20)?;
+        let data = base64(s(a, "data_base64")).map_err(|_| {
+            Violation::invalid(
+                "args.data_base64",
+                "invalid Base64",
+                "Base64-encoded document bytes",
+            )
+        })?;
+        require(
+            !data.is_empty() && data.len() <= 8 << 20,
+            "args.data_base64",
+            "1 byte to 8 MiB of document content",
+        )?;
     }
     if p(a, "blob") {
-        let reference = a["blob"].as_object().ok_or(Error::Invalid)?;
+        let reference = a["blob"].as_object().ok_or_else(|| {
+            Violation::invalid(
+                "args.blob",
+                "field has the wrong type",
+                "a blob reference object",
+            )
+        })?;
         let query = !s(reference, "query_id").is_empty();
         let record =
             !s(reference, "record_id").is_empty() && !s(reference, "collection").is_empty();
-        check(digest(s(reference, "digest")) && query != record)?;
+        require(
+            digest(s(reference, "digest")),
+            "args.blob.digest",
+            "a SHA-256 digest",
+        )?;
+        require(
+            query != record,
+            "args.blob",
+            "a query ID or a record ID and collection",
+        )?;
     }
     Ok(())
 }
-fn pdf(c: &Command, a: &Args) -> Result<(), Error> {
-    check(
-        c.expected_version == 0
-            && !arr(a, "annotations").is_empty()
-            && arr(a, "annotations").len() <= 100,
+fn pdf(c: &Command, a: &Args) -> Result<(), Violation> {
+    let annotations = arr(a, "annotations");
+    require(
+        c.expected_version == 0,
+        "expected_version",
+        "omit for a new document",
+    )?;
+    require(
+        (1..=100).contains(&annotations.len()),
+        "args.annotations",
+        "1 to 100 annotations",
     )?;
     document_input(a)?;
-    for annotation in arr(a, "annotations") {
+    for (index, annotation) in annotations.iter().enumerate() {
         let a = annotation.as_object().ok_or(Error::Invalid)?;
-        check(
-            (1.0..=1000.0).contains(&n(a, "page"))
-                && ["note", "highlight"].contains(&s(a, "type"))
-                && s(a, "text").len() <= 4096
-                && (s(a, "type") != "note" || !s(a, "text").is_empty()),
+        let path = |field| format!("args.annotations[{index}].{field}");
+        require(
+            (1.0..=1000.0).contains(&n(a, "page")),
+            path("page"),
+            "a page number from 1 to 1000",
         )?;
-        for field in ["x", "y", "width", "height"] {
-            check(n(a, field).is_finite() && (0.0..=100_000.0).contains(&n(a, field)))?;
+        require(
+            ["note", "highlight"].contains(&s(a, "type")),
+            path("type"),
+            "note or highlight",
+        )?;
+        require(
+            s(a, "text").len() <= 4096 && (s(a, "type") != "note" || !s(a, "text").is_empty()),
+            path("text"),
+            "at most 4096 bytes of text, required for notes",
+        )?;
+        for field in ["x", "y"] {
+            require(
+                (0.0..=100_000.0).contains(&n(a, field)),
+                path(field),
+                "0 to 100000",
+            )?;
         }
-        check(n(a, "width") > 0.0 && n(a, "height") > 0.0)?;
+        for field in ["width", "height"] {
+            let size = n(a, field);
+            require(
+                size > 0.0 && size <= 100_000.0,
+                path(field),
+                "greater than 0 and at most 100000",
+            )?;
+        }
     }
     Ok(())
 }
@@ -151,14 +237,27 @@ pub(crate) fn shape(op: &str) -> &'static str {
         }
     }
 }
-fn allowed(c: &Command, keys: &[&str], reject_null: bool) -> Result<(), Error> {
+fn allowed(c: &Command, keys: &[&str], reject_null: bool) -> Result<(), Violation> {
     let v: Value = serde_json::from_str(c.args.get()).map_err(|_| Error::Invalid)?;
     for (k, v) in v.as_object().ok_or(Error::Invalid)? {
-        check(keys.contains(&k.as_str()) && (!reject_null || !v.is_null()))?;
+        if !keys.contains(&k.as_str()) {
+            return Err(Violation::invalid(
+                format!("args.{k}"),
+                "field is unsupported for this operation",
+                "a field supported by the operation",
+            ));
+        }
+        if reject_null && v.is_null() {
+            return Err(Violation::invalid(
+                format!("args.{k}"),
+                "field must not be null",
+                "a value or an omitted field",
+            ));
+        }
     }
     Ok(())
 }
-fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
+fn reminders(c: &Command, a: &Args) -> Result<(), Violation> {
     let fields = match c.op.as_str() {
         "reminders.create" => vec![
             "list_id",
@@ -193,9 +292,29 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
     };
     allowed(c, &fields, true)?;
     if fields.is_empty() {
-        return Err(Error::Unsupported);
+        return Err(Error::Unsupported.into());
     }
-    check(!p(a, "title") || !s(a, "title").trim().is_empty())?;
+    if p(a, "title") && s(a, "title").trim().is_empty() {
+        return Err(Violation::invalid(
+            "args.title",
+            "title is empty",
+            "a nonempty title",
+        ));
+    }
+    if fields.contains(&"id") && s(a, "id").is_empty() {
+        return Err(Violation::invalid(
+            "args.id",
+            "target is required",
+            "a reminder or list ID",
+        ));
+    }
+    if fields.contains(&"id") && c.expected_version == 0 {
+        return Err(Violation::invalid(
+            "expected_version",
+            "target version is required",
+            "the current version of the target",
+        ));
+    }
     let patch = [
         "title",
         "notes",
@@ -226,6 +345,17 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
         }
         _ => !s(a, "id").is_empty() && c.expected_version != 0,
     })?;
+    reminder_alarms(a)?;
+    if p(a, "priority") && !(0.0..=9.0).contains(&n(a, "priority")) {
+        return Err(Violation::invalid(
+            "args.priority",
+            "priority is outside the supported range",
+            "0 to 9",
+        ));
+    }
+    Ok(())
+}
+fn reminder_alarms(a: &Args) -> Result<(), Violation> {
     check(arr(a, "alarms").len() <= 8)?;
     for alarm in arr(a, "alarms") {
         let alarm = alarm.as_object().ok_or(Error::Invalid)?;
@@ -253,7 +383,7 @@ fn reminders(c: &Command, a: &Args) -> Result<(), Error> {
             check(timestamp(s(alarm, "absolute_date")))?;
         }
     }
-    check(!p(a, "priority") || (0.0..=9.0).contains(&n(a, "priority")))
+    Ok(())
 }
 fn notes(c: &Command, a: &Args) -> Result<(), Error> {
     let op = c.op.as_str();
@@ -314,7 +444,7 @@ fn notes(c: &Command, a: &Args) -> Result<(), Error> {
         _ => return Err(Error::Unsupported),
     })
 }
-fn messages(c: &Command, a: &Args) -> Result<(), Error> {
+fn messages(c: &Command, a: &Args) -> Result<(), Violation> {
     let fields: &[&str] = match c.op.as_str() {
         "messages.send" => &[
             "chat_id",
@@ -322,6 +452,7 @@ fn messages(c: &Command, a: &Args) -> Result<(), Error> {
             "service",
             "text",
             "files",
+            "asset_ids",
             "resend_of",
         ],
         "messages.reply" => &["id", "part_index", "text", "files"],
@@ -331,57 +462,144 @@ fn messages(c: &Command, a: &Args) -> Result<(), Error> {
         _ => &["id"],
     };
     allowed(c, fields, true)?;
-    check(n(a, "part_index") >= 0.0 && arr(a, "files").len() <= 10 && s(a, "text").len() <= 65536)?;
-    for file in arr(a, "files") {
-        let f = file.as_object().ok_or(Error::Invalid)?;
-        let data = base64(s(f, "data"))?;
-        if data.len() > 100 << 20 {
-            return Err(Error::TooLarge);
-        }
-        check(
-            s(f, "data").is_empty() != s(f, "upload_id").is_empty()
-                && !s(f, "name").is_empty()
-                && ![".", ".."].contains(&s(f, "name"))
-                && !s(f, "name").contains('/'),
-        )?;
-    }
+    require(
+        n(a, "part_index") >= 0.0,
+        "args.part_index",
+        "a nonnegative index",
+    )?;
+    require(
+        s(a, "text").len() <= 65536,
+        "args.text",
+        "at most 65536 bytes of text",
+    )?;
+    let files = arr(a, "files");
+    message_files(files)?;
+
     if c.op == "messages.send" {
-        check(
-            (s(a, "resend_of").is_empty() || !s(a, "chat_id").is_empty())
-                && (s(a, "chat_id").is_empty() || s(a, "service").is_empty())
-                && (s(a, "chat_id").is_empty() != arr(a, "handles").is_empty())
-                && (!s(a, "text").is_empty() || !arr(a, "files").is_empty())
-                && c.expected_version == 0,
-        )?;
-        if !arr(a, "handles").is_empty() {
-            check(
-                arr(a, "handles").len() == 1
-                    && ["iMessage", "SMS", "RCS"].contains(&s(a, "service")),
-            )?;
-        }
+        send_message(c, a, files)?;
     } else {
-        check(!s(a, "id").is_empty())?;
+        require(!s(a, "id").is_empty(), "args.id", "a message ID")?;
         if matches!(c.op.as_str(), "messages.edit" | "messages.unsend")
             || c.op.starts_with("messages.delete_")
         {
-            check(c.expected_version != 0)?;
+            require(
+                c.expected_version != 0,
+                "expected_version",
+                "the current version of the message",
+            )?;
         }
     }
     if matches!(c.op.as_str(), "messages.edit" | "messages.reply") {
-        check(!s(a, "text").is_empty())?;
+        require(
+            !s(a, "text").is_empty(),
+            "args.text",
+            "nonempty message text",
+        )?;
     }
     if c.op == "messages.react" {
-        check(
+        require(
             ["love", "like", "dislike", "laugh", "emphasize", "question"]
                 .contains(&s(a, "reaction"))
                 || s(a, "reaction") == "emoji" && !s(a, "emoji").is_empty(),
+            "args.reaction",
+            "a supported reaction or an emoji with its value",
         )?;
     }
     Ok(())
 }
-fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
+fn send_message(c: &Command, a: &Args, files: &[Value]) -> Result<(), Violation> {
+    if p(a, "asset_ids")
+        && (arr(a, "asset_ids").is_empty()
+            || arr(a, "asset_ids").len() != arr(a, "files").len()
+            || arr(a, "asset_ids").iter().any(|id| {
+                id.as_str()
+                    .is_none_or(|id| id.trim().is_empty() || id.len() > 256)
+            }))
+    {
+        return Err(Violation::invalid(
+            "args.asset_ids",
+            "invalid photo attachment binding",
+            "one nonempty asset ID for each staged photo",
+        ));
+    }
+    let chat = !s(a, "chat_id").is_empty();
+    require(
+        chat == arr(a, "handles").is_empty(),
+        "args.chat_id",
+        "exactly one of chat_id or handles",
+    )?;
+    require(
+        s(a, "resend_of").is_empty() || chat,
+        "args.resend_of",
+        "chat_id when resending",
+    )?;
+    require(
+        !chat || s(a, "service").is_empty(),
+        "args.service",
+        "omit when chat_id is given",
+    )?;
+    require(
+        !s(a, "text").is_empty() || !files.is_empty(),
+        "args.text",
+        "message text, files, or both",
+    )?;
+    require(
+        c.expected_version == 0,
+        "expected_version",
+        "omit for a new message",
+    )?;
+    if !chat {
+        require(
+            arr(a, "handles").len() == 1,
+            "args.handles",
+            "one recipient",
+        )?;
+        require(
+            ["iMessage", "SMS", "RCS"].contains(&s(a, "service")),
+            "args.service",
+            "iMessage, SMS, or RCS",
+        )?;
+    }
+    Ok(())
+}
+fn message_files(files: &[Value]) -> Result<(), Violation> {
+    require(files.len() <= 10, "args.files", "at most 10 files")?;
+    for (index, file) in files.iter().enumerate() {
+        let file = file.as_object().ok_or(Error::Invalid)?;
+        let data = base64(s(file, "data")).map_err(|_| {
+            Violation::invalid(
+                format!("args.files[{index}].data"),
+                "invalid Base64",
+                "Base64-encoded file bytes",
+            )
+        })?;
+        if data.len() > 100 << 20 {
+            return Err(Violation {
+                code: "too_large",
+                ..Violation::invalid(
+                    format!("args.files[{index}].data"),
+                    "file exceeds upload limit",
+                    "at most 100 MiB",
+                )
+            });
+        }
+        require(
+            s(file, "data").is_empty() != s(file, "upload_id").is_empty(),
+            format!("args.files[{index}]"),
+            "exactly one of data or upload_id",
+        )?;
+        let name = s(file, "name");
+        require(
+            !name.is_empty() && ![".", ".."].contains(&name) && !name.contains('/'),
+            format!("args.files[{index}].name"),
+            "a filename without path components",
+        )?;
+    }
+    Ok(())
+}
+fn calendar(c: &Command, a: &Args) -> Result<(), Violation> {
     if s(a, "span") == "all" {
-        return Err(Error::Unsupported);
+        return Err(Error::Unsupported.into());
     }
     let mut fields = vec![
         "calendar_id",
@@ -420,36 +638,9 @@ fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
                 && ["this", "future"].contains(&s(a, "span"))
                 && (c.op != "calendar.update_event" || a.len() >= 3)
         }
-        _ => return Err(Error::Unsupported),
+        _ => return Err(Error::Unsupported.into()),
     })?;
-    let mut times = Vec::new();
-    for k in ["start", "end"] {
-        if p(a, k) {
-            let text = s(a, k);
-            let date = text.parse::<jiff::civil::Date>();
-            let t = if b(a, "all_day") {
-                date.map(|d| d.to_string())
-            } else if timestamp(text) {
-                Ok(text.to_string())
-            } else if !p(a, "all_day") && c.op == "calendar.update_event" {
-                date.map(|d| d.to_string())
-            } else {
-                return Err(Error::Invalid);
-            };
-            times.push(t.map_err(|_| Error::Invalid)?);
-        }
-    }
-    if times.len() == 2 {
-        let to_time = |text: &str| {
-            text.parse::<Timestamp>()
-                .or_else(|_| format!("{text}T00:00:00Z").parse())
-        };
-        let start = to_time(&times[0]).map_err(|_| Error::Invalid)?;
-        let end = to_time(&times[1]).map_err(|_| Error::Invalid)?;
-        let zero = "0001-01-01T00:00:00Z";
-        let ordered = start.to_string() == zero || end.to_string() == zero || end > start;
-        check(ordered)?;
-    }
+    calendar_times(c, a)?;
     if !s(a, "time_zone").is_empty() {
         check(s(a, "time_zone") == "Local" || jiff::tz::TimeZone::get(s(a, "time_zone")).is_ok())?;
     }
@@ -469,7 +660,49 @@ fn calendar(c: &Command, a: &Args) -> Result<(), Error> {
             check(timestamp(s(a, "absolute_date")))?;
         }
     }
-    check(!p(a, "availability") || (-1.0..=3.0).contains(&n(a, "availability")))
+    check(!p(a, "availability") || (-1.0..=3.0).contains(&n(a, "availability")))?;
+    Ok(())
+}
+fn calendar_times(c: &Command, a: &Args) -> Result<(), Violation> {
+    let mut times = Vec::new();
+    for k in ["start", "end"] {
+        if p(a, k) {
+            let text = s(a, k);
+            let date = text.parse::<jiff::civil::Date>();
+            let t = if b(a, "all_day") {
+                date.map(|d| d.to_string())
+            } else if timestamp(text) {
+                Ok(text.to_string())
+            } else if !p(a, "all_day") && c.op == "calendar.update_event" {
+                date.map(|d| d.to_string())
+            } else {
+                return Err(Violation::invalid(
+                    format!("args.{k}"),
+                    "invalid event date or time",
+                    "an ISO date for an all-day event or a timestamp with offset",
+                ));
+            };
+            times.push(t.map_err(|_| Error::Invalid)?);
+        }
+    }
+    if times.len() == 2 {
+        let to_time = |text: &str| {
+            text.parse::<Timestamp>()
+                .or_else(|_| format!("{text}T00:00:00Z").parse())
+        };
+        let start = to_time(&times[0]).map_err(|_| Error::Invalid)?;
+        let end = to_time(&times[1]).map_err(|_| Error::Invalid)?;
+        let zero = "0001-01-01T00:00:00Z";
+        let ordered = start.to_string() == zero || end.to_string() == zero || end > start;
+        if !ordered {
+            return Err(Violation::invalid(
+                "args.end",
+                "event ends before or at its start",
+                "an end after start",
+            ));
+        }
+    }
+    Ok(())
 }
 fn mail(c: &Command, a: &Args) -> Result<(), Error> {
     match c.op.as_str() {
@@ -521,47 +754,51 @@ fn files(c: &Command, a: &Args) -> Result<(), Error> {
     }
     check(arr(a, "tags").len() <= 64)
 }
-fn capture(op: &str, a: &Args) -> Result<(), Error> {
+fn capture(op: &str, a: &Args) -> Result<(), Violation> {
     if op == "print.document" {
         document_input(a)?;
     } else {
         check(!p(a, "blob") && s(a, "data_base64").is_empty())?;
     }
-    check(match op {
-        "capture.screenshot" => {
-            !(p(a, "display") && p(a, "window"))
-                && (!p(a, "display") || n(a, "display") > 0.0)
-                && (!p(a, "window") || n(a, "window") > 0.0)
-                && n(a, "seconds") == 0.0
-                && s(a, "file").is_empty()
-                && s(a, "printer").is_empty()
-        }
-        "capture.camera_photo" => {
-            !p(a, "display")
-                && !p(a, "window")
-                && n(a, "seconds") == 0.0
-                && ["file", "printer"].iter().all(|k| s(a, k).is_empty())
-        }
-        "capture.record_audio" | "mac.screen_record" => {
-            (1.0..=if op == "mac.screen_record" {
-                30.0
-            } else {
-                60.0
-            })
-                .contains(&n(a, "seconds"))
-                && !p(a, "display")
-                && !p(a, "window")
-                && s(a, "file").is_empty()
-                && s(a, "printer").is_empty()
-        }
-        "print.document" => {
-            !s(a, "printer").trim().is_empty()
-                && !p(a, "display")
-                && !p(a, "window")
-                && n(a, "seconds") == 0.0
-        }
-        _ => false,
-    })
+    require(
+        match op {
+            "capture.screenshot" => {
+                !(p(a, "display") && p(a, "window"))
+                    && (!p(a, "display") || n(a, "display") > 0.0)
+                    && (!p(a, "window") || n(a, "window") > 0.0)
+                    && n(a, "seconds") == 0.0
+                    && s(a, "file").is_empty()
+                    && s(a, "printer").is_empty()
+            }
+            "capture.camera_photo" => {
+                !p(a, "display")
+                    && !p(a, "window")
+                    && n(a, "seconds") == 0.0
+                    && ["file", "printer"].iter().all(|k| s(a, k).is_empty())
+            }
+            "capture.record_audio" | "mac.screen_record" => {
+                (1.0..=if op == "mac.screen_record" {
+                    30.0
+                } else {
+                    60.0
+                })
+                    .contains(&n(a, "seconds"))
+                    && !p(a, "display")
+                    && !p(a, "window")
+                    && s(a, "file").is_empty()
+                    && s(a, "printer").is_empty()
+            }
+            "print.document" => {
+                !s(a, "printer").trim().is_empty()
+                    && !p(a, "display")
+                    && !p(a, "window")
+                    && n(a, "seconds") == 0.0
+            }
+            _ => false,
+        },
+        "args",
+        "valid capture options for the operation",
+    )
 }
 fn digest(s: &str) -> bool {
     s.len() == 64
@@ -569,7 +806,7 @@ fn digest(s: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 #[allow(clippy::too_many_lines)]
-fn contacts(c: &Command) -> Result<Args, Error> {
+fn contacts(c: &Command) -> Result<Args, Violation> {
     if [
         "contacts.create_group",
         "contacts.rename_group",
@@ -671,7 +908,7 @@ fn contacts(c: &Command) -> Result<Args, Error> {
         "contacts.create" => s(a, "id").is_empty() && c.expected_version == 0 && !a.is_empty(),
         "contacts.update" => !s(a, "id").is_empty() && c.expected_version != 0 && a.len() >= 2,
         "contacts.delete" => !s(a, "id").is_empty() && c.expected_version != 0 && a.len() == 1,
-        _ => return Err(Error::Unsupported),
+        _ => return Err(Error::Unsupported.into()),
     })?;
     Ok(a.clone())
 }
@@ -816,7 +1053,6 @@ fn iphone(c: &Command, a: &Args, now: Timestamp) -> Result<(), Error> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod mail_tests {
-    use super::validate;
     use crate::{ActionContext, Command, Error, native_action};
     use serde_json::{Value, json};
 
@@ -831,7 +1067,7 @@ mod mail_tests {
     }
 
     fn checked(op: &str, args: &Value) -> Result<(), Error> {
-        validate(&command(op, args), jiff::Timestamp::now()).map(|_| ())
+        crate::validate(&command(op, args), jiff::Timestamp::now()).map(|_| ())
     }
 
     #[test]

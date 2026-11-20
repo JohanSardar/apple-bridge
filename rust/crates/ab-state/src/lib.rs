@@ -11,6 +11,8 @@ pub use gateway::{CommitResult, FrozenSnapshot, restore};
 pub use ledger::{BlobReference, Command, CommandError, CommandEvent, CommandPart, CommandRecord};
 mod models;
 mod notes;
+mod page;
+pub use page::ReadPage;
 mod projection;
 mod query;
 mod reminders;
@@ -34,6 +36,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("command ledger missing; run bridge restore --accept-ledger-loss")]
     LedgerMissing,
+    #[error("missing required scope {0}")]
+    MissingScope(&'static str),
     #[error("id_reused: command ID already identifies another request")]
     IdReused,
     #[error("{0}")]

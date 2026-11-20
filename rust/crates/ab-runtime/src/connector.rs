@@ -109,46 +109,61 @@ async fn answer(
         .map(Json)
         .map_err(|_| StatusCode::GONE)
 }
-pub async fn ask_for_agent(home: &Path, name: &str) -> Result<Value, Error> {
-    socket_post(home, "ask", &json!({"name": name})).await
+pub async fn ask_for_agent(home: &Path, name: &str) -> Result<Value, ClientError> {
+    exchange(home, "ask", Some(json!({"name": name}))).await
 }
-pub async fn ask_for_tailnet_agent(home: &Path, name: &str) -> Result<Value, Error> {
-    socket_post(home, "ask-tailnet", &json!({"name": name})).await
+pub async fn ask_for_tailnet_agent(home: &Path, name: &str) -> Result<Value, ClientError> {
+    exchange(home, "ask-tailnet", Some(json!({"name": name}))).await
 }
-pub async fn agent_answer(home: &Path, id: &str, secret: &str) -> Result<Value, Error> {
-    socket_post(home, "answer", &json!({"id": id, "secret": secret})).await
+pub async fn agent_answer(home: &Path, id: &str, secret: &str) -> Result<Value, ClientError> {
+    exchange(home, "answer", Some(json!({"id": id, "secret": secret}))).await
 }
 pub async fn tailnet_agent_answer(
     home: &Path,
     id: &str,
     secret: &str,
     resource: &str,
-) -> Result<Value, Error> {
-    socket_post(
+) -> Result<Value, ClientError> {
+    exchange(
         home,
         "answer-tailnet",
-        &json!({"id": id, "secret": secret, "resource": resource}),
+        Some(json!({"id": id, "secret": secret, "resource": resource})),
     )
     .await
 }
-async fn socket_post(home: &Path, route: &str, body: &Value) -> Result<Value, Error> {
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error("invalid connector action")]
+    InvalidAction,
+    #[error("connector transport failed: {0}")]
+    Transport(#[from] reqwest::Error),
+    #[error("connector rejected the request with {0}")]
+    Rejected(reqwest::StatusCode),
+    #[error("invalid connector response: {0}")]
+    Decode(#[from] serde_json::Error),
+}
+
+async fn exchange(home: &Path, route: &str, body: Option<Value>) -> Result<Value, ClientError> {
     let client = reqwest::Client::builder()
         .unix_socket(home.join("run/connectors.sock"))
         .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|_| Error::Invalid)?;
-    let response = client
-        .post(format!("http://local/{route}"))
-        .header("Content-Type", "application/json")
-        .body(body.to_string())
-        .send()
-        .await
-        .map_err(|_| Error::Invalid)?;
+        .build()?;
+    let url = format!("http://local/{route}");
+    let request = if let Some(body) = body {
+        client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .body(body.to_string())
+    } else {
+        client.get(url)
+    };
+    let response = request.send().await?;
     if !response.status().is_success() {
-        return Err(Error::Invalid);
+        return Err(ClientError::Rejected(response.status()));
     }
-    serde_json::from_slice(&response.bytes().await.map_err(|_| Error::Invalid)?).map_err(Into::into)
+    Ok(serde_json::from_slice(&response.bytes().await?)?)
 }
+
 pub async fn serve(
     listener: tokio::net::UnixListener,
     connectors: Arc<Connectors>,
@@ -225,23 +240,22 @@ pub fn approval_window(
         });
     }))
 }
-pub async fn command(home: &Path, action: &str, id: &str, code: &str) -> Result<Value, Error> {
-    let client = reqwest::Client::builder()
-        .unix_socket(home.join("run/connectors.sock"))
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|_| Error::Invalid)?;
-    let request = match action {
-        "pending" => client.get("http://local/pending"),
-        "allow" | "deny" => client
-            .post("http://local/decision")
-            .header("Content-Type", "application/json")
-            .body(json!({"id":id,"code":code,"approve":action == "allow"}).to_string()),
-        _ => return Err(Error::Invalid),
-    };
-    let response = request.send().await.map_err(|_| Error::Invalid)?;
-    if !response.status().is_success() {
-        return Err(Error::Invalid);
+pub async fn command(
+    home: &Path,
+    action: &str,
+    id: &str,
+    code: &str,
+) -> Result<Value, ClientError> {
+    match action {
+        "pending" => exchange(home, "pending", None).await,
+        "allow" | "deny" => {
+            exchange(
+                home,
+                "decision",
+                Some(json!({"id": id, "code": code, "approve": action == "allow"})),
+            )
+            .await
+        }
+        _ => Err(ClientError::InvalidAction),
     }
-    serde_json::from_slice(&response.bytes().await.map_err(|_| Error::Invalid)?).map_err(Into::into)
 }

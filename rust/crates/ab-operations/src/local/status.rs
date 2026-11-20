@@ -9,14 +9,13 @@ impl LocalGateway {
         principal: &Principal,
         query: &CommandQuery,
     ) -> Result<Box<RawValue>, Error> {
-        let record = self.state.command(&query.id)?;
-        if record.principal != principal.id
-            || !principal
-                .visibility()
-                .get(&record.source)
-                .copied()
-                .unwrap_or(false)
-                && !principal.visibility().contains_key("admin")
+        let record = self.state.principal_command(&principal.id, &query.id)?;
+        if principal
+            .authorize(&format!("{}:read", record.source))
+            .is_err()
+            && principal
+                .authorize(&format!("{}:write", record.source))
+                .is_err()
         {
             return Err(Code::NotFound.into());
         }
@@ -29,16 +28,17 @@ impl LocalGateway {
             && record.admission_era == self.state.admission_era()?
             && resolvable(&record)
         {
-            let lock = self.lock(format!("command:{}", query.id))?;
+            let id = record.command.id.clone();
+            let lock = self.lock(format!("command:{id}"))?;
             let _guard = lock.lock().await;
-            record = self.state.command(&query.id)?;
+            record = self.state.command(&id)?;
             if resolvable(&record) {
                 let collection = self.actions.collection(&record.command)?;
                 let frame = self
                     .peer
                     .exchange(IpcFrame {
                         t: "Resolve".into(),
-                        command_id: query.id.clone(),
+                        command_id: id,
                         ..IpcFrame::default()
                     })
                     .await?;
@@ -50,18 +50,21 @@ impl LocalGateway {
         raw(&record)
     }
     pub fn list(&self, principal: &Principal, limit: u64) -> Result<Box<RawValue>, Error> {
-        let mut rows = Vec::new();
-        for record in self.state.commands()? {
-            if record.principal == principal.id
-                && (principal.visibility().contains_key("admin")
-                    || principal.visibility().get(&record.source) == Some(&true))
-            {
-                rows.push(self.expire(record)?);
-            }
-        }
-        if limit > 0 && rows.len() as u64 > limit {
-            rows.drain(..rows.len() - usize::try_from(limit).map_err(|_| Code::Invalid)?);
-        }
+        self.list_page(principal, 0, limit)
+    }
+    pub fn list_page(
+        &self,
+        principal: &Principal,
+        offset: usize,
+        limit: u64,
+    ) -> Result<Box<RawValue>, Error> {
+        let limit = ab_state::ReadPage::limit(limit).map_err(|_| Code::Invalid)?;
+        let rows = self
+            .state
+            .visible_commands(principal, offset, limit)?
+            .into_iter()
+            .map(|record| self.expire(record))
+            .collect::<Result<Vec<_>, _>>()?;
         raw(&rows)
     }
     pub fn approvals(&self) -> Result<Vec<CommandRecord>, Error> {

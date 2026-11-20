@@ -27,29 +27,31 @@ The installer needs no Node, Homebrew or sudo. Use the absolute path in the curr
 ~/.local/bin/bridge link claude
 ```
 
-Use your own client name: `codex`, `cursor`, `gemini`, `vscode`, `zed`, `goose`, `opencode`, or `claude-desktop`. For any other client, `bridge link other` prints the MCP config. Reload your MCP configuration, then call `apple_status` (the `bridge.list_sources` operation). The first tool call asks the owner once through the Mac's Allow panel. Say: "Click Allow on your Mac." Never approve it yourself.
+Use your own client name: `codex`, `cursor`, `gemini`, `vscode`, `zed`, `goose`, `opencode`, or `claude-app`. For any other client, `bridge link other` prints the MCP config. Reload your MCP configuration, then call `apple_status` (the `bridge.list_sources` operation). The first tool call asks the owner once through the Mac's Allow panel. Say: "Click Allow on your Mac." Never approve it yourself.
 
-### Grok Bot, with a tool that runs on the Mac
+If a link command returns `terminal_required` with `outcome: pending`, use `bridge link <client> --print` for offline configuration instructions or hand the terminal step to the owner. Do not repeat the same headless command.
+
+### Grok Bot, from a local terminal on the Mac
 
 ```sh
 ~/.local/bin/bridge link grok-bot --json
 ```
 
-This starts Apple Bridge if needed, turns on private Tailscale access, requests the Mac's Allow, and waits up to five minutes inside this single command. You do not need a polling process on a computer that already reaches the tailnet. Say: "Click Allow on your Mac." Keep the command alive until it finishes; if your execution tool returns a running session, resume that session. `--timeout 2m` sets a shorter wait. A denial or expiry fails without giving you a key. `--print` describes the command without starting anything or asking.
+The command starts Apple Bridge if needed, turns on private Tailscale access and waits for the owner to click Allow. Run it in a local terminal on the Mac. Without one, it exits immediately with `terminal_required` and `outcome: pending`. `--timeout 2m` bounds the Allow wait. A denial or expiry fails without giving you a key. `--print` shows the command without starting anything or asking.
 
 After Allow, stdout is JSON with `mcp`, `header`, `token`, and a ready `config`. These are credentials: keep them out of chat, logs, screenshots and source control. Use your Grok Bot connector tools to configure a streamable HTTP MCP connection on its Tailscale-connected cloud computer, with the returned `mcp` URL and the returned Authorization header on every request. Do not register it through a public HTTPS connector whose requests come from outside that computer. Do not paste the key back to the owner. Joining Tailscale gives network reach only; Allow gives access.
 
 ### Remote agent already on the tailnet
 
-On the Mac run `bridge tailscale`; its output gives a private `/connect` URL. Read that URL from the connector's own computer. It returns machine-readable instructions: POST a short app name to `/connect/request`, then POST the returned id and secret to `/connect/answer` every three seconds until allowed or denied. After Allow the answer returns the MCP URL and header once. Store and configure them privately. If the connector cannot yet reach the tailnet, use the Mac command above for Grok Bot instead of trying to poll from an unreachable computer.
+In a local terminal on the Mac run `bridge tailscale`; its output gives a private `/connect` URL. Read that URL from the connector's own computer. It returns machine-readable instructions: POST a short app name to `/connect/request`, then POST the returned id and secret to `/connect/answer` every three seconds until allowed or denied. After Allow the answer returns the MCP URL and header once. Store and configure them privately. If the connector cannot yet reach the tailnet, use the Mac command above for Grok Bot instead of trying to poll from an unreachable computer.
 
 `bridge tailscale` reports devices blocked by the owner's rules. Never change those rules. Tell the owner which device and port are blocked. Do not enable Funnel or expose a public port. The Mac must stay awake and online; do not change system sleep settings automatically.
 
 ## 4. Permissions and proof
 
-Run `bridge permissions status --json`, which never prompts. For a requested source, run `bridge permissions request <name>` on the Mac; only the owner grants it. Or run `bridge permissions guide --yes` for the guided setup. The guide refreshes the Helper after changed permissions. Never approve prompts or UI for them.
+Run `bridge permissions status --json`, which never prompts. For a requested source, the owner can run `bridge permissions request <name>` or `bridge permissions guide --only <names>` in a local terminal on the Mac. The guide refreshes the Helper after changed permissions. A headless or `--non-interactive` invocation returns `terminal_required` and leaves permissions pending. Use the status command to check again after the owner acts.
 
-From your actual configured MCP client, call `apple_status` (the `bridge.list_sources` operation), then a harmless read of a permitted source the owner asked to use. Report a real result or the exact permission or reachability failure. `bridge stats --wait --timeout 2m` shows sync counts, not proof that a remote connector works. Retry a safe read after a permission refresh; never automatically retry a write whose outcome is unknown.
+From your actual configured MCP client, call `apple_status` (the `bridge.list_sources` operation), then a harmless read of a permitted source the owner asked to use. Report a real result or the exact permission or reachability failure. `bridge stats --wait --timeout 2m` shows sync counts. A `partial` or `failed` sync requires checking the affected sources before claiming success. Retry a safe read after a permission refresh. For a partially applied or indeterminate write, inspect its request ID and affected records before further changes.
 
 For a failure: `bridge status --json`, `bridge doctor`, and `bridge permissions status --json` distinguish gateway health, the private route and permissions. Keep private data and credentials out of diagnostics. `bridge up` is detached from the terminal but does not restart after logout, reboot or a crash; the app's Launch at Login is a separate owner choice. A network change should reconnect the Tailscale route while the gateway stays up. Do not promise uptime when the Mac is asleep or offline.
 

@@ -111,14 +111,28 @@ pub(crate) fn all_endpoints(world: &World) -> Result<Vec<(Option<usize>, Client,
         None,
         gateway_client(world)?,
         world
-            .gateway_cli(&["token", "create", "--scope", "system:read"])?
+            .gateway_cli(&[
+                "token",
+                "create",
+                "--expires-in",
+                "1h",
+                "--scope",
+                "system:read",
+            ])?
             .trim()
             .to_owned(),
     )];
     for (index, endpoint) in replicas::endpoints().iter().enumerate() {
         let token = replicas::cli(
             &endpoint.home,
-            &["token", "create", "--scope", "system:read"],
+            &[
+                "token",
+                "create",
+                "--expires-in",
+                "1h",
+                "--scope",
+                "system:read",
+            ],
         )?;
         out.push((Some(index), endpoint.client(), token));
     }
@@ -271,22 +285,20 @@ pub(crate) fn scope_probe(
     let mut scope_ok = true;
     for (_, client, token) in scoped {
         let scoped_client = Client::at(client.address(), token);
-        let page = scoped_client.call(
+        let page = scoped_client.call_raw(
             "records.query",
             &json!({"collection":"reminders.reminder","include_aliases":true}),
             20,
         )?;
-        scope_ok &= page.is_some_and(|p| {
-            p["records"].as_array().is_none_or(Vec::is_empty)
-                && p["aliases"].as_array().is_none_or(Vec::is_empty)
-        });
+        scope_ok &= page
+            .is_some_and(|(status, value)| status == 403 && value["error"]["code"] == "forbidden");
         if let Some(record) = reminders.first() {
             let path = format!(
                 "/v1/records/{}/{}",
                 record["collection"].as_str().unwrap_or_default(),
                 record["id"].as_str().unwrap_or_default()
             );
-            scope_ok &= scoped_client.request("GET", &path, &[], None, 20)?.status == 404;
+            scope_ok &= scoped_client.request("GET", &path, &[], None, 20)?.status == 403;
         }
     }
     evidence.check(

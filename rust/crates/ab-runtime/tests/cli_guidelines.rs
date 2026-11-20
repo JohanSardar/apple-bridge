@@ -56,7 +56,7 @@ fn a_repeated_page_cursor_stops_with_pagination_stalled() -> Check {
     let (_lock, log) = scripted_gateway(home.path(), |_, _| {
         ok(json!({"records": [record("notes.note", "same")], "cursor": null, "next": "again"}))
     })?;
-    let output = run(home.path(), &["search", "item", "--all", "--json"])?;
+    let output = run(home.path(), &["search", "item", "--limit", "2", "--json"])?;
     assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
     let document = error_document(&output)?;
     assert_eq!(document["reason"], "pagination_stalled");
@@ -81,39 +81,60 @@ fn empty_pages_that_claim_more_stop_instead_of_spinning() -> Check {
 }
 
 #[test]
-fn a_failed_later_page_reports_rows_fetched_and_where_to_resume() -> Check {
+fn a_failed_later_page_resumes_from_the_last_cursor_printed() -> Check {
     let home = short_home()?;
     seeded_home(home.path())?;
     let (_lock, log) = scripted_gateway(home.path(), |_, body| {
-        if body["after"].as_str() == Some("p1") {
+        let after = body["after"].as_str();
+        if after == Some("buffered") {
             return (
                 503,
                 Vec::new(),
                 json!({"error": {"code": "unavailable", "message": "busy", "retryable": false}}),
             );
         }
-        ok(
-            json!({"records": [record("notes.note", "a"), record("notes.note", "b")], "cursor": null, "next": "p1"}),
-        )
+        let (id, next) = if after.is_none() {
+            ("printed-row", "printed")
+        } else {
+            ("buffered-row", "buffered")
+        };
+        ok(json!({"records": [record("notes.note", id)], "cursor": null, "next": next}))
     })?;
-    let output = run(home.path(), &["search", "item", "--limit", "6", "--json"])?;
+    let first = run(home.path(), &["search", "item", "--limit", "1", "--json"])?;
+    let page: Value = serde_json::from_slice(&first.stdout)?;
+    let cursor = page["next_cursor"].as_str().ok_or("cursor")?;
+    let output = run(
+        home.path(),
+        &["search", "--next", cursor, "--limit", "2", "--json"],
+    )?;
     assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
-    let document = error_document(&output)?;
-    assert_eq!(document["data"]["rowsFetched"], 2, "{document}");
-    assert_eq!(document["data"]["pages"], 1);
-    assert!(document["data"]["cursor"].is_null());
-    let resume = document["data"]["resume"]
-        .as_str()
-        .ok_or("resume")?
-        .to_owned();
     assert_eq!(output.stdout, [] as [u8; 0]);
+    let document = error_document(&output)?;
+    assert_eq!(document["data"]["rowsFetched"], 1, "{document}");
+    assert_eq!(document["data"]["pages"], 1);
+    assert_eq!(document["data"]["resume"], cursor);
+    let recovery = document["next"]
+        .as_array()
+        .ok_or("next")?
+        .iter()
+        .filter_map(|step| step["argv"].as_array())
+        .find(|argv| argv.get(2) == Some(&json!("--next")))
+        .ok_or("recovery argv")?;
+    assert_eq!(recovery[3], cursor);
     let before = requests(&log, "search").len();
-    let output = run(home.path(), &["search", "--next", &resume, "--json"])?;
-    assert_eq!(output.status.code(), Some(1));
-    let again = requests(&log, "search");
-    assert_eq!(again[before]["after"], "p1");
-    assert_eq!(again[before]["text"], "item");
-    assert_eq!(error_document(&output)?["data"]["cursor"], resume.as_str());
+    let output = run(
+        home.path(),
+        &[
+            "search",
+            "--next",
+            recovery[3].as_str().ok_or("resume")?,
+            "--json",
+        ],
+    )?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let page: Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(page["records"][0], record("notes.note", "buffered-row"));
+    assert_eq!(requests(&log, "search")[before]["after"], "printed");
     Ok(())
 }
 
@@ -320,12 +341,10 @@ fn global_options_mean_the_same_in_any_position() -> Check {
         assert_eq!(text(&late.stdout), text(&early.stdout), "{after:?}");
         assert!(!late.stdout.is_empty(), "{after:?}");
     }
-    let output = bridge().args(["--json=true", "--version"]).output()?;
+    let output = bridge().args(["--json", "--version"]).output()?;
     let version: Value = serde_json::from_slice(&output.stdout)?;
     assert!(version["version"].is_string());
-    let output = bridge()
-        .args(["--json", "--json=false", "--version"])
-        .output()?;
+    let output = bridge().args(["--version"]).output()?;
     assert!(text(&output.stdout).starts_with("bridge "));
     assert_eq!(output.stderr, [] as [u8; 0]);
     Ok(())
@@ -375,6 +394,7 @@ fn widening_access_needs_consent_and_narrowing_does_not() -> Check {
             "approve",
             "--scope",
             "notes:read",
+            "--yes",
             "--json",
         ],
     )?;
@@ -445,7 +465,7 @@ fn access_can_be_issued_with_an_expiry() -> Check {
     assert!((3500..=3600).contains(&left), "{left}");
     let output = run(
         home.path(),
-        &["agents", "create", "--name", "forever", "--json"],
+        &["agents", "create", "--name", "forever", "--yes", "--json"],
     )?;
     let created: Value = serde_json::from_slice(&output.stdout)?;
     assert!(created["agent"]["expires_at"].is_null());
@@ -498,26 +518,12 @@ fn connectors_allow_reports_every_missing_input() -> Check {
 }
 
 #[test]
-fn stats_modes_follow_wait_and_watch_as_documented() -> Check {
+fn stats_follow_and_wait_work_and_watch_is_retired() -> Check {
     let home = short_home()?;
     seeded_home(home.path())?;
-    let output = run(
-        home.path(),
-        &[
-            "stats",
-            "--watch",
-            "--settle",
-            "0",
-            "--timeout",
-            "0",
-            "--json",
-        ],
-    )?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert_eq!(
-        text(&output.stdout).lines().last(),
-        Some(r#"{"event":"timeout","total":0}"#)
-    );
+    let retired = run(home.path(), &["stats", "--watch", "--json"])?;
+    assert_eq!(retired.status.code(), Some(2));
+    assert_eq!(error_document(&retired)?["reason"], "unknown_option");
     let output = run(home.path(), &["stats", "--wait", "--timeout", "0"])?;
     assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
     let output = bridge()
@@ -645,13 +651,13 @@ fn link_stops_a_slow_client_at_the_deadline_and_reaps_it() -> Check {
     let pid_file = bin.path().join("pid");
     fake_program(
         bin.path(),
-        "claude",
+        "codex",
         &format!("echo $$ > {}\nexec sleep 30", pid_file.display()),
     )?;
     let began = Instant::now();
     let output = bridge()
         .env("PATH", with_path(bin.path()))
-        .args(["link", "claude", "--timeout", "1s", "--json", "--home"])
+        .args(["link", "codex", "--timeout", "1s", "--json", "--home"])
         .arg(home.path())
         .output()?;
     assert!(
@@ -681,11 +687,11 @@ fn link_prints_commands_on_their_own_lines_and_a_json_document() -> Check {
     seeded_home(home.path())?;
     let (_lock, _log) = scripted_gateway(home.path(), |_, _| ok(json!({})))?;
     let bin = short_home()?;
-    fake_program(bin.path(), "claude", "exit 0")?;
+    fake_program(bin.path(), "codex", "exit 0")?;
     let output = bridge()
         .env("PATH", with_path(bin.path()))
         .env("COLUMNS", "40")
-        .args(["link", "claude", "--home"])
+        .args(["link", "codex", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
@@ -693,21 +699,21 @@ fn link_prints_commands_on_their_own_lines_and_a_json_document() -> Check {
     assert!(stderr.contains("click Allow"), "{stderr}");
     let output = bridge()
         .env("PATH", with_path(bin.path()))
-        .args(["link", "claude", "--json", "--home"])
+        .args(["link", "codex", "--json", "--home"])
         .arg(home.path())
         .output()?;
     let document: Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(document["outcome"], "added");
     assert_eq!(document["args"][0], "mcp");
     assert_eq!(document["running"], true);
-    let printed = run(home.path(), &["link", "claude", "--print"])?;
+    let printed = run(home.path(), &["link", "codex", "--print"])?;
     assert_eq!(text(&printed.stdout).lines().count(), 1);
-    let printed = run(home.path(), &["link", "claude", "--print", "--json"])?;
+    let printed = run(home.path(), &["link", "codex", "--print", "--json"])?;
     let document: Value = serde_json::from_slice(&printed.stdout)?;
-    assert_eq!(document["argv"][0], "claude");
+    assert_eq!(document["argv"][0], "codex");
     let output = bridge()
         .env("PATH", with_path(bin.path()))
-        .args(["unlink", "claude", "--json", "--home"])
+        .args(["unlink", "codex", "--json", "--home"])
         .arg(home.path())
         .output()?;
     let document: Value = serde_json::from_slice(&output.stdout)?;
@@ -761,20 +767,18 @@ fn result_schemas_name_the_fields_commands_return() -> Check {
         serde_json::from_slice(&bridge().args(["call", "--help", "--json"]).output()?.stdout)?;
     assert_eq!(
         described["result_schema"]["see"],
-        "bridge call --list --json"
+        "bridge call --describe <OPERATION>"
     );
     Ok(())
 }
 
 #[test]
-fn array_results_from_old_spellings_still_warn_on_stderr() -> Check {
+fn retired_browser_commands_are_rejected() -> Check {
     let home = short_home()?;
     let output = run(home.path(), &["web", "devices", "--json"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert_eq!(text(&output.stdout).trim(), "[]");
-    let warning = error_document(&output)?;
-    assert_eq!(warning["status"], "warning");
-    assert_eq!(warning["reason"], "deprecated");
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
+    assert_eq!(error_document(&output)?["reason"], "unknown_command");
     Ok(())
 }
 
@@ -811,7 +815,7 @@ fn the_singular_agent_spelling_still_needs_consent_to_widen() -> Check {
     let output = run(
         home.path(),
         &[
-            "agents", "create", "--name", "bot", "--level", "approve", "--json",
+            "agents", "create", "--name", "bot", "--level", "approve", "--yes", "--json",
         ],
     )?;
     let created: Value = serde_json::from_slice(&output.stdout)?;
@@ -822,17 +826,18 @@ fn the_singular_agent_spelling_still_needs_consent_to_widen() -> Check {
     )?;
     assert_eq!(output.status.code(), Some(2), "{}", text(&output.stdout));
     assert_eq!(error_document(&output)?["reason"], "confirmation_required");
-    let output = run(home.path(), &["agent", "level", &id, "full", "--json"])?;
+    let retired = run(home.path(), &["agent", "level", &id, "full", "--json"])?;
+    assert_eq!(retired.status.code(), Some(2));
+    assert_eq!(error_document(&retired)?["reason"], "unknown_command");
+    let output = run(
+        home.path(),
+        &[
+            "agents", "update", &id, "--level", "full", "--yes", "--json",
+        ],
+    )?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let changed: Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(changed["agent"]["level"], "full");
-    let reasons: Vec<&str> = changed["warnings"]
-        .as_array()
-        .ok_or("warnings")?
-        .iter()
-        .filter_map(|warning| warning["reason"].as_str())
-        .collect();
-    assert_eq!(reasons, ["deprecated", "deprecated"]);
     Ok(())
 }
 

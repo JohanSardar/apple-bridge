@@ -10,47 +10,6 @@ use ab_trust::{AgentLevel, Authority, Grant, Principal};
 use data_encoding::BASE64URL_NOPAD;
 use serde_json::{Value, json};
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-
-static LEGACY_REVOKE: AtomicBool = AtomicBool::new(false);
-
-pub fn typed_as(words: &[String]) {
-    let first = words.first().map(String::as_str);
-    let second = words.get(1).map(String::as_str);
-    let legacy = matches!(first, Some("revoke" | "scope"))
-        || (matches!(first, Some("agent" | "agents")) && second == Some("level"))
-        || (first == Some("agent") && second == Some("revoke"))
-        || (first == Some("web") && second == Some("lock"));
-    LEGACY_REVOKE.store(legacy, Ordering::Relaxed);
-}
-
-fn legacy_grace(what: &str) -> bool {
-    let modes = Modes::get();
-    if !modes.yes && !modes.interactive() && LEGACY_REVOKE.load(Ordering::Relaxed) {
-        ui::warn(
-            "deprecated",
-            &format!(
-                "{what} without --yes outside a terminal is deprecated. Pass --yes; the next major version will refuse."
-            ),
-        );
-        return true;
-    }
-    false
-}
-
-fn confirm_unless_legacy(what: &str, consent: &ui::Consent<'_>) -> Outcome {
-    if legacy_grace(what) {
-        if Modes::get().json {
-            return Ok(());
-        }
-        for (label, value) in &consent.rows {
-            ui::row(label, value);
-        }
-        return Ok(());
-    }
-    ui::confirm(consent)
-}
-
 fn expiry(text: Option<&str>) -> Outcome<Option<jiff::Timestamp>> {
     let Some(text) = text else {
         return Ok(None);
@@ -553,11 +512,10 @@ fn lasting_consent(owner: &str, what: &str, rows: &[(&str, String)]) -> Outcome<
         return Ok(false);
     }
     if !modes.interactive() {
-        ui::warn(
-            "never_expires",
-            &format!("{owner} never expires. Pass --expires-in to limit it."),
-        );
-        return Ok(false);
+        return Err(Failure::new(
+            Reason::ConfirmationRequired,
+            format!("{owner} never expires. Pass --yes to confirm or --expires-in to limit it."),
+        ));
     }
     for (label, value) in rows {
         ui::row(label, value);
@@ -608,7 +566,6 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
     } else {
         None
     };
-    let authority = open(home)?;
     let asked = if expires.is_none() {
         lasting_consent(
             &format!("{}'s token", ui::clean(name)),
@@ -623,8 +580,8 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
     } else {
         false
     };
-    let (agent, token) = authority
-        .create_agent_until(name, level, grants, expires)
+    let (agent, token) = open(home)?
+        .create_agent_for_resource(name, level, grants, expires, tailnet.as_deref())
         .map_err(|error| match error {
             ab_trust::Error::Unauthorized => Failure::new(
                 Reason::PermissionDenied,
@@ -632,12 +589,6 @@ pub fn agents_create(home: &Path, args: &AgentCreateArgs) -> Outcome {
             ),
             other => Failure::from(other),
         })?;
-    let agent = match &tailnet {
-        Some(resource) => authority
-            .bind_to_resource(&agent.id, resource)
-            .map_err(Failure::from)?,
-        None => agent,
-    };
     ui::mask_secret(&token);
     if modes.json || modes.legacy_json() {
         #[derive(serde::Serialize)]
@@ -831,17 +782,14 @@ pub fn agents_update(
             argv.extend(["--scope".to_owned(), scope.to_owned()]);
         }
         argv.push("--yes".to_owned());
-        confirm_unless_legacy(
-            "Widening an agent's access",
-            &ui::Consent {
-                action: format!("widen the access of {id}"),
-                rows,
-                consequence: consequence.to_owned(),
-                question: format!("Change {id}?"),
-                with_yes: Step::new("Change it", argv),
-                nothing_changed: "Nothing was changed.",
-            },
-        )?;
+        ui::confirm(&ui::Consent {
+            action: format!("widen the access of {id}"),
+            rows,
+            consequence: consequence.to_owned(),
+            question: format!("Change {id}?"),
+            with_yes: Step::new("Change it", argv),
+            nothing_changed: "Nothing was changed.",
+        })?;
     }
     let mut after = before.clone();
     if let Some(level) = chosen
@@ -911,10 +859,6 @@ fn report_agent_change(before: &Principal, after: &Principal, unchanged: bool) -
     Ok(())
 }
 
-pub fn agents_level(home: &Path, id: &str, text: &str) -> Outcome {
-    agents_update(home, id, Some(text), None)
-}
-
 pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<&str>) -> Outcome {
     let grants = parse_grants(scope, false);
     let expires = expiry(expires_in);
@@ -928,7 +872,6 @@ pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<
         }
     };
     let modes = Modes::get();
-    let authority = open(home)?;
     let asked = if expires.is_none() {
         lasting_consent(
             "This token",
@@ -942,6 +885,7 @@ pub fn tokens_create(home: &Path, scope: &str, remote: bool, expires_in: Option<
     } else {
         false
     };
+    let authority = open(home)?;
     let token = authority
         .create_token_until(grants.clone(), remote, expires)
         .map_err(|_| {
@@ -1093,27 +1037,25 @@ pub fn revoke(home: &Path, id: &str, selector: Selector) -> Outcome {
     }
     rows.push(("Access lost".to_owned(), access_text(&principal.grants)));
     let modes = Modes::get();
-    if !legacy_grace("Revoking") {
-        let mut argv = vec![
-            "bridge".to_owned(),
-            "tokens".to_owned(),
-            "revoke".to_owned(),
-            id.to_owned(),
-            "--yes".to_owned(),
-        ];
-        if selector == Selector::Agent {
-            "agents".clone_into(&mut argv[1]);
-        }
-        ui::confirm(&ui::Consent {
-            action: format!("revoke {noun} {id}"),
-            rows,
-            consequence: "Anything using its token stops working at once. This cannot be undone."
-                .to_owned(),
-            question: format!("Revoke {shown}?"),
-            with_yes: Step::new("Revoke it", argv),
-            nothing_changed: "Nothing was revoked.",
-        })?;
+    let mut argv = vec![
+        "bridge".to_owned(),
+        "tokens".to_owned(),
+        "revoke".to_owned(),
+        id.to_owned(),
+        "--yes".to_owned(),
+    ];
+    if selector == Selector::Agent {
+        "agents".clone_into(&mut argv[1]);
     }
+    ui::confirm(&ui::Consent {
+        action: format!("revoke {noun} {id}"),
+        rows,
+        consequence: "Anything using its token stops working at once. This cannot be undone."
+            .to_owned(),
+        question: format!("Revoke {shown}?"),
+        with_yes: Step::new("Revoke it", argv),
+        nothing_changed: "Nothing was revoked.",
+    })?;
     authority.revoke(id).map_err(|_| not_found(id))?;
     if modes.json && modes::legacy_spelling() {
         ui::json_document(json!({
@@ -1189,7 +1131,7 @@ pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
         return Ok(());
     }
     if widens(&before.grants, &grants) {
-        let mut argv = vec![
+        let argv = vec![
             "bridge".to_owned(),
             "tokens".to_owned(),
             "update".to_owned(),
@@ -1198,28 +1140,22 @@ pub fn update_grants(home: &Path, id: &str, scope: &str) -> Outcome {
             scope.to_owned(),
             "--yes".to_owned(),
         ];
-        if LEGACY_REVOKE.load(Ordering::Relaxed) {
-            argv.drain(1..3);
-            argv.insert(1, "scope".to_owned());
-        }
-        confirm_unless_legacy(
-            "Widening access",
-            &ui::Consent {
-                action: format!("widen the access of {id}"),
-                rows: vec![
-                    (label_case(&before.kind), id.to_owned()),
-                    (
-                        "Access".to_owned(),
-                        format!("{} → {}", access_text(&before.grants), access_text(&grants)),
-                    ),
-                ],
-                consequence: "Anything using this credential can use the added sources as soon as this is saved."
+        ui::confirm(&ui::Consent {
+            action: format!("widen the access of {id}"),
+            rows: vec![
+                (label_case(&before.kind), id.to_owned()),
+                (
+                    "Access".to_owned(),
+                    format!("{} → {}", access_text(&before.grants), access_text(&grants)),
+                ),
+            ],
+            consequence:
+                "Anything using this credential can use the added sources as soon as this is saved."
                     .to_owned(),
-                question: format!("Change {id}?"),
-                with_yes: Step::new("Change it", argv),
-                nothing_changed: "Nothing was changed.",
-            },
-        )?;
+            question: format!("Change {id}?"),
+            with_yes: Step::new("Change it", argv),
+            nothing_changed: "Nothing was changed.",
+        })?;
     }
     let after = authority
         .set_grants(id, grants)
@@ -1680,9 +1616,7 @@ pub fn sessions_revoke(home: &Path) -> Outcome {
         return already_signed_out();
     }
     let plural = if count == 1 { "browser" } else { "browsers" };
-    confirm_unless_legacy(
-        "Signing out browsers",
-        &ui::Consent {
+    ui::confirm(&ui::Consent {
             action: format!("sign out {count} {plural}"),
             rows: vec![
                 ("Browsers".to_owned(), count.to_string()),

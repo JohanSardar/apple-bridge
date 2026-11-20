@@ -1,3 +1,5 @@
+mod support;
+
 use std::{
     net::TcpListener,
     os::unix::fs::PermissionsExt,
@@ -126,7 +128,7 @@ fn every_failure_names_what_went_wrong() -> Check {
         (&["doctor"], "isn't set up", 1),
         (&["stats"], "isn't set up", 1),
         (&["read", "messages"], "isn't running", 1),
-        (&["connector", "pending"], "isn't running", 1),
+        (&["connectors", "list"], "isn't running", 1),
         (
             &["permissions", "request", "fake"],
             "It isn't a permission name",
@@ -390,22 +392,24 @@ fn link_registers_each_agent_to_launch_bridge_mcp() -> Check {
             .arg(home.path())
             .output()
     };
-    let claude = link(&["link", "claude"])?;
+    let claude = link(&["link", "claude", "--print"])?;
     assert!(claude.status.success(), "{}", text(&claude.stderr));
-    let calls = std::fs::read_to_string(&claude_log)?;
     assert_eq!(
-        calls.lines().next(),
-        Some(format!("mcp add --scope user apple-bridge -- {launch}").as_str())
+        text(&claude.stdout).trim(),
+        format!("claude mcp add --scope user apple-bridge -- {launch}")
     );
-    assert!(!calls.contains("mcp login"));
-    assert!(text(&claude.stderr).contains("click Allow"));
-    assert_eq!(text(&claude.stdout), "apple-bridge\n");
-
-    let project = link(&["link", "claude-code", "--scope", "project", "--name", "ab"])?;
+    let project = link(&[
+        "link",
+        "claude-code",
+        "--scope",
+        "project",
+        "--name",
+        "ab",
+        "--print",
+    ])?;
     assert!(project.status.success());
-    assert!(
-        std::fs::read_to_string(&claude_log)?.contains(&format!("--scope project ab -- {launch}"))
-    );
+    assert!(text(&project.stdout).contains(&format!("--scope project ab -- {launch}")));
+    assert!(!claude_log.exists());
 
     let codex = link(&["link", "codex"])?;
     assert!(codex.status.success(), "{}", text(&codex.stderr));
@@ -455,7 +459,7 @@ fn link_registers_each_agent_to_launch_bridge_mcp() -> Check {
 #[test]
 fn link_replaces_its_old_address_and_refuses_a_different_server() -> Check {
     let tools = tempfile::tempdir()?;
-    let log = fake_tool(tools.path(), "claude")?;
+    let log = fake_tool(tools.path(), "codex")?;
     let home = tempfile::tempdir()?;
     let api = free_port()?;
     let (_guard, _) = up(home.path(), &api)?;
@@ -469,13 +473,13 @@ fn link_replaces_its_old_address_and_refuses_a_different_server() -> Check {
             .env("PATH", &path)
             .env("FAKE_EXISTS", "1")
             .env("FAKE_URL", existing)
-            .args(["link", "claude", "--home"])
+            .args(["link", "codex", "--home"])
             .arg(home.path())
             .output()
     };
     let old = link(format!("http://{api}/mcp"))?;
     assert!(old.status.success(), "{}", text(&old.stderr));
-    assert!(std::fs::read_to_string(&log)?.contains("mcp remove --scope user apple-bridge"));
+    assert!(std::fs::read_to_string(&log)?.contains("mcp remove apple-bridge"));
     std::fs::write(&log, "")?;
     let different = link("https://elsewhere.example/mcp".to_owned())?;
     assert_eq!(different.status.code(), Some(1));
@@ -514,12 +518,12 @@ fn link_explains_a_missing_agent() -> Check {
     let empty = tempfile::tempdir()?;
     let output = bridge()
         .env("PATH", empty.path())
-        .args(["link", "claude", "--home"])
+        .args(["link", "codex", "--home"])
         .arg(home.path())
         .output()?;
     assert_eq!(output.status.code(), Some(1));
     let error = text(&output.stderr);
-    assert!(error.contains("Can't find Claude Code"), "{error}");
+    assert!(error.contains("Can't find Codex"), "{error}");
     assert!(error.contains("bridge link other"), "{error}");
     Ok(())
 }
@@ -565,14 +569,14 @@ fn stats_gives_a_settings_fallback_after_a_permission_decline() -> Check {
 }
 
 #[test]
-fn stats_watch_reports_each_source_then_finishes() -> Check {
+fn stats_wait_reports_each_source_then_finishes() -> Check {
     let home = tempfile::tempdir()?;
     seed_sources(home.path())?;
     let output = run(
         home.path(),
         &[
             "stats",
-            "--watch",
+            "--wait",
             "--settle",
             "1",
             "--timeout",
@@ -580,7 +584,7 @@ fn stats_watch_reports_each_source_then_finishes() -> Check {
             "--json",
         ],
     )?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert_eq!(output.status.code(), Some(1), "{}", text(&output.stderr));
     let events: Vec<serde_json::Value> = text(&output.stdout)
         .lines()
         .map(serde_json::from_str)
@@ -602,15 +606,11 @@ fn stats_watch_reports_each_source_then_finishes() -> Check {
 }
 
 #[test]
-fn stats_watch_stops_at_its_time_limit_on_an_empty_home() -> Check {
+fn stats_follow_reports_when_its_time_limit_ends() -> Check {
     let home = tempfile::tempdir()?;
-    let output = run(home.path(), &["stats", "--watch", "--timeout", "1"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stdout).contains("Still syncing"));
-    assert!(text(&output.stderr).contains("--watch is deprecated. Use --wait."));
     let output = run(home.path(), &["stats", "--follow", "--timeout", "1s"])?;
     assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(!text(&output.stderr).contains("deprecated"));
+    assert!(text(&output.stderr).contains("Stopped following"));
     Ok(())
 }
 
@@ -686,7 +686,7 @@ fn read_commands_use_the_gateway_and_leave_no_credential_behind() -> Check {
     let photos = run(home.path(), &["read", "photos", "--json"])?;
     assert!(!photos.status.success());
     assert!(text(&photos.stderr).contains("unavailable"));
-    let write = run(home.path(), &["call", "photos.favorite", "--args", "{}"])?;
+    let write = run(home.path(), &["call", "photos.favorite", "--data", "{}"])?;
     assert!(!write.status.success());
     assert_eq!(principals(home.path())?, before);
     Ok(())
@@ -1076,22 +1076,27 @@ fn photos_permission_request_reaches_the_helper_and_cleans_reports() -> Check {
             ),
         )?;
         std::fs::set_permissions(&open, std::fs::Permissions::from_mode(0o755))?;
-        let output = bridge()
+        let terminal = support::Terminal::open()?;
+        let mut command = support::bridge();
+        command
             .args([
                 "permissions",
                 "request",
                 "photos",
                 "--helper-app",
                 "/PhotosProof.app",
+                "--json",
             ])
             .env("HOME", home.path())
-            .env("PATH", &bin)
-            .output()?;
-        assert!(output.status.success(), "{}", text(&output.stderr));
-        assert!(output.stdout.is_empty(), "{}", text(&output.stdout));
+            .env("PATH", &bin);
+        terminal.attach(&mut command)?;
+        let output = command.output()?;
+        let stderr = terminal.read()?;
+        assert!(output.status.success(), "{stderr}");
+        let result: serde_json::Value = serde_json::from_slice(&output.stdout)?;
         assert_eq!(
-            text(&output.stderr).contains("permission was declined"),
-            denied
+            result["outcome"],
+            if denied { "denied" } else { "requested" }
         );
         let arguments = std::fs::read_to_string(&log)?;
         let arguments: Vec<_> = arguments.lines().collect();
@@ -1115,7 +1120,7 @@ fn photos_permission_request_reaches_the_helper_and_cleans_reports() -> Check {
 }
 
 #[test]
-fn a_declined_permission_request_exits_cleanly_including_on_retry() -> Check {
+fn headless_permission_request_leaves_consent_pending() -> Check {
     let home = tempfile::tempdir()?;
     let bin = home.path().join("bin");
     std::fs::create_dir(&bin)?;
@@ -1129,24 +1134,15 @@ fn a_declined_permission_request_exits_cleanly_including_on_retry() -> Check {
         "#!/bin/sh\nwhile [ \"$1\" != --report ]; do shift; done\nprintf '{\"request\":\"contacts\",\"outcome\":\"denied\"}' > \"$2\"\n",
     )?;
     std::fs::set_permissions(&open, std::fs::Permissions::from_mode(0o755))?;
-    for _ in 0..2 {
-        let output = bridge()
-            .args(["permissions", "request", "contacts"])
-            .env("HOME", home.path())
-            .env("PATH", &bin)
-            .output()?;
-        assert!(output.status.success(), "{}", text(&output.stderr));
-        assert!(output.stdout.is_empty(), "{}", text(&output.stdout));
-        let message = text(&output.stderr);
-        for phrase in [
-            "permission was declined",
-            "System Settings > Privacy & Security > Contacts",
-            "bridge down",
-            "bridge up",
-        ] {
-            assert!(message.contains(phrase), "{message}");
-        }
-    }
+    let output = bridge()
+        .args(["permissions", "request", "contacts", "--json"])
+        .env("HOME", home.path())
+        .env("PATH", &bin)
+        .output()?;
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
+    let error: serde_json::Value = serde_json::from_slice(&output.stderr)?;
+    assert_eq!(error["reason"], "terminal_required");
     Ok(())
 }
 
@@ -1246,20 +1242,9 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "--dial-replica",
             "y:2",
         ],
-        &[
-            "pair",
-            "--peer-addr",
-            "x:1",
-            "--name",
-            "replica",
-            "--scope",
-            "a:read",
-            "--home",
-            "/h",
-        ],
         &["pair", "--iphone", "--via-remote", "--home", "/h"],
         &["join", "CODE", "--listen", "127.0.0.1:0", "--home", "/h"],
-        &["connector", "pending", "--home", "/h"],
+        &["connectors", "list", "--home", "/h"],
         &[
             "connector",
             "allow",
@@ -1289,10 +1274,12 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "/h",
         ],
         &["web", "enroll", "--public", "--home", "/h"],
-        &["web", "lock", "--home", "/h"],
-        &["web", "devices", "--home", "/h"],
-        &["revoke", "id", "--home", "/h"],
-        &["scope", "id", "--scope", "a:read", "--home", "/h"],
+        &["web", "sessions", "revoke", "--all", "--home", "/h"],
+        &["web", "sessions", "list", "--home", "/h"],
+        &["tokens", "revoke", "id", "--home", "/h"],
+        &[
+            "tokens", "update", "id", "--scope", "a:read", "--home", "/h",
+        ],
         &["status", "--home", "/h"],
         &["doctor", "--home", "/h"],
         &["backup", "/b", "--home", "/h"],
@@ -1316,15 +1303,136 @@ fn every_form_that_scripts_and_the_helper_use_still_parses() -> Check {
             "--no-ui",
         ],
         &["setup", "--helper-app", "/a.app"],
-        &["shortcuts", "install-pack", "--pack", "/p"],
-        &["-home", "/h", "status"],
-        &["status", "-home=/h"],
-        &["pair", "--iphone=true", "--via-remote", "--home=/h"],
+        &["shortcuts", "install", "--pack", "/p"],
     ];
     for form in forms {
         let arguments = std::iter::once("bridge").chain(form.iter().copied());
         ab_runtime::cli::parse(arguments.map(std::ffi::OsString::from))
             .map_err(|error| format!("{form:?}: {error}"))?;
     }
+    Ok(())
+}
+
+#[test]
+fn native_checkpoints_return_pending_without_launching_or_waiting() -> Check {
+    let parent = tempfile::tempdir()?;
+    let home = parent.path().join("fresh");
+    for arguments in [
+        &["permissions", "guide", "--only", "contacts", "--yes"][..],
+        &["permissions", "request", "contacts"][..],
+        &["link", "claude", "--timeout", "30m"][..],
+        &["link", "grok-bot", "--timeout", "5m"][..],
+        &["tailscale", "--keep-awake", "--yes"][..],
+        &["setup", "--yes"][..],
+        &["selftest", "messages", "--yes"][..],
+    ] {
+        let mut child = bridge()
+            .args(arguments)
+            .args(["--non-interactive", "--json", "--home"])
+            .arg(&home)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while child.try_wait()?.is_none() {
+            if std::time::Instant::now() >= until {
+                child.kill()?;
+                child.wait()?;
+                return Err(format!("{arguments:?} did not return at the checkpoint").into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let output = child.wait_with_output()?;
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{arguments:?}: {}",
+            text(&output.stderr)
+        );
+        assert_eq!(output.stdout, [] as [u8; 0]);
+        let error: serde_json::Value = serde_json::from_slice(&output.stderr)?;
+        assert_eq!(error["reason"], "terminal_required", "{error}");
+        assert_eq!(error["data"]["outcome"], "pending", "{error}");
+        assert!(!home.exists(), "{arguments:?}");
+    }
+    Ok(())
+}
+
+#[test]
+fn claude_app_print_leaves_the_config_untouched() -> Check {
+    let folder = tempfile::tempdir()?;
+    let config = folder
+        .path()
+        .join("Library/Application Support/Claude/claude_desktop_config.json");
+    let dir = config.parent().ok_or("config directory")?;
+    let run = |args: &[&str]| {
+        bridge()
+            .env("HOME", folder.path())
+            .args(["link", "claude-app"])
+            .args(args)
+            .args(["--json", "--non-interactive"])
+            .output()
+    };
+    let output = run(&["--print"])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    assert!(!dir.exists());
+    std::fs::create_dir_all(dir)?;
+    let existing = b"{\"mcpServers\":{}}";
+    std::fs::write(&config, existing)?;
+    let output = run(&["--print"])?;
+    let printed: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(printed["file"], serde_json::json!(config));
+    assert_eq!(
+        printed["config"]["mcpServers"]["apple-bridge"]["args"][0],
+        "mcp"
+    );
+    for args in [
+        &["--no-open"][..],
+        &["--no-login"][..],
+        &["--timeout", "1m"][..],
+        &["--name", "other"][..],
+        &["--scope", "user"][..],
+    ] {
+        let output = run(args)?;
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        let error: serde_json::Value = serde_json::from_slice(&output.stderr)?;
+        assert_eq!(error["reason"], "unknown_option", "{error}");
+    }
+    assert_eq!(std::fs::read(&config)?, existing);
+    Ok(())
+}
+
+#[test]
+fn restore_rejects_an_explicit_empty_backup_before_ledger_changes() -> Check {
+    let home = tempfile::tempdir()?;
+    let output = run(
+        home.path(),
+        &[
+            "restore",
+            "--backup",
+            "",
+            "--accept-ledger-loss",
+            "--yes",
+            "--json",
+        ],
+    )?;
+    assert_eq!(output.status.code(), Some(2));
+    let error: serde_json::Value = serde_json::from_slice(&output.stderr)?;
+    assert_eq!(error["reason"], "invalid_value");
+    assert!(text(&output.stderr).contains("--backup"));
+    assert_eq!(std::fs::read_dir(home.path())?.count(), 0);
+    Ok(())
+}
+
+#[test]
+fn describe_outputs_catalog_schemas_without_a_gateway() -> Check {
+    let home = tempfile::tempdir()?;
+    let output = run(home.path(), &["call", "--describe", "sources.status"])?;
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let operation: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    assert_eq!(operation["name"], "sources.status");
+    assert!(operation["input"].is_object());
+    assert!(operation["output"].is_object());
+    assert_eq!(std::fs::read_dir(home.path())?.count(), 0);
     Ok(())
 }

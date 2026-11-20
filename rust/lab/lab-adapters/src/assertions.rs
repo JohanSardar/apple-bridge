@@ -438,14 +438,17 @@ pub fn scoped_clients(
     let mut out = vec![(
         observed.gateway.clone(),
         world
-            .gateway_cli(&["token", "create", "--scope", scope])?
+            .gateway_cli(&["token", "create", "--expires-in", "1h", "--scope", scope])?
             .trim()
             .to_owned(),
     )];
     for endpoint in &observed.replicas {
         out.push((
             endpoint.client(),
-            replicas::cli(&endpoint.home, &["token", "create", "--scope", scope])?,
+            replicas::cli(
+                &endpoint.home,
+                &["token", "create", "--expires-in", "1h", "--scope", scope],
+            )?,
         ));
     }
     Ok(out)

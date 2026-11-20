@@ -8,6 +8,9 @@ pub struct StateReads<Role = ab_state::Replica>(
     pub Arc<tokio::sync::Mutex<ab_blobs::Store>>,
 );
 fn state_error(error: &ab_state::Error) -> Error {
+    if let ab_state::Error::MissingScope(scope) = error {
+        return Error::missing_scope(scope);
+    }
     if let ab_state::Error::Contract(code) = error
         && let Ok(code) = serde_json::to_value(code).and_then(serde_json::from_value::<Code>)
     {
@@ -63,6 +66,16 @@ pub fn visibility(input: &Visibility) -> ab_state::Visibility {
     }
     result
 }
+pub fn write_visibility(input: &Visibility) -> ab_state::Visibility {
+    let mut result = visibility(input);
+    for (grant, allowed) in input {
+        if *allowed && let Some(source) = grant.strip_suffix(":write") {
+            result.insert(source.into(), true);
+        }
+    }
+    result
+}
+
 impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
     fn record_activity(&self, activity: &ab_trust::activity::AgentActivity) -> Result<(), Error> {
         let call = || {
@@ -168,7 +181,7 @@ impl<Role: std::fmt::Debug + Send + Sync> ReadStore for StateReads<Role> {
             .map_err(|_| Code::Unavailable)?
             .query_blob_grant(&principal.id, id)
             .map_err(|e| state_error(&e))?;
-        principal.authorize(&scope).map_err(|_| Code::Forbidden)?;
+        principal.authorize_blob(&scope)?;
         blobs
             .as_array()
             .ok_or(Code::Corrupt)?
@@ -390,6 +403,12 @@ impl Identity for TrustIdentity {
         ))
     }
     fn current(&self, original: &Principal) -> Result<Principal, Error> {
+        if original
+            .expires_at
+            .is_some_and(|expiry| expiry <= jiff::Timestamp::now())
+        {
+            return Err(Code::Unauthorized.into());
+        }
         let credentials = self.0.load().map_err(|error| trust_error(&error))?;
         if original.kind == "delegated" {
             let (parent, _) = original.id.split_once('/').ok_or(Code::Unauthorized)?;
@@ -418,17 +437,24 @@ impl Identity for TrustIdentity {
             .into_iter()
             .find(|p| p.id == original.id && p.active())
             .ok_or(Code::Unauthorized)?;
-        let ceiling = original
-            .grants
-            .iter()
-            .map(|g| ab_trust::Grant::parse(g))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| trust_error(&error))?;
-        current.grants = ab_trust::effective_grants(&current.grants, &ceiling);
         if let Some(enrollment) = credentials.enrollment {
             current.grants = ab_trust::effective_grants(&current.grants, &enrollment.grants);
         }
-        Ok(principal(current))
+        current
+            .grants
+            .retain(|grant| original.authorize(grant.as_str()).is_ok());
+        let mut current = principal(current);
+        if !original.resource.is_empty() {
+            current.resource.clone_from(&original.resource);
+        }
+        if let Some(expiry) = original.expires_at {
+            current.expires_at = Some(
+                current
+                    .expires_at
+                    .map_or(expiry, |stored| stored.min(expiry)),
+            );
+        }
+        Ok(current)
     }
     fn sign(&self, original: &Principal, id: &str, hash: &str) -> Result<String, Error> {
         let current = self.current(original)?;

@@ -145,6 +145,14 @@ pub(crate) fn open_ledger(home: &Path) -> Result<Connection> {
     let db = Connection::open(path)?;
     db.busy_timeout(std::time::Duration::from_secs(5))?;
     db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,state TEXT NOT NULL,payload BLOB NOT NULL); CREATE INDEX IF NOT EXISTS commands_state ON commands(state); CREATE TABLE IF NOT EXISTS dedupe(command_id TEXT PRIMARY KEY,principal TEXT NOT NULL,request_hash TEXT NOT NULL,admission_era TEXT NOT NULL);")?;
+    db.execute_batch(
+        "CREATE TABLE IF NOT EXISTS command_requests(
+            principal TEXT NOT NULL,
+            request_id TEXT NOT NULL,
+            id TEXT NOT NULL UNIQUE,
+            PRIMARY KEY(principal, request_id)
+        );",
+    )?;
     db.execute(
         "INSERT OR IGNORE INTO meta VALUES('admission_era',?)",
         [gateway::new_id("")?],
@@ -242,16 +250,75 @@ impl State<Gateway> {
         crate::stored_row(&raw.ok_or(ErrorCode::NotFound)?, |row| row)?
             .ok_or_else(|| ErrorCode::NotFound.into())
     }
-    pub fn commands(&self) -> Result<Vec<CommandRecord>> {
-        let mut stmt = self
+    pub fn principal_command(&self, principal: &str, id: &str) -> Result<CommandRecord> {
+        let raw: Option<Vec<u8>> = self
             .ledger
             .as_ref()
             .ok_or(ErrorCode::Unavailable)?
-            .prepare("SELECT payload FROM commands ORDER BY id")?;
-        let rows = stmt.query_map([], |r| r.get::<_, Vec<u8>>(0))?;
+            .query_row(
+                "SELECT payload FROM commands
+                 WHERE principal=?1 AND id=COALESCE(
+                     (SELECT id FROM command_requests WHERE principal=?1 AND request_id=?2),
+                     ?2
+                 )",
+                [principal, id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        crate::stored_row(&raw.ok_or(ErrorCode::NotFound)?, |row| row)?
+            .ok_or_else(|| ErrorCode::NotFound.into())
+    }
+
+    pub fn commands(&self) -> Result<Vec<CommandRecord>> {
+        self.command_rows(None, None, 0, usize::MAX)
+    }
+
+    pub fn visible_commands(
+        &self,
+        principal: &str,
+        visibility: &crate::Visibility,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Vec<CommandRecord>> {
+        let sources = if visibility.get("admin") == Some(&true) {
+            None
+        } else {
+            let sources: Vec<_> = visibility
+                .iter()
+                .filter(|(_, allowed)| **allowed)
+                .map(|(source, _)| source)
+                .collect();
+            Some(serde_json::to_string(&sources)?)
+        };
+        self.command_rows(Some(principal), sources.as_deref(), offset, limit)
+    }
+
+    fn command_rows(
+        &self,
+        principal: Option<&str>,
+        sources: Option<&str>,
+        mut offset: usize,
+        limit: usize,
+    ) -> Result<Vec<CommandRecord>> {
+        let mut stmt = self.ledger.as_ref().ok_or(ErrorCode::Unavailable)?.prepare_cached(
+            "SELECT payload FROM commands WHERE (?1 IS NULL OR principal=?1)
+             AND (?2 IS NULL OR json_extract(payload,'$.source') IN (SELECT value FROM json_each(?2)))
+             ORDER BY rtrim(json_extract(payload,'$.created_at'),'Z') DESC, id DESC",
+        )?;
+        let mut rows = stmt.query([principal, sources])?;
         let mut out = Vec::new();
-        for row in rows {
-            out.extend(crate::stored_row(&row?, |row| row)?);
+        while out.len() < limit {
+            let Some(row) = rows.next()? else {
+                break;
+            };
+            let raw: Vec<u8> = row.get(0)?;
+            if let Some(record) = crate::stored_row(&raw, |row| row)? {
+                if offset == 0 {
+                    out.push(record);
+                } else {
+                    offset -= 1;
+                }
+            }
         }
         Ok(out)
     }
@@ -267,10 +334,18 @@ impl State<Gateway> {
         from: Option<CommandState>,
         record: CommandRecord,
     ) -> Result<CommandRecord> {
-        self.persist_command(from, record, false)
+        self.persist_command(from, record, false, None)
     }
+    pub fn admit_command(
+        &mut self,
+        request_id: &str,
+        record: CommandRecord,
+    ) -> Result<CommandRecord> {
+        self.persist_command(None, record, false, Some(request_id))
+    }
+
     pub fn update_command_parts(&mut self, record: CommandRecord) -> Result<CommandRecord> {
-        self.persist_command(Some(record.state), record, true)
+        self.persist_command(Some(record.state), record, true, None)
     }
     #[allow(clippy::too_many_lines)]
     fn persist_command(
@@ -278,6 +353,7 @@ impl State<Gateway> {
         from: Option<CommandState>,
         mut r: CommandRecord,
         parts_updated: bool,
+        request_id: Option<&str>,
     ) -> Result<CommandRecord> {
         if parts_updated {
             if from != Some(r.state) || r.command.op != "messages.send" {
@@ -369,6 +445,12 @@ impl State<Gateway> {
             .unwrap_or("")
             .to_owned();
         tx.execute("INSERT INTO commands VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload",params![r.command.id.as_str(),r.principal,r.request_hash,state,encoded(&r)?])?;
+        if let Some(request_id) = request_id {
+            tx.execute(
+                "INSERT INTO command_requests VALUES(?,?,?)",
+                params![r.principal, request_id, r.command.id.as_str()],
+            )?;
+        }
         if from.is_none() {
             tx.execute(
                 "INSERT INTO dedupe VALUES(?,?,?,?)",

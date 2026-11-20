@@ -14,7 +14,6 @@ Photos is read live from the Mac's library. It has no text search and is not par
 
 - Show the person the individual images from `photos_find` as they are. Keep any numbered grid out of the reply.
 - For full resolution, pass the `asset_id` to `photos_show`. It returns the whole photo as Photos shows it.
-- `photos_show` with `save: true` also saves the original file on the Mac and returns `file`, its path, for desktop agents to open or attach.
 - To send a photo in Messages, pass its `asset_id` in `photos` to `messages_send`; the photo file is attached as Photos shows it, as if dragged in from Photos.
 
 ## Downloading originals

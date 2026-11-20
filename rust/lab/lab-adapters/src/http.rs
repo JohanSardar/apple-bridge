@@ -28,7 +28,7 @@ impl Client {
             .ok_or_else(|| Error::Invalid("runtime API address".into()))?
             .to_owned();
         let token = world
-            .gateway_cli(&["token", "create", "--scope", scope])?
+            .gateway_cli(&["token", "create", "--expires-in", "1h", "--scope", scope])?
             .trim()
             .to_owned();
         Ok(Self { address, token })

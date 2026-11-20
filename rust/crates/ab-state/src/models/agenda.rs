@@ -1,6 +1,7 @@
 use super::{Connection, ErrorCode, Result, Value, Visibility, b, data, json, list, s, visible};
 
 pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
+    let page = crate::ReadPage::parse(query)?;
     let start = s(query, "start")
         .parse::<jiff::Timestamp>()
         .map_err(|_| ErrorCode::Invalid)?;
@@ -24,12 +25,16 @@ pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) ->
                 continue;
             }
             let overlaps = if b(&fields, "all_day") {
-                let start_day = &s(query, "start")[..10];
+                let start_day = s(query, "start").get(..10).ok_or(ErrorCode::Invalid)?;
                 let raw_end = s(query, "end");
-                let mut end_day = raw_end[..10]
+                let mut end_day = raw_end
+                    .get(..10)
+                    .ok_or(ErrorCode::Invalid)?
                     .parse::<jiff::civil::Date>()
                     .map_err(|_| ErrorCode::Invalid)?;
-                let local_time = raw_end[11..]
+                let local_time = raw_end
+                    .get(11..)
+                    .ok_or(ErrorCode::Invalid)?
                     .split(['Z', '+', '-'])
                     .next()
                     .ok_or(ErrorCode::Invalid)?
@@ -62,5 +67,14 @@ pub(super) fn agenda(db: &Connection, visibility: &Visibility, query: &Value) ->
             .cmp(&right.0)
             .then(left.1.id.as_str().cmp(right.1.id.as_str()))
     });
-    Ok(json!({"records":out.into_iter().map(|(_,record)|record).collect::<Vec<_>>()}))
+    let total = out.len();
+    let records: Vec<_> = out
+        .into_iter()
+        .skip(page.offset)
+        .take(page.limit)
+        .map(|(_, record)| record)
+        .collect();
+    let mut result = json!({"records":records});
+    page.continuation(total, &mut result);
+    Ok(result)
 }

@@ -23,6 +23,10 @@
     [
       "next",
       "string"
+    ],
+    [
+      "next_offset",
+      "int"
     ]
   ],
   "Alias": [
@@ -649,6 +653,10 @@
     [
       "cursor",
       "Cursor"
+    ],
+    [
+      "next_offset",
+      "int"
     ]
   ],
   "NoteListAccount": [
@@ -847,6 +855,10 @@
     [
       "cursor",
       "Cursor"
+    ],
+    [
+      "next_offset",
+      "int"
     ]
   ],
   "ReminderSectionItems": [

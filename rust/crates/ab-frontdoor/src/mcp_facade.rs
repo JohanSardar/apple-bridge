@@ -7,7 +7,11 @@ use crate::{
     },
 };
 use ab_catalog::{AgentOperation, OperationKind, VersionRule};
-use ab_operations::{Code, Error, Principal};
+use ab_operations::{
+    Code, Command, Error, Principal,
+    local::{CommandRecord, PartOutcome, RetryAdvice},
+    scoped_command_id,
+};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Map, Value, json};
 
@@ -65,19 +69,6 @@ pub(crate) struct Call<'a> {
     pub registry: &'a Registry,
 }
 
-const TOOL_SCOPES: &[(&str, &str)] = &[
-    ("messages_read", "messages:read"),
-    ("messages_send", "messages:write"),
-    ("reminders_add", "reminders:write"),
-    ("calendar_events", "calendar:read"),
-    ("calendar_add", "calendar:write"),
-    ("contacts_find", "contacts:read"),
-    ("notes_create", "notes:write"),
-    ("screen_time", "usage:read"),
-    ("photos_find", "photos:read"),
-    ("photos_show", "photos:read"),
-];
-
 pub(crate) async fn call(
     frontdoor: &Frontdoor,
     principal: &Principal,
@@ -95,7 +86,7 @@ pub(crate) async fn call(
         principal,
         registry,
     };
-    if tool == "calendar_events"
+    if tool == "calendar_list"
         && let Some(id) = input.remove("calendar_id")
     {
         input.entry("calendar").or_insert(id);
@@ -109,7 +100,7 @@ pub(crate) async fn call(
         "apple_search" => call.search(&input).await,
         "apple_read" => call.read(&input).await,
         "apple_change" => call.change(&input).await,
-        "apple_command_status" => call.command_status(&input).await,
+        "apple_change_status" => call.command_status(&input).await,
         "apple_guide" => crate::mcp_guides::guide_tool(
             input.get("name").and_then(Value::as_str),
             &json!(call.index()),
@@ -117,11 +108,11 @@ pub(crate) async fn call(
         "messages_read" => call.messages_read(&input).await,
         "messages_send" => call.messages_send(&input).await,
         "reminders_add" => call.reminders_add(&input).await,
-        "calendar_events" => call.calendar_events(&input).await,
+        "calendar_list" => call.calendar_list(&input).await,
         "calendar_add" => call.calendar_add(&input).await,
         "contacts_find" => call.contacts_find(&input).await,
-        "notes_create" => call.notes_create(&input).await,
-        "screen_time" => call.screen_time(&input).await,
+        "notes_add" => call.notes_add(&input).await,
+        "screen_time_read" => call.screen_time_read(&input),
         "photos_find" => call.photos_find(&input).await,
         "photos_show" => call.photos_show(&input).await,
         _ => Err(Problem::new("invalid", format!("unknown tool {tool}"))),
@@ -190,33 +181,6 @@ pub(crate) fn request_id(input: &Map<String, Value>) -> Step<String> {
     }
 }
 
-pub(crate) fn scoped_id(principal: &str, request_id: &str) -> String {
-    let digest = ab_trust::fingerprint(format!("{principal}\n{request_id}").as_bytes());
-    let readable: String = request_id.chars().take(100).collect();
-    format!("{readable}.{}", &digest[..16])
-}
-
-pub(crate) fn legacy_ids(request_id: &str) -> Vec<String> {
-    let mut ids = vec![request_id.to_owned()];
-    if !request_id.starts_with("qry_") {
-        ids.push(format!("qry_{request_id}"));
-    }
-    ids.retain(|id| mcp_registry::valid_id(id));
-    ids
-}
-
-pub(crate) fn status_ids(principal: &str, request_id: &str) -> Vec<String> {
-    let mut ids = Vec::new();
-    for id in [scoped_id(principal, request_id), request_id.to_owned()] {
-        if !id.starts_with("qry_") {
-            ids.push(format!("qry_{id}"));
-        }
-        ids.push(id);
-    }
-    ids.retain(|id| mcp_registry::valid_id(id));
-    ids
-}
-
 pub(crate) fn source_of(collection: &str) -> &str {
     collection.split('.').next().unwrap_or(collection)
 }
@@ -226,8 +190,12 @@ impl Call<'_> {
         let Some(schema) = self.registry.tool_schema(tool) else {
             return Ok(());
         };
-        mcp_check::check_tool(tool, schema, &self.registry.example(tool), input)?;
-        if let Some((_, scope)) = TOOL_SCOPES.iter().find(|(name, _)| *name == tool) {
+        mcp_check::check_tool(tool, &schema, &self.registry.example(tool), input)?;
+        if let Some(scope) = self
+            .registry
+            .tool_scope(tool)
+            .filter(|scope| !scope.is_empty())
+        {
             self.require(scope, tool)?;
         }
         Ok(())
@@ -319,20 +287,30 @@ impl Call<'_> {
         }
     }
 
-    pub(crate) async fn command_id(&self, request_id: &str) -> Step<String> {
-        let status = self.operation("commands.status")?;
-        for legacy in legacy_ids(request_id) {
-            match self.invoke(status, &json!({"command_id": legacy})).await {
-                Ok(_) => return Ok(request_id.to_owned()),
-                Err(problem) if problem.code == "not_found" => {}
-                Err(problem) => {
-                    return Err(problem.field("request_id").hint(
-                        "Apple Bridge could not check whether this request_id was already used, so nothing was done. Retry the same call with the same request_id.",
-                    ));
-                }
+    async fn request_status(&self, request_id: &str) -> Step<Value> {
+        let operation = self.operation("commands.status")?;
+        let raw = self
+            .frontdoor
+            .service
+            .request_status(self.principal, request_id, false)
+            .await
+            .map_err(|error| from_error(&error, Some(operation), self.principal))?;
+        serde_json::from_str(raw.get()).map_err(|_| Problem::new("corrupt", "unreadable status"))
+    }
+
+    async fn command_id(&self, request_id: &str) -> Step<String> {
+        match self.request_status(request_id).await {
+            Ok(record) => record["command"]["command_id"]
+                .as_str()
+                .map(str::to_owned)
+                .ok_or_else(|| Problem::new("corrupt", "missing command ID")),
+            Err(problem) if problem.code == "not_found" => {
+                Ok(scoped_command_id(&self.principal.id, request_id))
             }
+            Err(problem) => Err(problem.field("request_id").hint(
+                "Could not check the request_id. Retry the same call with the same request_id.",
+            )),
         }
-        Ok(scoped_id(&self.principal.id, request_id))
     }
 
     pub(crate) async fn quiet(&self, name: &str, input: Value) -> Option<Value> {
@@ -473,9 +451,14 @@ impl Call<'_> {
                 "next": if matches.is_empty() { "Nothing matched; try other words, or apple_describe with a domain such as messages." } else { "Best first. Run one with apple_read or apple_change as in its example." },
             })));
         }
+        let domains = self
+            .registry
+            .visible(Some(self.principal))
+            .map(|operation| &operation.domain)
+            .collect::<std::collections::BTreeSet<_>>();
         Ok(Outcome::ok(json!({
             "naming": NAMING,
-            "domains": self.index(),
+            "domains": domains,
             "next": "apple_describe with a domain gives each operation's summary, arguments and an example; with a query, the best operations for a task.",
         })))
     }
@@ -711,13 +694,11 @@ impl Call<'_> {
         if operation.name == USAGE_SUMMARY {
             return self
                 .usage_summary(&arguments)
-                .await
                 .map(|v| Outcome::ok(v).named(USAGE_SUMMARY));
         }
         if operation.name == crate::mcp_lookups::FREE_SLOTS {
             return self
                 .free_slots(&arguments)
-                .await
                 .map(|v| Outcome::ok(v).named(crate::mcp_lookups::FREE_SLOTS));
         }
         if operation.name == crate::mcp_lookups::SHARED {
@@ -729,11 +710,10 @@ impl Call<'_> {
         if operation.name == CALENDARS {
             return self
                 .calendars()
-                .await
                 .map(|list| {
                     Outcome::ok(json!({
                         "calendars": list,
-                        "next": "Pass a calendar's title as calendar to calendar_add or calendar_events.",
+                        "next": "Pass a calendar's title as calendar to calendar_add or calendar_list.",
                     }))
                 })
                 .map(|o| o.named(CALENDARS));
@@ -775,7 +755,7 @@ impl Call<'_> {
                 .map(|v| Outcome::ok(v).named(BLOB_READ));
         }
         let started = std::time::Instant::now();
-        let body = if operation.kind == OperationKind::Query {
+        let mut body = if operation.kind == OperationKind::Query {
             let mut body = json!({"args": arguments.clone()});
             match operation.name.as_str() {
                 "photos.places" => body["deadline_ms"] = json!(45_000),
@@ -795,6 +775,10 @@ impl Call<'_> {
         } else {
             Value::Object(arguments.clone())
         };
+        if let Some(window) = crate::mcp_views::model_window(operation, input, &arguments) {
+            body["offset"] = json!(window.offset);
+            body["limit"] = json!(window.limit);
+        }
         let raw = self.invoke_raw(operation, &body).await?;
         let elapsed = started.elapsed().as_secs_f64() * 1000.0;
         let mut images = Vec::new();
@@ -873,73 +857,19 @@ impl Call<'_> {
             self.require(&operation.scope, &operation.public)?;
         }
         let id = request_id(input)?;
-        let _turn = if BY_TITLE.contains(&operation.name.as_str()) {
-            Some(crate::mcp_compose::request_turn(&self.principal.id, &id).await)
-        } else {
-            None
-        };
-        let mut selected = None;
-        if BY_TITLE.contains(&operation.name.as_str())
-            && !self.bound_target(operation, &id, &mut arguments).await?
-        {
-            let title = arguments
-                .get("reminder")
-                .and_then(Value::as_str)
-                .map(str::to_owned);
-            self.reminder_target(operation, &mut arguments).await?;
-            selected = title.zip(
-                arguments
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned),
-            );
+        if BY_TITLE.contains(&operation.name.as_str()) && arguments.contains_key("reminder") {
+            self.require("reminders:read", "finding a reminder by title")?;
         }
         if operation.name == "calendar.create_event" {
             let name = arguments.remove("calendar");
             if name.is_some() || !arguments.contains_key("calendar_id") {
-                let (calendar, _) = self
-                    .calendar_for(name.as_ref().and_then(Value::as_str), true)
-                    .await?;
+                let (calendar, _) =
+                    self.calendar_for(name.as_ref().and_then(Value::as_str), true)?;
                 arguments.insert("calendar_id".into(), json!(calendar));
             }
         }
-        let outcome = self
-            .run_change(operation, arguments, &id, flag(input, "verbose"))
-            .await;
-        if let Some((title, target)) = selected
-            && outcome
-                .as_ref()
-                .err()
-                .is_none_or(|problem| problem.code != "id_reused")
-        {
-            self.bind_if_admitted(operation, &id, &title, &target).await;
-        }
-        outcome
-    }
-
-    async fn bind_if_admitted(
-        &self,
-        operation: &AgentOperation,
-        request_id: &str,
-        title: &str,
-        target: &str,
-    ) {
-        let Ok(status) = self.operation("commands.status") else {
-            return;
-        };
-        let Ok(command_id) = self.command_id(request_id).await else {
-            return;
-        };
-        let Ok(record) = self
-            .invoke(status, &json!({"command_id": command_id}))
+        self.run_change(operation, arguments, &id, flag(input, "verbose"))
             .await
-        else {
-            return;
-        };
-        let command = &record["command"];
-        if command["op"] == operation.name.as_str() && command["args"]["id"] == target {
-            crate::mcp_compose::bind_selector(&self.principal.id, request_id, title);
-        }
     }
 
     pub(crate) async fn run_change(
@@ -987,8 +917,18 @@ impl Call<'_> {
             envelope["expected_version"] = version;
         }
         let record = self.invoke(operation, &envelope).await?;
-        let mut value = change_result(&record, verbose);
-        value["request_id"] = json!(external);
+        self.finished_change(operation, external, &record, verbose)
+            .await
+    }
+
+    async fn finished_change(
+        &self,
+        operation: &AgentOperation,
+        request_id: &str,
+        record: &Value,
+        verbose: bool,
+    ) -> Step<Outcome> {
+        let mut value = change_result(record, request_id, verbose)?;
         self.attach_record(&mut value, operation).await;
         Ok(Outcome::ok(value).named(&operation.name))
     }
@@ -1037,19 +977,7 @@ impl Call<'_> {
                 .field("request_id")
                 .expected(json!("the request_id an earlier change returned"))
         })?;
-        let operation = self.operation("commands.status")?;
-        let mut record = Err(Problem::new("not_found", "no such change"));
-        for candidate in status_ids(&self.principal.id, id) {
-            record = self
-                .invoke(operation, &json!({"command_id": candidate}))
-                .await;
-            if !record
-                .as_ref()
-                .is_err_and(|problem| problem.code == "not_found")
-            {
-                break;
-            }
-        }
+        let record = self.request_status(id).await;
         let record = record.map_err(|problem| {
             if problem.code == "not_found" {
                 problem
@@ -1071,8 +999,7 @@ impl Call<'_> {
         {
             return Ok(Outcome::ok(photos_status(&op, id, &record, verbose)).named(&op));
         }
-        let mut value = change_result(&record, verbose);
-        value["request_id"] = json!(id);
+        let mut value = change_result(&record, id, verbose)?;
         if let Some(op) = self.registry.find(&op) {
             self.attach_record(&mut value, op).await;
         }
@@ -1090,21 +1017,47 @@ impl Call<'_> {
                 .hint("Give text, photos (asset_id values from photos_find), or both."));
         }
         let id = request_id(input)?;
-        if photos.is_some()
-            && let Ok(sent) = self
-                .command_status(&Map::from_iter([("request_id".to_owned(), json!(id))]))
-                .await
-        {
-            return Ok(sent);
+        if input.contains_key("chat_id") && input.contains_key("to") {
+            return Err(Problem::new("invalid", "give to or chat_id, not both")
+                .operation(&operation.name)
+                .field("to")
+                .hint("chat_id already names the chat; remove to."));
         }
+        if text(input, "chat_id").is_none() && text(input, "to").is_none() {
+            return Err(Problem::new("invalid", "to or chat_id is required")
+                .operation(&operation.name)
+                .field("to")
+                .expected(json!("a phone number, email or contact name, or a chat_id"))
+                .example(json!({"tool": "messages_send", "arguments": {"to": "+38640123456", "text": "On my way"}})));
+        }
+        if let Some(photos) = photos {
+            let mut arguments: Map<String, Value> = ["to", "chat_id", "service"]
+                .into_iter()
+                .filter_map(|key| text(input, key).map(|value| (key.into(), json!(value))))
+                .collect();
+            if let Some(body) = body {
+                arguments.insert("text".into(), json!(body));
+            }
+            arguments.insert("asset_ids".into(), json!(photos));
+            return self
+                .send_photo_message(operation, &id, input, arguments)
+                .await;
+        }
+        let mut arguments = self.message_recipient(operation, input).await?;
+        if let Some(body) = body {
+            arguments.insert("text".into(), json!(body));
+        }
+        mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
+        self.run_change(operation, arguments, &id, false).await
+    }
+
+    async fn message_recipient(
+        &self,
+        operation: &AgentOperation,
+        input: &Map<String, Value>,
+    ) -> Step<Map<String, Value>> {
         let mut arguments = Map::new();
         if let Some(chat) = text(input, "chat_id") {
-            if input.contains_key("to") {
-                return Err(Problem::new("invalid", "give to or chat_id, not both")
-                    .operation(&operation.name)
-                    .field("to")
-                    .hint("chat_id already names the chat; remove to."));
-            }
             arguments.insert("chat_id".into(), json!(chat));
         } else if let Some(who) = text(input, "to") {
             let person = self.person(who, "to").await?;
@@ -1145,21 +1098,50 @@ impl Call<'_> {
                 .candidates(json!(person.handles))
                 .hint("Ask the owner which one to use, then pass it as to."));
             }
-        } else {
-            return Err(Problem::new("invalid", "to or chat_id is required")
-                .operation(&operation.name)
-                .field("to")
-                .expected(json!("a phone number, email or contact name, or a chat_id"))
-                .example(json!({"tool": "messages_send", "arguments": {"to": "+38640123456", "text": "On my way"}})));
         }
-        if let Some(body) = body {
-            arguments.insert("text".into(), json!(body));
-        }
-        if let Some(photos) = photos {
-            arguments.insert("files".into(), json!(self.photo_attachments(photos).await?));
-        }
-        mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
-        self.run_change(operation, arguments, &id, false).await
+        Ok(arguments)
+    }
+
+    async fn send_photo_message(
+        &self,
+        operation: &AgentOperation,
+        request_id: &str,
+        input: &Map<String, Value>,
+        arguments: Map<String, Value>,
+    ) -> Step<Outcome> {
+        self.require("photos:read", "attaching a photo")?;
+        let command: Command = serde_json::from_value(json!({"args": arguments, "wait_ms": 15000}))
+            .map_err(|_| Problem::new("invalid", "unencodable message"))?;
+        let mut preparation_problem = None;
+        let raw = self
+            .frontdoor
+            .service
+            .submit_photo_message(self.principal, request_id, command, |assets| {
+                let preparation_problem = &mut preparation_problem;
+                Box::pin(async move {
+                    let prepared: Step<_> = async {
+                        let recipient = self.message_recipient(operation, input).await?;
+                        let files = self.photo_attachments(assets).await?;
+                        Ok(ab_operations::local::StagedPhotoMessage { recipient, files })
+                    }
+                    .await;
+                    prepared.map_err(|problem| {
+                        let code = serde_json::from_value(json!(problem.code))
+                            .unwrap_or(Code::Unavailable);
+                        *preparation_problem = Some(problem);
+                        Error::from(code)
+                    })
+                })
+            })
+            .await
+            .map_err(|error| {
+                preparation_problem
+                    .unwrap_or_else(|| from_error(&error, Some(operation), self.principal))
+            })?;
+        let record = serde_json::from_str(raw.get())
+            .map_err(|_| Problem::new("corrupt", "unreadable message result"))?;
+        self.finished_change(operation, request_id, &record, false)
+            .await
     }
 
     pub(crate) async fn reminder_list(&self, list: Option<&str>) -> Step<(String, Option<String>)> {
@@ -1265,7 +1247,7 @@ impl Call<'_> {
         .named("contacts.lookup"))
     }
 
-    async fn notes_create(&self, input: &Map<String, Value>) -> Step<Outcome> {
+    async fn notes_add(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let operation = self.operation("notes.create")?;
         let title = content(input, "title", &operation.name)?.ok_or_else(|| {
             Problem::new("invalid", "title is required")
@@ -1793,52 +1775,28 @@ fn without_internal(value: &Value) -> Value {
     }
 }
 
-fn part_outcome(disposition: &str) -> &'static str {
-    match disposition {
-        "observed" | "delivered" => "sent",
-        "delivery_failed" => "failed",
-        "failed_no_effect" => "not_sent",
-        _ => "unknown",
-    }
-}
-
 #[allow(clippy::too_many_lines)]
-pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
-    let state = record["state"].as_str().unwrap_or_default();
+pub(crate) fn change_result(record: &Value, request_id: &str, verbose: bool) -> Step<Value> {
+    let command: CommandRecord = serde_json::from_value(record.clone())
+        .map_err(|_| Problem::new("corrupt", "unreadable change result"))?;
+    let (outcome, retry) = command.classify_outcome();
+    let status = json!(outcome);
+    let status = status.as_str().unwrap_or_default();
     let disposition = record["disposition"].as_str().unwrap_or_default();
-    let request_id = record["command"]["command_id"].as_str().unwrap_or_default();
-    let operation = record["command"]["op"].as_str().unwrap_or_default();
+    let operation = command.command.op.as_str();
     let sends = matches!(operation, "messages.send" | "messages.reply" | "mail.send");
-    let parts: Vec<Value> = record["parts"]
-        .as_array()
-        .into_iter()
-        .flatten()
+    let parts: Vec<Value> = command
+        .parts
+        .iter()
         .map(|part| {
-            let mut out = json!({
-                "index": part["index"],
-                "kind": part["kind"],
-                "outcome": part_outcome(part["disposition"].as_str().unwrap_or_default()),
-            });
-            if let Some(id) = part["record_id"].as_str().filter(|id| !id.is_empty()) {
-                out["id"] = json!(id);
+            let mut out =
+                json!({"index": part.index, "kind": part.kind, "outcome": part.outcome()});
+            if !part.record_id.is_empty() {
+                out["id"] = json!(part.record_id);
             }
             out
         })
         .collect();
-    let succeeded = parts.iter().filter(|p| p["outcome"] == "sent").count();
-    let failed_parts = parts.len() - succeeded;
-    let base = match state {
-        "awaiting_approval" => "awaiting_approval",
-        "admitted" | "prepared" | "dispatched" => "pending",
-        "observed" | "delivered" => "done",
-        "indeterminate" => "indeterminate",
-        _ => "failed",
-    };
-    let status = match base {
-        "failed" if succeeded > 0 => "partial",
-        "done" if failed_parts > 0 && parts.len() > 1 => "partial",
-        other => other,
-    };
     let mut ids: Vec<Value> = record["observed_record_ids"]
         .as_array()
         .cloned()
@@ -1855,14 +1813,6 @@ pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
     {
         ids.push(json!(id));
     }
-    let no_effect = matches!(
-        disposition,
-        "rejected_before_dispatch"
-            | "rejected_by_owner"
-            | "failed_no_effect"
-            | "expired"
-            | "absent_confirmed"
-    );
     let verification = match disposition {
         _ if status == "partial" => "Some parts happened and some did not; see parts.",
         "locally_observed" if sends => {
@@ -1895,13 +1845,18 @@ pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
         "done" if sends => "Done. Do not send it again.".to_owned(),
         "done" => "Done. Use record.version as expected_version for the next change to this record.".to_owned(),
         "partial" => format!(
-            "Part of this happened: {}. Do not repeat this request, with this or a new request_id: that would repeat the parts that worked. Tell the owner which part failed; if they want it, send only that part as a new request.",
-            described.join(", ")
+            "Part of this happened: {}. Do not repeat the whole request. {}",
+            described.join(", "),
+            if retry == RetryAdvice::RetryUnsentPartsOnly {
+                "With the owner's direction, start a new request for the parts confirmed not sent."
+            } else {
+                "Confirm what happened with the owner before sending anything again."
+            }
         ),
-        "pending" => format!("Still running on the Mac. Call apple_command_status with request_id {request_id} in a few seconds. Do not repeat it with a new request_id."),
-        "awaiting_approval" => format!("The owner set this agent to ask first. Tell them what you asked for; after they approve it in Apple Bridge, call apple_command_status with request_id {request_id}."),
+        "pending" => format!("Still running on the Mac. Call apple_change_status with request_id {request_id} in a few seconds. Do not repeat it with a new request_id."),
+        "awaiting_approval" => format!("The owner set this agent to ask first. Tell them what you asked for; after they approve it in Apple Bridge, call apple_change_status with request_id {request_id}."),
         "indeterminate" => "Nobody can tell whether it happened. Do not retry with a new request_id; tell the owner.".to_owned(),
-        _ if no_effect => "It did not happen and nothing changed. Fix the cause before trying again with a new request_id.".to_owned(),
+        _ if retry == RetryAdvice::FixBeforeRetry => "It did not happen and nothing changed. Fix the cause before trying again with a new request_id.".to_owned(),
         _ if disposition == "delivery_failed" => "The Mac's app shows it as not delivered. Sending it again with a new request_id makes a second copy; tell the owner and let them decide.".to_owned(),
         _ => "It failed, but that does not prove nothing changed. Read the record or ask the owner before trying again with a new request_id.".to_owned(),
     };
@@ -1912,7 +1867,12 @@ pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
         "ids": ids,
         "next": next,
     });
-    if parts.len() > 1 || failed_parts > 0 {
+    if parts.len() > 1
+        || command
+            .parts
+            .iter()
+            .any(|part| part.outcome() != PartOutcome::Sent)
+    {
         value["parts"] = json!(parts);
     }
     if !verification.is_empty() {
@@ -1938,7 +1898,7 @@ pub(crate) fn change_result(record: &Value, verbose: bool) -> Value {
     if verbose {
         value["details"] = record.clone();
     }
-    value
+    Ok(value)
 }
 
 fn photos_ids(arguments: &Map<String, Value>, result: &Value) -> Vec<Value> {

@@ -118,3 +118,62 @@ fn a_restored_note_comes_back_under_its_old_record() {
     assert_eq!(tally(directory.path()).0, 1);
     assert_eq!(id(directory.path()), before);
 }
+
+#[test]
+fn source_reads_distinguish_missing_scope_from_an_empty_store() {
+    let directory = tempfile::tempdir().expect("home");
+    let store = State::<Gateway>::open(directory.path()).expect("open");
+    for (operation, source, scope, query) in [
+        ("notes.list", "notes", "notes:read", json!({})),
+        (
+            "reminders.items",
+            "reminders",
+            "reminders:read",
+            json!({"smart":"all","time_zone":"UTC"}),
+        ),
+    ] {
+        let denied = store.read_model(&ab_state::Visibility::new(), operation, &query);
+        assert!(matches!(denied, Err(ab_state::Error::MissingScope(missing)) if missing == scope));
+        let allowed = ab_state::Visibility::from([(source.into(), true)]);
+        assert_eq!(
+            store
+                .read_model(&allowed, operation, &query)
+                .expect("authorized")["count"],
+            0
+        );
+    }
+}
+
+#[test]
+fn note_pages_preserve_total_and_continue_in_display_order() {
+    let directory = tempfile::tempdir().expect("home");
+    let mut store = State::<Gateway>::open(directory.path()).expect("open");
+    commit(&mut store, 1, &[upsert("C"), upsert("A"), upsert("B")]);
+    let allowed = ab_state::Visibility::from([("notes".into(), true)]);
+    let first = store
+        .read_model(&allowed, "notes.list", &json!({"sort":"title","limit":2}))
+        .expect("first page");
+    assert_eq!(first["count"], 3);
+    assert_eq!(
+        first["sections"][0]["notes"][0]["note"]["data"]["title"],
+        "A"
+    );
+    assert_eq!(
+        first["sections"][0]["notes"][1]["note"]["data"]["title"],
+        "B"
+    );
+    assert_eq!(first["next_offset"], 2);
+    let second = store
+        .read_model(
+            &allowed,
+            "notes.list",
+            &json!({"sort":"title","limit":2,"offset":first["next_offset"]}),
+        )
+        .expect("second page");
+    assert_eq!(second["count"], 3);
+    assert_eq!(
+        second["sections"][0]["notes"][0]["note"]["data"]["title"],
+        "C"
+    );
+    assert!(second.get("next_offset").is_none());
+}

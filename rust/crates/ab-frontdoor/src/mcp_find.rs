@@ -172,7 +172,6 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
     ("usage", &[("screentime.summary", 12)]),
     ("spend", &[("screentime.summary", 10)]),
     ("spent", &[("screentime.summary", 10)]),
-    ("phone", &[("screentime.summary", 0)]),
     ("app", &[("screentime.summary", 2)]),
     (
         "location",
@@ -196,7 +195,7 @@ const SYNONYMS: &[(&str, &[(&str, u32)])] = &[
         &[("bridge.list_records/voice_memos.recording", 6)],
     ),
     ("event", &[("calendar", 6)]),
-    ("meeting", &[("calendar", 8), ("event", 0)]),
+    ("meeting", &[("calendar", 8)]),
     ("appointment", &[("calendar", 8)]),
     ("calendar", &[("calendar", 6)]),
     ("schedul", &[("calendar.list", 4)]),

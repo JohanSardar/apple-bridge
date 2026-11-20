@@ -1,7 +1,7 @@
 use crate::{
     mcp_answer::{self, DEFAULT_ITEMS, Window, page, paged, short},
     mcp_check::{Problem, mac_zone},
-    mcp_facade::{Call, Step, compact},
+    mcp_facade::{Call, Step, compact, flag, text},
 };
 use ab_catalog::AgentOperation;
 use serde_json::{Map, Value, json};
@@ -11,6 +11,7 @@ const OVERDUE_TOP: usize = 3;
 const NOTE_PREVIEW: usize = 64;
 const UPCOMING_TOP: usize = 5;
 const UPCOMING_DAYS: i64 = 7;
+const REMINDER_SCAN_PAGE_SIZE: usize = 1000;
 const VIEWS: &[&str] = &["due_today", "overdue", "upcoming"];
 
 pub(crate) fn read_window(input: &Map<String, Value>, arguments: &Map<String, Value>) -> Window {
@@ -23,22 +24,37 @@ pub(crate) fn read_window(input: &Map<String, Value>, arguments: &Map<String, Va
     mcp_answer::window(&scope, DEFAULT_ITEMS)
 }
 
-fn zone() -> jiff::tz::TimeZone {
-    jiff::tz::TimeZone::get(&mac_zone()).unwrap_or(jiff::tz::TimeZone::UTC)
+pub(crate) fn model_window(
+    operation: &AgentOperation,
+    input: &Map<String, Value>,
+    arguments: &Map<String, Value>,
+) -> Option<Window> {
+    let model_paged = operation.name == "notes.list"
+        || operation.name == "reminders.items" && text(arguments, "smart") != Some("today");
+    (model_paged && !flag(input, "verbose") && !input.contains_key("fields"))
+        .then(|| read_window(input, arguments))
 }
 
-fn today() -> jiff::civil::Date {
-    jiff::Zoned::now().with_time_zone(zone()).date()
+fn model_page(raw: &Value, returned: usize, window: Window, narrow: &str) -> Value {
+    let total = raw["count"].as_u64().and_then(|n| usize::try_from(n).ok());
+    let next = raw["next_offset"]
+        .as_u64()
+        .map(|offset| json!({"offset": offset}));
+    let mut page = mcp_answer::cursor_page(returned, next, total, narrow);
+    if window.offset > 0 {
+        page["offset"] = json!(window.offset);
+    }
+    page
 }
 
-fn due_day(data: &Value) -> Option<jiff::civil::Date> {
+fn due_day(data: &Value, zone: &jiff::tz::TimeZone) -> Option<jiff::civil::Date> {
     let due = data["due"].as_str()?;
     if due.len() == 10 {
         return due.parse().ok();
     }
     due.parse::<jiff::Timestamp>()
         .ok()
-        .map(|at| at.to_zoned(zone()).date())
+        .map(|at| at.to_zoned(zone.clone()).date())
 }
 
 impl Call<'_> {
@@ -88,9 +104,12 @@ impl Call<'_> {
                 if arguments.get("smart").and_then(Value::as_str) == Some("today") {
                     self.today_view(arguments, raw, &names, window, input).await
                 } else {
-                    let items = reminder_cards(raw, &names);
-                    let (items, page) = page(
-                        items,
+                    let items: Vec<_> = reminder_records(raw)
+                        .map(|(section, item)| reminder_card(section, item, &names))
+                        .collect();
+                    let page = model_page(
+                        raw,
+                        items.len(),
                         window,
                         "Pass list for one list, smart for a smart list, or tag.",
                     );
@@ -139,18 +158,22 @@ impl Call<'_> {
         window: Window,
         input: &Map<String, Value>,
     ) -> Step<Value> {
-        let today = today();
+        let zone = arguments
+            .get("time_zone")
+            .and_then(Value::as_str)
+            .and_then(|name| jiff::tz::TimeZone::get(name).ok())
+            .unwrap_or(jiff::tz::TimeZone::UTC);
+        let today = jiff::Timestamp::now().to_zoned(zone.clone()).date();
         let mut due_today = Vec::new();
         let mut overdue = Vec::new();
-        for (card, day) in reminder_cards(raw, names)
-            .into_iter()
-            .zip(reminder_days(raw))
-        {
-            match day {
+        self.visit_reminder_pages(arguments, raw, |section, item| {
+            let card = reminder_card(section, item, names);
+            match due_day(&item["reminder"]["data"], &zone) {
                 Some(day) if day < today => overdue.push((day, card)),
                 _ => due_today.push(card),
             }
-        }
+        })
+        .await?;
         overdue.sort_by_key(|entry| std::cmp::Reverse(entry.0));
         let overdue: Vec<Value> = overdue.into_iter().map(|(_, card)| card).collect();
         let mut scheduled = arguments.clone();
@@ -158,17 +181,22 @@ impl Call<'_> {
         let found = self
             .invoke(
                 self.operation("reminders.items")?,
-                &Value::Object(scheduled),
+                &Value::Object(scheduled.clone()),
             )
             .await?;
         let last = today
             .checked_add(jiff::Span::new().days(UPCOMING_DAYS))
             .unwrap_or(today);
-        let mut upcoming: Vec<(jiff::civil::Date, Value)> = reminder_cards(&found, names)
-            .into_iter()
-            .zip(reminder_days(&found))
-            .filter_map(|(card, day)| day.filter(|d| *d > today && *d <= last).map(|d| (d, card)))
-            .collect();
+        let mut upcoming = Vec::new();
+        self.visit_reminder_pages(&scheduled, &found, |section, item| {
+            if let Some(day) = due_day(&item["reminder"]["data"], &zone)
+                && day > today
+                && day <= last
+            {
+                upcoming.push((day, reminder_card(section, item, names)));
+            }
+        })
+        .await?;
         upcoming.sort_by_key(|entry| entry.0);
         let upcoming: Vec<Value> = upcoming.into_iter().map(|(_, card)| card).collect();
         let call = |view: &str| json!({"tool": "apple_read", "arguments": {"operation": "reminders.list", "arguments": arguments, "view": view}});
@@ -205,9 +233,33 @@ impl Call<'_> {
         }
         Ok(value)
     }
+
+    async fn visit_reminder_pages(
+        &self,
+        arguments: &Map<String, Value>,
+        first: &Value,
+        mut visit: impl FnMut(&Value, &Value) + Send,
+    ) -> Step<()> {
+        let operation = self.operation("reminders.items")?;
+        let mut arguments = Value::Object(arguments.clone());
+        arguments["limit"] = json!(REMINDER_SCAN_PAGE_SIZE);
+        let mut next = first["next_offset"].as_u64();
+        for (section, item) in reminder_records(first) {
+            visit(section, item);
+        }
+        while let Some(offset) = next {
+            arguments["offset"] = json!(offset);
+            let raw = self.invoke(operation, &arguments).await?;
+            for (section, item) in reminder_records(&raw) {
+                visit(section, item);
+            }
+            next = raw["next_offset"].as_u64();
+        }
+        Ok(())
+    }
 }
 
-fn reminder_records(raw: &Value) -> Vec<(&Value, &Value)> {
+fn reminder_records(raw: &Value) -> impl Iterator<Item = (&Value, &Value)> {
     raw["sections"]
         .as_array()
         .into_iter()
@@ -217,52 +269,53 @@ fn reminder_records(raw: &Value) -> Vec<(&Value, &Value)> {
                 .as_array()
                 .into_iter()
                 .flatten()
-                .map(move |item| (section, item))
+                .flat_map(move |item| reminder_tree(section, item))
         })
-        .collect()
 }
 
-fn reminder_days(raw: &Value) -> Vec<Option<jiff::civil::Date>> {
-    reminder_records(raw)
-        .into_iter()
-        .map(|(_, item)| due_day(&item["reminder"]["data"]))
-        .collect()
+fn reminder_tree<'a>(
+    section: &'a Value,
+    root: &'a Value,
+) -> impl Iterator<Item = (&'a Value, &'a Value)> {
+    let mut items = vec![root];
+    std::iter::from_fn(move || {
+        let item = items.pop()?;
+        if let Some(subtasks) = item["subtasks"].as_array() {
+            items.extend(subtasks.iter().rev());
+        }
+        Some((section, item))
+    })
 }
 
-fn reminder_cards(raw: &Value, names: &HashMap<String, String>) -> Vec<Value> {
-    reminder_records(raw)
-        .into_iter()
-        .map(|(section, item)| {
-            let record = compact(&item["reminder"], false, None);
-            let data = &record["data"];
-            let list = data["list_id"].as_str().unwrap_or_default();
-            let mut card = json!({
-                "id": record["id"],
-                "version": record["version"],
-                "title": data["title"],
-                "due": data["due"],
-                "due_local": data["due_local"],
-                "list": names.get(list).map_or_else(|| json!(list), |name| json!(name)),
-                "section": section["section"]["title"].as_str().filter(|t| !t.is_empty()),
-                "notes": data["notes"].as_str().filter(|n| !n.is_empty()).map(short),
-            });
-            if data["priority"].as_u64().is_some_and(|p| p > 0) {
-                card["priority"] = data["priority"].clone();
-            }
-            for flag in ["flagged", "completed"] {
-                if data[flag] == true {
-                    card[flag] = json!(true);
-                }
-            }
-            if let Some(count) = item["subtasks"].as_array().map(Vec::len).filter(|n| *n > 0) {
-                card["subtasks"] = json!(count);
-            }
-            if let Some(fields) = card.as_object_mut() {
-                fields.retain(|_, v| !v.is_null());
-            }
-            card
-        })
-        .collect()
+fn reminder_card(section: &Value, item: &Value, names: &HashMap<String, String>) -> Value {
+    let record = compact(&item["reminder"], false, None);
+    let data = &record["data"];
+    let list = data["list_id"].as_str().unwrap_or_default();
+    let mut card = json!({
+        "id": record["id"],
+        "version": record["version"],
+        "title": data["title"],
+        "due": data["due"],
+        "due_local": data["due_local"],
+        "list": names.get(list).map_or_else(|| json!(list), |name| json!(name)),
+        "section": section["section"]["title"].as_str().filter(|t| !t.is_empty()),
+        "notes": data["notes"].as_str().filter(|n| !n.is_empty()).map(short),
+    });
+    if data["priority"].as_u64().is_some_and(|p| p > 0) {
+        card["priority"] = data["priority"].clone();
+    }
+    for flag in ["flagged", "completed"] {
+        if data[flag] == true {
+            card[flag] = json!(true);
+        }
+    }
+    if let Some(count) = item["subtasks"].as_array().map(Vec::len).filter(|n| *n > 0) {
+        card["subtasks"] = json!(count);
+    }
+    if let Some(fields) = card.as_object_mut() {
+        fields.retain(|_, v| !v.is_null());
+    }
+    card
 }
 
 fn replica_view(raw: &Value) -> Value {
@@ -339,8 +392,9 @@ fn notes_view(raw: &Value, window: Window) -> Value {
                 })
         })
         .collect();
-    let (notes, page) = page(
-        notes,
+    let page = model_page(
+        raw,
+        notes.len(),
         window,
         "Pass folder (a fld_ ID from folders) for one folder, or find words with apple_search sources notes.",
     );

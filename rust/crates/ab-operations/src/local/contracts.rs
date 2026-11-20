@@ -46,8 +46,49 @@ pub trait GatewayState: Debug + Send + Sync {
     ) -> Result<String, Error> {
         Ok(key)
     }
+    fn serialization_key_validated(
+        &self,
+        principal: &Principal,
+        command: &Command,
+        _target: &crate::command_contract::Validated,
+        key: String,
+    ) -> Result<String, Error> {
+        self.serialization_key(principal, command, key)
+    }
+    fn reminder_target(&self, _title: &str, _completed: bool) -> Result<(String, u64), Error> {
+        Err(Code::Unsupported.into())
+    }
     fn command(&self, id: &str) -> Result<CommandRecord, Error>;
+    fn principal_command(&self, principal: &str, id: &str) -> Result<CommandRecord, Error> {
+        let record = self.command(id)?;
+        if record.principal != principal {
+            return Err(Code::NotFound.into());
+        }
+        Ok(record)
+    }
+    fn admit(&self, _request_id: &str, record: CommandRecord) -> Result<CommandRecord, Error> {
+        self.transition(None, record)
+    }
     fn commands(&self) -> Result<Vec<CommandRecord>, Error>;
+    fn visible_commands(
+        &self,
+        principal: &Principal,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Vec<CommandRecord>, Error> {
+        let visibility = crate::adapters::write_visibility(&principal.visibility());
+        Ok(self
+            .commands()?
+            .into_iter()
+            .filter(|record| {
+                record.principal == principal.id
+                    && (visibility.get("admin") == Some(&true)
+                        || visibility.get(&record.source) == Some(&true))
+            })
+            .skip(offset)
+            .take(limit)
+            .collect())
+    }
     fn transition(
         &self,
         from: Option<State>,
@@ -89,6 +130,17 @@ pub trait ActionResolver: Debug + Send + Sync {
         command: &Command,
     ) -> Result<String, Error> {
         crate::command_contract::serialization_key(command)
+    }
+
+    fn serialization_key_validated(
+        &self,
+        _principal: &Principal,
+        command: &Command,
+        target: &crate::command_contract::Validated,
+    ) -> Result<String, Error> {
+        Ok(crate::command_contract::serialization_key_for(
+            command, target,
+        ))
     }
 
     fn borrow_uploads(

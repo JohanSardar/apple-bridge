@@ -126,11 +126,12 @@ impl LocalGateway {
             .checked_add(ttl)
             .map_err(|_| Code::Invalid)?
             .to_string();
+        let target = crate::command_contract::validate_at(&record.command, self.clock.now())?;
         record = self.transition(record, State::Admitted, None, None, None)?;
         let result = raw(&record)?;
         let gateway = self.clone();
         tokio::spawn(async move {
-            let _ = gateway.execute(record, principal, deadline).await;
+            let _ = gateway.execute(record, principal, target, deadline).await;
         });
         Ok(result)
     }

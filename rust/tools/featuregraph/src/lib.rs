@@ -22,6 +22,18 @@ pub struct Checker {
     pub problems: Vec<String>,
 }
 
+#[derive(serde::Deserialize)]
+struct TestSelection {
+    scenarios: Vec<SelectionEntry>,
+}
+
+#[derive(serde::Deserialize)]
+struct SelectionEntry {
+    id: String,
+    path: String,
+    levels: Vec<String>,
+}
+
 impl Checker {
     pub fn load(root: &Path) -> Result<Self, String> {
         let raw = fs::read_to_string(root.join("features.yaml")).map_err(|e| e.to_string())?;
@@ -42,9 +54,36 @@ impl Checker {
         self.problems.push(message);
     }
 
+    fn read_lab_json<T: serde::de::DeserializeOwned>(&mut self, name: &str) -> Option<T> {
+        let path = self.root.join("lab").join(name);
+        let result = match fs::read(&path) {
+            Ok(raw) => serde_json::from_slice(&raw).map_err(|e| e.to_string()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+            Err(e) => Err(e.to_string()),
+        };
+        match result {
+            Ok(value) => Some(value),
+            Err(e) => {
+                self.fail(format!("lab/{name}: {e}"));
+                None
+            }
+        }
+    }
+
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Vec<FeatureView> {
-        let scenario_files = self.index_scenario_files();
+        let selection = self.read_lab_json::<TestSelection>("test-selection.json");
+        let sim_selection = selection.map(|selection| {
+            selection
+                .scenarios
+                .into_iter()
+                .filter(|entry| entry.levels.iter().any(|level| level == "sim"))
+                .map(|entry| (entry.id, entry.path))
+                .collect::<BTreeSet<_>>()
+        });
+        let scenario_files = self.index_scenario_files(sim_selection.as_ref());
+        let no_runner: BTreeMap<String, String> =
+            self.read_lab_json("no-runner.json").unwrap_or_default();
         let mut ids = BTreeSet::new();
         let mut owner: BTreeMap<String, String> = BTreeMap::new();
         let statuses: BTreeSet<String> = self.graph.statuses.iter().cloned().collect();
@@ -109,6 +148,12 @@ impl Checker {
                     reason: s.reason.clone(),
                     results: Vec::new(),
                 };
+                let unavailable = no_runner.get(&s.id);
+                if sv.reason.is_empty()
+                    && let Some(reason) = unavailable
+                {
+                    sv.reason.clone_from(reason);
+                }
                 if sv.file.is_empty() && f.status != "todo" {
                     self.fail(format!(
                         "{}: scenario {} has no file under lab/scenarios",
@@ -119,11 +164,17 @@ impl Checker {
                     if !self.graph.levels.contains_key(l) {
                         self.fail(format!("{}: scenario {} has unknown level {l}", f.id, s.id));
                     }
-                    let mut result = self.result(&s.id, l);
-                    if s.status == "dropped" || f.status == "dropped" {
-                        "dropped".clone_into(&mut result.state);
-                    }
-                    sv.results.push(result);
+                    let state = if s.status == "dropped" || f.status == "dropped" {
+                        "dropped".to_owned()
+                    } else if unavailable.is_some() {
+                        "no-runner".to_owned()
+                    } else {
+                        self.evidence_state(&s.id, l)
+                    };
+                    sv.results.push(LevelResult {
+                        level: l.clone(),
+                        state,
+                    });
                 }
                 v.views.push(sv);
             }
@@ -167,7 +218,10 @@ impl Checker {
         views
     }
 
-    fn index_scenario_files(&mut self) -> BTreeMap<String, String> {
+    fn index_scenario_files(
+        &mut self,
+        sim_selection: Option<&BTreeSet<(String, String)>>,
+    ) -> BTreeMap<String, String> {
         let mut files: BTreeMap<String, String> = BTreeMap::new();
         let mut features: BTreeMap<String, String> = BTreeMap::new();
         let mut levels: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -184,6 +238,14 @@ impl Checker {
                 continue;
             }
             let rel = display(path.strip_prefix(&self.root).unwrap_or(&path));
+            if let Some(selection) = sim_selection
+                && head.levels.iter().any(|level| level == "sim")
+                && !selection.contains(&(id.clone(), rel.clone()))
+            {
+                self.fail(format!(
+                    "sim scenario {id} ({rel}) missing from lab/test-selection.json"
+                ));
+            }
             let feature = head.feature;
             let head_levels = head.levels;
             if let Some(prev) = files.get(&id).cloned() {
@@ -212,11 +274,7 @@ impl Checker {
         files
     }
 
-    fn result(&self, id: &str, level: &str) -> LevelResult {
-        let mut result = LevelResult {
-            level: level.to_owned(),
-            state: "missing".to_owned(),
-        };
+    fn evidence_state(&self, id: &str, level: &str) -> String {
         let path = self
             .root
             .join("lab")
@@ -224,20 +282,14 @@ impl Checker {
             .join(level)
             .join(format!("{id}.json"));
         let Ok(raw) = fs::read(path) else {
-            return result;
+            return "missing".to_owned();
         };
         match serde_json::from_slice::<Evidence>(&raw) {
-            Err(_) => "corrupt".clone_into(&mut result.state),
-            Ok(e) => {
-                let state = if e.passed == Some(true) {
-                    "passed"
-                } else {
-                    "failed"
-                };
-                state.clone_into(&mut result.state);
-            }
+            Err(_) => "corrupt",
+            Ok(e) if e.passed == Some(true) => "passed",
+            Ok(_) => "failed",
         }
-        result
+        .to_owned()
     }
 
     fn check_acyclic(&mut self) {
@@ -329,21 +381,23 @@ fn go_quote(value: &str) -> String {
 #[must_use]
 pub fn summarize(views: &[FeatureView]) -> String {
     let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
-    let (mut passed, mut total) = (0, 0);
+    let (mut passed, mut total, mut no_runner) = (0, 0, 0);
     for v in views {
         *counts.entry(v.feature.status.as_str()).or_default() += 1;
         for s in &v.views {
             for r in &s.results {
                 total += 1;
-                if r.state == "passed" {
-                    passed += 1;
+                match r.state.as_str() {
+                    "passed" => passed += 1,
+                    "no-runner" => no_runner += 1,
+                    _ => {}
                 }
             }
         }
     }
     let count = |name: &str| counts.get(name).copied().unwrap_or(0);
     format!(
-        "features: {} (done {}, limited {}, in_progress {}, todo {}, blocked {}, dropped {}); scenario-levels passing {passed}/{total}",
+        "features: {} (done {}, limited {}, in_progress {}, todo {}, blocked {}, dropped {}); scenario-levels passing {passed}/{total}, no-runner {no_runner}",
         views.len(),
         count("done"),
         count("limited"),
@@ -352,4 +406,44 @@ pub fn summarize(views: &[FeatureView]) -> String {
         count("blocked"),
         count("dropped"),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_runner_does_not_credit_canonical_evidence() {
+        let root = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+        let write = |name: &str, contents: &str| {
+            let path = root.path().join(name);
+            let parent = path.parent().unwrap_or_else(|| panic!("missing parent"));
+            fs::create_dir_all(parent).unwrap_or_else(|e| panic!("{e}"));
+            fs::write(path, contents).unwrap_or_else(|e| panic!("{e}"));
+        };
+        write(
+            "features.yaml",
+            "statuses: [done]\nlevels: {sim: simulation}\nrequirements: {R: behavior}\nfeatures:\n  - id: example\n    status: done\n    requirements: [R]\n    scenarios: [{id: EXAMPLE, levels: [sim]}]\n",
+        );
+        write(
+            "lab/scenarios/EXAMPLE.yaml",
+            "id: EXAMPLE\nfeature: example\nlevels: [sim]\n",
+        );
+        write("lab/evidence/sim/EXAMPLE.json", r#"{"passed":true}"#);
+        let mut checker = Checker::load(root.path()).unwrap_or_else(|e| panic!("{e}"));
+        let views = checker.check();
+        assert_eq!(views[0].views[0].results[0].state, "passed");
+        assert_eq!(checker.problems, [] as [String; 0]);
+
+        write("lab/no-runner.json", r#"{"EXAMPLE":"runner removed"}"#);
+        let views = checker.check();
+        let scenario = &views[0].views[0];
+        assert_eq!(scenario.results[0].state, "no-runner");
+        assert_eq!(scenario.reason, "runner removed");
+        assert_eq!(
+            checker.problems,
+            ["example is done but EXAMPLE at sim is no-runner"]
+        );
+        assert!(summarize(&views).contains("passing 0/1, no-runner 1"));
+    }
 }

@@ -77,7 +77,7 @@ pub(crate) fn mutation(operation: &str) -> bool {
     )
 }
 
-pub(super) fn validate(query: &NativeQuery, args: &Value) -> Result<(), Error> {
+pub(crate) fn validate(query: &NativeQuery, args: &Value) -> Result<(), Error> {
     if !query.op.starts_with("photos.") {
         return Ok(());
     }

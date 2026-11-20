@@ -7,9 +7,10 @@ use axum::{
 use rmcp::{
     RoleServer, ServerHandler,
     model::{
-        CacheScope, CallToolRequestParams, CallToolResponse, ErrorData, ListResourcesResult,
-        ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResponse,
-        ReadResourceResult, ServerConfig, Tool,
+        Annotations, CacheScope, CallToolRequestParams, CallToolResponse, CallToolResult,
+        ContentBlock, ErrorData, ImageContent, ListResourcesResult, ListToolsResult, MetaObject,
+        PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResponse,
+        ReadResourceResult, Role, ServerConfig,
     },
     service::RequestContext,
     transport::streamable_http_server::{
@@ -23,7 +24,6 @@ use tower::ServiceExt;
 struct Handler {
     frontdoor: Arc<Frontdoor>,
     principal: Option<Principal>,
-    tools: Vec<Tool>,
 }
 impl ServerHandler for Handler {
     fn get_info(&self) -> ServerConfig {
@@ -34,9 +34,14 @@ impl ServerHandler for Handler {
         _: Option<PaginatedRequestParams>,
         _: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListToolsResult, ErrorData>> {
-        std::future::ready(Ok(ListToolsResult::with_all_items(self.tools.clone())
-            .with_ttl_ms(0)
-            .with_cache_scope(CacheScope::Public)))
+        let result = crate::mcp_registry::registry()
+            .map(|registry| {
+                ListToolsResult::with_all_items(registry.typed_tools(self.principal.as_ref()))
+                    .with_ttl_ms(0)
+                    .with_cache_scope(CacheScope::Private)
+            })
+            .ok_or_else(|| ErrorData::internal_error("operation registry failed to load", None));
+        std::future::ready(result)
     }
     fn list_resources(
         &self,
@@ -116,25 +121,25 @@ impl Handler {
             .map_err(|_| ErrorData::internal_error("encoding", None))?;
         let text =
             String::from_utf8(bytes).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let structured: serde_json::Value =
-            serde_json::from_str(&text).map_err(|_| ErrorData::internal_error("encoding", None))?;
-        let mut items = vec![json!({"type":"text","text":text})];
-        for image in &outcome.images {
-            let mut content = json!({"type":"image","data":image.data,"mimeType":image.mime});
-            if outcome.operation.as_deref() == Some("photos.contact_sheet") {
-                content["annotations"] = json!({"audience":["assistant"]});
-            }
-            items.push(content);
-        }
-        let mut value =
-            json!({"isError":outcome.is_error,"content":items,"structuredContent":structured});
-        if let Some(elapsed) = outcome.read_model_ms {
-            value["_meta"] = json!({"bridge/read_model_ms": elapsed});
-        }
         let size = text.len();
-        serde_json::from_value::<rmcp::model::CallToolResult>(value)
-            .map(|result| (CallToolResponse::Complete(result), size))
-            .map_err(|_| ErrorData::internal_error("encoding", None))
+        let mut result = CallToolResult::success(vec![ContentBlock::text(text)]);
+        result.structured_content = Some(outcome.value.clone());
+        result.is_error = outcome.is_error.then_some(true);
+        for image in &outcome.images {
+            let mut content = ImageContent::new(&image.data, &image.mime);
+            if outcome.operation.as_deref() == Some("photos.contact_sheet") {
+                content = content
+                    .with_annotations(Annotations::default().with_audience(vec![Role::Assistant]));
+            }
+            result.content.push(ContentBlock::Image(content));
+        }
+        if let Some(elapsed) = outcome.read_model_ms {
+            result.meta = Some(MetaObject(serde_json::Map::from_iter([(
+                "bridge/read_model_ms".into(),
+                json!(elapsed),
+            )])));
+        }
+        Ok((CallToolResponse::Complete(result), size))
     }
 }
 
@@ -210,7 +215,7 @@ pub(crate) fn detach_image(raw: &str) -> Result<(Vec<u8>, Option<Image>), serde_
 pub fn server_info() -> serde_json::Value {
     json!({
         "protocolVersion":"2025-03-26",
-        "capabilities":{"logging":{},"tools":{"listChanged":true},"resources":{}},
+        "capabilities":{"logging":{},"tools":{},"resources":{}},
         "serverInfo":{"name":"apple-bridge","version":"1"},
         "instructions": crate::mcp_guides::INSTRUCTIONS,
     })
@@ -219,15 +224,39 @@ pub fn every_tool() -> Vec<serde_json::Value> {
     crate::mcp_registry::registry().map_or_else(Vec::new, |registry| registry.tools(None))
 }
 pub(crate) async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Request) -> Response {
+    let content_type = request
+        .headers()
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok());
+    let json = content_type == Some("application/json");
+    let request = if request.method() == axum::http::Method::POST
+        && content_type.is_some_and(|value| {
+            let media_type = value
+                .split_once(';')
+                .map_or(value, |(media_type, _)| media_type);
+            media_type.trim().eq_ignore_ascii_case("application/json")
+        }) {
+        let (parts, body) = request.into_parts();
+        let bytes = match crate::read_body(body, 1 << 20).await {
+            Ok(bytes) => bytes,
+            Err(error) => return problem(error),
+        };
+        let valid = std::str::from_utf8(&bytes)
+            .is_ok_and(|raw| ab_operations::command_contract::parse_json(raw).is_ok());
+        if !valid {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                axum::Json(json!({"jsonrpc":"2.0","id":null,"error":{
+                    "code":-32700,"message":"Invalid JSON or duplicate object keys"
+                }})),
+            )
+                .into_response();
+        }
+        Request::from_parts(parts, axum::body::Body::from(bytes))
+    } else {
+        request
+    };
     let principal = request.extensions().get::<Principal>().cloned();
-    let Some(registry) = crate::mcp_registry::registry() else {
-        return problem(Code::Corrupt.into());
-    };
-    let Ok(tools) =
-        serde_json::from_value(serde_json::Value::Array(registry.tools(principal.as_ref())))
-    else {
-        return problem(Code::Corrupt.into());
-    };
     let mut config = StreamableHttpServerConfig::default();
     config.legacy_session_mode = false;
     config.json_response = !frontdoor.config.public;
@@ -236,100 +265,22 @@ pub(crate) async fn handle(State(frontdoor): State<Arc<Frontdoor>>, request: Req
     let handler = Handler {
         frontdoor,
         principal,
-        tools,
     };
     let service = StreamableHttpService::new(
         move || Ok(handler.clone()),
         Arc::new(LocalSessionManager::default()),
         config,
     );
-    let json = request
-        .headers()
-        .get("content-type")
-        .is_some_and(|v| v == "application/json");
     match service.oneshot(request).await {
         Ok(response) => {
             let mut response = response.into_response();
             if json && response.status() == axum::http::StatusCode::UNSUPPORTED_MEDIA_TYPE {
                 *response.status_mut() = axum::http::StatusCode::BAD_REQUEST;
             }
-            normalize(response).await
+            response
         }
         Err(_) => problem(Error::from(Code::Unavailable)),
     }
-}
-
-#[derive(serde::Serialize)]
-struct ToolResult<'a> {
-    #[serde(rename = "_meta", skip_serializing_if = "Option::is_none")]
-    meta: Option<&'a serde_json::value::RawValue>,
-    content: &'a serde_json::value::RawValue,
-    #[serde(rename = "structuredContent")]
-    structured: &'a serde_json::value::RawValue,
-    #[serde(rename = "isError", skip_serializing_if = "std::ops::Not::not")]
-    is_error: bool,
-}
-#[derive(serde::Serialize)]
-struct Envelope<'a> {
-    jsonrpc: &'a serde_json::value::RawValue,
-    id: &'a serde_json::value::RawValue,
-    result: &'a serde_json::value::RawValue,
-}
-
-fn normalize_json(bytes: &[u8]) -> Option<Vec<u8>> {
-    use serde_json::value::RawValue;
-    let mut envelope: std::collections::BTreeMap<String, Box<RawValue>> =
-        serde_json::from_slice(bytes).ok()?;
-    let result: std::collections::BTreeMap<String, Box<RawValue>> =
-        serde_json::from_str(envelope.get("result")?.get()).ok()?;
-    let content = result.get("content")?;
-    let items: serde_json::Value = serde_json::from_str(content.get()).ok()?;
-    let structured = RawValue::from_string(items[0]["text"].as_str()?.to_owned()).ok()?;
-    let result = ToolResult {
-        meta: result.get("_meta").map(AsRef::as_ref),
-        content,
-        structured: &structured,
-        is_error: result.get("isError").is_some_and(|v| v.get() == "true"),
-    };
-    envelope.insert(
-        "result".into(),
-        serde_json::value::to_raw_value(&result).ok()?,
-    );
-    serde_json::to_vec(&Envelope {
-        jsonrpc: envelope.get("jsonrpc")?,
-        id: envelope.get("id")?,
-        result: envelope.get("result")?,
-    })
-    .ok()
-}
-async fn normalize(response: Response) -> Response {
-    let (parts, body) = response.into_parts();
-    let Ok(bytes) = axum::body::to_bytes(body, 16 << 20).await else {
-        return problem(Code::Corrupt.into());
-    };
-    let json = parts
-        .headers
-        .get("content-type")
-        .is_some_and(|v| v.to_str().is_ok_and(|s| s.starts_with("application/json")));
-    let normalized = if json {
-        normalize_json(&bytes).unwrap_or_else(|| bytes.to_vec())
-    } else {
-        String::from_utf8_lossy(&bytes)
-            .split_inclusive('\n')
-            .map(|line| {
-                if let Some(data) = line.strip_prefix("data:")
-                    && let Some(result) = normalize_json(data.trim().as_bytes())
-                {
-                    return format!("data: {}\n", String::from_utf8_lossy(&result));
-                }
-                line.to_owned()
-            })
-            .collect::<String>()
-            .into_bytes()
-    };
-    let mut response = Response::from_parts(parts, axum::body::Body::from(normalized));
-    response.headers_mut().remove("content-length");
-    response
 }
 
 #[cfg(feature = "lab-harness")]

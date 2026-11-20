@@ -804,8 +804,22 @@ fn restart_after_quit(home: &Path) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn guide(home: &Path, args: &GuideArgs) -> Outcome {
     let named = args.only.as_deref().map(only).transpose()?;
+    if args.fixture.is_none() {
+        let mut retry = vec!["bridge", "permissions", "guide"];
+        if let Some(only) = args.only.as_deref() {
+            retry.extend(["--only", only]);
+        }
+        if let Some(helper) = args.helper_app.as_deref() {
+            retry.extend(["--helper-app", helper]);
+        }
+        if args.in_terminal {
+            retry.push("--in-terminal");
+        }
+        Modes::get().require_native_interaction("the permission guide", &retry)?;
+    }
     if args.fixture.is_none()
         && !args.in_terminal
         && cfg!(target_os = "macos")

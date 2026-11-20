@@ -38,7 +38,11 @@ pub struct Globals {
         help = "Run as if started in this folder; relative paths resolve against it"
     )]
     pub cwd: Option<PathBuf>,
-    #[arg(long, global = true, help = "Print the result as JSON; never prompt")]
+    #[arg(
+        long,
+        global = true,
+        help = "Print the result as JSON without terminal prompts"
+    )]
     pub json: bool,
     #[arg(
         long,
@@ -155,17 +159,7 @@ pub enum Command {
     InstallCredentials,
     #[command(
         hide = true,
-        about = "Revoke an agent or token (deprecated: bridge tokens revoke)"
-    )]
-    Revoke(CredentialArgs),
-    #[command(
-        hide = true,
-        about = "Change a token's access (deprecated: bridge tokens update)"
-    )]
-    Scope(ScopeArgs),
-    #[command(
-        hide = true,
-        about = "Run the Messages self-test, which sends real messages to yourself (deprecated: bridge selftest messages)"
+        about = "Run the Messages self-test, which sends real messages to yourself"
     )]
     Setup(SelftestArgs),
     #[cfg(feature = "lab-harness")]
@@ -224,7 +218,11 @@ pub enum LinkClient {
     Goose,
     #[value(help = "OpenCode")]
     Opencode,
-    #[value(help = "The Claude desktop app")]
+    #[value(
+        name = "claude-app",
+        alias = "claude-desktop",
+        help = "The Claude desktop app"
+    )]
     ClaudeDesktop,
     #[value(alias = "grok", help = "Grok Bot")]
     GrokBot,
@@ -251,35 +249,76 @@ impl LinkScope {
 
 #[derive(Debug, Args)]
 pub struct LinkArgs {
-    #[arg(value_enum, value_name = "AGENT", help = "Which agent to connect")]
-    pub client: LinkClient,
+    #[command(subcommand)]
+    pub client: LinkTarget,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum LinkTarget {
+    #[command(alias = "claude-code", about = "Connect Claude Code")]
+    Claude(ClaudeLinkArgs),
+    #[command(about = "Connect Codex")]
+    Codex(ToolLinkArgs),
+    #[command(about = "Connect Cursor")]
+    Cursor(NamedLinkArgs),
+    #[command(aliases = ["code", "vs-code"], about = "Connect Visual Studio Code")]
+    Vscode(ToolLinkArgs),
+    #[command(about = "Connect Zed")]
+    Zed(NamedLinkArgs),
+    #[command(alias = "gemini-cli", about = "Connect Gemini CLI")]
+    Gemini(ToolLinkArgs),
+    #[command(about = "Connect Goose")]
+    Goose(NamedLinkArgs),
+    #[command(about = "Connect OpenCode")]
+    Opencode(NamedLinkArgs),
+    #[command(alias = "claude-desktop", about = "Connect the Claude desktop app")]
+    ClaudeApp(PrintLinkArgs),
+    #[command(alias = "grok", about = "Connect Grok Bot")]
+    GrokBot(ToolLinkArgs),
+    #[command(about = "Print the setup any other agent needs")]
+    Other(NamedLinkArgs),
+}
+
+pub const DEFAULT_LINK_NAME: &str = "apple-bridge";
+
+#[derive(Debug, Args)]
+pub struct PrintLinkArgs {
+    #[arg(long, help = "Print the setup without applying it")]
+    pub print: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct NamedLinkArgs {
+    #[command(flatten)]
+    pub output: PrintLinkArgs,
+    #[arg(long, value_name = "NAME", default_value = DEFAULT_LINK_NAME, help = "Name shown in the agent")]
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ToolLinkArgs {
+    #[command(flatten)]
+    pub named: NamedLinkArgs,
+    #[arg(
+        long,
+        value_name = "DURATION",
+        help = "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)"
+    )]
+    pub timeout: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct ClaudeLinkArgs {
+    #[command(flatten)]
+    pub tool: ToolLinkArgs,
     #[arg(
         long,
         value_enum,
         value_name = "SCOPE",
         default_value = "user",
-        help = "Claude Code only: where Claude Code saves the registration. This isn't access; you allow access on your Mac"
+        help = "Where Claude Code saves the registration"
     )]
     pub scope: LinkScope,
-    #[arg(
-        long,
-        value_name = "NAME",
-        default_value = "apple-bridge",
-        help = "Name shown in the agent"
-    )]
-    pub name: String,
-    #[arg(long, help = "Print the agent's setup instead of applying it")]
-    pub print: bool,
-    #[arg(long, hide = true)]
-    pub no_login: bool,
-    #[arg(long, alias = "no-browser", hide = true)]
-    pub no_open: bool,
-    #[arg(
-        long,
-        value_name = "DURATION",
-        help = "Stop waiting after this long (default: 30s for local commands, 5m for Grok Bot Allow)"
-    )]
-    pub timeout: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -324,19 +363,16 @@ pub struct StatsArgs {
     #[arg(
         short = 'f',
         long,
-        conflicts_with_all = ["wait", "watch"],
+        conflicts_with = "wait",
         help = "Keep showing sync events until you stop it or --timeout passes"
     )]
     pub follow: bool,
     #[arg(
         short = 'w',
         long,
-        conflicts_with = "watch",
         help = "Show sync events until every source has finished syncing, then exit"
     )]
     pub wait: bool,
-    #[arg(long, hide = true)]
-    pub watch: bool,
     #[arg(
         long,
         value_name = "DURATION",
@@ -354,7 +390,7 @@ pub struct StatsArgs {
     pub all: bool,
     #[arg(
         long,
-        conflicts_with_all = ["follow", "wait", "watch"],
+        conflicts_with_all = ["follow", "wait"],
         help = "Show the largest answers agents got over MCP, per tool, as sizes only"
     )]
     pub answers: bool,
@@ -472,8 +508,8 @@ pub struct CallArgs {
         help = "Arguments as JSON; - reads them from stdin (default: {})"
     )]
     pub data: Option<String>,
-    #[arg(long, value_name = "JSON", hide = true)]
-    pub args: Option<String>,
+    #[arg(long, value_name = "OPERATION", conflicts_with_all = ["operation", "data", "file", "list", "write", "token_env"], help = "Print one operation's input and output schemas as JSON")]
+    pub describe: Option<String>,
     #[arg(
         long,
         value_name = "FILE",
@@ -560,6 +596,8 @@ pub struct GuideStatusArgs {
 
 #[derive(Debug, Args)]
 pub struct TailscaleArgs {
+    #[arg(long, help = "Show what would happen without applying changes")]
+    pub dry_run: bool,
     #[arg(long, help = "Turn Tailscale access off again")]
     pub off: bool,
     #[arg(
@@ -577,10 +615,6 @@ fn levels(switchable: bool) -> [clap::builder::PossibleValue; 3] {
             .help("Reads only")
             .hide(switchable),
     ]
-}
-
-fn level_values(switchable: bool) -> clap::builder::PossibleValuesParser {
-    clap::builder::PossibleValuesParser::new(levels(switchable))
 }
 
 #[derive(Clone)]
@@ -619,11 +653,6 @@ pub enum ConnectorAction {
     Allow(DecisionArgs),
     #[command(about = "Deny a waiting app")]
     Deny(DecisionArgs),
-    #[command(
-        hide = true,
-        about = "List apps waiting for approval (deprecated: bridge connectors list)"
-    )]
-    Pending,
 }
 
 #[derive(Debug, Args)]
@@ -660,11 +689,6 @@ pub enum AgentAction {
     Update(AgentUpdateArgs),
     #[command(about = "Revoke an agent's token")]
     Revoke(AgentArgs),
-    #[command(
-        hide = true,
-        about = "Change an agent's level (deprecated: bridge agents update --level)"
-    )]
-    Level(AgentLevelArgs),
 }
 
 #[derive(Debug, Args, Default)]
@@ -685,14 +709,6 @@ pub struct ListArgs {
 pub struct AgentArgs {
     #[arg(value_name = "AGENT", help = "Agent ID, such as agent:01J…")]
     pub id: String,
-}
-
-#[derive(Debug, Args)]
-pub struct AgentLevelArgs {
-    #[arg(value_name = "AGENT", help = "Agent ID")]
-    pub id: String,
-    #[arg(value_name = "LEVEL", value_parser = level_values(true), help = "New level")]
-    pub level: String,
 }
 
 #[derive(Debug, Args)]
@@ -745,14 +761,6 @@ pub struct AgentUpdateArgs {
 pub struct CredentialArgs {
     #[arg(value_name = "CREDENTIAL", help = "Agent, token or replica ID")]
     pub id: String,
-}
-
-#[derive(Debug, Args)]
-pub struct ScopeArgs {
-    #[arg(value_name = "CREDENTIAL", help = "Agent, token or replica ID")]
-    pub id: String,
-    #[arg(long, value_name = "ACCESS", default_value = DEFAULT_GRANTS, help = "Access grants, comma-separated")]
-    pub scope: String,
 }
 
 #[derive(Debug, Args)]
@@ -813,16 +821,6 @@ pub enum WebAction {
     },
     #[command(about = "List or sign out signed-in browsers")]
     Sessions(SessionsCommand),
-    #[command(
-        hide = true,
-        about = "Sign out every browser (deprecated: bridge web sessions revoke --all)"
-    )]
-    Lock,
-    #[command(
-        hide = true,
-        about = "List signed-in browsers (deprecated: bridge web sessions list)"
-    )]
-    Devices,
 }
 
 #[derive(Debug, Args)]
@@ -948,6 +946,8 @@ pub struct JoinArgs {
 
 #[derive(Debug, Args)]
 pub struct BackupArgs {
+    #[arg(long, help = "Show what would happen without applying changes")]
+    pub dry_run: bool,
     #[arg(value_name = "FILE", help = "File to write")]
     pub path: PathBuf,
     #[arg(long, help = "Replace the file if it exists")]
@@ -956,6 +956,8 @@ pub struct BackupArgs {
 
 #[derive(Debug, Args)]
 pub struct RestoreArgs {
+    #[arg(long, help = "Show what would happen without applying changes")]
+    pub dry_run: bool,
     #[arg(value_name = "FILE", help = "Backup file")]
     pub path: Option<PathBuf>,
     #[arg(
@@ -981,12 +983,6 @@ pub struct ShortcutsCommand {
 pub enum ShortcutsAction {
     #[command(about = "Open the Shortcuts pack for import")]
     Install(PackArgs),
-    #[command(
-        name = "install-pack",
-        hide = true,
-        about = "Open the Shortcuts pack (deprecated: bridge shortcuts install)"
-    )]
-    InstallPack(PackArgs),
 }
 
 #[derive(Debug, Args)]
@@ -1014,6 +1010,8 @@ pub enum SelftestAction {
 
 #[derive(Debug, Args)]
 pub struct SelftestArgs {
+    #[arg(long, help = "Show what would happen without applying changes")]
+    pub dry_run: bool,
     #[arg(long, value_name = "PATH", help = "Helper app to use")]
     pub helper_app: Option<String>,
     #[arg(long, help = "Run again even if already proven")]

@@ -52,7 +52,7 @@ Global options:
   -h, --help         Show help for the command
   --home <DIR>       Data folder (default: ~/Library/Application Support/AppleBridge; env:
                      APPLE_BRIDGE_HOME)
-  --json             Print the result as JSON; never prompt
+  --json             Print the result as JSON without terminal prompts
   --no-color         Disable color (also NO_COLOR)
   --non-interactive  Never prompt; fail with the input that is needed instead
   -v, --version      Print the version
@@ -96,21 +96,21 @@ Notes:
 ## bridge link
 
 ```text
-bridge link <AGENT> [options]
+bridge link <command> [options]
 Connect an agent on this Mac, such as Claude Code, Codex or Cursor
 
-Arguments:
-  <AGENT>  Which agent to connect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
-           opencode, claude-desktop, grok-bot, other)
-
-Options:
-  --name <NAME>         Name shown in the agent (default: apple-bridge)
-  --print               Print the agent's setup instead of applying it
-  --scope <SCOPE>       Claude Code only: where Claude Code saves the registration. This isn't
-                        access; you allow access on your Mac (accepted: user, project, local)
-                        (default: user)
-  --timeout <DURATION>  Stop waiting after this long (default: 30s for local commands, 5m for Grok
-                        Bot Allow)
+Commands:
+  claude      Connect Claude Code
+  codex       Connect Codex
+  cursor      Connect Cursor
+  vscode      Connect Visual Studio Code
+  zed         Connect Zed
+  gemini      Connect Gemini CLI
+  goose       Connect Goose
+  opencode    Connect OpenCode
+  claude-app  Connect the Claude desktop app
+  grok-bot    Connect Grok Bot
+  other       Print the setup any other agent needs
 
 Global options: see bridge --help
 
@@ -139,7 +139,200 @@ Notes:
   Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over
   your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.
   Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot
-  prints credentials as JSON only after Allow; keep them private.
+  prints credentials as JSON only after Allow in a local terminal; keep them private.
+```
+
+## bridge link claude
+
+```text
+bridge link claude [options]
+Connect Claude Code
+
+Options:
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --print               Print the setup without applying it
+  --scope <SCOPE>       Where Claude Code saves the registration (accepted: user, project, local)
+                        (default: user)
+  --timeout <DURATION>  Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link claude --print
+```
+
+## bridge link codex
+
+```text
+bridge link codex [options]
+Connect Codex
+
+Options:
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --print               Print the setup without applying it
+  --timeout <DURATION>  Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link codex --print
+```
+
+## bridge link cursor
+
+```text
+bridge link cursor [options]
+Connect Cursor
+
+Options:
+  --name <NAME>  Name shown in the agent (default: apple-bridge)
+  --print        Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link cursor --print
+```
+
+## bridge link vscode
+
+```text
+bridge link vscode [options]
+Connect Visual Studio Code
+
+Options:
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --print               Print the setup without applying it
+  --timeout <DURATION>  Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link vscode --print
+```
+
+## bridge link zed
+
+```text
+bridge link zed [options]
+Connect Zed
+
+Options:
+  --name <NAME>  Name shown in the agent (default: apple-bridge)
+  --print        Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link zed --print
+```
+
+## bridge link gemini
+
+```text
+bridge link gemini [options]
+Connect Gemini CLI
+
+Options:
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --print               Print the setup without applying it
+  --timeout <DURATION>  Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link gemini --print
+```
+
+## bridge link goose
+
+```text
+bridge link goose [options]
+Connect Goose
+
+Options:
+  --name <NAME>  Name shown in the agent (default: apple-bridge)
+  --print        Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link goose --print
+```
+
+## bridge link opencode
+
+```text
+bridge link opencode [options]
+Connect OpenCode
+
+Options:
+  --name <NAME>  Name shown in the agent (default: apple-bridge)
+  --print        Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link opencode --print
+```
+
+## bridge link claude-app
+
+```text
+bridge link claude-app [options]
+Connect the Claude desktop app
+
+Options:
+  --print  Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link claude-app --print
+```
+
+## bridge link grok-bot
+
+```text
+bridge link grok-bot [options]
+Connect Grok Bot
+
+Options:
+  --name <NAME>         Name shown in the agent (default: apple-bridge)
+  --print               Print the setup without applying it
+  --timeout <DURATION>  Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link grok-bot --print
+```
+
+## bridge link other
+
+```text
+bridge link other [options]
+Print the setup any other agent needs
+
+Options:
+  --name <NAME>  Name shown in the agent (default: apple-bridge)
+  --print        Print the setup without applying it
+
+Global options: see bridge --help
+
+Examples:
+  Preview the configuration
+    bridge link other --print
 ```
 
 ## bridge unlink
@@ -150,7 +343,7 @@ Disconnect an agent that bridge link connected
 
 Arguments:
   <AGENT>  Which agent to disconnect (accepted: claude, codex, cursor, vscode, zed, gemini, goose,
-           opencode, claude-desktop, grok-bot, other)
+           opencode, claude-app, grok-bot, other)
 
 Options:
   --name <NAME>         Name shown in the agent (default: apple-bridge)
@@ -223,14 +416,14 @@ Examples:
   Walk through each permission
     bridge permissions guide
 
-  Request two permissions from a script
+  Request two permissions in a terminal on the Mac
     bridge permissions guide --only contacts,calendar
 
 Notes:
   Every step is optional, and permissions you've already allowed are kept. Enter at a prompt
   continues; s skips; Ctrl+C or end of input stops before the next step.
-  Without a terminal, pass --only with the permissions to request. Without it, the list with each
-  status is printed and the command exits 2.
+  Without a local terminal or with --non-interactive, exits 2 with terminal_required and requests
+  nothing. Use bridge permissions status --json to see what is missing.
 ```
 
 ## bridge permissions status
@@ -373,8 +566,6 @@ Notes:
   Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is
   fetched. Photos is queried live and follows its pages like the rest; everything else is read from
   what has synced, with its freshness on stderr.
-  With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope
-  without records, as in earlier releases.
   --next continues with the same filters, window and order. Options you leave out come from the
   cursor; ones that differ are refused.
   Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields
@@ -410,7 +601,6 @@ Examples:
 Notes:
   --limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000
   results. --next continues the same search; TEXT can be left out.
-  With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.
   Piped, rows are tab-separated with a header line, even when nothing matches.
 ```
 
@@ -424,18 +614,22 @@ Arguments:
   <OPERATION>  Operation name, such as sources.status
 
 Options:
-  --data <JSON>       Arguments as JSON; - reads them from stdin (default: {})
-  --file <FILE>       Read the arguments from a JSON file; - means stdin
-  --list              List read operations, and Photos writes with --write
-  --token-env <NAME>  Environment variable holding an existing token to call with; it's never
-                      revoked
-  --write             Allow Photos organization writes; needs --token-env and a stable query ID
+  --data <JSON>           Arguments as JSON; - reads them from stdin (default: {})
+  --describe <OPERATION>  Print one operation's input and output schemas as JSON
+  --file <FILE>           Read the arguments from a JSON file; - means stdin
+  --list                  List read operations, and Photos writes with --write
+  --token-env <NAME>      Environment variable holding an existing token to call with; it's never
+                          revoked
+  --write                 Allow Photos organization writes; needs --token-env and a stable query ID
 
 Global options: see bridge --help
 
 Examples:
   List the operations you can call
     bridge call --list
+
+  Inspect one operation offline
+    bridge call --describe sources.status
 
   Check every source's state
     bridge call sources.status
@@ -447,7 +641,8 @@ Notes:
   Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.
   A write whose result can't be confirmed is reported as unknown_outcome with its operation ID;
   inspect it before trying again. Writes are never retried.
-  The result is the operation's own output; see its output schema in bridge call --list --json.
+  The result is the operation's own output; inspect its input and output schemas with bridge call
+  --describe <OPERATION>.
 ```
 
 ## bridge skills
@@ -635,24 +830,6 @@ Notes:
   Asks first; without a terminal, pass --yes. The agent stays in the list, marked revoked.
 ```
 
-## bridge agents level
-
-```text
-bridge agents level <AGENT> <LEVEL> [options]
-Change an agent's level
-Deprecated: use bridge agents update <AGENT> --level <LEVEL>.
-
-Arguments:
-  <AGENT>  Agent ID
-  <LEVEL>  New level (accepted: full, approve)
-
-Global options: see bridge --help
-
-Notes:
-  Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until
-  the next major version.
-```
-
 ## bridge tokens
 
 ```text
@@ -807,16 +984,6 @@ Examples:
     bridge connectors deny --request <REQUEST> --code <CODE>
 ```
 
-## bridge connectors pending
-
-```text
-bridge connectors pending [options]
-List apps waiting for approval
-Deprecated: use bridge connectors list.
-
-Global options: see bridge --help
-```
-
 ## bridge web
 
 ```text
@@ -908,26 +1075,6 @@ Notes:
   Asks first; without a terminal, pass --yes.
 ```
 
-## bridge web lock
-
-```text
-bridge web lock [options]
-Sign out every browser
-Deprecated: use bridge web sessions revoke --all.
-
-Global options: see bridge --help
-```
-
-## bridge web devices
-
-```text
-bridge web devices [options]
-List signed-in browsers
-Deprecated: use bridge web sessions list.
-
-Global options: see bridge --help
-```
-
 ## bridge tailscale
 
 ```text
@@ -935,6 +1082,7 @@ bridge tailscale [options]
 Let your other devices and cloud agents reach this Mac through Tailscale
 
 Options:
+  --dry-run     Show what would happen without applying changes
   --keep-awake  Keep this Mac awake with the lid closed so agents still reach it; macOS asks for
                 your password or Touch ID
   --off         Turn Tailscale access off again
@@ -1054,7 +1202,8 @@ Arguments:
   <FILE>  File to write
 
 Options:
-  --force  Replace the file if it exists
+  --dry-run  Show what would happen without applying changes
+  --force    Replace the file if it exists
 
 Global options: see bridge --help
 
@@ -1082,6 +1231,7 @@ Arguments:
 Options:
   --accept-ledger-loss  Restore even though the command ledger is missing or doesn't match
   --backup <FILE>       Backup file; same as the positional FILE
+  --dry-run             Show what would happen without applying changes
 
 Global options: see bridge --help
 
@@ -1116,6 +1266,7 @@ bridge selftest messages [options]
 Prove Messages operations by sending real messages to your own chat
 
 Options:
+  --dry-run            Show what would happen without applying changes
   --force              Run again even if already proven
   --helper-app <PATH>  Helper app to use
   --no-ui              Skip steps that use the Messages window
@@ -1156,19 +1307,6 @@ Global options: see bridge --help
 Examples:
   Open the Shortcuts pack
     bridge shortcuts install
-```
-
-## bridge shortcuts install-pack
-
-```text
-bridge shortcuts install-pack [options]
-Open the Shortcuts pack
-Deprecated: use bridge shortcuts install.
-
-Options:
-  --pack <DIR>  Pack folder (default: .build/shortcuts)
-
-Global options: see bridge --help
 ```
 
 ## bridge completion
@@ -1248,51 +1386,4 @@ Global options: see bridge --help
 
 Notes:
   Used by the Apple Bridge app.
-```
-
-## bridge revoke
-
-```text
-bridge revoke <CREDENTIAL> [options]
-Revoke an agent or token
-Deprecated: use bridge tokens revoke.
-
-Arguments:
-  <CREDENTIAL>  Agent, token or replica ID
-
-Global options: see bridge --help
-```
-
-## bridge scope
-
-```text
-bridge scope <CREDENTIAL> [options]
-Change a token's access
-Deprecated: use bridge tokens update.
-
-Arguments:
-  <CREDENTIAL>  Agent, token or replica ID
-
-Options:
-  --scope <ACCESS>  Access grants, comma-separated (default: reminders:read,system:read)
-
-Global options: see bridge --help
-```
-
-## bridge setup
-
-```text
-bridge setup [options]
-Run the Messages self-test, which sends real messages to yourself
-Deprecated: use bridge selftest messages.
-
-Options:
-  --force              Run again even if already proven
-  --helper-app <PATH>  Helper app to use
-  --no-ui              Skip steps that use the Messages window
-
-Global options: see bridge --help
-
-Notes:
-  This sends real messages to your own chat through the Helper.
 ```

@@ -154,7 +154,14 @@ impl World {
         };
         world.launch_gateway()?;
         world
-            .gateway_cli(&["token", "create", "--scope", &world.config.scope])?
+            .gateway_cli(&[
+                "token",
+                "create",
+                "--expires-in",
+                "1h",
+                "--scope",
+                &world.config.scope,
+            ])?
             .trim()
             .clone_into(&mut world.token);
         world.launch_peer()?;
@@ -207,7 +214,14 @@ impl World {
         }
         world.launch_gateway()?;
         world
-            .gateway_cli(&["token", "create", "--scope", &world.config.scope])?
+            .gateway_cli(&[
+                "token",
+                "create",
+                "--expires-in",
+                "1h",
+                "--scope",
+                &world.config.scope,
+            ])?
             .trim()
             .clone_into(&mut world.token);
         let deadline = Instant::now() + Duration::from_secs(15);

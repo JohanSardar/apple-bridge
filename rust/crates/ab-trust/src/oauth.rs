@@ -49,6 +49,8 @@ pub struct Access {
     pub principal: String,
     pub resource: String,
     pub expires_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Refresh {
@@ -57,6 +59,8 @@ pub struct Refresh {
     pub resource: String,
     pub principal: String,
     pub expires_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
     pub used: bool,
     #[serde(default)]
     pub rotated_at: i64,
@@ -130,13 +134,6 @@ pub fn agent_grants(level: &str, scopes: &[Grant]) -> Result<Vec<Grant>, Error> 
             ))
         })
         .collect()
-}
-fn scope(p: &Principal) -> String {
-    p.grants
-        .iter()
-        .map(Grant::as_str)
-        .collect::<Vec<_>>()
-        .join(" ")
 }
 pub(crate) fn read<T: serde::de::DeserializeOwned>(
     d: &Credentials,
@@ -252,6 +249,7 @@ struct Spent {
     reused: bool,
     retry_salt: Option<String>,
     refresh_expires: String,
+    scope: Option<String>,
 }
 fn successor(spent: &str, salt: &str, label: &str) -> String {
     let mut hash = Sha256::new();
@@ -293,6 +291,7 @@ fn spend_code(codes: &mut [Code], e: &Exchange) -> Result<Spent, Error> {
         reused,
         retry_salt: None,
         refresh_expires: expiry(90 * 86400),
+        scope: None,
     })
 }
 fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange, salt: &str) -> Result<Spent, Error> {
@@ -323,22 +322,65 @@ fn spend_refresh(refreshes: &mut [Refresh], e: &Exchange, salt: &str) -> Result<
         reused,
         retry_salt,
         refresh_expires: r.expires_at.clone(),
+        scope: r.scope.clone(),
     })
+}
+fn exchange_scope(
+    grants: &[Grant],
+    ceiling: Option<&str>,
+    requested: &str,
+    refreshing: bool,
+) -> Result<String, Error> {
+    let granted: Vec<_> = grants
+        .iter()
+        .map(Grant::as_str)
+        .filter(|grant| {
+            ceiling.is_none_or(|scope| scope.split_whitespace().any(|allowed| allowed == *grant))
+        })
+        .collect();
+    let requested: Vec<_> = requested.split_whitespace().collect();
+    if !requested.iter().all(|scope| {
+        *scope == OFFLINE_ACCESS || granted.contains(scope) || crate::removed_grant(scope)
+    }) {
+        return Err(Error::Invalid);
+    }
+    Ok(granted
+        .into_iter()
+        .filter(|grant| !refreshing || requested.is_empty() || requested.contains(grant))
+        .collect::<Vec<_>>()
+        .join(" "))
 }
 fn saved_successor(
     accesses: &[Access],
     refreshes: &[Refresh],
     e: &Exchange,
     salt: &str,
-    scope: String,
+    fallback_scope: String,
 ) -> Result<Tokens, Error> {
     let access = successor(&e.refresh_token, salt, "access");
     let next = successor(&e.refresh_token, salt, "refresh");
-    let expires = accesses
+    let saved = accesses
         .iter()
         .find(|a| a.hash == fingerprint(access.as_bytes()) && live(&a.expires_at))
-        .and_then(|a| a.expires_at.parse::<jiff::Timestamp>().ok())
         .ok_or(Error::Unauthorized)?;
+    let expires = saved
+        .expires_at
+        .parse::<jiff::Timestamp>()
+        .map_err(|_| Error::Unauthorized)?;
+    let scope = saved.scope.clone().unwrap_or(fallback_scope);
+    let requested = e
+        .scope
+        .split_whitespace()
+        .filter(|scope| *scope != OFFLINE_ACCESS && !crate::removed_grant(scope))
+        .collect::<std::collections::BTreeSet<_>>();
+    if !e.scope.trim().is_empty()
+        && scope
+            .split_whitespace()
+            .collect::<std::collections::BTreeSet<_>>()
+            != requested
+    {
+        return Err(Error::Invalid);
+    }
     if !refreshes
         .iter()
         .any(|r| r.hash == fingerprint(next.as_bytes()) && live(&r.expires_at))
@@ -556,15 +598,7 @@ impl Authority {
                 .iter_mut()
                 .find(|p| p.id == spent.principal && p.kind == "agent" && p.active())
                 .ok_or(Error::Unauthorized)?;
-            let scopes = scope(p);
-            let granted: Vec<&str> = scopes.split_whitespace().collect();
-            if !e
-                .scope
-                .split_whitespace()
-                .all(|s| s == OFFLINE_ACCESS || granted.contains(&s) || crate::removed_grant(s))
-            {
-                return Err(Error::Invalid);
-            }
+            let scopes = exchange_scope(&p.grants, spent.scope.as_deref(), &e.scope, refreshing)?;
             if let Some(saved) = &spent.retry_salt {
                 let accesses: Vec<Access> = read(d, "oauth_access")?;
                 return Ok(saved_successor(&accesses, &refreshes, e, saved, scopes));
@@ -578,6 +612,7 @@ impl Authority {
                 principal: spent.principal.clone(),
                 resource: e.resource.clone(),
                 expires_at: expiry(3600),
+                scope: Some(scopes.clone()),
             });
             let window_start = jiff::Timestamp::now().as_second() - REFRESH_RETRY_SECONDS;
             refreshes.retain(|r| live(&r.expires_at));
@@ -593,6 +628,7 @@ impl Authority {
                 resource: e.resource.clone(),
                 principal: spent.principal,
                 expires_at: spent.refresh_expires,
+                scope: Some(scopes.clone()),
                 used: false,
                 rotated_at: 0,
                 retry_salt: String::new(),
@@ -634,12 +670,19 @@ impl Authority {
             })
             .cloned()
             .ok_or(Error::Unauthorized)?;
+        if let Some(e) = d.enrollment {
+            p.grants = effective_grants(&p.grants, &e.grants);
+        }
         if let Some(a) = access {
             p.extra.insert("resource".into(), a.resource.into());
             p.extra.insert("expires_at".into(), a.expires_at.into());
-        }
-        if let Some(e) = d.enrollment {
-            p.grants = effective_grants(&p.grants, &e.grants);
+            if let Some(scope) = a.scope {
+                p.grants.retain(|grant| {
+                    scope
+                        .split_whitespace()
+                        .any(|allowed| allowed == grant.as_str())
+                });
+            }
         }
         if recently_used(&p) {
             return Ok(p);
@@ -667,6 +710,77 @@ mod security_tests;
 mod remote_agent_tests {
     #![allow(clippy::unwrap_used)]
     use crate::{Authority, Grant};
+
+    #[test]
+    fn refresh_scope_narrows_access_and_stays_narrow_on_retry_and_rotation() {
+        use super::{Exchange, Refresh, expiry, fingerprint, write};
+        let home = tempfile::tempdir().unwrap();
+        let authority = Authority::open(home.path()).unwrap();
+        let resource = "https://bridge.test/mcp";
+        let initial = "synthetic-initial-refresh";
+        let client_id = "synthetic-client";
+        let grants = ["calendar:read", "calendar:write"].map(|scope| Grant::parse(scope).unwrap());
+        let (agent, _) = authority
+            .create_oauth_agent("Synthetic", "full", &grants, false)
+            .unwrap();
+        authority
+            .update(|credentials| {
+                write(
+                    credentials,
+                    "oauth_refresh",
+                    &[Refresh {
+                        hash: fingerprint(initial.as_bytes()),
+                        client_id: client_id.into(),
+                        resource: resource.into(),
+                        principal: agent.id,
+                        expires_at: expiry(3600),
+                        used: false,
+                        rotated_at: 0,
+                        retry_salt: String::new(),
+                        scope: None,
+                    }],
+                )
+            })
+            .unwrap();
+        let refresh = |token: &str, scope: &str| {
+            authority.exchange_oauth(&Exchange {
+                grant_type: "refresh_token".into(),
+                client_id: client_id.into(),
+                resource: resource.into(),
+                refresh_token: token.into(),
+                scope: scope.into(),
+                code: String::new(),
+                redirect_uri: String::new(),
+                code_verifier: String::new(),
+            })
+        };
+        let narrowed = refresh(initial, "calendar:read").unwrap();
+        assert_eq!(narrowed.scope, "calendar:read");
+        let authenticated = authority
+            .authenticate_token(&narrowed.access_token)
+            .unwrap();
+        assert_eq!(
+            authenticated.grants,
+            [Grant::parse("calendar:read").unwrap()]
+        );
+        for requested in ["", "calendar:read offline_access"] {
+            let retry = refresh(initial, requested).unwrap();
+            assert_eq!(retry.access_token, narrowed.access_token);
+            assert_eq!(retry.refresh_token, narrowed.refresh_token);
+            assert_eq!(retry.scope, narrowed.scope);
+        }
+        assert!(refresh(initial, "calendar:write").is_err());
+        assert!(refresh(&narrowed.refresh_token, "calendar:write").is_err());
+        let rotated = refresh(&narrowed.refresh_token, "").unwrap();
+        assert_eq!(rotated.scope, narrowed.scope);
+        assert_eq!(
+            authority
+                .authenticate_token(&rotated.access_token)
+                .unwrap()
+                .grants,
+            authenticated.grants
+        );
+    }
 
     #[test]
     fn a_connector_approved_on_a_public_host_may_use_that_host() {

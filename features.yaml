@@ -216,7 +216,8 @@ features:
     milestone: M0
     modules: [state]
     depends_on: [core.replication]
-    status: done
+    status: in_progress
+    notes: CORE-SEARCH-UPDATE-PERF has historical Go evidence. The Rust port runs under make rust-search-perf and is separate from the lab scenario.
     scenarios:
       - {id: CORE-BENCH, levels: [sim, replica]}
       - {id: CORE-SEARCH-UPDATE-PERF, levels: [sim]}
@@ -228,7 +229,8 @@ features:
     milestone: M1
     modules: [native/AppleSession, applepeer]
     depends_on: [core.commands]
-    status: done
+    status: in_progress
+    notes: HELPER-LIVE-BACKFILL has historical Go evidence for the retired Swift capture path. The Rust first-scan live-edit behavior is covered separately by messages_live_first.rs.
     scenarios:
       - {id: HELPER-RESTART-REAL, levels: [real]}
       - {id: HELPER-TCC-READY, levels: [real]}
@@ -505,10 +507,10 @@ features:
     milestone: M5
     modules: [lab/agent, frontdoor]
     depends_on: [messages.send, reminders.write, calendar.write, contacts.write, notes.write, usage.read]
-    status: done
+    status: in_progress
     scenarios:
       - {id: AGENT-SUITE, levels: [agent]}
-    notes: one natural-language task per source (messages self-send + read, reminders, calendar, contacts, notes, usage) run by the MCP-only agent on Ubuntu, graded by Truth
+    notes: The Go lab ran one natural-language task per source through MCP and graded each with Truth. The Rust lab has no runner for this suite.
 
   - id: agent.answers
     title: Small, paged MCP answers with sensible defaults
@@ -737,7 +739,7 @@ features:
     milestone: G7
     modules: [native/Sources/MapsSource]
     depends_on: [core.queries]
-    status: done
+    status: in_progress
     scenarios:
       - {id: QUERY-AGENT, levels: [sim, real, agent]}
       - {id: LOC-IDLE, levels: [real], status: dropped, reason: "Dropped by the owner: speed and idle-CPU budgets are out of scope; the feature's behavior is qualified separately."}
@@ -749,7 +751,7 @@ features:
       - {id: MAP-SEARCH-REAL, levels: [real]}
       - {id: MAP-DIRECTIONS-REAL, levels: [real]}
       - {id: MAP-SNAPSHOT-REAL, levels: [real]}
-    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53. QUERY-AGENT qualifies Codex and MCP against synthetic Maps results, not live traffic.
+    notes: Transit route geometry is unsupported by MKDirections (ETA is supported); real maps.open remains unverified. Whole-Helper idle qualification is blocked by T53. QUERY-AGENT has historical Go evidence against synthetic Maps results and has no Rust runner at its declared levels.
   - id: capture.commands
     title: Capture and PDF print provider lifecycle
     requirements: [R-API, R-SCOPE]

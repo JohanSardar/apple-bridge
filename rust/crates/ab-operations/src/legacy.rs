@@ -57,6 +57,7 @@ fn emit(value: &Value, kind: &str, shapes: &Value, out: &mut String) -> Result<(
     Ok(())
 }
 pub fn read_model(name: &str, value: &Value) -> Result<Box<RawValue>, Error> {
+    static SHAPES: std::sync::OnceLock<Result<(Value, Value), Code>> = std::sync::OnceLock::new();
     let kind = match name {
         "health.summary" => "HealthSummary",
         "messages.chats" => "ChatsResult",
@@ -71,19 +72,27 @@ pub fn read_model(name: &str, value: &Value) -> Result<Box<RawValue>, Error> {
         "calendar.range" => "CalendarRangeResult",
         _ => "ReadResult",
     };
-    let mut shapes: Value =
-        serde_json::from_str(include_str!("legacy_shapes.json")).map_err(|_| Code::Corrupt)?;
-    if name == "replica.status"
-        && let Some(fields) = shapes["Record"].as_array_mut()
-    {
-        for field in fields {
-            if field[0] == "data" {
-                field[1] = Value::String("ReplicaStatus".into());
+    let (shapes, replica) = SHAPES
+        .get_or_init(|| {
+            let shapes: Value = serde_json::from_str(include_str!("legacy_shapes.json"))
+                .map_err(|_| Code::Corrupt)?;
+            let mut replica = shapes.clone();
+            for field in replica["Record"].as_array_mut().ok_or(Code::Corrupt)? {
+                if field[0] == "data" {
+                    field[1] = Value::String("ReplicaStatus".into());
+                }
             }
-        }
-    }
+            Ok((shapes, replica))
+        })
+        .as_ref()
+        .map_err(Clone::clone)?;
+    let shapes = if name == "replica.status" {
+        replica
+    } else {
+        shapes
+    };
     let mut out = String::new();
-    emit(value, kind, &shapes, &mut out)?;
+    emit(value, kind, shapes, &mut out)?;
     RawValue::from_string(out).map_err(|_| Code::Corrupt.into())
 }
 

@@ -14,13 +14,12 @@ impl LocalGateway {
         if descriptor.kind != ab_catalog::OperationKind::Query {
             return Err(Code::Unsupported.into());
         }
-        let principal = self.authorize(principal, &query.op).map_err(|error| {
-            if error.code == Code::Unauthorized {
-                Code::Forbidden.into()
-            } else {
-                error
-            }
-        })?;
+        let principal = self.identity.current(principal)?;
+        principal.require_explicit_scope(&descriptor.scope)?;
+        if principal.is_agent() && principal.level == "read" && descriptor.scope.ends_with(":write")
+        {
+            return Err(Code::Forbidden.into());
+        }
         {
             let mut rates = self.query_rates.lock().map_err(|_| Code::Unavailable)?;
             rates.retain(|_, (at, _)| at.elapsed() <= Duration::from_secs(1));
@@ -56,7 +55,7 @@ impl LocalGateway {
         {
             return Err(Code::Invalid.into());
         }
-        if let Some(pending) = self.location_approval(&principal, &query).await? {
+        if let Some(pending) = self.location_approval(&principal, &mut query).await? {
             return Ok(pending);
         }
         let id = query.id.clone();

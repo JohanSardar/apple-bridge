@@ -3,8 +3,16 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
-      "examples": [],
+      "examples": [
+        {
+          "command": "bridge up",
+          "summary": "Start Apple Bridge on this Mac"
+        },
+        {
+          "command": "bridge link claude",
+          "summary": "Then connect your agent"
+        }
+      ],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge",
       "lifecycle": "stable",
@@ -96,7 +104,7 @@
           "repeatable": false,
           "required": false,
           "short": null,
-          "summary": "Print the result as JSON; never prompt",
+          "summary": "Print the result as JSON without terminal prompts",
           "type": "boolean",
           "value_hint": null,
           "values": []
@@ -268,7 +276,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge up",
@@ -388,27 +395,7 @@
     },
     {
       "aliases": [],
-      "arguments": [
-        {
-          "name": "AGENT",
-          "required": true,
-          "summary": "Which agent to connect",
-          "values": [
-            "claude",
-            "codex",
-            "cursor",
-            "vscode",
-            "zed",
-            "gemini",
-            "goose",
-            "opencode",
-            "claude-desktop",
-            "grok-bot",
-            "other"
-          ]
-        }
-      ],
-      "deprecated": null,
+      "arguments": [],
       "examples": [
         {
           "command": "bridge link claude",
@@ -438,66 +425,9 @@
         "The agent starts bridge mcp on this Mac. The first time each agent connects, the Mac shows the Apple Bridge Allow panel once; nothing opens a browser.",
         "Claude Code, Codex and Gemini CLI are set up with their own mcp add commands. Cursor, Zed, OpenCode and the Claude app have their config file updated. VS Code uses code --add-mcp or its install link, and Goose opens its install link.",
         "Agents on other computers, servers and Grok Bot can't start bridge mcp here; they connect over your Tailscale network with bridge tailscale, or start bridge mcp on this Mac over SSH.",
-        "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow; keep them private."
+        "Piped, stdout holds only the server name; bridge link other prints only the config. Grok Bot prints credentials as JSON only after Allow in a local terminal; keep them private."
       ],
-      "options": [
-        {
-          "aliases": [],
-          "default": "apple-bridge",
-          "global": false,
-          "name": "--name",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Name shown in the agent",
-          "type": "string",
-          "value_hint": "<NAME>",
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "false",
-          "global": false,
-          "name": "--print",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Print the agent's setup instead of applying it",
-          "type": "boolean",
-          "value_hint": null,
-          "values": []
-        },
-        {
-          "aliases": [],
-          "default": "user",
-          "global": false,
-          "name": "--scope",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Claude Code only: where Claude Code saves the registration. This isn't access; you allow access on your Mac",
-          "type": "string",
-          "value_hint": "<SCOPE>",
-          "values": [
-            "user",
-            "project",
-            "local"
-          ]
-        },
-        {
-          "aliases": [],
-          "default": null,
-          "global": false,
-          "name": "--timeout",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Stop waiting after this long (default: 30s for local commands, 5m for Grok Bot Allow)",
-          "type": "string",
-          "value_hint": "<DURATION>",
-          "values": []
-        }
-      ],
+      "options": [],
       "path": "bridge link",
       "result_schema": {
         "fields": [
@@ -578,9 +508,1509 @@
           }
         ]
       },
-      "subcommands": [],
+      "subcommands": [
+        {
+          "name": "claude",
+          "summary": "Connect Claude Code"
+        },
+        {
+          "name": "codex",
+          "summary": "Connect Codex"
+        },
+        {
+          "name": "cursor",
+          "summary": "Connect Cursor"
+        },
+        {
+          "name": "vscode",
+          "summary": "Connect Visual Studio Code"
+        },
+        {
+          "name": "zed",
+          "summary": "Connect Zed"
+        },
+        {
+          "name": "gemini",
+          "summary": "Connect Gemini CLI"
+        },
+        {
+          "name": "goose",
+          "summary": "Connect Goose"
+        },
+        {
+          "name": "opencode",
+          "summary": "Connect OpenCode"
+        },
+        {
+          "name": "claude-app",
+          "summary": "Connect the Claude desktop app"
+        },
+        {
+          "name": "grok-bot",
+          "summary": "Connect Grok Bot"
+        },
+        {
+          "name": "other",
+          "summary": "Print the setup any other agent needs"
+        }
+      ],
       "summary": "Connect an agent on this Mac, such as Claude Code, Codex or Cursor",
-      "usage": "bridge link <AGENT> [options]"
+      "usage": "bridge link <command> [options]"
+    },
+    {
+      "aliases": [
+        "claude-code"
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link claude --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-claude",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "user",
+          "global": false,
+          "name": "--scope",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Where Claude Code saves the registration",
+          "type": "string",
+          "value_hint": "<SCOPE>",
+          "values": [
+            "user",
+            "project",
+            "local"
+          ]
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        }
+      ],
+      "path": "bridge link claude",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Claude Code",
+      "usage": "bridge link claude [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link codex --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-codex",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        }
+      ],
+      "path": "bridge link codex",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Codex",
+      "usage": "bridge link codex [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link cursor --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-cursor",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link cursor",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Cursor",
+      "usage": "bridge link cursor [options]"
+    },
+    {
+      "aliases": [
+        "code",
+        "vs-code"
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link vscode --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-vscode",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        }
+      ],
+      "path": "bridge link vscode",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Visual Studio Code",
+      "usage": "bridge link vscode [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link zed --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-zed",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link zed",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Zed",
+      "usage": "bridge link zed [options]"
+    },
+    {
+      "aliases": [
+        "gemini-cli"
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link gemini --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-gemini",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        }
+      ],
+      "path": "bridge link gemini",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Gemini CLI",
+      "usage": "bridge link gemini [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link goose --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-goose",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link goose",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Goose",
+      "usage": "bridge link goose [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link opencode --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-opencode",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link opencode",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect OpenCode",
+      "usage": "bridge link opencode [options]"
+    },
+    {
+      "aliases": [
+        "claude-desktop"
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link claude-app --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-claude-app",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link claude-app",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect the Claude desktop app",
+      "usage": "bridge link claude-app [options]"
+    },
+    {
+      "aliases": [
+        "grok"
+      ],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link grok-bot --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-grok-bot",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--timeout",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Bound the wait (default: 30s for local commands, 5m for Grok Bot Allow)",
+          "type": "string",
+          "value_hint": "<DURATION>",
+          "values": []
+        }
+      ],
+      "path": "bridge link grok-bot",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Connect Grok Bot",
+      "usage": "bridge link grok-bot [options]"
+    },
+    {
+      "aliases": [],
+      "arguments": [],
+      "examples": [
+        {
+          "command": "bridge link other --print",
+          "summary": "Preview the configuration"
+        }
+      ],
+      "hidden": false,
+      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-link-other",
+      "lifecycle": "stable",
+      "notes": [],
+      "options": [
+        {
+          "aliases": [],
+          "default": "apple-bridge",
+          "global": false,
+          "name": "--name",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Name shown in the agent",
+          "type": "string",
+          "value_hint": "<NAME>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--print",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print the setup without applying it",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        }
+      ],
+      "path": "bridge link other",
+      "result_schema": {
+        "fields": [
+          {
+            "name": "outcome",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "client",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "command",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "where",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "running",
+            "secret": false,
+            "type": "boolean"
+          },
+          {
+            "name": "argv",
+            "secret": false,
+            "type": "array"
+          },
+          {
+            "name": "file",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "config",
+            "secret": false,
+            "type": "object"
+          },
+          {
+            "name": "url",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "mcp",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "token",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "header",
+            "secret": false,
+            "type": "string"
+          },
+          {
+            "name": "next",
+            "secret": false,
+            "type": "string"
+          }
+        ]
+      },
+      "subcommands": [],
+      "summary": "Print the setup any other agent needs",
+      "usage": "bridge link other [options]"
     },
     {
       "aliases": [],
@@ -598,13 +2028,12 @@
             "gemini",
             "goose",
             "opencode",
-            "claude-desktop",
+            "claude-app",
             "grok-bot",
             "other"
           ]
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge unlink claude",
@@ -696,7 +2125,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge mcp",
@@ -721,7 +2149,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-permissions",
@@ -750,7 +2177,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge permissions guide",
@@ -758,7 +2184,7 @@
         },
         {
           "command": "bridge permissions guide --only contacts,calendar",
-          "summary": "Request two permissions from a script"
+          "summary": "Request two permissions in a terminal on the Mac"
         }
       ],
       "hidden": false,
@@ -766,7 +2192,7 @@
       "lifecycle": "stable",
       "notes": [
         "Every step is optional, and permissions you've already allowed are kept. Enter at a prompt continues; s skips; Ctrl+C or end of input stops before the next step.",
-        "Without a terminal, pass --only with the permissions to request. Without it, the list with each status is printed and the command exits 2."
+        "Without a local terminal or with --non-interactive, exits 2 with terminal_required and requests nothing. Use bridge permissions status --json to see what is missing."
       ],
       "options": [
         {
@@ -836,7 +2262,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge permissions status",
@@ -914,7 +2339,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge permissions request camera",
@@ -964,7 +2388,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge stats",
@@ -1099,7 +2522,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge down",
@@ -1153,7 +2575,6 @@
           ]
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge read chats",
@@ -1173,7 +2594,6 @@
       "lifecycle": "stable",
       "notes": [
         "Shows newest first. --limit is the total to show (default 10, cap 200); only what remains is fetched. Photos is queried live and follows its pages like the rest; everything else is read from what has synced, with its freshness on stderr.",
-        "With --json, --limit 0 still makes one request at the gateway's page size and prints its envelope without records, as in earlier releases.",
         "--next continues with the same filters, window and order. Options you leave out come from the cursor; ones that differ are refused.",
         "Piped, rows are tab-separated with a header line, even when nothing matches. With --json, --fields picks fields inside each record's data.",
         "Uses a temporary read-only credential that's revoked when the read ends."
@@ -1319,7 +2739,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge search dentist",
@@ -1335,7 +2754,6 @@
       "lifecycle": "stable",
       "notes": [
         "--limit is the total to show (default 10, cap 200). --all fetches every page, up to 10,000 results. --next continues the same search; TEXT can be left out.",
-        "With --json, --limit 0 still prints one page at the gateway's page size, as in earlier releases.",
         "Piped, rows are tab-separated with a header line, even when nothing matches."
       ],
       "options": [
@@ -1421,11 +2839,14 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge call --list",
           "summary": "List the operations you can call"
+        },
+        {
+          "command": "bridge call --describe sources.status",
+          "summary": "Inspect one operation offline"
         },
         {
           "command": "bridge call sources.status",
@@ -1442,7 +2863,7 @@
       "notes": [
         "Prints the operation's raw JSON response. Read-only unless --write; other changes go through MCP.",
         "A write whose result can't be confirmed is reported as unknown_outcome with its operation ID; inspect it before trying again. Writes are never retried.",
-        "The result is the operation's own output; see its output schema in bridge call --list --json."
+        "The result is the operation's own output; inspect its input and output schemas with bridge call --describe <OPERATION>."
       ],
       "options": [
         {
@@ -1456,6 +2877,19 @@
           "summary": "Arguments as JSON; - reads them from stdin (default: {})",
           "type": "string",
           "value_hint": "<JSON>",
+          "values": []
+        },
+        {
+          "aliases": [],
+          "default": null,
+          "global": false,
+          "name": "--describe",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Print one operation's input and output schemas as JSON",
+          "type": "string",
+          "value_hint": "<OPERATION>",
           "values": []
         },
         {
@@ -1515,7 +2949,7 @@
       "result_schema": {
         "field": "output",
         "from": "operation",
-        "see": "bridge call --list --json"
+        "see": "bridge call --describe <OPERATION>"
       },
       "subcommands": [],
       "summary": "Call a read operation and print its raw JSON",
@@ -1524,7 +2958,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-skills",
@@ -1551,7 +2984,6 @@
         "ls"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge skills list",
@@ -1592,7 +3024,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge skills get core",
@@ -1617,7 +3048,6 @@
         "agent"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents",
@@ -1656,7 +3086,6 @@
         "ls"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge agents list",
@@ -1768,7 +3197,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge agents create --name my-bot --level read --scope messages:read,contacts:read --expires-in 30d",
@@ -1891,7 +3319,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge agents inspect <AGENT>",
@@ -1962,7 +3389,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge agents update <AGENT> --level approve",
@@ -2050,7 +3476,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge agents revoke <AGENT>",
@@ -2138,88 +3563,10 @@
       "usage": "bridge agents revoke <AGENT> [options]"
     },
     {
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "AGENT",
-          "required": true,
-          "summary": "Agent ID",
-          "values": []
-        },
-        {
-          "name": "LEVEL",
-          "required": true,
-          "summary": "New level",
-          "values": [
-            "full",
-            "approve"
-          ]
-        }
-      ],
-      "deprecated": "bridge agents update <AGENT> --level <LEVEL>",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-agents-level",
-      "lifecycle": "deprecated",
-      "notes": [
-        "Like the old bridge scope, it still runs without --yes outside a terminal, with a warning, until the next major version."
-      ],
-      "options": [],
-      "path": "bridge agents level",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "level",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "scopes",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "created_at",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "revoked_at",
-            "secret": false,
-            "type": "string|null"
-          },
-          {
-            "name": "last_used",
-            "secret": false,
-            "type": "object|null"
-          },
-          {
-            "name": "expires_at",
-            "secret": false,
-            "type": "string|null"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Change an agent's level",
-      "usage": "bridge agents level <AGENT> <LEVEL> [options]"
-    },
-    {
       "aliases": [
         "token"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-tokens",
@@ -2248,7 +3595,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge tokens create --scope reminders:read --expires-in 12h",
@@ -2366,7 +3712,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge tokens revoke <CREDENTIAL>",
@@ -2459,7 +3804,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge tokens update <CREDENTIAL> --scope messages:read",
@@ -2561,7 +3905,6 @@
         "connector"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors",
@@ -2592,7 +3935,6 @@
         "ls"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge connectors list",
@@ -2680,7 +4022,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge connectors allow --request <REQUEST> --code <CODE>",
@@ -2743,7 +4084,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge connectors deny --request <REQUEST> --code <CODE>",
@@ -2804,23 +4144,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": "bridge connectors list",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-connectors-pending",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [],
-      "path": "bridge connectors pending",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "List apps waiting for approval",
-      "usage": "bridge connectors pending [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web",
@@ -2845,7 +4168,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge web enroll",
@@ -2917,7 +4239,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-sessions",
@@ -2944,7 +4265,6 @@
         "ls"
       ],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge web sessions list",
@@ -3032,7 +4352,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge web sessions revoke --all",
@@ -3082,39 +4401,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": "bridge web sessions revoke --all",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-lock",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [],
-      "path": "bridge web lock",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "Sign out every browser",
-      "usage": "bridge web lock [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": "bridge web sessions list",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-web-devices",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [],
-      "path": "bridge web devices",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "List signed-in browsers",
-      "usage": "bridge web devices [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge tailscale",
@@ -3134,6 +4420,19 @@
         "It also reads this Mac's Tailscale access rules. When they stop a device from reaching the route, it names the device and prints the exact rule to add. Run it again to check."
       ],
       "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--dry-run",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show what would happen without applying changes",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
         {
           "aliases": [],
           "default": "false",
@@ -3203,7 +4502,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge pair --scope messages:read",
@@ -3334,7 +4632,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge join <CODE>",
@@ -3384,7 +4681,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge status",
@@ -3418,7 +4714,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge doctor",
@@ -3554,7 +4849,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge backup ~/apple-bridge.db",
@@ -3572,6 +4866,19 @@
         "Refuses an existing file unless --force, or you confirm at the prompt. The backup is written privately and moved into place whole."
       ],
       "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--dry-run",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show what would happen without applying changes",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
         {
           "aliases": [],
           "default": "false",
@@ -3620,7 +4927,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge restore ~/apple-bridge.db",
@@ -3663,6 +4969,19 @@
           "type": "string",
           "value_hint": "<FILE>",
           "values": []
+        },
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--dry-run",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show what would happen without applying changes",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
         }
       ],
       "path": "bridge restore",
@@ -3692,7 +5011,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-selftest",
@@ -3713,7 +5031,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge selftest messages",
@@ -3727,6 +5044,19 @@
         "This sends real messages to your own chat through the Helper."
       ],
       "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--dry-run",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show what would happen without applying changes",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
         {
           "aliases": [],
           "default": "false",
@@ -3776,7 +5106,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": false,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-shortcuts",
@@ -3797,7 +5126,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge shortcuts install",
@@ -3831,36 +5159,6 @@
     },
     {
       "aliases": [],
-      "arguments": [],
-      "deprecated": "bridge shortcuts install",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-shortcuts-install-pack",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [
-        {
-          "aliases": [],
-          "default": ".build/shortcuts",
-          "global": false,
-          "name": "--pack",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Pack folder",
-          "type": "string",
-          "value_hint": "<DIR>",
-          "values": []
-        }
-      ],
-      "path": "bridge shortcuts install-pack",
-      "result_schema": null,
-      "subcommands": [],
-      "summary": "Open the Shortcuts pack",
-      "usage": "bridge shortcuts install-pack [options]"
-    },
-    {
-      "aliases": [],
       "arguments": [
         {
           "name": "SHELL",
@@ -3873,7 +5171,6 @@
           ]
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge completion zsh > ~/.zfunc/_bridge",
@@ -3901,7 +5198,6 @@
           "values": []
         }
       ],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge help search token",
@@ -3940,7 +5236,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [
         {
           "command": "bridge start --role gateway --api-addr 127.0.0.1:7780 --peer-addr 127.0.0.1:7443",
@@ -4097,7 +5392,6 @@
     {
       "aliases": [],
       "arguments": [],
-      "deprecated": null,
       "examples": [],
       "hidden": true,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-install-credentials",
@@ -4132,127 +5426,28 @@
     },
     {
       "aliases": [],
-      "arguments": [
-        {
-          "name": "CREDENTIAL",
-          "required": true,
-          "summary": "Agent, token or replica ID",
-          "values": []
-        }
-      ],
-      "deprecated": "bridge tokens revoke",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-revoke",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [],
-      "path": "bridge revoke",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "kind",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Revoke an agent or token",
-      "usage": "bridge revoke <CREDENTIAL> [options]"
-    },
-    {
-      "aliases": [],
-      "arguments": [
-        {
-          "name": "CREDENTIAL",
-          "required": true,
-          "summary": "Agent, token or replica ID",
-          "values": []
-        }
-      ],
-      "deprecated": "bridge tokens update",
-      "examples": [],
-      "hidden": true,
-      "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-scope",
-      "lifecycle": "deprecated",
-      "notes": [],
-      "options": [
-        {
-          "aliases": [],
-          "default": "reminders:read,system:read",
-          "global": false,
-          "name": "--scope",
-          "repeatable": false,
-          "required": false,
-          "short": null,
-          "summary": "Access grants, comma-separated",
-          "type": "string",
-          "value_hint": "<ACCESS>",
-          "values": []
-        }
-      ],
-      "path": "bridge scope",
-      "result_schema": {
-        "fields": [
-          {
-            "name": "id",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "scopes",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "previous",
-            "secret": false,
-            "type": "array"
-          },
-          {
-            "name": "outcome",
-            "secret": false,
-            "type": "string"
-          },
-          {
-            "name": "next",
-            "secret": false,
-            "type": "array"
-          }
-        ]
-      },
-      "subcommands": [],
-      "summary": "Change a token's access",
-      "usage": "bridge scope <CREDENTIAL> [options]"
-    },
-    {
-      "aliases": [],
       "arguments": [],
-      "deprecated": "bridge selftest messages",
       "examples": [],
       "hidden": true,
       "learn_more": "https://eilmer.si/applebridge/docs/reference/cli.md#bridge-setup",
-      "lifecycle": "deprecated",
+      "lifecycle": "hidden",
       "notes": [
         "This sends real messages to your own chat through the Helper."
       ],
       "options": [
+        {
+          "aliases": [],
+          "default": "false",
+          "global": false,
+          "name": "--dry-run",
+          "repeatable": false,
+          "required": false,
+          "short": null,
+          "summary": "Show what would happen without applying changes",
+          "type": "boolean",
+          "value_hint": null,
+          "values": []
+        },
         {
           "aliases": [],
           "default": "false",

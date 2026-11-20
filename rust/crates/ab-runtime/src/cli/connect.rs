@@ -172,13 +172,6 @@ fn start_tailscale(home: &Path, keep_awake: bool) -> Outcome {
         return Ok(());
     }
     if !Path::new(TAILSCALE_APP).exists() {
-        if !Modes::get().interactive() && !Modes::get().yes {
-            return Err(
-                Failure::new(Reason::NotFound, "Tailscale isn't installed on this Mac.")
-                    .sentence("Installing it asks for the owner's password or Touch ID.")
-                    .then("Install it and turn it on", ["bridge", "tailscale"]),
-            );
-        }
         install_tailscale(home, keep_awake)?;
     }
     if !running("Tailscale") {
@@ -222,6 +215,7 @@ fn ensure_running(home: &Path) -> Outcome {
 }
 
 pub(super) async fn turn_on(home: &Path, keep_awake: bool) -> Outcome<String> {
+    Modes::get().require_native_interaction("Tailscale setup", &["bridge", "tailscale"])?;
     ensure_running(home)?;
     commands::check_remote_files(home)?;
     start_tailscale(home, keep_awake)?;
@@ -421,6 +415,25 @@ fn explain_reach(reach: &ab_remote::reach::Reach, ssh: Option<&str>) {
 }
 
 pub async fn tailscale(home: &Path, args: &TailscaleArgs) -> Outcome {
+    if args.dry_run {
+        let description = if args.off {
+            "Turn off private Tailscale access."
+        } else {
+            "Turn on private Tailscale access."
+        };
+        commands::dry_run("tailscale", description);
+        return Ok(());
+    }
+    if args.keep_awake {
+        Modes::get().require_native_interaction(
+            "the Tailscale sleep setting",
+            if args.off {
+                &["bridge", "tailscale", "--off", "--keep-awake"]
+            } else {
+                &["bridge", "tailscale", "--keep-awake"]
+            },
+        )?;
+    }
     if args.off {
         turn_off(home).await?;
         if args.keep_awake {

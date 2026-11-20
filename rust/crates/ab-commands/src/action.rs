@@ -91,7 +91,7 @@ pub fn native_action(c: &Command, ctx: &ActionContext) -> Result<Vec<u8>, Error>
             .ok_or(Error::Invalid)?
             .clone()
     } else {
-        decode(c.args.get(), shape)?
+        decode(c.args.get(), shape).map_err(|violation| violation.legacy())?
     };
     let mut fields = Vec::new();
     text(&mut fields, "origin", &ctx.origin)?;
@@ -105,6 +105,7 @@ pub fn native_action(c: &Command, ctx: &ActionContext) -> Result<Vec<u8>, Error>
     if op.starts_with("messages.") {
         let mut m = a.clone();
         m.remove("files");
+        m.remove("asset_ids");
         if !ctx.resend_key.is_empty() {
             m.insert("resend_of".into(), Value::String(ctx.resend_key.clone()));
         }
