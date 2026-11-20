@@ -287,11 +287,11 @@ fn voicemail_checks(evidence: &mut Evidence) {
         "ab-native",
         &[
             "--test",
-            "voicemail",
-            "--test",
-            "voicemail_limits",
-            "--test",
-            "voicemail_scan_budget",
+            "telephony_media",
+            "--",
+            "voicemail::",
+            "voicemail_limits::",
+            "voicemail_scan_budget::",
         ],
     );
     rust_tests(
@@ -306,11 +306,11 @@ fn voicemail_checks(evidence: &mut Evidence) {
         "ab-session",
         &[
             "--test",
-            "voicemail_limits",
-            "--test",
-            "capture_handle_budget",
-            "--test",
-            "voicemail_scan_budget",
+            "capture",
+            "--",
+            "voicemail_limits::",
+            "capture_handle_budget::",
+            "voicemail_scan_budget::",
         ],
     );
     rust_tests(
@@ -323,13 +323,13 @@ fn voicemail_checks(evidence: &mut Evidence) {
         evidence,
         "voicemail_blob_restart_and_late_assets",
         "ab-session",
-        &["--test", "capture_producer", "rust_voicemail"],
+        &["--test", "capture", "capture_producer::rust_voicemail"],
     );
     rust_tests(
         evidence,
         "voicemail_cli_mcp_and_audio_download",
         "ab-runtime",
-        &["--test", "voicemail"],
+        &["--test", "integration", "voicemail::"],
     );
 }
 
@@ -342,15 +342,15 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
             "ab-session",
             &[
                 "--test",
-                "capture_producer",
-                "rust_calls_voicemail_and_voice_memos_are_routed",
+                "capture",
+                "capture_producer::rust_calls_voicemail_and_voice_memos_are_routed",
             ],
         ),
         "CALL-IDLE" => rust_tests(
             evidence,
             "no_idle_checkpoints",
             "ab-session",
-            &["--test", "capture_pacing"],
+            &["--test", "capture", "capture_pacing::"],
         ),
         "CALLS-REPLICA" => calls_replica(world, evidence)?,
         "CALL-READ-REAL" => calls_real(world, evidence)?,
@@ -361,8 +361,8 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
             "ab-session",
             &[
                 "--test",
-                "capture_producer",
-                "rust_calls_voicemail_and_voice_memos_are_routed",
+                "capture",
+                "capture_producer::rust_calls_voicemail_and_voice_memos_are_routed",
             ],
         ),
         "VMEMO-LATE-ASSETS" => {
@@ -370,7 +370,7 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
                 evidence,
                 "folders_late_transcript_audio_blob_same_record",
                 "ab-native",
-                &["--test", "voice_memo"],
+                &["--test", "telephony_media", "voice_memo::"],
             );
             rust_tests(
                 evidence,
@@ -378,8 +378,8 @@ pub fn phone(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()
                 "ab-session",
                 &[
                     "--test",
-                    "capture_producer",
-                    "rust_voice_memos_serve_blob_reads_across_restart",
+                    "capture",
+                    "capture_producer::rust_voice_memos_serve_blob_reads_across_restart",
                 ],
             );
         }

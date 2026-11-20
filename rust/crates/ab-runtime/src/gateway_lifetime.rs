@@ -246,31 +246,73 @@ mod tests {
     }
 
     #[test]
-    fn running_rotation_preserves_concurrent_stdout_and_stderr()
+    fn repeated_rotation_preserves_concurrent_output_and_keeps_one_archive()
     -> Result<(), Box<dyn std::error::Error>> {
         let home = tempfile::tempdir()?;
         let path = home.path().join("gateway.log");
         let mut log = open_log(&path)?;
-        let mut previous = vec![b'x'; usize::try_from(LOG_LIMIT + 1)?];
-        previous.extend_from_slice(b"\nbefore rotation\n");
-        log.write_all(&previous)?;
+        log.write_all(b"before rotation\n")?;
+        log.set_len(LOG_LIMIT + 1)?;
         let output = std::process::Command::new(std::env::current_exe()?)
             .args([
                 "--exact",
                 "gateway_lifetime::tests::rotation_fixture",
+                "--ignored",
                 "--nocapture",
             ])
             .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
             .stdout(log.try_clone()?)
             .stderr(log)
             .status()?;
-        assert!(output.success());
-        let archive = std::fs::read(home.path().join("gateway.log.1"))?;
-        let current = std::fs::read(&path)?;
-        assert!(archive.starts_with(&previous));
-        assert!(current.len() < usize::try_from(LOG_LIMIT)?);
-        let all = [archive, current].concat();
-        let text = String::from_utf8(all)?;
+        assert!(output.success(), "{}", std::fs::read_to_string(&path)?);
+        let archive = std::fs::read_to_string(home.path().join("gateway.log.1"))?;
+        assert!(archive.contains("second generation"));
+        assert!(!archive.contains("before rotation"));
+        assert!(archive.len() < usize::try_from(LOG_LIMIT * 2)?);
+        assert!(std::fs::read_to_string(&path)?.contains("after rotation"));
+        assert!(path.metadata()?.len() < LOG_LIMIT);
+        assert!(!home.path().join("gateway.log.2").exists());
+        Ok(())
+    }
+
+    async fn wait_for_rotation(path: &Path, previous: &std::fs::Metadata) -> Result<(), Error> {
+        tokio::time::timeout(POLL * 5, async {
+            let mut tick = tokio::time::interval(Duration::from_millis(10));
+            loop {
+                tick.tick().await;
+                if !same_file(previous, &path.metadata()?) {
+                    return Ok(());
+                }
+            }
+        })
+        .await
+        .map_err(|_| Error::Invalid)?
+    }
+
+    #[tokio::test]
+    #[ignore = "subprocess fixture"]
+    async fn rotation_fixture() -> Result<(), Box<dyn std::error::Error>> {
+        let home = PathBuf::from(
+            std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE").ok_or(Error::Invalid)?,
+        );
+        let path = home.join("gateway.log");
+        let original = path.metadata()?;
+        let ownership = Arc::new(HomeLock::acquire(&home)?);
+        let log = Log::inherited(&home)?.ok_or(Error::Invalid)?;
+        let (stop, receiver) = tokio::sync::watch::channel(false);
+        let writer = std::thread::spawn(|| {
+            for number in 0..100 {
+                println!("stdout fixture {number:03}");
+                eprintln!("stderr fixture {number:03}");
+                std::thread::yield_now();
+            }
+        });
+        let task = tokio::spawn(run(log, receiver, ownership));
+        wait_for_rotation(&path, &original).await?;
+        writer.join().map_err(|_| Error::Invalid)?;
+        let archive = std::fs::read_to_string(home.join("gateway.log.1"))?;
+        assert!(archive.starts_with("before rotation\n"));
+        let text = archive + &std::fs::read_to_string(&path)?;
         for number in 0..100 {
             assert_eq!(
                 text.matches(&format!("stdout fixture {number:03}\n"))
@@ -283,64 +325,10 @@ mod tests {
                 1
             );
         }
-        assert!(text.contains("after rotation\n"));
-        Ok(())
-    }
-
-    #[test]
-    fn repeated_rotation_retains_only_one_archive() -> Result<(), Box<dyn std::error::Error>> {
-        let home = tempfile::tempdir()?;
-        let path = home.path().join("gateway.log");
-        let log = open_log(&path)?;
-        std::fs::write(&path, vec![b'x'; usize::try_from(LOG_LIMIT + 1)?])?;
-        let output = std::process::Command::new(std::env::current_exe()?)
-            .args([
-                "--exact",
-                "gateway_lifetime::tests::rotation_fixture",
-                "--nocapture",
-            ])
-            .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
-            .env("APPLE_BRIDGE_LOG_ROTATION_TWICE", "1")
-            .stdout(log.try_clone()?)
-            .stderr(log)
-            .status()?;
-        assert!(output.success());
-        let archive = std::fs::read(home.path().join("gateway.log.1"))?;
-        assert!(
-            archive
-                .windows(b"second generation".len())
-                .any(|bytes| bytes == b"second generation")
-        );
-        assert!(archive.len() < usize::try_from(LOG_LIMIT * 2)?);
-        assert!(path.metadata()?.len() < LOG_LIMIT);
-        assert!(!home.path().join("gateway.log.2").exists());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rotation_fixture() -> Result<(), Box<dyn std::error::Error>> {
-        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
-            return Ok(());
-        };
-        let home = PathBuf::from(home);
-        let ownership = Arc::new(HomeLock::acquire(&home)?);
-        let log = Log::inherited(&home)?.ok_or(Error::Invalid)?;
-        let (stop, receiver) = tokio::sync::watch::channel(false);
-        let task = tokio::spawn(run(log, receiver, ownership));
-        let writer = std::thread::spawn(|| {
-            for number in 0..100 {
-                println!("stdout fixture {number:03}");
-                eprintln!("stderr fixture {number:03}");
-                std::thread::sleep(Duration::from_millis(1));
-            }
-        });
-        tokio::time::sleep(POLL * 2).await;
-        writer.join().map_err(|_| Error::Invalid)?;
-        if std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_TWICE").is_some() {
-            println!("second generation");
-            std::io::stdout().write_all(&vec![b'y'; usize::try_from(LOG_LIMIT + 1)?])?;
-            tokio::time::sleep(POLL * 2).await;
-        }
+        let current = path.metadata()?;
+        println!("second generation");
+        std::io::stdout().write_all(&vec![b'y'; usize::try_from(LOG_LIMIT + 1)?])?;
+        wait_for_rotation(&path, &current).await?;
         stop.send(true)?;
         task.await??;
         eprintln!("after rotation");
@@ -511,6 +499,7 @@ mod tests {
             .args([
                 "--exact",
                 "gateway_lifetime::tests::full_disk_fixture",
+                "--ignored",
                 "--nocapture",
             ])
             .env("APPLE_BRIDGE_LOG_ROTATION_FIXTURE", home.path())
@@ -521,22 +510,22 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[cfg(target_os = "linux")]
+    #[tokio::test(start_paused = true)]
+    #[ignore = "subprocess fixture"]
     async fn full_disk_fixture() -> Result<(), Box<dyn std::error::Error>> {
-        let Some(home) = std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE") else {
-            return Ok(());
-        };
-        let home = PathBuf::from(home);
+        let home = PathBuf::from(
+            std::env::var_os("APPLE_BRIDGE_LOG_ROTATION_FIXTURE").ok_or(Error::Invalid)?,
+        );
         let ownership = Arc::new(HomeLock::acquire(&home)?);
         let log = Log {
             path: home.join("missing"),
             file: File::open(home.join("gateway.log"))?,
         };
         let (stop, receiver) = tokio::sync::watch::channel(false);
-        let task = tokio::spawn(run(log, receiver, ownership));
-        tokio::time::sleep(POLL * 2).await;
+        let mut task = tokio::spawn(run(log, receiver, ownership));
         assert!(
-            !task.is_finished(),
+            tokio::time::timeout(POLL * 2, &mut task).await.is_err(),
             "rotation error reporting stopped the supervisor"
         );
         stop.send(true)?;

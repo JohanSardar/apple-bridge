@@ -132,7 +132,7 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
             evidence,
             "production_native_watcher_fault_checks",
             "ab-session",
-            &["--test", "messages_live_first"],
+            &["--test", "capture", "messages_live_first::"],
         );
     }
     history::tail(world, &observed, &observers, evidence)

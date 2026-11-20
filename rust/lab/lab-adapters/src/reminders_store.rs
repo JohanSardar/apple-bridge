@@ -23,7 +23,7 @@ fn read(_: &World, evidence: &mut Evidence) {
         evidence,
         "reader_fields_and_blobs",
         "ab-native",
-        &["--test", "reminders_store_oracle"],
+        &["--test", "stores", "reminders_store_oracle::"],
     );
 }
 
@@ -32,7 +32,7 @@ fn perf(_: &World, evidence: &mut Evidence) {
         evidence,
         "store_profile_completed",
         "ab-native",
-        &["--test", "reminders_store_oracle"],
+        &["--test", "stores", "reminders_store_oracle::"],
     );
 }
 
@@ -41,6 +41,6 @@ fn sections(_: &World, evidence: &mut Evidence) {
         evidence,
         "store_effects_and_invalidation",
         "ab-native",
-        &["--test", "reminders_store_oracle"],
+        &["--test", "stores", "reminders_store_oracle::"],
     );
 }

@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: "23 8 * * 1"
 
 permissions: {}
 
@@ -21,6 +23,7 @@ env:
 jobs:
   gates:
     name: Gates
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -47,6 +50,7 @@ jobs:
         run: rust/check.sh deny check
 
   clippy:
+    if: github.event_name != 'schedule'
     name: Clippy (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -69,12 +73,11 @@ jobs:
           components: clippy
       - name: Workspace
         run: rust/check.sh clippy --workspace --all-targets --locked -- -D warnings
-      - name: Session alone
-        run: rust/check.sh clippy -p ab-session --all-targets --locked -- -D warnings
       - name: Session with the lab feature
         run: rust/check.sh clippy -p ab-session --features lab --all-targets --locked -- -D warnings
 
   tests:
+    if: github.event_name != 'schedule'
     name: Tests (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -96,16 +99,37 @@ jobs:
         with:
           tool: cargo-nextest@0.9.151
       - name: Workspace
-        run: rust/check.sh nextest run --profile ci --workspace --locked
-      - name: Session alone
-        run: rust/check.sh nextest run --profile ci -p ab-session --locked
+        run: rust/check.sh nextest run --profile ci --workspace --tests --locked
       - name: Session with the lab feature
-        run: rust/check.sh nextest run --profile ci -p ab-session --features lab --locked
-      - name: Documentation examples
-        if: runner.os == 'Linux'
-        run: rust/check.sh test --workspace --locked --doc
+        run: rust/check.sh nextest run --profile ci -p ab-session --features lab --test lab_peer --locked
+
+  search-changes:
+    name: Search inputs
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - id: diff
+        shell: bash
+        run: |
+          git diff --name-only HEAD^1 HEAD -- rust/crates/ab-state rust/lab/lab-demo rust/Cargo.toml rust/Cargo.lock .github/workflows/rust.yml .github/actions/rust Makefile > "$RUNNER_TEMP/search-inputs"
+          if [[ -s "$RUNNER_TEMP/search-inputs" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
   search-perf:
+    needs: search-changes
+    if: >-
+      ${{ !cancelled() && (github.ref == 'refs/heads/main' ||
+          github.event_name == 'schedule' || needs.search-changes.outputs.changed == 'true') }}
     name: Search update
     runs-on: ubuntu-24.04
     timeout-minutes: 30

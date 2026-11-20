@@ -77,7 +77,7 @@ pub fn decode(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
         evidence,
         "scrubbed_segb_and_day_math",
         "ab-native",
-        &["--test", "usage"],
+        &["--test", "stores", "usage::"],
     );
     Ok(())
 }

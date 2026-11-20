@@ -1,4 +1,4 @@
-> Go oracle retired: the Go gateway, its parity oracles and the Go lab were deleted. Go commands, file names and Go-versus-Rust results below record what was verified while Go existed; the stored evidence files are unchanged. The Rust tests and `make rust-ci` are the gate now.
+> Historical record. The Go oracles and the retired Rust spike sources and scripts are available in Git history. The committed evidence remains alongside this report. The Rust tests and `make rust-ci` are the current gate.
 
 # Phase 1 Rust spikes
 
@@ -24,7 +24,7 @@ Method: macOS 26.7.1, 8 GiB RAM, 8 logical CPUs, Rust/Cargo 1.99.1. Native arm64
 
 Peak memory is sampled aggregate RSS of Cargo and its descendant processes at 100 ms intervals, excluding unrelated workers. This is a sampled peak, not an OS high-water mark; shared pages may be counted more than once and brief peaks can be missed. Wall time excludes waiting for the build lock and includes sampling overhead. Target disk use is allocated bytes from `du -sk`, for this profile only. A leaf check touches `ab-wire/src/lib.rs` then checks `ab-wire`. Each row has n=1; its p50/p95/max equal the reported observation, with no statistical confidence implied. The initial two rows and the jobs=2 check ran within one lock acquisition; subsequent steps acquire the lock separately so other workers can interleave.
 
-Reproduce from the workspace: `python3 rust/spikes/budget.py`. The controller must run outside `ab-local`; it acquires the lock separately for every clean/check/build/leaf check. Results resume from `/tmp/ab-rust-budget.json`; remove that results file to start a new matrix. The final cleanup removes only `spike-budget` artifacts.
+The original workspace command was `python3 rust/spikes/budget.py`. The controller must run outside `ab-local`; it acquires the lock separately for every clean/check/build/leaf check. Results resume from `/tmp/ab-rust-budget.json`; remove that results file to start a new matrix. The final cleanup removes only `spike-budget` artifacts.
 
 ## S2: Helper TCC child attribution
 
@@ -56,7 +56,7 @@ Verification: the real scenario passed 20 assertions; `make lint`, `go test ./la
 - `ab-wire::gojson` preserves number tokens using `RawValue`, orders maps, applies Go HTML/no-HTML escaping, replaces unpaired UTF-16 surrogates, formats UTC `GoTime`, and encodes the capitalized command fields in declaration order. It deliberately does not expose a universal struct canonicalizer.
 - `tools/lint` rejects the two prohibited serde_json features in manifests. `cargo deny` also rejects their resolved activation, including through transitive dependencies.
 
-The Go oracle that reproduced these synthetic checks (`tools/rust-spike`) is retired with the Go tree; the checks run from `rust/spikes` alone. Optional following database paths invoke the hash-only comparison. Clone with `sqlite3 -readonly`: begin a read transaction, read `sqlite_schema` to establish its snapshot, invoke `.backup` into an owner-only temporary directory, then roll back. The explicit read transaction prevents online-backup restarts under active capture. Never pass a live database to the comparator. No raw capture recording was enabled or read from the gateway.
+The synthetic checks also ran directly from the former `rust/spikes` crate. Optional following database paths invoke the hash-only comparison. Clone with `sqlite3 -readonly`: begin a read transaction, read `sqlite_schema` to establish its snapshot, invoke `.backup` into an owner-only temporary directory, then roll back. The explicit read transaction prevents online-backup restarts under active capture. Never pass a live database to the comparator. No raw capture recording was enabled or read from the gateway.
 
 **Phase 0 golden verification passed after it landed on main `a02485dd`: 22 compatibility comparisons, 0 mismatches, in two Rust integration tests.** These check all four JSON vectors in both escape modes, all four command preimages and hashes, five timestamp normalizations, and the Capture fixture observation Data. This fixture is synthetic; it does not replace a recorded live-capture corpus. Reproduce with `cargo test --manifest-path rust/Cargo.toml -p ab-wire`.
 
@@ -69,7 +69,7 @@ The Go oracle that reproduced these synthetic checks (`tools/rust-spike`) is ret
 - WAL snapshot isolation: a pinned reader retained its count across a committed write from a second connection, then saw the additional row after committing its read transaction. **0 isolation mismatches**.
 - Go `state.Open` created the actual schema-v2 state database; Rust reopened it, queried FTS and wrote another document; Go reopened it, observed **6 documents**, and verified `schema_version=2`. **0 reopen mismatches**. This tests state.db, not a migration implementation or live-ledger write compatibility.
 
-Reproduce with `<oracle> sqlite <temporary-path-prefix> <ab-spikes>`. Use a fresh prefix; the probe creates a synthetic home. All synthetic database artifacts from this run are cleaned after verification.
+The original command was `<oracle> sqlite <temporary-path-prefix> <ab-spikes>`. Use a fresh prefix; the probe creates a synthetic home. All synthetic database artifacts from this run are cleaned after verification.
 
 ## S7: mTLS
 
@@ -101,7 +101,7 @@ Crate/API references: [rusqlite](https://docs.rs/rusqlite/0.41.1/rusqlite/), [ru
 
 **PASS for the frozen transcripts and tested legacy clients: 8/8 exchanges match semantically, 0 breaking differences after adaptation.** Ubuntu x86_64, Rust 1.99.1, Go 1.27.2, rmcp **3.8.0**, Go SDK **1.8.0**. Synthetic loopback servers only; public-host tests select SSE and send synthetic public Host/Origin without contacting a public gateway.
 
-The standalone research crate lives at spikes/s4-s6, outside the product workspace because S6 introduces the dependency advisory below. It uses StreamableHttpService with legacy_session_mode=false, no rmcp attribute macros, and a **147-entry descriptor table** decoded from the frozen tools/list fixture. This proves transport and descriptor serialization, not Rust operation implementations or future ab-catalog generation.
+The standalone research crate used to live at `spikes/s4-s6` outside the product workspace because of the S6 dependency advisory below. It uses StreamableHttpService with legacy_session_mode=false, no rmcp attribute macros, and a **147-entry descriptor table** decoded from the frozen tools/list fixture. This proves transport and descriptor serialization, not Rust operation implementations or future ab-catalog generation.
 
 - JSON and SSE: initialize, initialized notification, tools/list and unauthorized tools/call; **4 exchanges per mode, 147/147 descriptors, 0 semantic payload or status mismatches**. Object key order is ignored; array order, schema values, numbers and error code/message are compared. Golden fixtures are unchanged.
 - Go and rmcp clients each initialize, list **147 tools** and receive the frozen authorization error code **0** and message: **4 combinations pass**.
@@ -122,7 +122,7 @@ Every observed difference:
 
 Recommendation: **use rmcp**, with descriptor lookup, Go error mapping, malformed-JSON status adaptation, public/local mode selection and explicit allow-lists. A hand-rolled transport is unnecessary for the tested contract. Golden tools/call covers authorization failure only; successful domain calls, application-specific structured errors and production auth middleware remain ab-frontdoor work.
 
-Reproduce on Ubuntu: python3 rust/spikes/s4-s6/run.py. The committed mcp-results.json contains golden, security, legacy-version and rmcp-client observations; the Go matrix logs remaining diagnostic differences. Final focused package wall times are approximately **0.1–0.9 seconds**, n=1 each, smoke timings rather than throughput measurements.
+The original Ubuntu command was `python3 rust/spikes/s4-s6/run.py`. The committed mcp-results.json contains golden, security, legacy-version and rmcp-client observations; the Go matrix logs remaining diagnostic differences. Final focused package wall times are approximately **0.1–0.9 seconds**, n=1 each, smoke timings rather than throughput measurements.
 
 References: [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports), [cancellation](https://modelcontextprotocol.io/specification/2025-03-26/basic/utilities/cancellation), [tool errors](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
 

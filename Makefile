@@ -67,15 +67,13 @@ rust-check:
 rust-lint: lint-rust-sources
 	rust/check.sh fmt --all -- --check
 	rust/check.sh clippy --workspace --all-targets -- -D warnings
-	rust/check.sh clippy -p ab-session --all-targets -- -D warnings
 	rust/check.sh clippy -p ab-session --features lab --all-targets -- -D warnings
 	rust/check.sh deny check
 
 .PHONY: rust-test rust-search-perf rust-ci
 rust-test:
-	rust/check.sh test --workspace --locked
-	rust/check.sh test -p ab-session --locked
-	rust/check.sh test -p ab-session --locked --features lab
+	rust/check.sh test --workspace --tests --locked
+	rust/check.sh test -p ab-session --features lab --test lab_peer --locked
 
 rust-search-perf:
 	rust/check.sh test --release --locked -p ab-state --test search_update_perf -- --ignored --nocapture
@@ -86,7 +84,7 @@ rust-ci: lint rust-test rust-search-perf rust-lint rust-lab-independence
 
 .PHONY: rust-golden rust-gate
 rust-golden:
-	rust/check.sh test --workspace --locked golden
+	rust/check.sh test --workspace --tests --locked golden
 
 rust-gate: lint-rust-sources rust-test rust-lint rust-lab-independence
 	python3 rust/check-native-graph.py

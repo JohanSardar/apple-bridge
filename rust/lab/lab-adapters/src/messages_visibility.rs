@@ -20,7 +20,7 @@ pub fn sim(_: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> {
         evidence,
         "native_capture_visibility_and_restore",
         "ab-native",
-        &["--test", "messages_paging"],
+        &["--test", "stores", "messages_paging::"],
     );
     Ok(())
 }

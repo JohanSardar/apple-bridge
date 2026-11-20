@@ -4,10 +4,12 @@ use serde_json::{Value, json};
 use std::{
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
+    net::{SocketAddr, TcpListener, TcpStream},
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     process::{Child, ChildStdout, Command, Output, Stdio},
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc},
+    thread::JoinHandle,
     time::Duration,
 };
 
@@ -151,19 +153,52 @@ pub fn record(collection: &str, id: &str) -> Value {
     json!({"collection": collection, "id": id, "data": {"title": format!("item {id}"), "date": "2026-11-01T00:00:00Z"}})
 }
 
+pub struct ScriptedGateway {
+    _lock: File,
+    address: SocketAddr,
+    stop: mpsc::Sender<()>,
+    listener: Option<JoinHandle<()>>,
+}
+
+impl Drop for ScriptedGateway {
+    fn drop(&mut self) {
+        if self.stop.send(()).is_ok()
+            && TcpStream::connect(self.address).is_ok()
+            && let Some(listener) = self.listener.take()
+        {
+            let _ = listener.join();
+        }
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 pub fn scripted_gateway(
     home: &Path,
     handler: impl Fn(&str, &Value) -> Reply + Send + Sync + 'static,
-) -> Result<(std::fs::File, Log), Box<dyn std::error::Error>> {
-    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
-    let address = listener.local_addr()?.to_string();
+) -> Result<(ScriptedGateway, Log), Box<dyn std::error::Error>> {
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let address = listener.local_addr()?;
+    std::fs::write(
+        home.join("runtime.json"),
+        json!({"role": "gateway", "home": home, "peer_address": "127.0.0.1:1", "api_address": address.to_string(), "socket": ""}).to_string(),
+    )?;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(home.join("lock"))?;
+    lock.try_lock()?;
     let log: Log = Arc::default();
     let seen = log.clone();
     let handler = Arc::new(handler);
-    std::thread::spawn(move || {
+    let (stop, stopping) = mpsc::channel();
+    let listener = std::thread::spawn(move || {
         for stream in listener.incoming() {
-            let Ok(mut stream) = stream else { continue };
+            if stopping.try_recv().is_ok() {
+                break;
+            }
+            let Ok(mut stream) = stream else { break };
             let seen = seen.clone();
             let handler = handler.clone();
             std::thread::spawn(move || {
@@ -245,18 +280,15 @@ pub fn scripted_gateway(
             });
         }
     });
-    std::fs::write(
-        home.join("runtime.json"),
-        json!({"role": "gateway", "home": home, "peer_address": "127.0.0.1:1", "api_address": address, "socket": ""}).to_string(),
-    )?;
-    let lock = std::fs::OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(home.join("lock"))?;
-    lock.try_lock()?;
-    Ok((lock, log))
+    Ok((
+        ScriptedGateway {
+            _lock: lock,
+            address,
+            stop,
+            listener: Some(listener),
+        },
+        log,
+    ))
 }
 
 pub fn requests(log: &Log, operation: &str) -> Vec<Value> {
