@@ -4,6 +4,17 @@ All notable changes are documented here, following [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-11-20
+
+### Changed
+
+- Renamed MCP tools and reduced the connection payload to 5,375 tokens. Moved four combined reads into Operations.
+- Unified REST JSON errors and reduced the OpenAPI document from 41,789 to 17,353 lines.
+
+### Security
+
+- Tightened replay validation, scope enforcement, OAuth refresh handling, and CLI credential handling. Added an explicit non-interactive CLI mode.
+
 ## [0.1.13] - 2026-11-19
 
 ### Fixed
