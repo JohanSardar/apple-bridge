@@ -102,3 +102,25 @@ fn print_takes_a_reference_or_bytes_but_never_a_path() -> Result<(), Box<dyn std
     )?);
     Ok(())
 }
+
+#[test]
+fn malformed_annotations_identify_the_field_and_expected_range()
+-> Result<(), Box<dyn std::error::Error>> {
+    let request: Command = serde_json::from_value(json!({
+        "command_id":"pdf-validation",
+        "op":"pdf.annotate",
+        "args":{"data_base64":"JVBERi0xLjQ=","annotations":[
+            {"page":1,"type":"note","text":"synthetic","x":0,"y":0,"width":0,"height":20}
+        ]}
+    }))?;
+    let Err(problem) = ab_commands::validate_request(&request, "2026-11-03T00:00:00Z".parse()?)
+    else {
+        return Err("the annotation must be refused".into());
+    };
+    assert_eq!(problem.code, "invalid");
+    assert_eq!(problem.field, "args.annotations[0].width");
+    assert_eq!(problem.expected, "greater than 0 and at most 100000");
+    assert_ne!(problem.hint, "");
+    assert!(!problem.retryable);
+    Ok(())
+}

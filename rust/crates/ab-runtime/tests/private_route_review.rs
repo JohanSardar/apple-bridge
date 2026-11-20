@@ -103,7 +103,8 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
         });
-        let mut command = tokio::process::Command::from(bridge());
+        let terminal = Terminal::open()?;
+        let mut command = bridge();
         command
             .args(["link", "grok-bot", "--json", "--home"])
             .arg(home.path())
@@ -111,9 +112,11 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
                 "APPLE_BRIDGE_TAILSCALE_SOCKET",
                 home.path().join("no-live-tailscale.sock"),
             )
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        let mut child = command.spawn()?;
+            .stdout(Stdio::piped());
+        terminal.attach(&mut command)?;
+        let mut child = tokio::process::Command::from(command)
+            .kill_on_drop(true)
+            .spawn()?;
         tokio::time::timeout(Duration::from_secs(10), waiting).await??;
         assert!(child.try_wait()?.is_none());
         assert!(authority.agents()?.is_empty(), "no credential before Allow");
@@ -136,6 +139,7 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
         connectors.decide(&request.id, "", approve)?;
         let output =
             tokio::time::timeout(Duration::from_secs(10), child.wait_with_output()).await??;
+        let stderr = terminal.read()?;
         remote.await??;
         stop.send(true)?;
         server.await??;
@@ -145,7 +149,7 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
                 "late Allow after CLI exit creates no credential"
             );
         } else if approve {
-            assert!(output.status.success(), "{}", text(&output.stderr));
+            assert!(output.status.success(), "{stderr}");
             check_grok_connection(&output, &authority)?;
         } else {
             assert!(!output.status.success());
@@ -154,7 +158,7 @@ async fn grok_link_collects_a_private_key_only_after_the_mac_decision() -> Check
                 authority.agents()?.is_empty(),
                 "denial creates no credential"
             );
-            assert!(text(&output.stderr).contains("permission_denied"));
+            assert!(stderr.contains("permission_denied"), "{stderr}");
         }
         assert!(connectors.pending()?.is_empty());
     }

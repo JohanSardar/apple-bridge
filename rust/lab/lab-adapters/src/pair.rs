@@ -123,7 +123,7 @@ pub fn run(world: &mut World, evidence: &mut Evidence) -> Result<()> {
     );
     let start = Instant::now();
     let revoked = identity(0)
-        .and_then(|id| world.gateway_cli(&["revoke", &id]))
+        .and_then(|id| world.gateway_cli(&["tokens", "revoke", &id, "--yes"]))
         .is_ok();
     if !revoked {
         evidence.check("revoke_replica", false, "revoke failed");

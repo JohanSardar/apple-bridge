@@ -1,5 +1,5 @@
 use crate::{Code, Command, Error};
-pub use ab_commands::{ActionContext, NativeFile, Validated};
+pub use ab_commands::{ActionContext, NativeFile, Validated, Violation};
 pub fn command(c: &Command) -> Result<ab_commands::Command, Error> {
     Ok(ab_commands::Command {
         id: c.id.clone(),
@@ -24,14 +24,45 @@ pub fn validate(c: &Command) -> Result<Validated, Error> {
         if !ab_commands::valid_command_id(&command.id) || !(0..=15000).contains(&command.wait_ms) {
             return Err(Code::Invalid.into());
         }
-        let args = serde_json::from_str(c.args.get()).map_err(|_| Code::Invalid)?;
+        let args = parse_arguments(c)?;
         crate::native_commands::maps(&args)?;
         return Ok(Validated {
             id: String::new(),
             list_id: String::new(),
+            folder_id: String::new(),
         });
     }
-    ab_commands::validate(&command(c)?, jiff::Timestamp::now()).map_err(error)
+    validate_at(c, jiff::Timestamp::now())
+}
+
+pub(crate) fn parse_arguments(c: &Command) -> Result<serde_json::Value, Error> {
+    parse_json(c.args.get())
+}
+
+pub fn parse_json(raw: &str) -> Result<serde_json::Value, Error> {
+    ab_commands::parse_arguments(raw).map_err(|violation| violation_error(&violation))
+}
+
+pub(crate) fn validate_at(c: &Command, now: jiff::Timestamp) -> Result<Validated, Error> {
+    if c.op == "maps.open" {
+        return validate(c);
+    }
+    ab_commands::validate_request(&command(c)?, now)
+        .map_err(|violation| violation_error(&violation))
+}
+
+fn violation_error(violation: &Violation) -> Error {
+    Error {
+        code: match violation.code {
+            "unsupported" => Code::Unsupported,
+            "too_large" => Code::TooLarge,
+            "expired" => Code::Expired,
+            _ => Code::Invalid,
+        },
+        message: violation.to_string(),
+        current: serde_json::value::to_raw_value(violation).ok(),
+        retryable: violation.retryable,
+    }
 }
 pub fn action(
     c: &Command,
@@ -80,32 +111,27 @@ pub fn prepared(
     action(&command, &context)
 }
 pub fn serialization_key(c: &Command) -> Result<String, Error> {
-    let target = validate(c)?;
+    Ok(serialization_key_for(c, &validate(c)?))
+}
+
+pub(crate) fn serialization_key_for(c: &Command, target: &Validated) -> String {
     if c.op.starts_with("files.") {
-        return Ok("files".into());
+        return "files".into();
     }
     if c.op.starts_with("notes.") {
         if !target.id.is_empty() {
-            return Ok(format!("notes:{}", target.id));
+            return format!("notes:{}", target.id);
         }
-        let encoded = action(c, &ActionContext::default())?;
-        let action: serde_json::Value =
-            serde_json::from_str(encoded.get()).map_err(|_| Code::Corrupt)?;
-        return Ok(format!(
-            "notes::{}",
-            action["note_args"]["folder_id"]
-                .as_str()
-                .unwrap_or_default()
-        ));
+        return format!("notes::{}", target.folder_id);
     }
     if c.op.starts_with("calendar.") && target.id.is_empty() {
-        return Ok(format!("calendar:{}", target.list_id));
+        return format!("calendar:{}", target.list_id);
     }
-    Ok(if !target.id.is_empty() {
-        target.id
+    if !target.id.is_empty() {
+        target.id.clone()
     } else if !target.list_id.is_empty() {
-        target.list_id
+        target.list_id.clone()
     } else {
         "lists".into()
-    })
+    }
 }

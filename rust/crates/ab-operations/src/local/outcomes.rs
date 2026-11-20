@@ -258,3 +258,101 @@ impl LocalGateway {
         self.transition(record, state, Some(disposition), frame.evidence, error)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CommandOutcome {
+    AwaitingApproval,
+    Pending,
+    Done,
+    Partial,
+    Failed,
+    Indeterminate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RetryAdvice {
+    CheckStatus,
+    FixBeforeRetry,
+    RetryUnsentPartsOnly,
+    ConfirmEffect,
+    NoRetry,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PartOutcome {
+    Sent,
+    Failed,
+    NotSent,
+    Unknown,
+}
+
+impl super::CommandPart {
+    pub fn outcome(&self) -> PartOutcome {
+        match self.disposition.as_str() {
+            "observed" | "delivered" => PartOutcome::Sent,
+            "delivery_failed" => PartOutcome::Failed,
+            "failed_no_effect" => PartOutcome::NotSent,
+            _ => PartOutcome::Unknown,
+        }
+    }
+}
+
+impl CommandRecord {
+    pub fn classify_outcome(&self) -> (CommandOutcome, RetryAdvice) {
+        let sent = self
+            .parts
+            .iter()
+            .filter(|part| part.outcome() == PartOutcome::Sent)
+            .count();
+        let outcome = match self.state {
+            State::AwaitingApproval => CommandOutcome::AwaitingApproval,
+            State::Admitted | State::Prepared | State::Dispatched => CommandOutcome::Pending,
+            State::Observed | State::Delivered if sent == self.parts.len() => CommandOutcome::Done,
+            State::Observed | State::Delivered if self.parts.len() == 1 => CommandOutcome::Done,
+            State::Indeterminate if sent == 0 => CommandOutcome::Indeterminate,
+            _ if sent > 0 => CommandOutcome::Partial,
+            _ => CommandOutcome::Failed,
+        };
+        let retry = match outcome {
+            CommandOutcome::AwaitingApproval | CommandOutcome::Pending => RetryAdvice::CheckStatus,
+            CommandOutcome::Done => RetryAdvice::NoRetry,
+            CommandOutcome::Partial
+                if self
+                    .parts
+                    .iter()
+                    .any(|part| part.outcome() == PartOutcome::Unknown) =>
+            {
+                RetryAdvice::ConfirmEffect
+            }
+            CommandOutcome::Partial
+                if self
+                    .parts
+                    .iter()
+                    .any(|part| part.outcome() == PartOutcome::NotSent) =>
+            {
+                RetryAdvice::RetryUnsentPartsOnly
+            }
+            CommandOutcome::Failed
+                if matches!(
+                    self.disposition,
+                    Some(
+                        Disposition::RejectedBeforeDispatch
+                            | Disposition::RejectedByOwner
+                            | Disposition::FailedNoEffect
+                            | Disposition::Expired
+                            | Disposition::AbsentConfirmed
+                    )
+                ) =>
+            {
+                RetryAdvice::FixBeforeRetry
+            }
+            CommandOutcome::Indeterminate | CommandOutcome::Partial | CommandOutcome::Failed => {
+                RetryAdvice::ConfirmEffect
+            }
+        };
+        (outcome, retry)
+    }
+}

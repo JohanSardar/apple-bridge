@@ -85,17 +85,12 @@ pub fn spawn(world: &World, scope: &str, cap: u64, extra: &[String]) -> Result<u
     let index = lock(&ENDPOINTS).len();
     let home = world.directory.join(format!("replica{index}"));
     let name = format!("replica{index}");
-    let code = world.gateway_cli(&[
-        "pair",
-        "--peer-addr",
-        &peer,
-        "--name",
-        &name,
-        "--scope",
-        scope,
-    ])?;
+    let code = world.gateway_cli(&["pair", "--peer-addr", &peer, "--scope", scope])?;
     cli(&home, &["join", code.trim()])?;
-    let token = cli(&home, &["token", "create", "--scope", scope])?;
+    let token = cli(
+        &home,
+        &["token", "create", "--expires-in", "1h", "--scope", scope],
+    )?;
     let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
     let child = Command::new(binary()?)
         .args(["start", "--role", "replica", "--home"])
@@ -130,15 +125,16 @@ pub fn spawn_dialed(world: &World, scope: &str) -> Result<usize> {
         "pair",
         "--peer-addr",
         &peer,
-        "--name",
-        &name,
         "--scope",
         scope,
         "--dial-replica",
         &listen,
     ])?;
     cli(&home, &["join", code.trim(), "--listen", &listen])?;
-    let token = cli(&home, &["token", "create", "--scope", scope])?;
+    let token = cli(
+        &home,
+        &["token", "create", "--expires-in", "1h", "--scope", scope],
+    )?;
     let log = fs::File::create(world.directory.join(format!("{name}.log")))?;
     let child = Command::new(binary()?)
         .args(["start", "--role", "replica", "--home"])

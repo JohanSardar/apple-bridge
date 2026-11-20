@@ -7,7 +7,13 @@ struct Tree<'a> {
     collator: icu_collator::CollatorBorrowed<'static>,
 }
 impl Tree<'_> {
-    fn build(&self, parent: &str, group: &str) -> Result<Vec<Value>> {
+    fn build(
+        &self,
+        parent: &str,
+        group: &str,
+        page: &crate::ReadPage,
+        visited: &mut usize,
+    ) -> Vec<Value> {
         let mut children = self
             .children
             .get(&(parent.into(), group.into()))
@@ -52,13 +58,21 @@ impl Tree<'_> {
         });
         let mut out = Vec::new();
         for id in children {
-            let record = &self.nodes[&id].0;
-            let media = self.media.get(&id).cloned().unwrap_or_default();
-            out.push(
-                json!({"reminder":record,"subtasks":self.build(&id,group)?,"attachments":media}),
-            );
+            if *visited >= page.end() {
+                break;
+            }
+            let selected = *visited >= page.offset;
+            *visited += 1;
+            let subtasks = self.build(&id, group, page, visited);
+            if selected {
+                let record = &self.nodes[&id].0;
+                let media = self.media.get(&id).map_or(&[][..], Vec::as_slice);
+                out.push(json!({"reminder":record,"subtasks":subtasks,"attachments":media}));
+            } else {
+                out.extend(subtasks);
+            }
         }
-        Ok(out)
+        out
     }
 }
 fn sort_time(raw: &str, zone: &jiff::tz::TimeZone) -> Option<jiff::Timestamp> {
@@ -254,6 +268,10 @@ pub(crate) fn lists(db: &Connection, visibility: &Visibility, query: &Value) -> 
 }
 #[allow(clippy::too_many_lines)]
 pub(crate) fn items(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
+    if visibility.get("reminders") != Some(&true) {
+        return Err(crate::Error::MissingScope("reminders:read"));
+    }
+    let page = crate::ReadPage::parse(query)?;
     let z = zone(query)?;
     let selectors = [s(query, "list"), s(query, "smart"), s(query, "tag")]
         .iter()
@@ -277,9 +295,6 @@ pub(crate) fn items(db: &Connection, visibility: &Visibility, query: &Value) -> 
         return Err(ErrorCode::Invalid.into());
     }
     let mut out = json!({"sections":[],"count":0});
-    if visibility.get("reminders") != Some(&true) {
-        return Ok(out);
-    }
     let lists = all(db, "reminders.list")?;
     let mut sections: BTreeMap<String, Value> = BTreeMap::new();
     if !s(query, "list").is_empty() {
@@ -426,11 +441,57 @@ pub(crate) fn items(db: &Connection, visibility: &Visibility, query: &Value) -> 
         collator,
     };
     let mut ss = Vec::new();
+    let mut sections: Vec<_> = sections.into_iter().collect();
+    sections.sort_by(|a, b| section_order(&a.1, &b.1));
+    let mut visited = 0;
     for (id, sec) in sections {
-        ss.push(json!({"section":sec,"items":tree.build("",&id)?}));
+        let items = tree.build("", &id, &page, &mut visited);
+        if !items.is_empty() || nodes.len() <= page.limit && page.offset == 0 {
+            ss.push(json!({"section":sec,"items":items}));
+        }
     }
-    ss.sort_by(|a, b| section_order(&a["section"], &b["section"]));
+    page.continuation(nodes.len(), &mut out);
     out["sections"] = ss.into();
     out["count"] = nodes.len().into();
     Ok(out)
+}
+
+impl crate::State<crate::Gateway> {
+    pub fn reminder_target(&self, title: &str, completed: bool) -> Result<Record> {
+        fn folded(title: &str) -> String {
+            use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
+            title
+                .nfd()
+                .filter(|c| !is_combining_mark(*c))
+                .collect::<String>()
+                .to_lowercase()
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+        let title = folded(title);
+        if title.is_empty() {
+            return Err(ErrorCode::Invalid.into());
+        }
+        let mut exact = None;
+        let mut partial = None;
+        let mut ambiguous_exact = false;
+        let mut ambiguous_partial = false;
+        for record in all(&self.db, "reminders.reminder")? {
+            let fields = data(&record)?;
+            if b(&fields, "completed") != completed {
+                continue;
+            }
+            let name = folded(s(&fields, "title"));
+            if name == title {
+                ambiguous_exact |= exact.replace(record).is_some();
+            } else if name.contains(&title) {
+                ambiguous_partial |= partial.replace(record).is_some();
+            }
+        }
+        if ambiguous_exact || exact.is_none() && ambiguous_partial {
+            return Err(ErrorCode::Conflict.into());
+        }
+        exact.or(partial).ok_or_else(|| ErrorCode::NotFound.into())
+    }
 }

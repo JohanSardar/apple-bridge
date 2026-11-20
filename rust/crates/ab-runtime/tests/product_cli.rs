@@ -11,12 +11,16 @@ fn bridge(home: &std::path::Path, arguments: &[&str]) -> Result<Output, std::io:
 }
 
 #[test]
-fn web_devices_and_lock_work_on_a_fresh_home() -> Check {
+fn web_sessions_work_on_a_fresh_home() -> Check {
     let home = tempfile::tempdir()?;
-    let devices = bridge(home.path(), &["web", "devices"])?;
+    let devices = bridge(home.path(), &["web", "sessions", "list"])?;
     assert!(devices.status.success());
     assert_eq!(String::from_utf8(devices.stdout)?.trim(), "[]");
-    assert!(bridge(home.path(), &["web", "lock"])?.status.success());
+    assert!(
+        bridge(home.path(), &["web", "sessions", "revoke", "--all"])?
+            .status
+            .success()
+    );
     assert_eq!(
         bridge(home.path(), &["web", "other"])?.status.code(),
         Some(2)
@@ -58,6 +62,7 @@ fn agent_json_matches_go_key_order_and_id_shape() -> Check {
         &[
             "agent",
             "create",
+            "--yes",
             "--name",
             "Test Agent",
             "--level",
@@ -107,6 +112,13 @@ fn doctor_reports_credential_store_last_error_without_a_database() -> Check {
     )?;
     let checked = bridge_with_file_store(home.path(), &["doctor", "--check", "--json"])?;
     assert_eq!(checked.status.code(), Some(1));
+    assert_eq!(checked.stdout, [] as [u8; 0]);
+    let error: serde_json::Value = serde_json::from_slice(&checked.stderr)?;
+    assert_eq!(error["reason"], "unhealthy_home");
+    assert_eq!(
+        error["data"]["report"]["credentials"]["last_error"],
+        failure
+    );
     let output = bridge_with_file_store(home.path(), &["doctor"])?;
     assert_eq!(output.status.code(), Some(0));
     let report: serde_json::Value = serde_json::from_slice(&output.stdout)?;

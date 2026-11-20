@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
-export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
+sdk=$("$root/packaging/dev/sdkroot.sh")
+sdk=${sdk:-$(xcrun --sdk macosx --show-sdk-path)}
 stage=$(mktemp -d /tmp/ab-setup-check.XXXXXX)
 trap 'rm -rf "$stage"' EXIT
-xcrun swiftc -warnings-as-errors "$root/native/Sources/AppleBridgeHelper/GuideFlow.swift" "$root/packaging/setup/Checks.swift" -o "$stage/check"
+xcrun swiftc -sdk "$sdk" -warnings-as-errors "$root/native/Sources/AppleBridgeHelper/GuideFlow.swift" "$root/packaging/setup/Checks.swift" -o "$stage/check"
 "$stage/check"

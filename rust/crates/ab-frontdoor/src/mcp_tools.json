@@ -2,7 +2,7 @@
   {
     "name": "apple_status",
     "title": "Apple Bridge status",
-    "description": "Your access (level and scopes), which Apple sources are ready, and the Mac's time zone and time. Use it when a source is empty or refused.",
+    "description": "Check access, source readiness and the Mac’s time zone.",
     "inputSchema": {
       "type": "object",
       "properties": {}
@@ -14,12 +14,13 @@
       "readOnlyHint": true,
       "openWorldHint": false
     },
-    "example": {}
+    "example": {},
+    "effect": "read"
   },
   {
     "name": "apple_describe",
     "title": "Find operations",
-    "description": "Find what you can do. query: the best operations for a task in plain words, such as search notes, each with arguments and an example call. domain: that domain's operations. operation: one operation's full contract. No arguments: a short overview.",
+    "description": "Discover operations by task, domain or name. Omit arguments to list domains.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -46,12 +47,13 @@
     },
     "example": {
       "query": "screen time yesterday"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "apple_search",
     "title": "Search Apple data",
-    "description": "Search the owner's data for text: contacts, messages, notes, mail, reminders, calendar, files, voicemail and more, grouped by source with ids; more and skipped say which sources have more or were not searched. Photos: photos_find.",
+    "description": "Search readable sources for text. The result reports sources skipped or with more matches.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -94,12 +96,13 @@
         "notes",
         "mail"
       ]
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "apple_read",
     "title": "Read Apple data",
-    "description": "Run a read operation. Common, arguments optional unless shown: reminders.list {\"list\":\"Groceries\"} or {\"smart\":\"today\"}; notes.search {\"text\":\"ferry\"}; mail.search {\"text\":\"invoice\"}. apple_describe gives other arguments. reads runs up to 10 reads at once.",
+    "description": "Run a read or a batch of up to 10 reads. Get arguments from apple_describe.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -164,7 +167,78 @@
       }
     },
     "outputSchema": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "page": {
+          "type": "object"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "type": "string"
+              },
+              "result": {
+                "type": "object"
+              },
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          }
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "next": {
+          "type": "string"
+        },
+        "cut": {
+          "type": "object"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      }
     },
     "annotations": {
       "readOnlyHint": true,
@@ -175,12 +249,13 @@
       "arguments": {
         "smart": "today"
       }
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "apple_change",
     "title": "Change Apple data",
-    "description": "Run an operation that changes data; apple_describe gives its arguments. Waits up to 15 seconds; status is done (with ids and the changed record), partial (see parts), pending, awaiting_approval, failed or indeterminate. Updates and deletes need expected_version: the record's version.",
+    "description": "Run a change. Get its arguments from apple_describe.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -197,7 +272,7 @@
         },
         "request_id": {
           "type": "string",
-          "description": "Your ID for this change: up to 120 letters, digits and ._:-. Reuse it to retry safely."
+          "description": "Reuse this ID only with the same request."
         },
         "verbose": {
           "type": "boolean",
@@ -219,12 +294,13 @@
       "arguments": {
         "reminder": "Call the plumber"
       }
-    }
+    },
+    "effect": "write"
   },
   {
-    "name": "apple_command_status",
+    "name": "apple_change_status",
     "title": "Check a change",
-    "description": "Check a change that came back pending or indeterminate by its request_id. Returns the same result as apple_change.",
+    "description": "Check the latest result of an earlier change by request_id.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -250,12 +326,13 @@
     },
     "example": {
       "request_id": "groceries-2026-11-12"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "apple_guide",
     "title": "Read a guide",
-    "description": "Read a how-to. No name: a short overview of the tools and operation names. Guides: core, setup, messages, reminders-calendar, photos, files.",
+    "description": "Read a guide or list available guides with their names.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -282,13 +359,14 @@
     },
     "example": {
       "name": "messages"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "messages_read",
     "title": "Read messages",
     "scope": "messages:read",
-    "description": "Read Messages. No arguments: recent chats with unread counts, without spam or unknown senders (unread: unread chats of the last 30 days). with: a person's chat by number, email or name, group chats as other_chats. chat_id: that chat; unread starts at the first unread, before pages back. text: messages with these words in any chat.",
+    "description": "List recent chats, read a thread or search message text.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -346,13 +424,14 @@
     },
     "example": {
       "with": "Ana Novak"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "messages_send",
     "title": "Send a message",
     "scope": "messages:write",
-    "description": "Send an iMessage, SMS or RCS. to: phone number, email or contact name, used only if it matches one person and one chat, otherwise you get candidates; or chat_id from messages_read, also for groups. Text is sent exactly as given. done means the Mac shows it sent, not that it was delivered.",
+    "description": "Send a message with text, photos or both.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -388,7 +467,7 @@
         },
         "request_id": {
           "type": "string",
-          "description": "Your ID for this send; repeating it never sends twice."
+          "description": "Reuse this ID only with the same request."
         }
       }
     },
@@ -404,13 +483,14 @@
     "example": {
       "to": "Ana Novak",
       "text": "On my way"
-    }
+    },
+    "effect": "write"
   },
   {
     "name": "reminders_add",
     "title": "Add a reminder",
     "scope": "reminders:write",
-    "description": "Add a reminder. list: a list name or lst_ ID; default the first list. Returns its id. To complete, change or delete it: apple_change reminders.complete, reminders.update or reminders.delete with reminder set to its title.",
+    "description": "Add a reminder with a title, list and optional due date.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -441,7 +521,7 @@
         },
         "request_id": {
           "type": "string",
-          "description": "Your ID for this change; repeating it never adds twice."
+          "description": "Reuse this ID only with the same request."
         }
       }
     },
@@ -458,13 +538,14 @@
       "title": "Buy oat milk",
       "list": "Groceries",
       "due": "2026-11-12"
-    }
+    },
+    "effect": "write"
   },
   {
-    "name": "calendar_events",
+    "name": "calendar_list",
     "title": "List calendar events",
     "scope": "calendar:read",
-    "description": "List calendar events, all-day ones included, with start_local and end_local in the Mac's time zone. Default today; date for one day, or start and end; text filters by title, notes or location; calendar by name or cal_ ID.",
+    "description": "List events for a day or date range. Defaults to today.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -508,13 +589,14 @@
     },
     "example": {
       "date": "2026-11-12"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "calendar_add",
     "title": "Add a calendar event",
     "scope": "calendar:write",
-    "description": "Add a calendar event. calendar: a name, such as Work, or cal_ ID; default the first writable calendar. Times without an offset are in the Mac's time zone; a start date YYYY-MM-DD makes an all-day event. Returns its id.",
+    "description": "Add a timed or all-day event, optionally to a named calendar.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -548,7 +630,7 @@
         },
         "request_id": {
           "type": "string",
-          "description": "Your ID for this change; repeating it never adds twice."
+          "description": "Reuse this ID only with the same request."
         }
       }
     },
@@ -566,13 +648,14 @@
       "start": "2026-11-12T15:00",
       "end": "2026-11-12T16:00",
       "calendar": "Personal"
-    }
+    },
+    "effect": "write"
   },
   {
     "name": "contacts_find",
     "title": "Find a contact",
     "scope": "contacts:read",
-    "description": "Find people by name (any word order, accents and case ignored), phone number or email. Returns up to 25 contacts with phones, emails and con_ IDs.",
+    "description": "Find contacts by name, email or phone number.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -600,13 +683,14 @@
     },
     "example": {
       "query": "Ana Novak"
-    }
+    },
+    "effect": "read"
   },
   {
-    "name": "notes_create",
+    "name": "notes_add",
     "title": "Create a note",
     "scope": "notes:write",
-    "description": "Create a plain-text note, kept exactly as given. folder: a folder name or fld_ ID; default the Notes folder. Returns its id.",
+    "description": "Add a note with a title and body to a Notes folder.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -627,7 +711,7 @@
         },
         "request_id": {
           "type": "string",
-          "description": "Your ID for this change; repeating it never creates twice."
+          "description": "Reuse this ID only with the same request."
         }
       }
     },
@@ -643,13 +727,14 @@
     "example": {
       "title": "Packing",
       "text": "Passport\nCharger"
-    }
+    },
+    "effect": "write"
   },
   {
-    "name": "screen_time",
+    "name": "screen_time_read",
     "title": "Screen Time",
     "scope": "usage:read",
-    "description": "Screen Time per device (Mac, iPhone, iPad): total and top apps, estimated from app focus. Default yesterday; date for one day, or start and end.",
+    "description": "Summarize app usage per device. Defaults to yesterday.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -686,13 +771,14 @@
     },
     "example": {
       "date": "2026-11-09"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "photos_find",
     "title": "Find photos",
     "scope": "photos:read",
-    "description": "Find photos by date, type, album, favorite or place. Each available match is attached as its own full-frame image to show the person. Use photos_show for full resolution.",
+    "description": "Find photo assets with individual previews, or browse by place.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -767,7 +853,71 @@
       }
     },
     "outputSchema": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "photos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "asset_id": {
+                "type": "string"
+              },
+              "image": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "One-based index among attached images."
+              },
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              }
+            },
+            "required": [
+              "asset_id"
+            ]
+          }
+        },
+        "places": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "type": "string"
+        },
+        "next": {
+          "type": "string"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      }
     },
     "annotations": {
       "readOnlyHint": true,
@@ -777,13 +927,14 @@
       "start": "2026-07-01",
       "end": "2026-08-01",
       "type": "image"
-    }
+    },
+    "effect": "read"
   },
   {
     "name": "photos_show",
     "title": "Show a photo",
     "scope": "photos:read",
-    "description": "The photo itself, to show the person: full frame and resolution, nothing drawn on it.",
+    "description": "Show one full-frame photo as JPEG image content.",
     "inputSchema": {
       "type": "object",
       "required": [
@@ -793,15 +944,46 @@
         "asset_id": {
           "type": "string",
           "description": "From photos_find."
-        },
-        "save": {
-          "type": "boolean",
-          "description": "Also save the original file on the Mac; returns its path as file."
         }
       }
     },
     "outputSchema": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string"
+        },
+        "taken_at": {
+          "description": "Capture timestamp, if known."
+        },
+        "width": {
+          "description": "Asset width in pixels, if known."
+        },
+        "height": {
+          "description": "Asset height in pixels, if known."
+        },
+        "image": {
+          "type": "string",
+          "description": "An attached JPEG image."
+        },
+        "next": {
+          "type": "string"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      }
     },
     "annotations": {
       "readOnlyHint": true,
@@ -809,6 +991,7 @@
     },
     "example": {
       "asset_id": "8F2A1C3E-0B4D-4E5F-9A6B-7C8D9E0F1A2B/L0/001"
-    }
+    },
+    "effect": "read"
   }
 ]

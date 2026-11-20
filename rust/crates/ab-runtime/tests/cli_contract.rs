@@ -129,8 +129,8 @@ fn bare_bridge_and_groups_print_help_to_stdout() -> Check {
 }
 
 #[test]
-fn help_wins_over_validation_and_is_available_as_json() -> Check {
-    let output = bridge().args(["read", "--bad", "--help"]).output()?;
+fn help_works_without_required_arguments_and_is_available_as_json() -> Check {
+    let output = bridge().args(["read", "--help"]).output()?;
     assert!(output.status.success());
     assert!(text(&output.stdout).starts_with("bridge read <KIND>"));
     let output = bridge()
@@ -248,25 +248,14 @@ fn unknown_options_are_refused_the_same_wherever_globals_sit() -> Check {
     ];
     for form in forms {
         let output = bridge().args(form).output()?;
-        let error = text(&output.stderr)
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
-        for option in ["--force", "--name", "--level"] {
-            assert!(
-                error.contains(&format!(
-                    "{option} is ignored by bridge status and will be refused in the next major version."
-                )),
-                "{error}"
-            );
-        }
-        assert_eq!(output.status.code(), Some(1), "{error}");
+        assert_eq!(output.status.code(), Some(2), "{form:?}");
+        assert!(text(&output.stderr).contains("--force"), "{form:?}");
     }
     Ok(())
 }
 
 #[test]
-fn nothing_after_the_separator_is_rewritten_and_old_spellings_warn() -> Check {
+fn nothing_after_the_separator_is_rewritten_and_old_spellings_fail() -> Check {
     let home = short_home()?;
     let output = bridge()
         .arg("--home")
@@ -280,13 +269,10 @@ fn nothing_after_the_separator_is_rewritten_and_old_spellings_warn() -> Check {
         .arg(home.path())
         .args(["web", "devices", "--non-interactive"])
         .output()?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stderr).contains("-home is deprecated. Use --home."));
+    assert_eq!(output.status.code(), Some(2));
     let output = run(home.path(), &["web", "enroll", "--public=false", "--json"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let enrolled: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    assert!(enrolled.get("warnings").is_none(), "{enrolled}");
-    assert_eq!(output.stderr, [] as [u8; 0]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.stdout, [] as [u8; 0]);
     Ok(())
 }
 
@@ -515,7 +501,7 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
     let home = short_home()?;
     let output = run(
         home.path(),
-        &["agents", "create", "--name", "bot", "--json"],
+        &["agents", "create", "--name", "bot", "--yes", "--json"],
     )?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let created: serde_json::Value = serde_json::from_slice(&output.stdout)?;
@@ -528,12 +514,11 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
 
     let output = bridge()
         .env("CLAUDECODE", "1")
-        .args(["agent", "revoke", &id, "--home"])
+        .args(["agent", "revoke", &id, "--yes", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let receipt = text(&output.stderr);
-    assert!(receipt.contains("deprecated"), "{receipt}");
     assert!(receipt.contains("Revoked "), "{receipt}");
     assert!(receipt.contains(&id), "{receipt}");
     assert!(receipt.contains("reminders:read"), "{receipt}");
@@ -541,7 +526,7 @@ fn revoking_shows_the_access_asks_and_says_already() -> Check {
     let output = run(home.path(), &["tokens", "revoke", &id, "--yes"])?;
     assert!(output.status.success());
     assert!(text(&output.stderr).contains("is already revoked."));
-    let output = run(home.path(), &["web", "lock"])?;
+    let output = run(home.path(), &["web", "sessions", "revoke", "--all"])?;
     assert!(output.status.success());
     assert!(text(&output.stderr).contains("No browsers are signed in."));
     Ok(())
@@ -552,13 +537,21 @@ fn one_selector_changes_agent_and_token_access() -> Check {
     let home = short_home()?;
     let output = run(
         home.path(),
-        &["agents", "create", "--name", "bot", "--json"],
+        &["agents", "create", "--name", "bot", "--yes", "--json"],
     )?;
     let created: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     let id = created["agent"]["id"].as_str().ok_or("id")?.to_owned();
     let output = run(
         home.path(),
-        &["scope", &id, "--scope", "contacts:read", "--json"],
+        &[
+            "tokens",
+            "update",
+            &id,
+            "--scope",
+            "contacts:read",
+            "--yes",
+            "--json",
+        ],
     )?;
     assert!(output.status.success(), "{}", text(&output.stderr));
     let changed: serde_json::Value = serde_json::from_slice(&output.stdout)?;
@@ -591,6 +584,7 @@ fn piped_reads_keep_json_for_one_release_with_a_notice() -> Check {
             "bot",
             "--scope",
             "reminders:read",
+            "--yes",
         ],
     )?;
     assert!(output.status.success());
@@ -615,7 +609,7 @@ fn piped_reads_keep_json_for_one_release_with_a_notice() -> Check {
     assert_eq!(output.stderr, [] as [u8; 0]);
     let output = bridge()
         .env("APPLE_BRIDGE_LEGACY_JSON", "0")
-        .args(["agents", "create", "--name", "two", "--home"])
+        .args(["agents", "create", "--name", "two", "--yes", "--home"])
         .arg(home.path())
         .output()?;
     let token = text(&output.stdout);
@@ -630,7 +624,7 @@ fn github_actions_masks_delivered_secrets() -> Check {
     let home = short_home()?;
     let output = bridge()
         .env("GITHUB_ACTIONS", "true")
-        .args(["tokens", "create", "--home"])
+        .args(["tokens", "create", "--yes", "--home"])
         .arg(home.path())
         .output()?;
     assert!(output.status.success());
@@ -778,8 +772,8 @@ fn signals_stop_waiting_with_their_codes() -> Check {
     assert!(output.status.success());
     assert!(text(&output.stderr).contains("Stopped following after"));
     let output = run(home.path(), &["stats", "--watch", "--timeout", "1s"])?;
-    assert!(output.status.success());
-    assert!(text(&output.stdout).contains("Stopped watching"));
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text(&output.stderr).contains("--watch"));
     Ok(())
 }
 
@@ -818,7 +812,8 @@ fn call_takes_arguments_from_data_a_file_or_stdin() -> Check {
     )?;
     assert_eq!(output.status.code(), Some(2));
     let output = run(home.path(), &["call", "sources.status", "--args", "{}"])?;
-    assert!(text(&output.stderr).contains("--args is deprecated. Use --data."));
+    assert_eq!(output.status.code(), Some(2));
+    assert!(text(&output.stderr).contains("--args"));
     let mut child = bridge()
         .args(["call", "sources.status", "--data", "-", "--home"])
         .arg(home.path())
@@ -911,11 +906,14 @@ fn yes_never_stands_in_for_force_on_backup() -> Check {
 }
 
 #[test]
-fn only_the_old_revoke_spellings_skip_consent_for_one_release() -> Check {
+fn every_revoke_spelling_requires_consent() -> Check {
     let home = short_home()?;
     let mut ids = Vec::new();
     for name in ["one", "two"] {
-        let output = run(home.path(), &["agents", "create", "--name", name, "--json"])?;
+        let output = run(
+            home.path(),
+            &["agents", "create", "--name", name, "--yes", "--json"],
+        )?;
         assert!(output.status.success(), "{}", text(&output.stderr));
         let created: serde_json::Value = serde_json::from_slice(&output.stdout)?;
         ids.push(created["agent"]["id"].as_str().ok_or("id")?.to_owned());
@@ -931,18 +929,12 @@ fn only_the_old_revoke_spellings_skip_consent_for_one_release() -> Check {
     )?;
     let receipt: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(receipt["outcome"], "revoked", "{receipt}");
-    let output = run(home.path(), &["revoke", &ids[1]])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stderr).contains("deprecated"));
-    let third = run(
-        home.path(),
-        &["agents", "create", "--name", "three", "--json"],
-    )?;
-    let created: serde_json::Value = serde_json::from_slice(&third.stdout)?;
-    let id = created["agent"]["id"].as_str().ok_or("id")?;
-    let output = run(home.path(), &["agent", "revoke", id])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stderr).contains("deprecated"));
+    let output = run(home.path(), &["revoke", &ids[1], "--json"])?;
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(error_document(&output)?["reason"], "unknown_command");
+    let output = run(home.path(), &["agent", "revoke", &ids[1], "--json"])?;
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(error_document(&output)?["reason"], "confirmation_required");
     Ok(())
 }
 

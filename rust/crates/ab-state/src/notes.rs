@@ -39,6 +39,10 @@ fn thumbnail(fields: &Value) -> Value {
 }
 #[allow(clippy::too_many_lines)]
 pub(crate) fn list(db: &Connection, visibility: &Visibility, query: &Value) -> Result<Value> {
+    if visibility.get("notes") != Some(&true) {
+        return Err(crate::Error::MissingScope("notes:read"));
+    }
+    let page = crate::ReadPage::parse(query)?;
     let sort = if s(query, "sort").is_empty() {
         "modified"
     } else {
@@ -54,9 +58,6 @@ pub(crate) fn list(db: &Connection, visibility: &Visibility, query: &Value) -> R
         return Err(ErrorCode::Invalid.into());
     }
     let mut out = json!({"accounts":[],"folders":[],"sections":[],"count":0,"sort":sort,"time_zone":zone_name});
-    if visibility.get("notes") != Some(&true) {
-        return Ok(out);
-    }
     let stored = records(
         db,
         "SELECT payload FROM records WHERE collection IN ('notes.folder','notes.note') AND deleted=0 ORDER BY collection,id",
@@ -165,9 +166,10 @@ pub(crate) fn list(db: &Connection, visibility: &Visibility, query: &Value) -> R
             .then(s(&a.0["note"], "id").cmp(s(&right.0["note"], "id")))
     });
     out["count"] = items.len().into();
+    page.continuation(items.len(), &mut out);
     let today = crate::replay::now().to_zoned(zone.clone()).date();
     let mut sections = Vec::<Value>::new();
-    for (item, _, date) in items {
+    for (item, _, date) in items.into_iter().skip(page.offset).take(page.limit) {
         let mut key = "older";
         let mut title = "Earlier";
         if b(&item, "pinned") {

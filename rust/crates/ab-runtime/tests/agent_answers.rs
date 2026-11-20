@@ -459,6 +459,8 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
         &[
             "token",
             "create",
+            "--expires-in",
+            "1h",
             "--scope",
             "messages:read,calendar:read,reminders:read,notes:read,contacts:read,mail:read",
         ],
@@ -491,8 +493,8 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     let today = world.today.to_string();
     let defaults = [
         ("apple_status", json!({})),
-        ("calendar_events", json!({})),
-        ("calendar_events", json!({"date": today})),
+        ("calendar_list", json!({})),
+        ("calendar_list", json!({"date": today})),
         ("messages_read", json!({})),
         ("messages_read", json!({"unread": true})),
         ("messages_read", json!({"text": "prize"})),
@@ -533,7 +535,7 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     let everything = [
         ("messages_read", json!({"limit": 100, "senders": "all"})),
         (
-            "calendar_events",
+            "calendar_list",
             json!({"start": world.day(-7).to_string(), "end": world.day(7).to_string(), "detail": true}),
         ),
         (
@@ -656,6 +658,25 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
         "{notes}"
     );
     assert_eq!(notes["page"]["next"]["offset"], returned);
+    let next_notes = agent
+        .call(
+            "apple_read",
+            &json!({"operation": "notes.list", "offset": notes["page"]["next"]["offset"]}),
+        )
+        .await?;
+    assert_eq!(next_notes["page"]["offset"], returned);
+    assert_eq!(
+        next_notes["notes"][0]["title"],
+        format!("Synthetic note {returned}")
+    );
+    let later_notes = agent
+        .call(
+            "apple_read",
+            &json!({"operation": "notes.list", "offset": 50}),
+        )
+        .await?;
+    assert_eq!(later_notes["page"]["total"], NOTES);
+    assert_eq!(later_notes["notes"][0]["title"], "Synthetic note 50");
     for note in notes["notes"].as_array().ok_or("notes")? {
         for heavy in ["plain_text", "html", "blocks"] {
             assert!(note.get(heavy).is_none(), "{note}");
@@ -668,7 +689,14 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     }
 
     let today_reminders = &answers[10];
-    assert_eq!(today_reminders["due_today"]["page"]["total"], DUE_TODAY);
+    assert_eq!(
+        today_reminders["due_today"]["page"]["total"], DUE_TODAY,
+        "{today_reminders}"
+    );
+    let due_titles = titles(&today_reminders["due_today"]["reminders"]);
+    for index in 0..DUE_TODAY {
+        assert!(due_titles.contains(&format!("Today errand {index}")));
+    }
     let overdue = today_reminders["overdue"]["count"]
         .as_u64()
         .ok_or("overdue count")?;
@@ -691,6 +719,16 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     );
     assert_eq!(answers[20]["page"]["offset"], 20);
 
+    let errands = agent
+        .call(
+            "apple_read",
+            &json!({"operation": "reminders.list", "arguments": {"list": "Synthetic Errands"}, "offset": 50}),
+        )
+        .await?;
+    assert_eq!(errands["page"]["total"], OVERDUE + DUE_TODAY + UPCOMING);
+    assert_eq!(errands["page"]["offset"], 50);
+    assert!(errands["reminders"][0]["title"].is_string(), "{errands}");
+
     let body = &answers[19]["records"][0]["data"];
     let number = body["title"]
         .as_str()
@@ -712,7 +750,7 @@ async fn default_answers_stay_small_and_right_on_a_large_synthetic_mac() -> Chec
     let stats: Value = serde_json::from_slice(&stats.stdout)?;
     let recorded = stats["answers"].as_array().ok_or("answers")?;
     for tool in [
-        "calendar_events",
+        "calendar_list",
         "messages_read",
         "apple_read",
         "apple_search",

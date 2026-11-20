@@ -8,7 +8,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const NON_INTERACTIVE_WATCH_LIMIT: Duration = Duration::from_secs(300);
 const WAIT_LIMIT: Duration = Duration::from_secs(600);
 const PROGRESS_EVERY: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(1);
@@ -588,7 +587,6 @@ fn event_json(event: &Event) -> Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Watch {
-    UntilSettled,
     Wait,
     Follow,
 }
@@ -763,9 +761,6 @@ async fn watch(
                 emit(&event, json_lines, all);
             }
         }
-        if tracker.done() && mode == Watch::UntilSettled {
-            return Ok(());
-        }
         if tracker.done() && mode == Watch::Wait {
             return settled(home, &snapshot, began, json_lines);
         }
@@ -773,23 +768,11 @@ async fn watch(
             return Err(waited_too_long(home, &snapshot, began));
         }
         if timeout.is_some_and(|limit| began.elapsed() >= limit) {
-            if mode == Watch::Follow {
-                if json_lines {
-                    ui::outln(&json!({"event":"timeout","total":snapshot.total}).to_string());
-                } else {
-                    ui::err_line(&format!(
-                        "Stopped following after {}: {} items so far.",
-                        friendly_duration(began.elapsed()),
-                        thousands(snapshot.total)
-                    ));
-                }
-                return Ok(());
-            }
             if json_lines {
                 ui::outln(&json!({"event":"timeout","total":snapshot.total}).to_string());
             } else {
-                ui::outln(&format!(
-                    "Still syncing after {}: {} items so far. Stopped watching; syncing continues.",
+                ui::err_line(&format!(
+                    "Stopped following after {}: {} items so far.",
                     friendly_duration(began.elapsed()),
                     thousands(snapshot.total)
                 ));
@@ -829,7 +812,6 @@ fn follow_limit(timeout: Option<Duration>) -> Outcome<Option<Duration>> {
 
 pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
     OWNED.store(restart_is_ours(home), std::sync::atomic::Ordering::Relaxed);
-    let waiting = args.wait || args.watch;
     let settle = commands::duration_or_zero("--settle", &args.settle)?;
     let timeout = args
         .timeout
@@ -842,7 +824,7 @@ pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
             }
         })
         .transpose()?;
-    if timeout.is_some() && !args.follow && !waiting {
+    if timeout.is_some() && !args.follow && !args.wait {
         return Err(Failure::new(
             Reason::ConflictingOptions,
             "Can't use --timeout without --follow or --wait.",
@@ -865,13 +847,7 @@ pub async fn run(home: &Path, args: &StatsArgs) -> Outcome {
         ui::set_cancel_note(Some(""));
         return watch(home, settle, timeout, json, args.all, Watch::Follow).await;
     }
-    if args.watch {
-        ui::set_cancel_note(Some(""));
-        let timeout = timeout
-            .or_else(|| (!Modes::get().interactive()).then_some(NON_INTERACTIVE_WATCH_LIMIT));
-        return watch(home, settle, timeout, json, args.all, Watch::UntilSettled).await;
-    }
-    if waiting {
+    if args.wait {
         ui::set_cancel_note(Some(""));
         if json {
             ui::stream_warnings();

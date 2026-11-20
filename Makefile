@@ -7,7 +7,7 @@ endif
 
 export PATH := /opt/homebrew/bin:$(PATH)
 
-.PHONY: build lint features sim real replica agent families dist native
+.PHONY: build lint packaging-check features sim real replica agent families dist native
 
 RUST_NATIVE_BUILD := $(if $(filter Darwin,$(shell uname -s)),packaging/dev/heavy.sh packaging/dev/build-native.sh,true)
 
@@ -20,6 +20,13 @@ native:
 
 lint: lint-rust-sources
 	python3 packaging/dev/test_source_registrations.py
+
+packaging-check:
+	@if [ -f packaging/relay/test_selfhost.py ]; then \
+		python3 packaging/relay/test_selfhost.py; \
+	else \
+		echo "Skipping self-host packaging checks: relay suite is absent"; \
+	fi
 	python3 packaging/npm/test_npm.py
 	packaging/capture/check.sh
 

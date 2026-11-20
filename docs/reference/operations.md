@@ -65,6 +65,24 @@ Calendar create_event; update and delete require expected_version and span this 
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.alarms` | array<object> \| null | no |  |
+| `args.alarms[].absolute_date` | string | no |  |
+| `args.alarms[].relative_offset` | number \| null | no |  |
+| `args.all_day` | boolean \| null | no |  |
+| `args.availability` | integer \| null | no |  |
+| `args.calendar_id` | string | yes |  |
+| `args.end` | string \| null | yes |  |
+| `args.location` | string \| null | no |  |
+| `args.notes` | string \| null | no |  |
+| `args.recurrence` | array<object> \| null | no |  |
+| `args.recurrence[].count` | integer | no |  |
+| `args.recurrence[].end` | string | no |  |
+| `args.recurrence[].frequency` | string | yes |  |
+| `args.recurrence[].interval` | integer | yes |  |
+| `args.start` | string \| null | yes |  |
+| `args.time_zone` | string \| null | no |  |
+| `args.title` | string \| null | yes |  |
+| `args.url` | string \| null | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -83,6 +101,26 @@ Calendar update_event; update and delete require expected_version and span this 
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.alarms` | array<object> \| null | no |  |
+| `args.alarms[].absolute_date` | string | no |  |
+| `args.alarms[].relative_offset` | number \| null | no |  |
+| `args.all_day` | boolean \| null | no |  |
+| `args.availability` | integer \| null | no |  |
+| `args.calendar_id` | string | no |  |
+| `args.end` | string \| null | no |  |
+| `args.id` | string | yes |  |
+| `args.location` | string \| null | no |  |
+| `args.notes` | string \| null | no |  |
+| `args.recurrence` | array<object> \| null | no |  |
+| `args.recurrence[].count` | integer | no |  |
+| `args.recurrence[].end` | string | no |  |
+| `args.recurrence[].frequency` | string | yes |  |
+| `args.recurrence[].interval` | integer | yes |  |
+| `args.span` | string | yes | One of: `this`, `future` |
+| `args.start` | string \| null | no |  |
+| `args.time_zone` | string \| null | no |  |
+| `args.title` | string \| null | no |  |
+| `args.url` | string \| null | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -101,6 +139,8 @@ Calendar delete_event; update and delete require expected_version and span this 
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.span` | string | yes | One of: `this`, `future` |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -119,6 +159,7 @@ Calendar create_calendar; update and delete require expected_version and span th
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.title` | string \| null | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -139,6 +180,8 @@ Play a named system sound with finished callback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.name` | string | yes | One of: `Basso`, `Blow`, `Bottle`, `Frog`, `Funk`, `Glass`, `Hero`, `Morse`, `Ping`, `Pop`, `Purr`, `Sosumi`, `Submarine`, `Tink` |
+| `args.volume` | number | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -175,6 +218,7 @@ Capture an artifact delivered through the blob store
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.seconds` | number | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -193,6 +237,8 @@ Capture an artifact delivered through the blob store
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.display` | integer \| null | no |  |
+| `args.window` | integer \| null | no |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -211,6 +257,7 @@ Record up to 30 seconds of screen video as a blob
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.seconds` | number | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -258,6 +305,63 @@ Create a contact in the default writable container
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.birthday` | object \| null | no |  |
+| `args.birthday.calendar` | string | no |  |
+| `args.birthday.day` | integer | yes |  |
+| `args.birthday.is_leap_month` | boolean | no |  |
+| `args.birthday.month` | integer | yes |  |
+| `args.birthday.year` | integer | no |  |
+| `args.dates` | array<object> | no |  |
+| `args.dates[].label` | string | no |  |
+| `args.dates[].value` | object \| null | yes |  |
+| `args.dates[].value.calendar` | string | no |  |
+| `args.dates[].value.day` | integer | yes |  |
+| `args.dates[].value.is_leap_month` | boolean | no |  |
+| `args.dates[].value.month` | integer | yes |  |
+| `args.dates[].value.year` | integer | no |  |
+| `args.department` | string | no |  |
+| `args.emails` | array<object> | no |  |
+| `args.emails[].label` | string | no |  |
+| `args.emails[].value` | string | yes |  |
+| `args.family_name` | string | no |  |
+| `args.given_name` | string | no |  |
+| `args.image` | object \| null | no |  |
+| `args.image.base64` | string | yes | Image bytes in base64, 8 MB at most. |
+| `args.instant_messages` | array<object> | no |  |
+| `args.instant_messages[].label` | string | no |  |
+| `args.instant_messages[].value` | object | yes |  |
+| `args.job_title` | string | no |  |
+| `args.middle_name` | string | no |  |
+| `args.name_prefix` | string | no |  |
+| `args.name_suffix` | string | no |  |
+| `args.nickname` | string | no |  |
+| `args.non_gregorian_birthday` | object \| null | no |  |
+| `args.non_gregorian_birthday.calendar` | string | no |  |
+| `args.non_gregorian_birthday.day` | integer | yes |  |
+| `args.non_gregorian_birthday.is_leap_month` | boolean | no |  |
+| `args.non_gregorian_birthday.month` | integer | yes |  |
+| `args.non_gregorian_birthday.year` | integer | no |  |
+| `args.organization` | string | no |  |
+| `args.phones` | array<object> | no |  |
+| `args.phones[].label` | string | no |  |
+| `args.phones[].value` | string | yes |  |
+| `args.phonetic_family_name` | string | no |  |
+| `args.phonetic_given_name` | string | no |  |
+| `args.phonetic_middle_name` | string | no |  |
+| `args.phonetic_organization` | string | no |  |
+| `args.postal_addresses` | array<object> | no |  |
+| `args.postal_addresses[].label` | string | no |  |
+| `args.postal_addresses[].value` | object | yes |  |
+| `args.previous_family_name` | string | no |  |
+| `args.relations` | array<object> | no |  |
+| `args.relations[].label` | string | no |  |
+| `args.relations[].value` | string | yes |  |
+| `args.social_profiles` | array<object> | no |  |
+| `args.social_profiles[].label` | string | no |  |
+| `args.social_profiles[].value` | object | yes |  |
+| `args.urls` | array<object> | no |  |
+| `args.urls[].label` | string | no |  |
+| `args.urls[].value` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -276,6 +380,64 @@ Patch contact fields with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.birthday` | object \| null | no |  |
+| `args.birthday.calendar` | string | no |  |
+| `args.birthday.day` | integer | yes |  |
+| `args.birthday.is_leap_month` | boolean | no |  |
+| `args.birthday.month` | integer | yes |  |
+| `args.birthday.year` | integer | no |  |
+| `args.dates` | array<object> | no |  |
+| `args.dates[].label` | string | no |  |
+| `args.dates[].value` | object \| null | yes |  |
+| `args.dates[].value.calendar` | string | no |  |
+| `args.dates[].value.day` | integer | yes |  |
+| `args.dates[].value.is_leap_month` | boolean | no |  |
+| `args.dates[].value.month` | integer | yes |  |
+| `args.dates[].value.year` | integer | no |  |
+| `args.department` | string | no |  |
+| `args.emails` | array<object> | no |  |
+| `args.emails[].label` | string | no |  |
+| `args.emails[].value` | string | yes |  |
+| `args.family_name` | string | no |  |
+| `args.given_name` | string | no |  |
+| `args.id` | string | yes |  |
+| `args.image` | object \| null | no |  |
+| `args.image.base64` | string | yes | Image bytes in base64, 8 MB at most. |
+| `args.instant_messages` | array<object> | no |  |
+| `args.instant_messages[].label` | string | no |  |
+| `args.instant_messages[].value` | object | yes |  |
+| `args.job_title` | string | no |  |
+| `args.middle_name` | string | no |  |
+| `args.name_prefix` | string | no |  |
+| `args.name_suffix` | string | no |  |
+| `args.nickname` | string | no |  |
+| `args.non_gregorian_birthday` | object \| null | no |  |
+| `args.non_gregorian_birthday.calendar` | string | no |  |
+| `args.non_gregorian_birthday.day` | integer | yes |  |
+| `args.non_gregorian_birthday.is_leap_month` | boolean | no |  |
+| `args.non_gregorian_birthday.month` | integer | yes |  |
+| `args.non_gregorian_birthday.year` | integer | no |  |
+| `args.organization` | string | no |  |
+| `args.phones` | array<object> | no |  |
+| `args.phones[].label` | string | no |  |
+| `args.phones[].value` | string | yes |  |
+| `args.phonetic_family_name` | string | no |  |
+| `args.phonetic_given_name` | string | no |  |
+| `args.phonetic_middle_name` | string | no |  |
+| `args.phonetic_organization` | string | no |  |
+| `args.postal_addresses` | array<object> | no |  |
+| `args.postal_addresses[].label` | string | no |  |
+| `args.postal_addresses[].value` | object | yes |  |
+| `args.previous_family_name` | string | no |  |
+| `args.relations` | array<object> | no |  |
+| `args.relations[].label` | string | no |  |
+| `args.relations[].value` | string | yes |  |
+| `args.social_profiles` | array<object> | no |  |
+| `args.social_profiles[].label` | string | no |  |
+| `args.social_profiles[].value` | object | yes |  |
+| `args.urls` | array<object> | no |  |
+| `args.urls[].label` | string | no |  |
+| `args.urls[].value` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -294,6 +456,7 @@ Delete a writable contact with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -312,6 +475,7 @@ Create a contact group in the default container
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.name` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -330,6 +494,8 @@ Rename a writable contact group with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.name` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -348,6 +514,7 @@ Delete a writable contact group without deleting its contacts
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -366,6 +533,8 @@ Add a contact from the same container to a group
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.contact_id` | string | yes |  |
+| `args.id` | string | yes | The group. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -384,6 +553,8 @@ Remove group membership without deleting the contact
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.contact_id` | string | yes |  |
+| `args.id` | string | yes | The group. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -432,6 +603,11 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.content_base64` | string | yes |  |
+| `args.digest` | string | yes |  |
+| `args.name` | string | yes |  |
+| `args.parent` | string | no |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -449,6 +625,11 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.content_base64` | string | yes |  |
+| `args.digest` | string | yes |  |
+| `args.name` | string | yes |  |
+| `args.parent` | string | no |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -466,6 +647,10 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.name` | string | yes |  |
+| `args.parent` | string | no |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -483,6 +668,10 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.name` | string | yes |  |
+| `args.parent` | string | no |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -500,6 +689,8 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -517,6 +708,9 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
+| `args.tags` | array<string> | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -534,6 +728,8 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -551,6 +747,8 @@ Mutate an opted-in file with native readback
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -568,6 +766,8 @@ Transform staged image and PDF blobs natively
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.path` | string | yes |  |
+| `args.root` | string | yes |  |
 | `command_id` | string | no |  |
 | `expires_at` | string | no |  |
 | `op` | string | no |  |
@@ -587,6 +787,9 @@ Set Do Not Disturb through AB Focus and confirm Focus status
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.mode` | string | yes | One of: `Do Not Disturb` |
+| `args.on` | boolean | yes |  |
+| `args.until` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -711,6 +914,8 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.id` | string | yes | UUID of the alarm or timer. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -729,6 +934,11 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.fire_at` | number | yes | Unix seconds, in the future. |
+| `args.id` | string | no | UUID of the alarm or timer. |
+| `args.snooze_seconds` | number \| null | no |  |
+| `args.title` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -747,6 +957,7 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -765,6 +976,11 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.fire_at` | number | yes | Unix seconds, in the future. |
+| `args.id` | string | yes | UUID of the alarm or timer. |
+| `args.snooze_seconds` | number \| null | no |  |
+| `args.title` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -783,6 +999,8 @@ Record up to ten seconds after on-phone Face ID approval and upload to the gatew
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.seconds` | integer \| null | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -801,6 +1019,7 @@ Capture a photo after on-phone Face ID approval and upload to the gateway
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -819,6 +1038,7 @@ Read iPhone device.status through the paired device
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -846,6 +1066,11 @@ Monitor a named geofence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.latitude` | number | yes |  |
+| `args.longitude` | number | yes |  |
+| `args.name` | string | yes |  |
+| `args.radius` | number | yes | Metres. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -864,6 +1089,7 @@ Publish named geofences as iPhone location records
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -882,6 +1108,8 @@ Remove a named geofence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.name` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -900,6 +1128,12 @@ Log tagged water (ml), weight (kg), mindful minutes or workout minutes on the pa
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.activity` | string | no | Required for a workout. One of: `walking`, `running`, `cycling`, `other` |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.kind` | string | yes | One of: `water`, `weight`, `mindful`, `workout` |
+| `args.start` | string | yes |  |
+| `args.tag` | string | yes |  |
+| `args.value` | number | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -918,6 +1152,11 @@ Push running agent task status to the iPhone lock screen
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.progress` | number | yes |  |
+| `args.status` | string | yes |  |
+| `args.task_id` | string | yes | Your id for this activity. Not _start. |
+| `args.title` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -936,6 +1175,11 @@ Push running agent task status to the iPhone lock screen
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.progress` | number | yes |  |
+| `args.status` | string | yes |  |
+| `args.task_id` | string | yes | Your id for this activity. Not _start. |
+| `args.title` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -954,6 +1198,11 @@ Push running agent task status to the iPhone lock screen
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.progress` | number | yes |  |
+| `args.status` | string | yes |  |
+| `args.task_id` | string | yes | Your id for this activity. Not _start. |
+| `args.title` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -972,6 +1221,7 @@ Read precise location into an iPhone location record
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -990,6 +1240,8 @@ Enable or disable significant location change records
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.enabled` | boolean | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1008,6 +1260,7 @@ Read authorized iPhone motion activity
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1026,6 +1279,8 @@ Read authorized iPhone motion history
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.days` | integer | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1044,6 +1299,14 @@ Deliver a notification; with buttons, return the selected action as the signed c
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.body` | string | yes |  |
+| `args.buttons` | array<object> | no |  |
+| `args.buttons[].id` | string | yes | Not starting with com.apple. |
+| `args.buttons[].title` | string | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.thread` | string | no |  |
+| `args.time_sensitive` | boolean | no |  |
+| `args.title` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1062,6 +1325,7 @@ Round-trip a command through the paired iPhone and return its signed result
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1080,6 +1344,7 @@ Cancel Bridge-owned Screen Time controls on the paired iPhone
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1098,6 +1363,9 @@ Schedule Bridge-owned Screen Time controls on the paired iPhone
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.end_minute` | integer | yes |  |
+| `args.start_minute` | integer | yes | Minute of the day. The window must be at least 15 minutes. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1116,6 +1384,7 @@ Shield Bridge-owned Screen Time controls on the paired iPhone
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1134,6 +1403,7 @@ Unshield Bridge-owned Screen Time controls on the paired iPhone
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1152,6 +1422,8 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.id` | string | yes | UUID of the alarm or timer. |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1170,6 +1442,10 @@ Operate app-owned iPhone AlarmKit alarms and timers
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.device_id` | string | yes | The paired iPhone, as iphone:<id>. See iphone.devices. |
+| `args.duration_seconds` | number | yes |  |
+| `args.id` | string | no | UUID of the alarm or timer. |
+| `args.title` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1248,6 +1524,10 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.body` | string | no |  |
+| `args.cc` | array<string> | no |  |
+| `args.subject` | string | yes |  |
+| `args.to` | array<string> | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1266,6 +1546,10 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.body` | string | no |  |
+| `args.cc` | array<string> | no |  |
+| `args.subject` | string | yes |  |
+| `args.to` | array<string> | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1284,6 +1568,9 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.account` | string | yes |  |
+| `args.id` | string | yes |  |
+| `args.mailbox` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1302,6 +1589,8 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.flagged` | boolean | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1320,6 +1609,8 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.read` | boolean | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1338,6 +1629,7 @@ Mail effect with readback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1358,6 +1650,15 @@ Open Maps at a coordinate; verify Maps is frontmost
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.from` | object | no |  |
+| `args.from.lat` | number | yes |  |
+| `args.from.lon` | number | yes |  |
+| `args.lat` | number | no |  |
+| `args.lon` | number | no |  |
+| `args.mode` | string | no | One of: `driving`, `walking`, `transit`, `cycling` |
+| `args.to` | object | no |  |
+| `args.to.lat` | number | yes |  |
+| `args.to.lon` | number | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1431,6 +1732,13 @@ Estimate travel time and distance between from/to points with numeric lat and lo
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.from` | object | yes |  |
+| `args.from.lat` | number | yes |  |
+| `args.from.lon` | number | yes |  |
+| `args.mode` | string | yes | One of: `driving`, `walking`, `transit`, `cycling` |
+| `args.to` | object | yes |  |
+| `args.to.lat` | number | yes |  |
+| `args.to.lon` | number | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 | `op` | string | no | One of: `maps.eta` |
@@ -1520,6 +1828,15 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.chat_id` | string | no |  |
+| `args.files` | array<object> | no |  |
+| `args.files[].data` | string | no |  |
+| `args.files[].name` | string | yes |  |
+| `args.files[].upload_id` | string | no |  |
+| `args.handles` | array<string> | no |  |
+| `args.resend_of` | string | no |  |
+| `args.service` | string | no | One of: `iMessage`, `SMS`, `RCS` |
+| `args.text` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1538,6 +1855,13 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.files` | array<object> | no |  |
+| `args.files[].data` | string | no |  |
+| `args.files[].name` | string | yes |  |
+| `args.files[].upload_id` | string | no |  |
+| `args.id` | string | yes |  |
+| `args.part_index` | integer | no |  |
+| `args.text` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1556,6 +1880,11 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.emoji` | string | no |  |
+| `args.id` | string | yes |  |
+| `args.part_index` | integer | no |  |
+| `args.reaction` | string | yes | One of: `love`, `like`, `dislike`, `laugh`, `emphasize`, `question`, `emoji` |
+| `args.remove` | boolean | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1574,6 +1903,9 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.part_index` | integer | no |  |
+| `args.text` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1592,6 +1924,8 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.part_index` | integer | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1610,6 +1944,7 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1628,6 +1963,7 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1646,6 +1982,7 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1664,6 +2001,7 @@ Messages command with evidence; unproven native routes reject before dispatch
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1697,6 +2035,9 @@ Create a plain text note in a folder
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.folder_id` | string | yes |  |
+| `args.plain_text` | string \| null | no |  |
+| `args.title` | string \| null | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1715,6 +2056,9 @@ Replace or append plain text, or edit text in canonical rich HTML with expected_
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.mode` | string | no | One of: `replace`, `append` |
+| `args.plain_text` | string \| null | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1733,6 +2077,7 @@ Delete a note with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1751,6 +2096,7 @@ Create a Notes folder
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.title` | string \| null | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -1769,6 +2115,8 @@ Move a note to a writable folder with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.folder_id` | string | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1787,6 +2135,8 @@ Rename a tagged Bridge Test folder with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.title` | string | yes | Only test folders can be renamed: the title must start with "Bridge Test [ab-test". |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1835,6 +2185,20 @@ Create an annotated PDF artifact
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.annotations` | array<object> | yes |  |
+| `args.annotations[].height` | number | yes |  |
+| `args.annotations[].page` | integer | yes |  |
+| `args.annotations[].text` | string | no |  |
+| `args.annotations[].type` | string | yes | One of: `note`, `highlight` |
+| `args.annotations[].width` | number | yes |  |
+| `args.annotations[].x` | number | yes |  |
+| `args.annotations[].y` | number | yes |  |
+| `args.blob` | object | no | A blob the caller may already read: query_id with digest, or collection and record_id with digest |
+| `args.blob.collection` | string | no |  |
+| `args.blob.digest` | string | yes |  |
+| `args.blob.query_id` | string | no |  |
+| `args.blob.record_id` | string | no |  |
+| `args.data_base64` | string | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -1854,6 +2218,18 @@ Live PhotoKit search with bounded fetches. Date/type/album filters run in PhotoK
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.album_id` | string | no |  |
+| `args.cursor` | string | no |  |
+| `args.end` | string | no |  |
+| `args.favorite` | boolean | no |  |
+| `args.include_hidden` | boolean | no |  |
+| `args.limit` | integer | no |  |
+| `args.near` | object | no |  |
+| `args.near.lat` | number | yes |  |
+| `args.near.lon` | number | yes |  |
+| `args.radius_m` | number | no |  |
+| `args.start` | string | no |  |
+| `args.type` | string | no | One of: `image`, `video`, `audio`, `live_photo`, `screenshot`, `panorama`, `hdr`, `depth`, `slow_motion`, `timelapse` |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1867,6 +2243,10 @@ Where photos were taken, by place name: each place (city, US state, country) wit
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.end` | string | no |  |
+| `args.include_hidden` | boolean | no |  |
+| `args.include_screenshots` | boolean | no |  |
+| `args.start` | string | no |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1880,6 +2260,7 @@ Live asset details, location and all public PhotoKit resources, including video,
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.asset_id` | string | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1893,6 +2274,9 @@ Page through user albums or smart albums, with PhotoKit editing capabilities. No
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.limit` | integer | no |  |
+| `args.offset` | integer | no |  |
+| `args.smart` | boolean | no |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1906,6 +2290,10 @@ Look at one photo. Renders a JPEG preview on demand, longest side max_px (64-153
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.asset_id` | string | yes |  |
+| `args.include_hidden` | boolean | no |  |
+| `args.max_px` | integer | no |  |
+| `args.network_access` | boolean | no |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1919,6 +2307,11 @@ Scan many photos at once. Renders up to 30 asset_ids from photos.search into one
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.asset_ids` | array<string> | yes |  |
+| `args.cell_px` | integer | no |  |
+| `args.columns` | integer | no |  |
+| `args.include_hidden` | boolean | no |  |
+| `args.network_access` | boolean | no |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1932,6 +2325,15 @@ Start a temporary original-resource transfer with asset_id, optional resource_in
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.asset_id` | string | no |  |
+| `args.length` | integer | no |  |
+| `args.max_bytes` | integer | no |  |
+| `args.network_access` | boolean | no |  |
+| `args.offset` | integer | no |  |
+| `args.rendition` | string | no | One of: `display` |
+| `args.resource_index` | integer | no |  |
+| `args.resource_key` | string | no |  |
+| `args.transfer_id` | string | no |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1945,6 +2347,7 @@ Cancel and delete this principal's temporary Photos transfer. Expired or foreign
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.transfer_id` | string | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | no |  |
 
@@ -1958,6 +2361,8 @@ Set an asset's favorite flag and read it back. Transient write that runs at once
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.asset_id` | string | yes |  |
+| `args.favorite` | boolean | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -1971,6 +2376,7 @@ Create a regular user album. Transient write. An agent set to ask first gets a h
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.title` | string | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -1984,6 +2390,8 @@ Rename an editable regular album. Transient write; asks the owner first only for
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.album_id` | string | yes |  |
+| `args.title` | string | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -1997,6 +2405,8 @@ Add up to 200 existing assets to an editable regular album. Does not import or c
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.album_id` | string | yes |  |
+| `args.asset_ids` | array<string> | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -2010,6 +2420,8 @@ Remove up to 200 memberships from an editable regular album, never from the libr
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.album_id` | string | yes |  |
+| `args.asset_ids` | array<string> | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -2023,6 +2435,7 @@ Delete an editable regular album, never its assets. Transient write; asks the ow
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `args` | object | yes |  |
+| `args.album_id` | string | yes |  |
 | `deadline_ms` | integer | no |  |
 | `id` | string | yes |  |
 
@@ -2039,6 +2452,13 @@ Print an authorized blob or supplied PDF bytes to PDF or a named printer
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.blob` | object | no | A blob the caller may already read: query_id with digest, or collection and record_id with digest |
+| `args.blob.collection` | string | no |  |
+| `args.blob.digest` | string | yes |  |
+| `args.blob.query_id` | string | no |  |
+| `args.blob.record_id` | string | no |  |
+| `args.data_base64` | string | no |  |
+| `args.printer` | string | yes |  |
 | `command_id` | string | no |  |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -2086,6 +2506,22 @@ Create a reminder in a writable list
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.alarms` | array<object> \| null | no |  |
+| `args.alarms[].absolute_date` | string | no |  |
+| `args.alarms[].latitude` | number \| null | no |  |
+| `args.alarms[].location_title` | string | no |  |
+| `args.alarms[].longitude` | number \| null | no |  |
+| `args.alarms[].proximity` | string | no | One of: `arrive`, `leave` |
+| `args.alarms[].radius_m` | number \| null | no |  |
+| `args.alarms[].relative_offset` | number \| null | no |  |
+| `args.due` | string \| null | no |  |
+| `args.due_all_day` | boolean \| null | no |  |
+| `args.list_id` | string | yes |  |
+| `args.notes` | string \| null | no |  |
+| `args.priority` | integer \| null | no |  |
+| `args.start` | string \| null | no |  |
+| `args.title` | string \| null | yes |  |
+| `args.url` | string \| null | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -2104,6 +2540,7 @@ Create a writable Reminders list
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.title` | string \| null | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | no |  |
 | `expires_at` | string | no |  |
@@ -2122,6 +2559,23 @@ Patch reminder fields with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.alarms` | array<object> \| null | no |  |
+| `args.alarms[].absolute_date` | string | no |  |
+| `args.alarms[].latitude` | number \| null | no |  |
+| `args.alarms[].location_title` | string | no |  |
+| `args.alarms[].longitude` | number \| null | no |  |
+| `args.alarms[].proximity` | string | no | One of: `arrive`, `leave` |
+| `args.alarms[].radius_m` | number \| null | no |  |
+| `args.alarms[].relative_offset` | number \| null | no |  |
+| `args.due` | string \| null | no |  |
+| `args.due_all_day` | boolean \| null | no |  |
+| `args.id` | string | yes |  |
+| `args.list_id` | string | no |  |
+| `args.notes` | string \| null | no |  |
+| `args.priority` | integer \| null | no |  |
+| `args.start` | string \| null | no |  |
+| `args.title` | string \| null | no |  |
+| `args.url` | string \| null | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2140,6 +2594,7 @@ Complete a reminder with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2158,6 +2613,7 @@ Reopen a reminder with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2176,6 +2632,7 @@ Delete a reminder with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2194,6 +2651,8 @@ Rename a Reminders list with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
+| `args.title` | string \| null | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2212,6 +2671,7 @@ Delete a Reminders list with expected_version
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.id` | string | yes |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |
@@ -2246,6 +2706,8 @@ Speak text with finished callback evidence
 | --- | --- | --- | --- |
 | `admission_era` | string | no |  |
 | `args` | object | yes |  |
+| `args.text` | string | yes |  |
+| `args.volume` | number | no |  |
 | `command_id` | string | no | Optional opaque caller ID, independent of replication cursors. Omit to generate one; retry the original ID after a lost response. IDs from older admission eras are lookup only. |
 | `expected_version` | integer | yes |  |
 | `expires_at` | string | no |  |

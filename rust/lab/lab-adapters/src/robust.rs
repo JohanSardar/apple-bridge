@@ -85,18 +85,20 @@ fn source_scans(world: &World) -> BTreeMap<String, u64> {
 }
 
 fn scope_probe(limited: &Client, fixture_id: &str, index: usize, evidence: &mut Evidence) -> bool {
-    let query = limited.call(
+    let query = limited.call_raw(
         "records.query",
         &json!({"collection":"reminders.reminder"}),
         20,
     );
-    if !query.is_ok_and(|p| p.is_some_and(|p| p["records"].as_array().is_none_or(Vec::is_empty))) {
+    if !query.is_ok_and(|p| {
+        p.is_some_and(|(status, value)| status == 403 && value["error"]["code"] == "forbidden")
+    }) {
         return false;
     }
     let path = format!("/v1/records/reminders.reminder/{fixture_id}");
     if !limited
         .request("GET", &path, &[], None, 20)
-        .is_ok_and(|reply| reply.status == 404)
+        .is_ok_and(|reply| reply.status == 403)
     {
         return false;
     }

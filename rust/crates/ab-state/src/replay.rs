@@ -20,13 +20,7 @@ pub fn command_id() -> Option<String> {
         let id = decisions["command_ids"]
             .get(index)
             .and_then(serde_json::Value::as_str)
-            .filter(|id| {
-                !id.is_empty()
-                    && id.len() <= 128
-                    && id
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || "._:-".contains(c))
-            })
+            .filter(|id| id.parse::<ab_domain::CommandId>().is_ok())
             .unwrap_or_else(|| panic!("lab replay command id missing"));
         return Some(id.to_owned());
     }

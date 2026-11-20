@@ -8,13 +8,12 @@ use std::time::{Duration, Instant};
 
 pub(crate) const SHOW_MAX_BYTES: u64 = 3_750_000;
 pub(crate) const ATTACH_MAX_BYTES: u64 = 100 << 20;
-pub(crate) const ATTACH_MAX_PHOTOS: usize = 10;
 const CHUNK: u64 = 64 << 10;
 const WAIT: Duration = Duration::from_secs(90);
 
-pub(crate) struct PhotoFile {
-    pub bytes: Vec<u8>,
-    pub name: String,
+struct PhotoFile {
+    bytes: Vec<u8>,
+    name: String,
 }
 
 const CURRENT_PHOTO: i64 = 5;
@@ -41,16 +40,10 @@ impl Call<'_> {
             "width": details["width"],
             "height": details["height"],
             "image": "attached: the photo itself, full frame, nothing drawn on it",
-            "next": "Show this image to the person as it is. To send it, use messages_send with photos. The image is a JPEG of the photo as Photos shows it; save gives the original file.",
+            "next": "To send this photo, call messages_send with photos. To download its original, use apple_read photos.download.",
         });
         if let Some(local) = crate::mcp_facade::local_time_of(details["created_at"].as_str()) {
             value["taken_at_local"] = json!(local);
-        }
-        if input.get("save").and_then(Value::as_bool) == Some(true) {
-            let original = self.photo_original(id, &details, ATTACH_MAX_BYTES).await?;
-            value["file"] = json!(self.save_photo(&original).await?);
-            value["file_name"] = json!(original.name);
-            value["file_bytes"] = json!(original.bytes.len());
         }
         Ok(Outcome {
             value,
@@ -72,22 +65,7 @@ impl Call<'_> {
         Ok(value["result_json"].clone())
     }
 
-    pub(crate) async fn photo_original(
-        &self,
-        id: &str,
-        details: &Value,
-        limit: u64,
-    ) -> Step<PhotoFile> {
-        self.photo_file(id, details, limit, false).await
-    }
-
-    async fn photo_file(
-        &self,
-        id: &str,
-        details: &Value,
-        limit: u64,
-        current: bool,
-    ) -> Step<PhotoFile> {
+    async fn photo_file(&self, id: &str, details: &Value, limit: u64) -> Step<PhotoFile> {
         let resources: Vec<&Value> = details["resources"]
             .as_array()
             .into_iter()
@@ -100,11 +78,10 @@ impl Call<'_> {
                 .copied()
         };
         let video = details["type"] == "video";
-        let chosen = match (video, current) {
-            (true, true) => pick(&[CURRENT_VIDEO, ORIGINAL_VIDEO]),
-            (true, false) => pick(&[ORIGINAL_VIDEO]),
-            (false, true) => pick(&[CURRENT_PHOTO, ORIGINAL_PHOTO]),
-            (false, false) => pick(&[ORIGINAL_PHOTO]),
+        let chosen = if video {
+            pick(&[CURRENT_VIDEO, ORIGINAL_VIDEO])
+        } else {
+            pick(&[CURRENT_PHOTO, ORIGINAL_PHOTO])
         }
         .ok_or_else(|| {
             Problem::new("unsupported", "this asset has no photo or video file").field("asset_id")
@@ -216,41 +193,19 @@ impl Call<'_> {
         }
     }
 
-    pub(crate) async fn save_photo(&self, file: &PhotoFile) -> Step<String> {
-        match self
-            .frontdoor
-            .service
-            .save_photo_file(self.principal, &file.name, &file.bytes)
-            .await
-        {
-            Ok(path) => Ok(path),
-            Err(error) => Err(from_error(
-                &error,
-                self.registry.find("photos.fetch"),
-                self.principal,
-            )),
-        }
-    }
-
-    pub(crate) async fn photo_attachments(&self, ids: &[Value]) -> Step<Vec<Value>> {
-        if ids.is_empty() || ids.len() > ATTACH_MAX_PHOTOS {
-            return Err(Problem::new("invalid", "photos takes 1 to 10 asset IDs")
-                .field("photos")
-                .expected(json!(["an asset_id from photos_find"])));
-        }
-        self.require("photos:read", "attaching a photo")?;
+    pub(crate) async fn photo_attachments(
+        &self,
+        ids: Vec<String>,
+    ) -> Step<Vec<ab_operations::local::StagedPhoto>> {
         let mut files = Vec::new();
         let mut names = Vec::new();
         for id in ids {
-            let id = id.as_str().filter(|id| !id.is_empty()).ok_or_else(|| {
-                Problem::new("invalid", "each photo is an asset_id string").field("photos")
-            })?;
             let details = self
-                .photo_details(id)
+                .photo_details(&id)
                 .await
                 .map_err(|p| p.field("photos"))?;
             let file = self
-                .photo_file(id, &details, ATTACH_MAX_BYTES, true)
+                .photo_file(&id, &details, ATTACH_MAX_BYTES)
                 .await
                 .map_err(|p| p.field("photos"))?;
             let upload = self
@@ -261,7 +216,13 @@ impl Call<'_> {
                 .map_err(|error| {
                     from_error(&error, self.registry.find("messages.send"), self.principal)
                 })?;
-            let upload: Value = serde_json::from_str(upload.get()).unwrap_or(Value::Null);
+            let upload: Value = serde_json::from_str(upload.get())
+                .map_err(|_| Problem::new("corrupt", "unreadable upload result"))?;
+            let upload_id = upload["upload_id"]
+                .as_str()
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| Problem::new("corrupt", "missing upload_id"))?
+                .to_owned();
             let mut name = file.name.clone();
             let mut copy = 2;
             while names.contains(&name) {
@@ -269,7 +230,7 @@ impl Call<'_> {
                 copy += 1;
             }
             names.push(name.clone());
-            files.push(json!({"name": name, "upload_id": upload["upload_id"]}));
+            files.push(ab_operations::local::StagedPhoto { name, upload_id });
         }
         Ok(files)
     }

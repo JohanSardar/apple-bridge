@@ -16,7 +16,7 @@ const APP_CALLBACK: &str = "https://app.example/api/mcp/auth_callback";
 const OTHER_CALLBACK: &str = "https://other.example/oauth/callback";
 
 struct Server {
-    _home: tempfile::TempDir,
+    home: tempfile::TempDir,
     router: Router,
     connectors: Arc<Connectors>,
     origin: String,
@@ -33,7 +33,7 @@ impl Server {
         let web = Web::new(authority, address, host.clone(), None, connectors.clone());
         web.set_route("tailnet");
         Self {
-            _home: home,
+            home,
             router: web
                 .router()
                 .layer(axum::Extension(ab_frontdoor::web::SecureTransport)),
@@ -50,7 +50,7 @@ impl Server {
         let connectors = Connectors::new(authority.clone());
         let web = Web::new(authority, address, String::new(), None, connectors.clone());
         Self {
-            _home: home,
+            home,
             router: web.router(),
             connectors,
             origin: "http://127.0.0.1:7780".into(),
@@ -71,6 +71,9 @@ impl Server {
             .send(self.request("GET", path).body(Body::empty()).unwrap())
             .await;
         assert_eq!(response.status(), StatusCode::OK, "{path}");
+        if path == "/connect" {
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        }
         body_json(response).await
     }
     async fn register(&self, metadata: &Value) -> (StatusCode, Value) {
@@ -206,6 +209,7 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
         )
         .await;
     let status = response.status();
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
     let ticket = body_json(response).await;
     assert_eq!(status, StatusCode::CREATED, "{ticket}");
     let pending = s.connectors.pending().unwrap();
@@ -224,12 +228,66 @@ async fn review_s1_tailnet_agent_can_follow_discovery_without_a_browser_origin()
         )
         .await;
     assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
     let answer = body_json(response).await;
     assert_eq!(answer["state"], "allowed");
     let token = answer["token"].as_str().unwrap();
     assert!(token.starts_with("aba-"));
     assert_eq!(answer["mcp"], discovery["mcp"]);
     assert_eq!(answer["header"], format!("Authorization: Bearer {token}"));
+}
+
+#[tokio::test]
+async fn connector_request_distinguishes_bad_input_from_a_full_queue() {
+    let s = Server::tailnet();
+    let post = |name: &str| {
+        s.request("POST", "/connect/request")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(json!({"name": name}).to_string()))
+            .unwrap()
+    };
+    for attempt in 0..4 {
+        s.connectors
+            .ask_for_agent(
+                &format!("Fixture {attempt}"),
+                "tailnet",
+                Some(format!("{}/mcp", s.origin)),
+            )
+            .unwrap();
+    }
+    for (name, status, code, retryable) in [
+        ("", StatusCode::BAD_REQUEST, "invalid", false),
+        (
+            "Grok Bot",
+            StatusCode::SERVICE_UNAVAILABLE,
+            "unavailable",
+            true,
+        ),
+    ] {
+        let response = s.send(post(name)).await;
+        assert_eq!(response.status(), status);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+        let problem = body_json(response).await;
+        assert_eq!(problem["error"]["code"], code);
+        assert_eq!(problem["error"]["retryable"], retryable);
+    }
+}
+
+#[tokio::test]
+async fn connect_errors_are_never_cacheable() {
+    let s = Server::new();
+    for path in [
+        "/connect",
+        "/connect/request",
+        "/connect/answer",
+        "/connect/unknown",
+    ] {
+        let response = s
+            .send(s.request("GET", path).body(Body::empty()).unwrap())
+            .await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+    }
 }
 
 #[tokio::test]
@@ -402,6 +460,18 @@ async fn the_full_flow_rotates_refresh_tokens_and_binds_the_resource() {
     assert_eq!(tokens["scope"], "calendar:read calendar:write");
     let refresh = tokens["refresh_token"].as_str().unwrap().to_owned();
 
+    let (status, error, _) = s
+        .token(&[
+            ("grant_type", "refresh_token"),
+            ("client_id", id),
+            ("refresh_token", &refresh),
+            ("resource", &resource),
+            ("scope", "calendar:read notes:read"),
+        ])
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["error"], "invalid_scope");
+
     let (status, next, _) = s
         .token(&[
             ("grant_type", "refresh_token"),
@@ -518,6 +588,12 @@ async fn errors_redirect_only_once_the_redirect_is_verified() {
         ("code_challenge_method", "plain", "invalid_request"),
         ("resource", "https://other.example/mcp", "invalid_target"),
         ("scope", "not-a-scope", "invalid_scope"),
+        (
+            "scope",
+            "calendar:read offline_access not-a-scope",
+            "invalid_scope",
+        ),
+        ("scope", "calendar:read admin", "invalid_scope"),
     ] {
         let query: Vec<(String, String)> = url::form_urlencoded::parse(
             s.authorize_query(id, OTHER_CALLBACK, &challenge).as_bytes(),
@@ -552,6 +628,53 @@ async fn errors_redirect_only_once_the_redirect_is_verified() {
             "Other App: iss on every error too"
         );
     }
+}
+
+#[tokio::test]
+async fn pending_authorization_reports_mixed_invalid_scopes_without_enqueuing() {
+    let s = Server::new();
+    let (_, client) = s.register(&json!({"redirect_uris": [APP_CALLBACK]})).await;
+    let (_, challenge) = pkce();
+    let query = s
+        .authorize_query(
+            client["client_id"].as_str().unwrap(),
+            APP_CALLBACK,
+            &challenge,
+        )
+        .replace("offline_access", "unknown");
+    let response = s
+        .send(
+            s.request("POST", &format!("/oauth/pending?{query}"))
+                .header(header::ORIGIN, &s.origin)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(body_json(response).await["error"]["code"], "invalid_scope");
+    let pending = s.connectors.pending().unwrap();
+    assert!(pending.is_empty(), "{pending:?}");
+}
+
+#[tokio::test]
+async fn token_exchange_distinguishes_authority_failure_from_invalid_grant() {
+    let s = Server::new();
+    let form = [
+        ("grant_type", "refresh_token"),
+        ("client_id", "unknown"),
+        ("refresh_token", "unknown"),
+    ];
+    let (status, error, _) = s.token(&form).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["error"], "invalid_grant");
+
+    let lock = s.home.path().join("credentials.lock");
+    std::fs::remove_file(&lock).unwrap();
+    std::fs::create_dir(&lock).unwrap();
+    let (status, error, cache) = s.token(&form).await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(error["error"], "server_error");
+    assert_eq!(cache.as_deref(), Some("no-store"));
 }
 
 #[tokio::test]

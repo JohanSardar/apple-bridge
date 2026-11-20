@@ -51,7 +51,6 @@ struct Session {
     client: reqwest::Client,
     address: String,
     token: String,
-    principal: String,
 }
 
 fn client() -> Outcome<reqwest::Client> {
@@ -100,6 +99,11 @@ fn rate_limited(operation: &str, wait: Option<Duration>) -> Failure {
 impl Session {
     async fn open(home: &Path) -> Outcome<Self> {
         let address = gateway::running_address(home).await?;
+        Self::temporary(home, address)
+    }
+
+    fn temporary(home: &Path, address: String) -> Outcome<Self> {
+        let client = client()?;
         let authority = access::open(home)?;
         let mut grants = Grant::agent_scopes()
             .into_iter()
@@ -107,20 +111,23 @@ impl Session {
             .map(|scope| Grant::parse(&scope))
             .collect::<Result<Vec<_>, _>>()?;
         grants.push(Grant::parse("system:read")?);
-        let token = authority.create_token(grants, false).map_err(|_| {
-            Failure::new(
-                Reason::PermissionDenied,
-                "Can't read from this home on its own.",
-            )
-            .sentence("Replicas read through the access they were paired with.")
-        })?;
-        let principal = authority.authenticate_token(&token)?.id;
+        let expires = jiff::Timestamp::now()
+            .checked_add(jiff::SignedDuration::from_hours(1))
+            .map_err(|error| Failure::internal(&error))?;
+        let token = authority
+            .create_token_until(grants, false, Some(expires))
+            .map_err(|_| {
+                Failure::new(
+                    Reason::PermissionDenied,
+                    "Can't read from this home on its own.",
+                )
+                .sentence("Replicas read through the access they were paired with.")
+            })?;
         Ok(Self {
             authority: Some(authority),
-            client: client()?,
+            client,
             address,
             token,
-            principal,
         })
     }
 
@@ -131,7 +138,6 @@ impl Session {
             client: client()?,
             address,
             token,
-            principal: String::new(),
         })
     }
 
@@ -255,10 +261,14 @@ impl Session {
             }
         }
     }
+}
 
-    fn close(self) {
-        if let Some(authority) = self.authority {
-            let _ = authority.revoke(&self.principal);
+impl Drop for Session {
+    fn drop(&mut self) {
+        if let Some(authority) = &self.authority
+            && let Ok(principal) = authority.authenticate_token(&self.token)
+        {
+            let _ = authority.revoke(&principal.id);
         }
     }
 }
@@ -971,31 +981,11 @@ struct Progress<'a> {
     start: Option<&'a Cursor>,
     rows: usize,
     pages: usize,
-    resume: Option<String>,
-    limit: usize,
-    home: &'a Path,
 }
 
 impl Progress<'_> {
-    fn resume_cursor(&self) -> Option<String> {
-        self.resume.as_ref().map(|after| {
-            Cursor {
-                kind: self.plan.kind.to_owned(),
-                operation: self.plan.operation.to_owned(),
-                arguments: filters(&self.plan.arguments),
-                options: self.plan.options.clone(),
-                after: Some(after.clone()),
-                offset: 0,
-                limit: Some(self.limit),
-                home: home_tag(self.home),
-                text: String::new(),
-            }
-            .encode()
-        })
-    }
-
     fn annotate(&self, failure: Failure) -> Failure {
-        let resume = self.resume_cursor();
+        let resume = self.start.map(|cursor| cursor.text.clone());
         let mut failure = failure
             .data("rowsFetched", self.rows)
             .data("pages", self.pages)
@@ -1009,14 +999,9 @@ impl Progress<'_> {
                 format!("{} rows on {} pages, not printed", self.rows, self.pages),
             );
         if let Some(resume) = resume {
-            let mut argv = vec!["bridge".to_owned()];
-            if self.plan.kind == "search" {
-                argv.push("search".to_owned());
-            } else {
-                argv.extend(["read".to_owned(), self.plan.kind.to_owned()]);
-            }
-            argv.extend(["--next".to_owned(), resume]);
-            failure = failure.step(Step::new("Continue after the last page that arrived", argv));
+            failure = failure.step(next_command(self.plan.kind, &resume));
+        } else {
+            failure = failure.sentence("Run the same read again to start from the first page.");
         }
         failure
     }
@@ -1065,7 +1050,6 @@ fn merge(answer: &mut Option<Value>, page: Value, pager: Pager) {
     current[pager.next] = page[pager.next].clone();
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn gather_pages(
     session: &Session,
     plan: &Plan,
@@ -1073,8 +1057,6 @@ async fn gather_pages(
     wanted: usize,
     start: Option<&Cursor>,
     budget: &Budget,
-    limit: usize,
-    home: &Path,
 ) -> Outcome<Gathered> {
     let mut after = start.and_then(|cursor| cursor.after.clone());
     let mut consumed: BTreeSet<String> = after.iter().cloned().collect();
@@ -1084,9 +1066,6 @@ async fn gather_pages(
         start,
         rows: 0,
         pages: 0,
-        resume: after.clone(),
-        limit,
-        home,
     };
     let mut empty = 0;
     let mut next: Option<String>;
@@ -1121,14 +1100,14 @@ async fn gather_pages(
         let Some(token) = next.clone() else {
             break;
         };
-        if progress.rows >= wanted {
-            break;
-        }
         if !consumed.insert(token.clone()) {
             return Err(stalled(
                 &progress,
                 "returned a page cursor it had already given",
             ));
+        }
+        if progress.rows >= wanted {
+            break;
         }
         if empty >= EMPTY_PAGES && !pager.nested {
             return Err(stalled(
@@ -1136,7 +1115,6 @@ async fn gather_pages(
                 &format!("returned {EMPTY_PAGES} empty pages in a row that each claimed more"),
             ));
         }
-        progress.resume = Some(token.clone());
         if progress.pages >= MAX_PAGES {
             ui::warn(
                 "truncated",
@@ -1173,11 +1151,9 @@ async fn gather(
     wanted: usize,
     start: Option<&Cursor>,
     budget: &Budget,
-    limit: usize,
-    home: &Path,
 ) -> Outcome<Gathered> {
     if let Some(pager) = pager(plan.operation) {
-        return gather_pages(session, plan, pager, wanted, start, budget, limit, home).await;
+        return gather_pages(session, plan, pager, wanted, start, budget).await;
     }
     let answer = budget
         .read(
@@ -1480,7 +1456,6 @@ struct Started {
     limit: usize,
     wanted: usize,
     budget: Budget,
-    zero: bool,
 }
 
 fn start(
@@ -1495,11 +1470,6 @@ fn start(
     if let Some(cursor) = &cursor {
         cursor.check(kind, home)?;
     }
-    let zero = Modes::get().json
-        && cursor.is_none()
-        && !all
-        && limit_text.is_some_and(|text| text.trim() == "0");
-    let limit_text = if zero { None } else { limit_text };
     let limit = match limit_text {
         Some(text) => limit(text)?,
         None => cursor
@@ -1516,33 +1486,7 @@ fn start(
         limit,
         wanted: if all { ALL_CAP } else { limit },
         budget,
-        zero,
     })
-}
-
-async fn zero_limit(
-    session: &Session,
-    plan: &Plan,
-    budget: &Budget,
-    keep_records: bool,
-) -> Outcome {
-    let mut arguments = plan.arguments.clone();
-    if let Some(object) = arguments.get_mut("args").and_then(Value::as_object_mut) {
-        object.insert("limit".into(), json!(1));
-    } else if arguments.get("limit").is_some() {
-        arguments["limit"] = json!(0);
-    }
-    let mut answer = budget
-        .read(session, plan.operation, &arguments, plan.subject.as_deref())
-        .await?;
-    if !keep_records && !plan.collections.is_empty() {
-        window(&mut answer, plan.collections, &mut 0, &mut 0);
-    }
-    if let Some(object) = answer.as_object_mut() {
-        object.insert("next_cursor".into(), Value::Null);
-    }
-    ui::json_document_unfiltered(answer);
-    Ok(())
 }
 
 pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
@@ -1561,22 +1505,15 @@ pub async fn read(home: &Path, args: &ReadArgs) -> Outcome {
     }
     check_record_fields(plan.collections, "bridge read")?;
     let session = Session::open(home).await?;
-    if started.zero {
-        let result = zero_limit(&session, &plan, &started.budget, false).await;
-        session.close();
-        return result;
-    }
     let result = gather(
         &session,
         &plan,
         started.wanted,
         started.cursor.as_ref(),
         &started.budget,
-        started.limit,
-        home,
     )
     .await;
-    session.close();
+    drop(session);
     let gathered = result?;
     let mut records = Vec::new();
     collect(&gathered.answer, plan.collections, &mut records);
@@ -1676,22 +1613,15 @@ pub async fn search(home: &Path, args: &SearchArgs) -> Outcome {
         return Err(super::commands::not_set_up(home));
     }
     let session = Session::open(home).await?;
-    if started.zero {
-        let result = zero_limit(&session, &plan, &started.budget, true).await;
-        session.close();
-        return result;
-    }
     let result = gather(
         &session,
         &plan,
         started.wanted,
         started.cursor.as_ref(),
         &started.budget,
-        started.limit,
-        home,
     )
     .await;
-    session.close();
+    drop(session);
     let gathered = result?;
     let cursor = continuation(&plan, &gathered, started.limit, home);
     if Modes::get().json {
@@ -1749,7 +1679,7 @@ fn list_operations(writes: bool) -> Outcome {
     Ok(())
 }
 
-fn read_stdin(what: &str) -> Outcome<String> {
+async fn read_stdin(what: &str) -> Outcome<String> {
     use std::io::IsTerminal;
     if std::io::stdin().is_terminal() {
         return Err(Failure::new(
@@ -1762,21 +1692,17 @@ fn read_stdin(what: &str) -> Outcome<String> {
         ));
     }
     modes::mark_stdin_payload();
-    let mut text = String::new();
-    std::io::stdin().read_to_string(&mut text)?;
-    Ok(text)
+    tokio::task::spawn_blocking(|| {
+        let mut text = String::new();
+        std::io::stdin().read_to_string(&mut text)?;
+        Ok(text)
+    })
+    .await
+    .map_err(|error| Failure::internal(&error))?
 }
 
-fn arguments(args: &CallArgs) -> Outcome<(Value, &'static str)> {
-    let given = [
-        args.data.is_some(),
-        args.args.is_some(),
-        args.file.is_some(),
-    ]
-    .iter()
-    .filter(|given| **given)
-    .count();
-    if given > 1 {
+async fn arguments(args: &CallArgs) -> Outcome<(Value, &'static str)> {
+    if args.data.is_some() && args.file.is_some() {
         return Err(Failure::new(
             Reason::ConflictingOptions,
             "Can't combine --data and --file. Pass the arguments once.",
@@ -1785,25 +1711,26 @@ fn arguments(args: &CallArgs) -> Outcome<(Value, &'static str)> {
     let (text, option) = if let Some(data) = &args.data {
         (
             if data == "-" {
-                read_stdin("--data")?
+                read_stdin("--data").await?
             } else {
                 data.clone()
             },
             "--data",
         )
-    } else if let Some(old) = &args.args {
-        ui::deprecated("--args", "--data");
-        (old.clone(), "--data")
     } else if let Some(file) = &args.file {
         if file.as_os_str() == "-" {
-            (read_stdin("--file")?, "--file")
+            (read_stdin("--file").await?, "--file")
         } else {
-            let text = std::fs::read_to_string(file).map_err(|_| {
-                Failure::new(
-                    Reason::NotFound,
-                    format!("Couldn't read --file {}.", file.display()),
-                )
-            })?;
+            let path = file.clone();
+            let text = tokio::task::spawn_blocking(move || std::fs::read_to_string(path))
+                .await
+                .map_err(|error| Failure::internal(&error))?
+                .map_err(|_| {
+                    Failure::new(
+                        Reason::NotFound,
+                        format!("Couldn't read --file {}.", file.display()),
+                    )
+                })?;
             (text, "--file")
         }
     } else {
@@ -1873,7 +1800,7 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
         }
         return list_operations(args.write);
     }
-    let Some(operation) = &args.operation else {
+    let Some(operation) = args.describe.as_ref().or(args.operation.as_ref()) else {
         return Err(Failure::new(
             Reason::MissingArgument,
             "Can't call without an <OPERATION>.",
@@ -1898,6 +1825,10 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
             Failure::new(Reason::InvalidValue, headline)
                 .then("List operations", ["bridge", "call", "--list"])
         })?;
+    if args.describe.is_some() {
+        ui::json_document_unfiltered(serde_json::to_value(&descriptor)?);
+        return Ok(());
+    }
     let photos_write = descriptor.scope == "photos:write";
     let once = photos_write || matches!(operation.as_str(), "photos.fetch" | "photos.release");
     if descriptor.kind == OperationKind::Command
@@ -1936,7 +1867,7 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
             "Can't use that --token-env. It must name an environment variable.",
         ));
     }
-    let (mut arguments, option) = arguments(args)?;
+    let (mut arguments, option) = arguments(args).await?;
     if operation == "helper.version" && arguments == json!({}) {
         arguments = json!({"args": {}});
     }
@@ -1996,7 +1927,7 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
     } else {
         let session = Session::open(home).await?;
         let result = session.read(operation, &arguments, None).await;
-        session.close();
+        drop(session);
         result?
     };
     ui::outln(&answer.to_string());
@@ -2005,7 +1936,26 @@ pub async fn call(home: &Path, args: &CallArgs) -> Outcome {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_used)]
     use super::*;
+
+    #[tokio::test]
+    async fn canceling_a_read_joins_the_task_and_revokes_its_temporary_token() {
+        let home = tempfile::tempdir().expect("temporary home");
+        let session = Session::temporary(home.path(), "127.0.0.1:1".into()).expect("session");
+        let authority = Authority::open(home.path()).expect("authority");
+        let token = session.token.clone();
+        assert!(authority.authenticate_token(&token).is_ok());
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            let _session = session;
+            started.send(()).expect("start signal");
+            std::future::pending::<Outcome>().await
+        });
+        ready.await.expect("read started");
+        super::super::cancel_task(task).await;
+        assert!(authority.authenticate_token(&token).is_err());
+    }
 
     #[test]
     fn records_are_found_at_any_depth_and_filtered_by_collection() {

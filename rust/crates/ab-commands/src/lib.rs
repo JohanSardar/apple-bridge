@@ -45,7 +45,54 @@ pub struct Command {
 pub struct Validated {
     pub id: String,
     pub list_id: String,
+    pub folder_id: String,
 }
+#[derive(Debug, Clone, serde::Serialize, thiserror::Error)]
+#[error("{field}: {problem}")]
+pub struct Violation {
+    pub code: &'static str,
+    pub field: String,
+    pub problem: &'static str,
+    pub expected: &'static str,
+    pub hint: &'static str,
+    pub retryable: bool,
+}
+
+impl Violation {
+    fn invalid(field: impl Into<String>, problem: &'static str, expected: &'static str) -> Self {
+        Self {
+            code: "invalid",
+            field: field.into(),
+            problem,
+            expected,
+            hint: "Correct the input before retrying.",
+            retryable: false,
+        }
+    }
+
+    fn legacy(&self) -> Error {
+        match self.code {
+            "unsupported" => Error::Unsupported,
+            "too_large" => Error::TooLarge,
+            "expired" => Error::Expired,
+            _ => Error::Invalid,
+        }
+    }
+}
+
+impl From<Error> for Violation {
+    fn from(error: Error) -> Self {
+        Self {
+            code: error.code(),
+            ..Self::invalid(
+                "args",
+                "arguments violate operation constraints",
+                "valid arguments for the operation",
+            )
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Field {
     name: &'static str,
@@ -73,101 +120,165 @@ fn arr<'a>(a: &'a Args, k: &str) -> &'a [Value] {
 fn check(ok: bool) -> Result<(), Error> {
     if ok { Ok(()) } else { Err(Error::Invalid) }
 }
-#[derive(Debug)]
-struct Ordered(Vec<(String, Value)>);
-impl<'de> serde::Deserialize<'de> for Ordered {
+struct UniqueJson(Value);
+
+impl<'de> serde::Deserialize<'de> for UniqueJson {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Visitor;
+
         impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = Ordered;
+            type Value = UniqueJson;
+
             fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str("an object")
+                f.write_str("JSON with unique case-insensitive object keys")
             }
+
+            fn visit_bool<E>(self, value: bool) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(value.into()))
+            }
+
+            fn visit_unit<E>(self) -> Result<UniqueJson, E> {
+                Ok(UniqueJson(Value::Null))
+            }
+
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<UniqueJson, A::Error> {
+                let mut items = Vec::new();
+                while let Some(UniqueJson(value)) = seq.next_element()? {
+                    items.push(value);
+                }
+                Ok(UniqueJson(Value::Array(items)))
+            }
+
             fn visit_map<A: serde::de::MapAccess<'de>>(
                 self,
                 mut map: A,
-            ) -> Result<Ordered, A::Error> {
-                let mut entries = Vec::new();
-                while let Some(entry) = map.next_entry()? {
-                    entries.push(entry);
+            ) -> Result<UniqueJson, A::Error> {
+                let mut seen = std::collections::HashSet::new();
+                let mut fields = Args::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if !seen.insert(key.to_ascii_lowercase()) {
+                        return Err(serde::de::Error::custom("duplicate object key"));
+                    }
+                    let UniqueJson(value) = map.next_value()?;
+                    fields.insert(key, value);
                 }
-                Ok(Ordered(entries))
+                Ok(UniqueJson(Value::Object(fields)))
             }
         }
-        deserializer.deserialize_map(Visitor)
+
+        deserializer.deserialize_any(Visitor)
     }
 }
-fn decode(raw: &str, shape: &str) -> Result<Args, Error> {
-    let Ordered(entries) = serde_json::from_str::<Ordered>(raw).map_err(|_| Error::Invalid)?;
-    let mut out = Args::new();
-    for (key, value) in entries {
-        let f = shapes::fields(shape)
-            .iter()
-            .find(|f| f.name.eq_ignore_ascii_case(&key))
-            .ok_or(Error::Invalid)?;
-        if value.is_null() {
-            if f.kind.starts_with('*') || f.kind.starts_with("[]") {
-                out.remove(f.name);
-            }
-            continue;
-        }
-        let single = Value::Object(Args::from_iter([(key, value)]));
-        out.extend(normalize(&single, shape)?);
-    }
-    Ok(out)
+
+pub fn parse_arguments(raw: &str) -> Result<Value, Violation> {
+    serde_json::from_str::<UniqueJson>(raw)
+        .map(|UniqueJson(value)| value)
+        .map_err(|_| {
+            Violation::invalid(
+                "args",
+                "invalid or duplicate JSON fields",
+                "JSON with unique case-insensitive object keys",
+            )
+        })
 }
-fn normalize(v: &Value, shape: &str) -> Result<Args, Error> {
-    let input = v.as_object().ok_or(Error::Invalid)?;
+
+fn decode(raw: &str, shape: &str) -> Result<Args, Violation> {
+    let Value::Object(fields) = parse_arguments(raw)? else {
+        return Err(Violation::invalid(
+            "args",
+            "arguments are not an object",
+            "an object",
+        ));
+    };
+    decode_fields(fields, shape, "args")
+}
+
+fn decode_fields(
+    entries: impl IntoIterator<Item = (String, Value)>,
+    shape: &str,
+    path: &str,
+) -> Result<Args, Violation> {
     let fields = shapes::fields(shape);
     let mut out = Args::new();
-    for (key, value) in input {
-        let f = fields
+    for (key, value) in entries {
+        let field_path = format!("{path}.{key}");
+        let field = fields
             .iter()
-            .find(|f| f.name == key)
-            .or_else(|| fields.iter().find(|f| f.name.eq_ignore_ascii_case(key)))
-            .ok_or(Error::Invalid)?;
+            .find(|field| field.name.eq_ignore_ascii_case(&key))
+            .ok_or_else(|| {
+                Violation::invalid(
+                    field_path.clone(),
+                    "field is unknown",
+                    "a field supported by the operation",
+                )
+            })?;
         if value.is_null() {
             continue;
         }
-        let kind = f.kind.trim_start_matches('*');
-        let val = if kind == "raw" {
-            value.clone()
-        } else if kind == "string" {
-            check(value.is_string())?;
-            value.clone()
-        } else if kind == "bool" {
-            check(value.is_boolean())?;
-            value.clone()
-        } else if kind == "int" {
-            check(value.as_i64().is_some())?;
-            value.clone()
-        } else if kind == "float64" {
-            check(value.is_number())?;
-            value.clone()
-        } else if let Some(elem) = kind.strip_prefix("[]") {
-            let list = value.as_array().ok_or(Error::Invalid)?;
-            let mut result = Vec::new();
-            for v in list {
-                if elem == "string" {
-                    check(v.is_string() || v.is_null())?;
-                    result.push(if v.is_null() {
-                        Value::String(String::new())
-                    } else {
-                        v.clone()
-                    });
-                } else {
-                    result.push(Value::Object(if v.is_null() {
-                        Args::new()
-                    } else {
-                        normalize(v, elem)?
-                    }));
+        let kind = field.kind.trim_start_matches('*');
+        let invalid = || Violation::invalid(field_path.clone(), "field has the wrong type", kind);
+        let value = match kind {
+            "raw" => value,
+            "string" if value.is_string() => value,
+            "bool" if value.is_boolean() => value,
+            "int" if value.as_i64().is_some() => value,
+            "float64" if value.is_number() => value,
+            _ if kind.starts_with("[]") => {
+                let Value::Array(items) = value else {
+                    return Err(invalid());
+                };
+                let element = &kind[2..];
+                let mut decoded = Vec::with_capacity(items.len());
+                for (index, item) in items.into_iter().enumerate() {
+                    let item_path = format!("{field_path}[{index}]");
+                    let value = match (element, item) {
+                        ("string", Value::Null) => Value::String(String::new()),
+                        ("string", item @ Value::String(_)) => item,
+                        ("string", _) => {
+                            return Err(Violation::invalid(
+                                item_path,
+                                "item has the wrong type",
+                                "a string",
+                            ));
+                        }
+                        (_, Value::Null) => Value::Object(Args::new()),
+                        (_, Value::Object(item)) => {
+                            Value::Object(decode_fields(item, element, &item_path)?)
+                        }
+                        _ => {
+                            return Err(Violation::invalid(
+                                item_path,
+                                "item has the wrong type",
+                                "an object",
+                            ));
+                        }
+                    };
+                    decoded.push(value);
                 }
+                Value::Array(decoded)
             }
-            Value::Array(result)
-        } else {
-            return Err(Error::Invalid);
+            _ => return Err(invalid()),
         };
-        out.insert(f.name.into(), val);
+        out.insert(field.name.into(), value);
     }
     Ok(out)
 }
@@ -196,18 +307,6 @@ pub fn expiry(op: &str, now: Timestamp, requested: Option<Timestamp>) -> Result<
     }
     Ok(end)
 }
-pub fn origin(op: &str, kind: &str, id: &str, remote: bool, agent_level: &str) -> &'static str {
-    if op == "messages.send" && kind == "token" && !remote && id.starts_with("token:") {
-        "owner_self"
-    } else if kind == "device"
-        || kind == "agent" && matches!(agent_level, "full" | "approve")
-        || kind == "delegated" && id.contains("/device:")
-    {
-        "interactive"
-    } else {
-        ""
-    }
-}
 fn timestamp(s: &str) -> bool {
     s.parse::<Timestamp>().is_ok()
 }
@@ -220,10 +319,28 @@ fn base64(s: &str) -> Result<Vec<u8>, Error> {
     .map_err(|_| Error::Invalid)
 }
 pub fn validate(c: &Command, now: Timestamp) -> Result<Validated, Error> {
-    check(valid_command_id(&c.id) && (0..=15000).contains(&c.wait_ms))?;
+    validate_request(c, now).map_err(|violation| violation.legacy())
+}
+
+pub fn validate_request(c: &Command, now: Timestamp) -> Result<Validated, Violation> {
+    if !valid_command_id(&c.id) {
+        return Err(Violation::invalid(
+            "command_id",
+            "invalid command ID",
+            "1 to 128 letters, digits or ._:- characters",
+        ));
+    }
+    if !(0..=15000).contains(&c.wait_ms) {
+        return Err(Violation::invalid(
+            "wait_ms",
+            "wait is outside the supported range",
+            "0 to 15000 milliseconds",
+        ));
+    }
     let a = sources::validate(c, now)?;
     Ok(Validated {
         id: s(&a, "id").into(),
+        folder_id: s(&a, "folder_id").into(),
         list_id: if c.op.starts_with("calendar.") {
             s(&a, "calendar_id")
         } else {

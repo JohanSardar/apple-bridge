@@ -3,6 +3,7 @@ mod adapters;
 pub mod approval_review;
 pub mod clock;
 pub mod command_contract;
+pub mod composite_reads;
 mod gateway_store;
 mod local_query;
 mod message_uploads;
@@ -20,7 +21,7 @@ pub mod peer;
 pub use ab_trust::domain;
 mod legacy;
 use ab_catalog::{OperationKind, operations};
-pub use adapters::{StateReads, TrustIdentity, visibility as state_visibility};
+pub use adapters::{StateReads, TrustIdentity, write_visibility as state_visibility};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
 use std::{collections::BTreeMap, fmt::Debug, future::Future, pin::Pin, sync::Arc, time::Duration};
@@ -113,6 +114,17 @@ pub struct Error {
 pub struct Problem<'a> {
     pub error: &'a Error,
 }
+impl Error {
+    fn missing_scope(scope: &str) -> Self {
+        Self {
+            code: Code::Forbidden,
+            message: format!("missing required scope {scope}"),
+            retryable: false,
+            current: None,
+        }
+    }
+}
+
 impl From<Code> for Error {
     fn from(code: Code) -> Self {
         let message = match code {
@@ -182,12 +194,32 @@ impl Principal {
             if grant == "admin" {
                 result.insert("admin".into(), true);
             }
-            if let Some((source, "read" | "write")) = grant.split_once(':') {
+            if let Some((source, "read")) = grant.split_once(':') {
                 result.insert(source.into(), true);
+            }
+            if grant.ends_with(":write") {
+                result.insert(grant.clone(), true);
             }
         }
         result
     }
+    pub fn authorize_reads(&self) -> Result<(), Error> {
+        if self
+            .grants
+            .iter()
+            .any(|grant| grant == "admin" || grant.ends_with(":read"))
+        {
+            Ok(())
+        } else {
+            Err(Code::Forbidden.into())
+        }
+    }
+
+    pub(crate) fn authorize_blob(&self, scope: &str) -> Result<(), Error> {
+        let (source, _) = scope.split_once(':').ok_or(Code::Corrupt)?;
+        self.require_explicit_scope(&format!("{source}:read"))
+    }
+
     pub fn authorize(&self, scope: &str) -> Result<(), Error> {
         if self.grants.iter().any(|g| g == "admin" || g == scope) {
             Ok(())
@@ -195,7 +227,33 @@ impl Principal {
             Err(Code::Unauthorized.into())
         }
     }
+    fn require_explicit_scope(&self, scope: &str) -> Result<(), Error> {
+        self.authorize(scope)
+            .map_err(|_| Error::missing_scope(scope))
+    }
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RequestStatus {
+    request_id: String,
+    #[serde(default)]
+    resolve: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CommandListOffset {
+    offset: usize,
+    #[serde(default)]
+    limit: u64,
+}
+
+pub fn scoped_command_id(principal: &str, request_id: &str) -> String {
+    let digest = ab_trust::fingerprint(format!("{principal}\n{request_id}").as_bytes());
+    let readable: String = request_id.chars().take(100).collect();
+    format!("{readable}.{}", &digest[..16])
+}
+
 pub trait Identity: Debug + Send + Sync {
     fn dial_replicas(&self) -> Result<Option<Value>, Error> {
         Ok(None)
@@ -231,6 +289,43 @@ pub struct ReadQuery {
     pub include_deleted: bool,
     pub include_aliases: bool,
     pub limit: usize,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fields: Vec<String>,
+}
+impl ReadQuery {
+    fn project(result: Box<RawValue>, fields: &[String]) -> Result<Box<RawValue>, Error> {
+        fn retain(value: &mut Value, fields: &[String]) {
+            match value {
+                Value::Object(object) => {
+                    let record = object.contains_key("collection") && object.contains_key("id");
+                    for (key, value) in object {
+                        if record && key == "data" {
+                            if let Some(data) = value.as_object_mut() {
+                                data.retain(|key, _| fields.contains(key));
+                            }
+                        } else {
+                            retain(value, fields);
+                        }
+                    }
+                }
+                Value::Array(items) => items.iter_mut().for_each(|value| retain(value, fields)),
+                _ => {}
+            }
+        }
+        if fields.is_empty() {
+            return Ok(result);
+        }
+        if fields.len() > 100
+            || fields
+                .iter()
+                .any(|field| field.is_empty() || field.len() > 128)
+        {
+            return Err(Code::Invalid.into());
+        }
+        let mut value = serde_json::from_str(result.get()).map_err(|_| Code::Corrupt)?;
+        retain(&mut value, fields);
+        serde_json::value::to_raw_value(&value).map_err(|_| Code::Corrupt.into())
+    }
 }
 pub trait ReadStore: Debug + Send + Sync {
     fn record_activity(&self, _activity: &ab_trust::activity::AgentActivity) -> Result<(), Error> {
@@ -511,9 +606,15 @@ impl RemoteGateway {
         if !valid_command_id(&command.id) || command.wait_ms > 15000 {
             return Err(Code::Invalid.into());
         }
-        if principal.kind == "agent" && principal.level == "read" {
+        if principal.is_agent() && principal.level == "read" {
             return Err(Code::Unauthorized.into());
         }
+        let descriptor = descriptor_for(&command.op)?;
+        if descriptor.kind != OperationKind::Command {
+            return Err(Code::Unsupported.into());
+        }
+        principal.authorize(&descriptor.scope)?;
+        crate::command_contract::parse_arguments(&command)?;
         command.origin = if principal.kind == "device" {
             "interactive".into()
         } else {
@@ -538,7 +639,19 @@ impl RemoteGateway {
                     ..
                 },
             ) => match self.call(principal, "status", None, &query).await {
-                Ok(response) => response,
+                Ok(response) => {
+                    let record: Value =
+                        serde_json::from_str(response.result.get()).map_err(|_| Code::Corrupt)?;
+                    if record["request_hash"] != self.codec.command_hash(&command)? {
+                        return Err(Code::IdReused.into());
+                    }
+                    if let Some(saved) = record.get("error") {
+                        return Err(
+                            serde_json::from_value(saved.clone()).map_err(|_| Code::Corrupt)?
+                        );
+                    }
+                    response
+                }
                 Err(_) => return Err(error),
             },
             result => result?,
@@ -554,13 +667,7 @@ impl RemoteGateway {
             .await
     }
 }
-pub fn valid_command_id(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= 128
-        && id
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b"._:-".contains(&b))
-}
+pub use ab_commands::valid_command_id;
 #[derive(Debug)]
 pub enum CommandTarget {
     Remote(Arc<RemoteGateway>),
@@ -574,6 +681,125 @@ pub struct Service {
     pub codec: Arc<dyn Codec>,
 }
 impl Service {
+    pub async fn request_status(
+        &self,
+        principal: &Principal,
+        request_id: &str,
+        resolve: bool,
+    ) -> Result<Box<RawValue>, Error> {
+        let principal = self.identity.current(principal)?;
+        self.lookup_status(&principal, request_id, resolve).await
+    }
+
+    async fn lookup_status(
+        &self,
+        principal: &Principal,
+        request_id: &str,
+        resolve: bool,
+    ) -> Result<Box<RawValue>, Error> {
+        if !valid_command_id(request_id) {
+            return Err(Code::Invalid.into());
+        }
+        for id in [
+            scoped_command_id(&principal.id, request_id),
+            request_id.into(),
+        ] {
+            for candidate in [format!("qry_{id}"), id.clone()] {
+                if !valid_command_id(&candidate) || id.starts_with("qry_") && candidate != id {
+                    continue;
+                }
+                let query = CommandQuery {
+                    id: candidate,
+                    resolve,
+                    ..CommandQuery::default()
+                };
+                match self.command_status(principal, &query).await {
+                    Err(error) if error.code == Code::NotFound => {}
+                    result => return result,
+                }
+            }
+        }
+        Err(Code::NotFound.into())
+    }
+
+    async fn command_status(
+        &self,
+        principal: &Principal,
+        query: &CommandQuery,
+    ) -> Result<Box<RawValue>, Error> {
+        match &self.target {
+            CommandTarget::Remote(target) => target.status(principal, query).await,
+            CommandTarget::Local(target) => target.status(principal, query).await,
+        }
+    }
+
+    async fn list_command_page(
+        &self,
+        principal: &Principal,
+        page: CommandListOffset,
+    ) -> Result<Box<RawValue>, Error> {
+        match &self.target {
+            CommandTarget::Local(target) => target.list_page(principal, page.offset, page.limit),
+            CommandTarget::Remote(target) => {
+                let limit = ab_state::ReadPage::limit(page.limit).map_err(|_| Code::Invalid)?;
+                let count = page
+                    .offset
+                    .checked_add(limit)
+                    .filter(|count| *count <= 1000)
+                    .ok_or_else(|| Error {
+                        code: Code::Invalid,
+                        message: "forwarded command pages have a 1000-record window".into(),
+                        current: None,
+                        retryable: false,
+                    })?;
+                let query = CommandQuery {
+                    limit: u64::try_from(count).map_err(|_| Code::Invalid)?,
+                    ..CommandQuery::default()
+                };
+                let response = target.call(principal, "list", None, &query).await?;
+                let rows: Vec<Box<RawValue>> =
+                    serde_json::from_str(response.result.get()).map_err(|_| Code::Corrupt)?;
+                let rows: Vec<_> = rows.into_iter().skip(page.offset).take(limit).collect();
+                serde_json::value::to_raw_value(&rows).map_err(|_| Code::Corrupt.into())
+            }
+        }
+    }
+
+    pub async fn submit_photo_message<'a>(
+        &self,
+        principal: &Principal,
+        request_id: &str,
+        mut command: Command,
+        stage: impl FnOnce(Vec<String>) -> Task<'a, local::StagedPhotoMessage> + Send + 'a,
+    ) -> Result<Box<RawValue>, Error> {
+        let principal = self.identity.current(principal)?;
+        principal.authorize("messages:write")?;
+        principal.require_explicit_scope("photos:read")?;
+        if !valid_command_id(request_id)
+            || (!command.op.is_empty() && command.op != "messages.send")
+        {
+            return Err(Code::Invalid.into());
+        }
+        let CommandTarget::Local(local) = &self.target else {
+            return Err(Code::Unavailable.into());
+        };
+        command.op = "messages.send".into();
+        command.id = match self.lookup_status(&principal, request_id, false).await {
+            Ok(result) => {
+                let record: local::CommandRecord =
+                    serde_json::from_str(result.get()).map_err(|_| Code::Corrupt)?;
+                record.command.id
+            }
+            Err(error) if error.code == Code::NotFound => {
+                scoped_command_id(&principal.id, request_id)
+            }
+            Err(error) => return Err(error),
+        };
+        local
+            .submit_photo_message(&principal, command, Box::new(stage))
+            .await
+    }
+
     pub async fn upload_message(
         &self,
         principal: &Principal,
@@ -628,16 +854,15 @@ impl Service {
         scope: &str,
         target: &RemoteGateway,
     ) -> Result<Box<RawValue>, Error> {
-        principal
-            .authorize(scope)
-            .map_err(|_| Error::from(Code::Forbidden))?;
+        principal.require_explicit_scope(scope)?;
         let mut query: NativeQuery = serde_json::from_slice(input).map_err(|_| Code::Invalid)?;
         if !query.op.is_empty() && query.op != name {
             return Err(Code::Invalid.into());
         }
         query.op = name.into();
-        if local::photos::mutation(name) && query.id.is_empty() {
-            return Err(Code::Invalid.into());
+        if name.starts_with("photos.") {
+            let args = serde_json::from_str(query.args.get()).map_err(|_| Code::Invalid)?;
+            local::photos::validate(&query, &args)?;
         }
         if query.id.is_empty() {
             query.id = format!("qry_{}", ulid::Ulid::new());
@@ -763,27 +988,34 @@ impl Service {
             if command.id.is_empty() {
                 command.id = new_command_id();
             }
-            command_contract::validate(&command)?;
             return match &self.target {
                 CommandTarget::Remote(target) => target.submit(&principal, command).await,
                 CommandTarget::Local(target) => target.submit(&principal, command).await,
             };
         }
         if name == "commands.status" || name == "commands.list" {
-            let query: CommandQuery =
-                serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
+            let input: Value = serde_json::from_slice(input).map_err(|_| Code::Invalid)?;
+            if name == "commands.status" && input.get("request_id").is_some() {
+                let query: RequestStatus =
+                    serde_json::from_value(input).map_err(|_| Code::Invalid)?;
+                return self
+                    .lookup_status(&principal, &query.request_id, query.resolve)
+                    .await;
+            }
+            if name == "commands.list" && input.get("offset").is_some() {
+                let page = serde_json::from_value(input).map_err(|_| Code::Invalid)?;
+                return self.list_command_page(&principal, page).await;
+            }
+            let query: CommandQuery = serde_json::from_value(input).map_err(|_| Code::Invalid)?;
             if query.limit > 1000 || (name == "commands.status" && !valid_command_id(&query.id)) {
                 return Err(Code::Invalid.into());
             }
+            if name == "commands.status" {
+                return self.command_status(&principal, &query).await;
+            }
             return match &self.target {
-                CommandTarget::Remote(target) if name == "commands.status" => {
-                    target.status(&principal, &query).await
-                }
                 CommandTarget::Remote(target) => {
                     Ok(target.call(&principal, "list", None, &query).await?.result)
-                }
-                CommandTarget::Local(target) if name == "commands.status" => {
-                    target.status(&principal, &query).await
                 }
                 CommandTarget::Local(target) => target.list(&principal, query.limit),
             };
@@ -813,6 +1045,9 @@ impl Service {
             }
             return self.identity.iphones();
         }
+        if matches!(name, "notes.list" | "reminders.items" | "calendar.agenda") {
+            principal.require_explicit_scope(&descriptor.scope)?;
+        }
         let visibility = principal.visibility();
         if descriptor.read_model
             || matches!(
@@ -820,8 +1055,15 @@ impl Service {
                 "contacts.lookup" | "sources.status" | "replica.status" | "health.summary"
             )
         {
-            let query: Value =
+            let mut query: Value =
                 serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
+            let fields: Vec<String> = query
+                .as_object_mut()
+                .and_then(|query| query.remove("fields"))
+                .map(serde_json::from_value)
+                .transpose()
+                .map_err(|_| Code::Invalid)?
+                .unwrap_or_default();
             let result = self.store.read_model(&visibility, name, &query)?;
             if name == "replica.status" {
                 let mut result: Value =
@@ -832,9 +1074,9 @@ impl Service {
                     result["replica"]["dial_replicas"] = dials;
                     result["records"][0]["data"] = result["replica"].clone();
                 }
-                return crate::legacy::read_model(name, &result);
+                return ReadQuery::project(crate::legacy::read_model(name, &result)?, &fields);
             }
-            return Ok(result);
+            return ReadQuery::project(result, &fields);
         }
         let query: ReadQuery =
             serde_json::from_slice(input).map_err(|_| Error::from(Code::Invalid))?;
@@ -842,10 +1084,14 @@ impl Service {
             return Err(Code::Invalid.into());
         }
         if query.collection == "system.replica" {
-            return self.store.read_model(
-                &visibility,
-                "replica.status",
-                &Value::Object(serde_json::Map::new()),
+            principal.require_explicit_scope("system:read")?;
+            return ReadQuery::project(
+                self.store.read_model(
+                    &visibility,
+                    "replica.status",
+                    &Value::Object(serde_json::Map::new()),
+                )?,
+                &query.fields,
             );
         }
         if (name == "records.get" && (query.collection.is_empty() || query.id.is_empty()))
@@ -853,7 +1099,15 @@ impl Service {
         {
             return Err(Code::Invalid.into());
         }
-        self.store.read(&visibility, &query)
+        principal.authorize_reads()?;
+        if !query.collection.is_empty() && query.collection != "system.command" {
+            let _: ab_trust::domain::Collection =
+                serde_json::from_value(Value::String(query.collection.clone()))
+                    .map_err(|_| Code::Invalid)?;
+            let (source, _) = query.collection.split_once('.').ok_or(Code::Invalid)?;
+            principal.require_explicit_scope(&format!("{source}:read"))?;
+        }
+        ReadQuery::project(self.store.read(&visibility, &query)?, &query.fields)
     }
 }
 

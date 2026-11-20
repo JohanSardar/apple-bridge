@@ -144,6 +144,11 @@ pub async fn permission_request(home: &Path, name: &str, helper_app: Option<&str
         .row("Accepted", product_cli::PERMISSIONS.join(", "))
         .then("For Full Disk Access", ["bridge", "permissions", "guide"]));
     }
+    let mut retry = vec!["bridge", "permissions", "request", name];
+    if let Some(helper) = helper_app {
+        retry.extend(["--helper-app", helper]);
+    }
+    Modes::get().require_native_interaction("the permission request", &retry)?;
     let report = product_cli::permissions_request(
         Path::new("open"),
         &product_cli::default_report_dir(),
@@ -156,17 +161,22 @@ pub async fn permission_request(home: &Path, name: &str, helper_app: Option<&str
     )
     .map_err(|error| helper_failure(&error, name))?;
     let outcome = report.get("outcome").cloned().unwrap_or_default();
-    if Modes::get().json {
-        ui::json_document(
-            json!({"permission": name, "outcome": if outcome.is_empty() { "requested".to_owned() } else { outcome.clone() }}),
-        );
-    }
     if outcome == "denied" {
         ui::warn("permission_denied", &permissions::declined(name));
-        return Ok(());
+    } else {
+        permissions::after_request(home, name, helper_app).await?;
     }
-    ui::done("Requested", name);
-    permissions::after_request(home, name, helper_app).await
+    if Modes::get().json {
+        let outcome = if outcome.is_empty() {
+            "requested"
+        } else {
+            &outcome
+        };
+        ui::json_document(json!({"permission": name, "outcome": outcome}));
+    } else if outcome != "denied" {
+        ui::done("Requested", name);
+    }
+    Ok(())
 }
 
 fn helper_failure(error: &Error, name: &str) -> Failure {
@@ -189,6 +199,24 @@ fn helper_failure(error: &Error, name: &str) -> Failure {
 }
 
 pub fn selftest(args: &SelftestArgs) -> Outcome {
+    if args.dry_run {
+        dry_run("selftest messages", "Send real messages to your own chat.");
+        return Ok(());
+    }
+    if !Modes::get().yes {
+        return Err(Failure::new(
+            Reason::ConfirmationRequired,
+            "The Messages self-test sends real messages to your own chat.",
+        )
+        .then(
+            "Confirm the send",
+            ["bridge", "selftest", "messages", "--yes"],
+        ));
+    }
+    Modes::get().require_native_interaction(
+        "the Messages self-test",
+        &["bridge", "selftest", "messages", "--yes"],
+    )?;
     let mut app = args.helper_app.clone().unwrap_or_default();
     if app.is_empty()
         && let Some(bundle) = product_cli::detect_helper_app()
@@ -223,7 +251,7 @@ pub fn selftest(args: &SelftestArgs) -> Outcome {
         )
         .then(
             "Run it again",
-            ["bridge", "selftest", "messages", "--force"],
+            ["bridge", "selftest", "messages", "--force", "--yes"],
         ));
     }
     ui::receipt("Proven", "Messages", "Messages is proven.");
@@ -403,6 +431,7 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
         }
     };
     if modes.json || modes.legacy_json() {
+        verdict()?;
         if !modes.json {
             legacy("bridge doctor");
         }
@@ -411,7 +440,7 @@ pub fn doctor(home: &Path, args: &super::tree::DoctorArgs) -> Outcome {
         } else {
             ui::exact_json(&report);
         }
-        return verdict();
+        return Ok(());
     }
     let mut rows = vec![
         ("Healthy".to_owned(), yes_no(&json!(ok))),
@@ -522,6 +551,14 @@ pub fn backup(home: &Path, args: &BackupArgs) -> Outcome {
         return Err(not_set_up(home));
     }
     let existed = destination.exists();
+    if args.dry_run {
+        let action = if existed { "Replace" } else { "Create" };
+        dry_run(
+            "backup",
+            &format!("{action} the backup at {}.", destination.display()),
+        );
+        return Ok(());
+    }
     if existed && !args.force {
         let refused = || {
             let failure = Failure::new(
@@ -650,8 +687,25 @@ fn sqlite_file(path: &Path) -> bool {
         .is_ok_and(|()| &header == b"SQLite format 3\0")
 }
 
+pub(super) fn dry_run(operation: &str, description: &str) {
+    if Modes::get().json {
+        ui::json_document(
+            json!({"outcome": "dry_run", "operation": operation, "description": description}),
+        );
+    } else {
+        ui::outln(description);
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
+    if [&args.path, &args.backup]
+        .into_iter()
+        .flatten()
+        .any(|path| path.as_os_str().is_empty())
+    {
+        return Err(Failure::invalid("Can't restore an empty backup path."));
+    }
     let backup = match (args.path, args.backup) {
         (Some(positional), Some(named)) if positional != named => {
             return Err(Failure::new(
@@ -661,13 +715,20 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
         }
         (positional, named) => positional.or(named),
     };
-    let Some(backup) = backup.filter(|path| !path.as_os_str().is_empty()) else {
+    let Some(backup) = backup else {
         if !args.accept_ledger_loss {
             return Err(Failure::new(
                 Reason::MissingArgument,
                 "Can't restore without a backup file.",
             )
             .then("Restore a backup", ["bridge", "restore", "<FILE>"]));
+        }
+        if args.dry_run {
+            dry_run(
+                "restore",
+                "Rebuild the local state and discard the operation ledger.",
+            );
+            return Ok(());
         }
         return rebuild_in_place(home);
     };
@@ -696,6 +757,13 @@ pub fn restore(home: &Path, args: RestoreArgs) -> Outcome {
             ),
         )
         .then("Stop it first", ["bridge", "down"]));
+    }
+    if args.dry_run {
+        dry_run(
+            "restore",
+            &format!("Restore {} into {}.", backup.display(), home.display()),
+        );
+        return Ok(());
     }
     let current = home.join("state.db");
     let had_data = current.exists();
@@ -959,10 +1027,6 @@ impl std::io::Write for Stderr {
     }
 }
 
-fn ssh() -> bool {
-    std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some()
-}
-
 fn sentence_case(text: &str) -> String {
     let text = text.trim().trim_end_matches('.');
     let mut characters = text.chars();
@@ -1038,7 +1102,7 @@ pub(super) async fn onboard(
         }
         recorder.seen.notify_one();
     };
-    let launch = open && (modes.browser_allowed() || !ssh());
+    let launch = open && modes.browser_allowed();
     let echo = !modes.stdout_tty() && !modes.json;
     let opener: ab_remote::onboarding::Opener = Arc::new(move |link: &str| {
         record(link);
@@ -1121,6 +1185,10 @@ pub async fn shortcuts(pack: PathBuf) -> Outcome {
         ));
     }
     let shown = pack.display().to_string();
+    Modes::get().require_native_interaction(
+        "Shortcuts installation",
+        &["bridge", "shortcuts", "install", "--pack", &shown],
+    )?;
     tokio::task::spawn_blocking(move || ab_shortcuts::cli::open_pack(&pack))
         .await
         .map_err(|error| Failure::internal(&error))?

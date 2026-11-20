@@ -1780,13 +1780,13 @@
       "d": "Rules: give data_base64 or blob, not both."
     },
     "files.transform": {
-      "s": "Convert or resize an image or PDF in an opted-in folder (not available yet).",
-      "r": "Nothing yet: the operation is not implemented and always returns unsupported.",
+      "s": "Convert or resize staged images or PDFs (unavailable through the agent tools).",
+      "r": "The agent tools return unsupported.",
       "x": {
         "root": "/Users/owner/Documents",
         "path": "scan.png"
       },
-      "u": "Not implemented yet; every call returns unsupported."
+      "u": "The agent tools do not accept the staged blob inputs needed for this operation."
     },
     "capture.camera_photo": {
       "s": "Take a photo with the Mac's camera.",

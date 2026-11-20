@@ -1,13 +1,33 @@
 use crate::{
     assertions::await_until,
-    http::Client,
-    journey::{command, effect_count, observed, records},
+    http::{Client, MCP_HEADERS},
+    journey::{command, effect_count, observed},
 };
 use lab_runner::Evidence;
 use lab_world::{Result, World};
 use serde_json::{Value, json};
 
-fn submit(client: &Client, command: &Value, _mcp: bool) -> Value {
+fn facade_input(command: &Value) -> Value {
+    let mut arguments = command["args"].clone();
+    if let Some(version) = command.get("expected_version") {
+        arguments["expected_version"] = version.clone();
+    }
+    json!({
+        "operation": command["op"],
+        "request_id": command["command_id"],
+        "arguments": arguments,
+        "verbose": true,
+    })
+}
+
+fn submit(client: &Client, command: &Value, mcp: bool) -> Value {
+    if mcp {
+        return client
+            .call_mcp_result("apple_change", &facade_input(command), 40)
+            .map_or(Value::Null, |result| {
+                result["structuredContent"]["details"].clone()
+            });
+    }
     let op = command["op"].as_str().unwrap_or_default();
     let reply = client.call_raw(op, command, 40);
     reply.ok().flatten().map_or(Value::Null, |(_, value)| value)
@@ -17,12 +37,39 @@ fn count(world: &World, command: &Value, expected: u64) -> bool {
     effect_count(world, command["command_id"].as_str().unwrap_or_default()) == Some(expected)
 }
 
-fn find_titled(client: &Client, title: &str) -> Option<Value> {
-    records(client)
-        .ok()?
-        .1
-        .into_iter()
+fn read(
+    client: &Client,
+    operation: &str,
+    mcp_operation: &str,
+    input: &Value,
+    mcp: bool,
+) -> Option<Value> {
+    if mcp {
+        let result = client
+            .call_mcp_result(
+                "apple_read",
+                &json!({"operation": mcp_operation, "arguments": input, "verbose": true}),
+                20,
+            )
+            .ok()?;
+        let structured = &result["structuredContent"];
+        return (structured.is_object() && result["isError"] != true).then(|| structured.clone());
+    }
+    client.call(operation, input, 20).ok().flatten()
+}
+
+fn find_titled(client: &Client, title: &str, mcp: bool) -> Option<Value> {
+    read(
+        client,
+        "records.query",
+        "bridge.list_records",
+        &json!({"collection": "reminders.reminder", "text": title, "limit": 100}),
+        mcp,
+    )?["records"]
+        .as_array()?
+        .iter()
         .find(|record| record["data"]["title"] == title)
+        .cloned()
 }
 
 fn truth_matches(world: &World, title: &str, op: &str) -> bool {
@@ -77,7 +124,7 @@ pub fn parity(
         }
         let mut created = Value::Null;
         let visible = await_until(5, || {
-            find_titled(gateway, &title).is_some_and(|record| {
+            find_titled(gateway, &title, mcp).is_some_and(|record| {
                 created = record;
                 true
             })
@@ -96,16 +143,18 @@ pub fn parity(
             let reply = submit(gateway, &c, mcp);
             evidence.check(
                 &format!("{protocol}_{op}"),
-                observed(&reply) && count(world, &c, 1),
+                observed(&reply) && count(world, &reply["command"], 1),
                 "command observed once",
             );
             results.push(reply["disposition"].as_str().unwrap_or_default().to_owned());
-            let read = gateway.call(
-                    "records.get",
-                    &json!({"collection": created["collection"], "id": created["id"], "include_deleted": true}),
-                    20,
-                );
-            match read.ok().flatten().and_then(|page| {
+            let read = read(
+                gateway,
+                "records.get",
+                "bridge.get_record",
+                &json!({"collection": created["collection"], "id": created["id"], "include_deleted": true}),
+                mcp,
+            );
+            match read.and_then(|page| {
                 let list = page["records"].as_array()?;
                 (list.len() == 1).then(|| list[0].clone())
             }) {
@@ -129,7 +178,7 @@ pub fn parity(
         let reply = submit(gateway, &list, mcp);
         evidence.check(
             &format!("{protocol}_create_list"),
-            observed(&reply) && count(world, &list, 1),
+            observed(&reply) && count(world, &reply["command"], 1),
             "list created once",
         );
     }
@@ -153,17 +202,31 @@ pub fn localhost(
                 "reminders.create",
                 &json!({"list_id": list_id, "title": "[ab-test] localhost"}),
             )?;
-            let body = serde_json::to_vec(&c)?;
+            let body = if protocol == "mcp" {
+                serde_json::to_vec(&json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {"name": "apple_change", "arguments": facade_input(&c)}
+                }))?
+            } else {
+                serde_json::to_vec(&c)?
+            };
             let path = if protocol == "mcp" {
                 "/mcp".to_owned()
             } else {
                 format!("/v1/op/{}", c["op"].as_str().unwrap_or_default())
             };
-            let headers: Vec<(&str, &str)> = match attack {
+            let mut headers = if protocol == "mcp" {
+                MCP_HEADERS.to_vec()
+            } else {
+                Vec::new()
+            };
+            headers.extend(match attack {
                 "bad-host" => vec![("Host", "attacker.invalid")],
                 "foreign-origin" => vec![("Origin", "https://attacker.invalid")],
                 _ => vec![],
-            };
+            });
             let status = gateway
                 .request_with(
                     attack != "no-token",
@@ -175,9 +238,20 @@ pub fn localhost(
                 )
                 .map(|reply| reply.status);
             let rejected = status.is_ok_and(|code| code == 401 || code == 403);
+            let request_id = c["command_id"].as_str().unwrap_or_default();
+            let effect_free = world
+                .control("/effects", &Value::Null)
+                .is_ok_and(|effects| {
+                    effects.as_object().is_some_and(|counts| {
+                        let scoped = format!("{request_id}.");
+                        counts.iter().all(|(id, count)| {
+                            (id != request_id && !id.starts_with(&scoped)) || count == 0
+                        })
+                    })
+                });
             evidence.check(
                 &format!("{protocol}_{attack}"),
-                rejected && count(world, &c, 0),
+                rejected && effect_free,
                 "request rejected before any native effect",
             );
         }

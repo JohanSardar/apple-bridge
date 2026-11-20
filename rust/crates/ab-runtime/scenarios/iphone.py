@@ -8,6 +8,7 @@ import http.server
 import json
 import os
 from pathlib import Path
+import pty
 import socketserver
 import subprocess
 import sys
@@ -133,7 +134,13 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
         process = subprocess.Popen([binary,'start','--role','gateway','--home',str(home),'--api-addr','127.0.0.1:0','--peer-addr','127.0.0.1:0','--blob-grace-ms','100'], env=env, stdout=output, stderr=output)
         try:
             wait(lambda: (home / 'runtime.json').exists())
-            command('tailscale')
+            master, terminal = pty.openpty()
+            try:
+                terminal_env = {key: value for key, value in env.items() if key not in ('SSH_CONNECTION', 'SSH_TTY', 'CI')}
+                subprocess.run([binary, 'tailscale', '--json', '--non-interactive=false', '--home', str(home)], env=terminal_env, stdin=terminal, stderr=terminal, stdout=subprocess.DEVNULL, check=True, timeout=100)
+            finally:
+                os.close(terminal)
+                os.close(master)
             def ready():
                 assert process.poll() is None, (Path(temp) / 'gateway.log').read_text()
                 value = json.loads((home / 'remote/status.json').read_text())
@@ -157,7 +164,7 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 except ValueError:
                     pass
                 return code, body
-            token = command('token','create','--scope','iphone:read,iphone:write,system:read')
+            token = command('token','create','--expires-in','1h','--scope','iphone:read,iphone:write,system:read')
             def local(path, payload, credential=token, extra=None):
                 connection = http.client.HTTPConnection(config['api_address'], timeout=10)
                 headers = {'Authorization':'Bearer ' + credential,'Host':config['api_address'],'Content-Type':'application/json'}
@@ -188,11 +195,12 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 return {'device_id':phone['id'],'at':at,'payload':b64(body),'signature':b64(signing.sign(message))}
             def signed(path, payload=None):
                 return public(path, phone_request(path,payload))
-            assert signed('/v1/iphone/status')[1] == phone
+            identity = {'id':phone['id'], 'gateway_key':phone['gateway_key']}
+            assert signed('/v1/iphone/status') == (200, identity)
             nil_request = phone_request('/v1/iphone/status')
             nil_request['payload'] = None
             nil_request['signature'] = b64(signing.sign(('apple-bridge-iphone/1\0/v1/iphone/status\0' + str(nil_request['at']) + '\0').encode()))
-            assert public('/v1/iphone/status',nil_request)[1] == phone
+            assert public('/v1/iphone/status',nil_request) == (200, identity)
             checks.append('signed_status_matches_pair_identity')
             def open_packet(packet):
                 ephemeral = base64.b64decode(packet['ephemeral_key'])
@@ -204,13 +212,14 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
             operation = {'command_id':'cmd_phone_fixture','args':{'device_id':phone['id']},'wait_ms':0}
             result, admitted = local('/v1/op/iphone.ping',operation)
             assert result == 200 and admitted['state'] == 'admitted', (result, admitted)
+            command_id = admitted['command']['command_id']
             result, packets = signed('/v1/iphone/pending')
             assert result == 200 and len(packets) == 1, (result, packets)
             job = open_packet(packets[0])
-            assert job['command']['command_id'] == operation['command_id']
+            assert job['command']['command_id'] == command_id
             assert job['request_hash'] == admitted['request_hash']
             checks.append('common_ledger_admission_and_independent_packet_decryption')
-            receipt = {'command_id':operation['command_id'],'request_hash':job['request_hash'],'state':'observed','data':{'pong':True}}
+            receipt = {'command_id':command_id,'request_hash':job['request_hash'],'state':'observed','data':{'pong':True}}
             assert signed('/v1/iphone/result',dict(receipt,request_hash='wrong'))[0] != 200
             result, body = signed('/v1/iphone/result',receipt)
             assert result == 200, (result, body)
@@ -225,12 +234,13 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 capture_command = {'command_id':'cmd_phone_capture_' + kind,'args':{'device_id':phone['id']},'wait_ms':0}
                 result, capture = local('/v1/op/iphone.capture.' + kind,capture_command)
                 assert result == 200 and capture['state'] == 'admitted', (result,capture)
+                capture_id = capture['command']['command_id']
                 payload = ('[ab-test] phone capture ' + kind).encode()
-                upload = {'command_id':capture_command['command_id'],'request_hash':capture['request_hash'],'content_type':content_type,'data':b64(payload)}
+                upload = {'command_id':capture_id,'request_hash':capture['request_hash'],'content_type':content_type,'data':b64(payload)}
                 assert signed('/v1/iphone/capture',upload)[0] == 400
                 result, packets = signed('/v1/iphone/pending')
                 assert result == 200 and len(packets) == 1
-                assert open_packet(packets[0])['command']['command_id'] == capture_command['command_id']
+                assert open_packet(packets[0])['command']['command_id'] == capture_id
                 assert signed('/v1/iphone/capture',dict(upload,request_hash='wrong'))[0] == 400
                 result, receipt = signed('/v1/iphone/capture',upload)
                 assert result == 200 and receipt['digest'] == hashlib.sha256(payload).hexdigest() and receipt['size'] == len(payload) and receipt['content_type'] == content_type, (result,receipt)
@@ -242,9 +252,9 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 response = connection.getresponse()
                 assert response.status == 200 and response.read() == payload
                 connection.close()
-                result, _ = signed('/v1/iphone/result',{'command_id':capture_command['command_id'],'request_hash':capture['request_hash'],'state':'observed','data':receipt})
+                result, _ = signed('/v1/iphone/result',{'command_id':capture_id,'request_hash':capture['request_hash'],'state':'observed','data':receipt})
                 assert result == 200
-                other_token = command('token','create','--scope','iphone:write')
+                other_token = command('token','create','--expires-in','1h','--scope','iphone:write')
                 connection = http.client.HTTPConnection(config['api_address'],timeout=10)
                 connection.request('GET','/v1/blobs/' + receipt['digest'] + '?record=' + receipt['blob_id'],headers={'Authorization':'Bearer ' + other_token,'Host':config['api_address']})
                 response = connection.getresponse()
@@ -253,28 +263,29 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
                 connection.close()
                 assert local('/v1/op/commands.status',{'command_id':capture_command['command_id']})[1]['state'] == 'observed'
                 checks.append('signed_' + kind + '_capture_is_bound_to_dispatch_hash_and_caller_blob_grant')
-            agent = json.loads(command('agent','create','--name','synthetic-phone-approval','--level','approve','--scope','iphone:write'))
+            agent = json.loads(command('agent','create','--name','synthetic-phone-approval','--level','approve','--expires-in','1h','--scope','iphone:write','--json'))
             pending_command = {'command_id':'cmd_phone_approval','args':{'device_id':phone['id']},'wait_ms':0}
             result, pending = local('/v1/op/iphone.ping',pending_command,agent['token'])
             assert result == 200 and pending['state'] == 'awaiting_approval', (result,pending)
+            pending_id = pending['command']['command_id']
             result, packets = signed('/v1/iphone/pending')
             assert result == 200 and len(packets) == 1
             approval = open_packet(packets[0])
             assert approval['command']['op'] == 'bridge.approval'
-            decision = {'command_id':pending_command['command_id'],'request_hash':pending['request_hash'],'approve':True}
+            decision = {'command_id':pending_id,'request_hash':pending['request_hash'],'approve':True}
             assert signed('/v1/iphone/approval',dict(decision,request_hash='wrong'))[0] != 200
             assert local('/v1/op/commands.status',{'command_id':pending_command['command_id']},agent['token'])[1]['state'] == 'awaiting_approval'
             assert signed('/v1/iphone/approval',decision)[0] == 200
             result, packets = signed('/v1/iphone/pending')
             assert result == 200 and len(packets) == 1
             approved = open_packet(packets[0])
-            assert approved['command']['command_id'] == pending_command['command_id']
-            assert signed('/v1/iphone/result',{'command_id':pending_command['command_id'],'request_hash':approved['request_hash'],'state':'observed','data':{'pong':True}})[0] == 200
+            assert approved['command']['command_id'] == pending_id
+            assert signed('/v1/iphone/result',{'command_id':pending_id,'request_hash':approved['request_hash'],'state':'observed','data':{'pong':True}})[0] == 200
             checks.append('phone_approval_hash_is_checked_before_common_dispatch')
             rejected_command = dict(pending_command,command_id='cmd_phone_reject')
             result, rejected = local('/v1/op/iphone.ping',rejected_command,agent['token'])
             assert result == 200 and rejected['state'] == 'awaiting_approval'
-            assert signed('/v1/iphone/approval',{'command_id':rejected_command['command_id'],'request_hash':rejected['request_hash'],'approve':False})[0] == 200
+            assert signed('/v1/iphone/approval',{'command_id':rejected['command']['command_id'],'request_hash':rejected['request_hash'],'approve':False})[0] == 200
             assert local('/v1/op/commands.status',{'command_id':rejected_command['command_id']},agent['token'])[1]['state'] == 'rejected_by_owner'
             assert signed('/v1/iphone/pending')[1] == []
             checks.append('rejected_phone_approval_has_no_delivery')
@@ -286,7 +297,7 @@ with tempfile.TemporaryDirectory(prefix='ab-gf-phone-') as temp:
             second = local('/v1/op/records.query',{'collection':'iphone.location'})[1]
             assert first['records'] == second['records']
             checks.append('location_capture_deduplicates_record_versions')
-            command('revoke',phone['id'])
+            command('tokens','revoke',phone['id'],'--yes')
             assert signed('/v1/iphone/status')[0] == 401
             checks.append('revoked_phone_is_rejected')
             command('tailscale','--off')

@@ -6,75 +6,10 @@ use crate::{
     },
     mcp_registry::can,
 };
-use ab_catalog::AgentOperation;
+use ab_operations::composite_reads::{AppUsage, Calendar, UsageSummaryQuery};
 use futures_util::StreamExt as _;
 use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Mutex, OnceLock};
-use std::time::{Duration, Instant};
-
-const SELECTOR_TTL: Duration = Duration::from_hours(24);
-const SELECTOR_CAP: usize = 1024;
-
-type Selectors = Mutex<HashMap<(String, String), (String, Instant)>>;
-
-fn selectors() -> &'static Selectors {
-    static SELECTORS: OnceLock<Selectors> = OnceLock::new();
-    SELECTORS.get_or_init(Selectors::default)
-}
-
-pub(crate) fn bind_selector(principal: &str, request_id: &str, title: &str) {
-    let Ok(mut map) = selectors().lock() else {
-        return;
-    };
-    map.retain(|_, (_, at)| at.elapsed() < SELECTOR_TTL);
-    if map.keys().filter(|(owner, _)| owner == principal).count() >= SELECTOR_CAP
-        && let Some(oldest) = map
-            .iter()
-            .filter(|((owner, _), _)| owner == principal)
-            .min_by_key(|(_, (_, at))| *at)
-            .map(|(key, _)| key.clone())
-    {
-        map.remove(&oldest);
-    }
-    map.insert(
-        (principal.to_owned(), request_id.to_owned()),
-        (fold(title.trim()), Instant::now()),
-    );
-}
-
-type Turns = Mutex<HashMap<(String, String), std::sync::Weak<tokio::sync::Mutex<()>>>>;
-
-pub(crate) async fn request_turn(
-    principal: &str,
-    request_id: &str,
-) -> tokio::sync::OwnedMutexGuard<()> {
-    static TURNS: OnceLock<Turns> = OnceLock::new();
-    let lock = {
-        let mut turns = TURNS
-            .get_or_init(Turns::default)
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        turns.retain(|_, turn| turn.strong_count() > 0);
-        let key = (principal.to_owned(), request_id.to_owned());
-        if let Some(lock) = turns.get(&key).and_then(std::sync::Weak::upgrade) {
-            lock
-        } else {
-            let lock = std::sync::Arc::new(tokio::sync::Mutex::new(()));
-            turns.insert(key, std::sync::Arc::downgrade(&lock));
-            lock
-        }
-    };
-    lock.lock_owned().await
-}
-
-pub(crate) fn selector(principal: &str, request_id: &str) -> Option<String> {
-    let map = selectors().lock().ok()?;
-    map.get(&(principal.to_owned(), request_id.to_owned()))
-        .filter(|(_, at)| at.elapsed() < SELECTOR_TTL)
-        .map(|(title, _)| title.clone())
-}
-
 pub(crate) struct Person {
     pub handles: Vec<String>,
     pub contact: Option<Value>,
@@ -149,40 +84,10 @@ fn app_name(bundle: &str) -> String {
     )
 }
 
-fn top_apps(apps: &BTreeMap<String, u64>, top: usize) -> Vec<Value> {
-    let mut sorted: Vec<(&String, &u64)> = apps.iter().collect();
-    sorted.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
-    sorted
-        .into_iter()
-        .take(top)
-        .map(|(bundle, seconds)| {
-            json!({"app": app_name(bundle), "bundle_id": bundle, "seconds": seconds, "time": duration(*seconds)})
-        })
-        .collect()
-}
-
-pub(crate) type UsageTally = (BTreeMap<String, u64>, BTreeMap<String, u64>);
-
-pub(crate) fn usage_tally(rows: &[Value], device: &str, first: &str, last: &str) -> UsageTally {
-    let mut apps: BTreeMap<String, u64> = BTreeMap::new();
-    let mut days: BTreeMap<String, u64> = BTreeMap::new();
-    for row in rows {
-        let data = &row["data"];
-        let stored = data["day"].as_str().unwrap_or_default();
-        let day = stored.split_once('@').map_or(stored, |(date, _)| date);
-        if row["deleted"] == true || data["device_id"] != device || day < first || day > last {
-            continue;
-        }
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let seconds = data["seconds_estimated"]
-            .as_f64()
-            .filter(|s| s.is_finite())
-            .map_or(0, |s| s.max(0.0).round() as u64);
-        let bundle = data["bundle_id"].as_str().unwrap_or("unknown").to_owned();
-        *apps.entry(bundle).or_default() += seconds;
-        *days.entry(day.to_owned()).or_default() += seconds;
-    }
-    (apps, days)
+fn top_apps(apps: &[AppUsage]) -> Vec<Value> {
+    apps.iter().map(|app| {
+        json!({"app": app_name(&app.bundle_id), "bundle_id": app.bundle_id, "seconds": app.seconds, "time": duration(app.seconds)})
+    }).collect()
 }
 
 fn civil_date(field: &str, raw: &str) -> Step<jiff::civil::Date> {
@@ -857,64 +762,33 @@ impl Call<'_> {
         Ok(outcome)
     }
 
-    pub(crate) async fn calendar_list(&self) -> Step<Vec<Value>> {
-        self.require("calendar:read", "the calendar list")?;
-        let found = self
-            .invoke(
-                self.operation("records.query")?,
-                &json!({"collection": "calendar.calendar", "limit": 1000}),
-            )
-            .await?;
-        Ok(found["records"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter(|r| r["deleted"] != true)
-            .cloned()
-            .collect())
-    }
-
-    pub(crate) async fn calendars(&self) -> Step<Vec<Value>> {
-        Ok(self
-            .calendar_list()
-            .await?
-            .iter()
-            .map(|c| {
-                let data = &c["data"];
-                let mut value = json!({
-                    "id": c["id"],
-                    "title": data["title"],
-                    "writable": data["writable"],
-                    "type": data["type"],
-                    "account": data["account"],
-                });
-                if let Some(fields) = value.as_object_mut() {
-                    fields.retain(|_, v| !v.is_null());
-                }
-                value
+    pub(crate) fn calendars(&self) -> Step<Vec<Calendar>> {
+        self.frontdoor
+            .service
+            .calendar_calendars(self.principal)
+            .map_err(|error| {
+                mcp_check::from_error(
+                    &error,
+                    self.registry.find(crate::mcp_registry::CALENDARS),
+                    self.principal,
+                )
             })
-            .collect())
     }
 
-    pub(crate) async fn calendar_for(
+    pub(crate) fn calendar_for(
         &self,
         wanted: Option<&str>,
         writable: bool,
     ) -> Step<(String, Option<String>)> {
-        let list = self.calendar_list().await?;
+        let list = self.calendars()?;
         let entries: Vec<(String, String)> = list
             .iter()
-            .filter(|c| !writable || c["data"]["writable"] == true)
-            .filter_map(|c| {
-                Some((
-                    c["id"].as_str()?.to_owned(),
-                    c["data"]["title"].as_str().unwrap_or_default().to_owned(),
-                ))
-            })
+            .filter(|c| !writable || c.writable)
+            .map(|c| (c.id.clone(), c.title.clone()))
             .collect();
         if let Some(id) = wanted.filter(|w| w.starts_with("cal_"))
             && !entries.iter().any(|(e, _)| e == id)
-            && list.iter().any(|c| c["id"] == id)
+            && list.iter().any(|c| c.id == id)
         {
             return Err(Problem::new("invalid", format!("{id} is read-only"))
                 .field("calendar")
@@ -940,7 +814,7 @@ impl Call<'_> {
     }
 
     #[allow(clippy::too_many_lines)]
-    pub(crate) async fn calendar_events(&self, input: &Map<String, Value>) -> Step<Outcome> {
+    pub(crate) async fn calendar_list(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let zone_name = mac_zone();
         let zone = jiff::tz::TimeZone::get(&zone_name).unwrap_or(jiff::tz::TimeZone::UTC);
         let ranged = ["start", "end", "start_local", "end_local"]
@@ -997,7 +871,7 @@ impl Call<'_> {
             (start, end)
         };
         let calendar = match text(input, "calendar") {
-            Some(wanted) => Some(self.calendar_for(Some(wanted), false).await?),
+            Some(wanted) => Some(self.calendar_for(Some(wanted), false)?),
             None => None,
         };
         let calendar_id = calendar.as_ref().map(|(id, _)| id.clone());
@@ -1045,16 +919,10 @@ impl Call<'_> {
         let names: HashMap<String, String> = if detail {
             HashMap::new()
         } else {
-            self.calendar_list()
-                .await
+            self.calendars()
                 .unwrap_or_default()
-                .iter()
-                .filter_map(|c| {
-                    Some((
-                        c["id"].as_str()?.to_owned(),
-                        c["data"]["title"].as_str()?.to_owned(),
-                    ))
-                })
+                .into_iter()
+                .map(|calendar| (calendar.id, calendar.title))
                 .collect()
         };
         let events: Vec<Value> = if detail {
@@ -1152,7 +1020,7 @@ impl Call<'_> {
             Some(id) if id.starts_with("cal_") && !can(self.principal, "calendar:read") => {
                 (id.to_owned(), None)
             }
-            wanted => self.calendar_for(wanted, true).await?,
+            wanted => self.calendar_for(wanted, true)?,
         };
         arguments.insert("calendar_id".into(), json!(calendar_id));
         mcp_check::arguments(operation, Some(&Value::Object(arguments.clone())))?;
@@ -1163,175 +1031,7 @@ impl Call<'_> {
         Ok(outcome)
     }
 
-    pub(crate) async fn bound_target(
-        &self,
-        operation: &AgentOperation,
-        request_id: &str,
-        arguments: &mut Map<String, Value>,
-    ) -> Step<bool> {
-        if !arguments.contains_key("reminder") || arguments.contains_key("id") {
-            return Ok(false);
-        }
-        let command_id = self.command_id(request_id).await?;
-        let record = match self
-            .invoke(
-                self.operation("commands.status")?,
-                &json!({"command_id": command_id}),
-            )
-            .await
-        {
-            Ok(record) => record,
-            Err(problem) if problem.code == "not_found" => return Ok(false),
-            Err(problem) => return Err(problem),
-        };
-        let command = &record["command"];
-        let reused = || {
-            Problem::new("id_reused", "this request_id was already used for a different request")
-                .operation(&operation.name)
-                .field("request_id")
-                .hint("Use a new request_id for a new change. Reuse a request_id only to repeat exactly the same call.")
-        };
-        if command["op"] != operation.name.as_str() {
-            return Err(reused());
-        }
-        let Some(id) = command["args"]["id"].as_str() else {
-            return Ok(false);
-        };
-        self.require("reminders:read", "finding a reminder by its title")
-            .map_err(|problem| problem.field("reminder").hint("Pass the reminder's id with expected_version instead, or ask the owner to grant reminders:read."))?;
-        let wanted = arguments
-            .get("reminder")
-            .and_then(Value::as_str)
-            .map(|title| fold(title.trim()))
-            .unwrap_or_default();
-        match selector(&self.principal.id, request_id) {
-            Some(bound) if bound == wanted => {}
-            Some(_) => return Err(reused()),
-            None => {
-                return Err(Problem::new(
-                    "id_reused",
-                    "this request_id was already used, and Apple Bridge can no longer confirm which reminder title it named",
-                )
-                .operation(&operation.name)
-                .field("request_id")
-                .hint("Call apple_command_status with this request_id to see what happened. To repeat it, pass the id and expected_version shown there instead of reminder; for a new change, use a new request_id."));
-            }
-        }
-        arguments.remove("reminder");
-        arguments.insert("id".into(), json!(id));
-        arguments.insert(
-            "expected_version".into(),
-            command["expected_version"].clone(),
-        );
-        Ok(true)
-    }
-
-    pub(crate) async fn reminder_target(
-        &self,
-        operation: &AgentOperation,
-        arguments: &mut Map<String, Value>,
-    ) -> Step<()> {
-        let title = arguments.remove("reminder");
-        if arguments.contains_key("id") {
-            if title.is_some() {
-                return Err(Problem::new("invalid", "give id or reminder, not both")
-                    .operation(&operation.name)
-                    .field("reminder"));
-            }
-            return Ok(());
-        }
-        let Some(title) = title
-            .as_ref()
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|t| !t.is_empty())
-        else {
-            return Err(Problem::new("invalid", "id or reminder is required")
-                .operation(&operation.name)
-                .field("reminder")
-                .expected(json!(
-                    "the reminder's title, or its rmd_ id with expected_version"
-                )));
-        };
-        self.require("reminders:read", "finding a reminder by its title")
-            .map_err(|problem| problem.field("reminder").hint("Pass the reminder's id with expected_version instead, or ask the owner to grant reminders:read."))?;
-        let completed = operation.name == "reminders.uncomplete";
-        let found = self
-            .invoke(
-                self.operation("reminders.items")?,
-                &json!({"smart": if completed { "completed" } else { "all" }, "show_completed": completed, "time_zone": mac_zone()}),
-            )
-            .await?;
-        let mut items: Vec<&Value> = Vec::new();
-        for section in found["sections"].as_array().into_iter().flatten() {
-            for item in section["items"].as_array().into_iter().flatten() {
-                items.push(&item["reminder"]);
-                for sub in item["subtasks"].as_array().into_iter().flatten() {
-                    items.push(sub.get("reminder").unwrap_or(sub));
-                }
-            }
-        }
-        let wanted = fold(title);
-        let name = |r: &Value| fold(r["data"]["title"].as_str().unwrap_or_default());
-        let exact: Vec<&Value> = items
-            .iter()
-            .copied()
-            .filter(|r| name(r) == wanted)
-            .collect();
-        let chosen = if exact.is_empty() {
-            items
-                .iter()
-                .copied()
-                .filter(|r| name(r).contains(&wanted))
-                .collect()
-        } else {
-            exact
-        };
-        let mut unique: Vec<&Value> = Vec::new();
-        for reminder in chosen {
-            if !unique.iter().any(|u| u["id"] == reminder["id"]) {
-                unique.push(reminder);
-            }
-        }
-        match unique.as_slice() {
-            [reminder] => {
-                arguments.insert("id".into(), reminder["id"].clone());
-                arguments.insert("expected_version".into(), reminder["version"].clone());
-                Ok(())
-            }
-            [] => Err(Problem::new("not_found", format!("no {}reminder is called {title}", if completed { "completed " } else { "open " }))
-                .operation(&operation.name)
-                .field("reminder")
-                .hint("Check the title with apple_read reminders.list, then pass it or the reminder's id.")),
-            many => Err(Problem::new("ambiguous", format!("{} reminders match {title}", many.len()))
-                .operation(&operation.name)
-                .field("reminder")
-                .candidates(json!(many.iter().take(10).map(|r| json!({"id": r["id"], "version": r["version"], "title": r["data"]["title"], "due": r["data"]["due"], "list_id": r["data"]["list_id"]})).collect::<Vec<_>>()))
-                .hint("Ask the owner which one, then pass its id with its version as expected_version.")),
-        }
-    }
-
-    async fn every_record(&self, collection: &str) -> Step<(Vec<Value>, bool)> {
-        let operation = self.operation("records.query")?;
-        let mut records = Vec::new();
-        let mut after: Option<String> = None;
-        for _ in 0..40 {
-            let mut arguments = json!({"collection": collection, "limit": 5000});
-            if let Some(after) = &after {
-                arguments["after"] = json!(after);
-            }
-            let found = self.invoke(operation, &arguments).await?;
-            records.extend(found["records"].as_array().cloned().unwrap_or_default());
-            match found["next"].as_str().filter(|n| !n.is_empty()) {
-                Some(next) => after = Some(next.to_owned()),
-                None => return Ok((records, true)),
-            }
-        }
-        Ok((records, false))
-    }
-
-    #[allow(clippy::too_many_lines)]
-    pub(crate) async fn usage_summary(&self, arguments: &Map<String, Value>) -> Step<Value> {
+    pub(crate) fn usage_summary(&self, arguments: &Map<String, Value>) -> Step<Value> {
         let zone = jiff::tz::TimeZone::get(&mac_zone()).unwrap_or(jiff::tz::TimeZone::UTC);
         let today = jiff::Zoned::now().with_time_zone(zone).date();
         let given = |key: &str| {
@@ -1358,92 +1058,49 @@ impl Call<'_> {
             };
             (first, last)
         };
-        if last < first {
-            return Err(Problem::new("invalid", "end is before start")
-                .operation(crate::mcp_registry::USAGE_SUMMARY)
-                .field("end"));
-        }
-        let span = first.until(last).map_or(0, |s| s.get_days());
-        if span > 91 {
-            return Err(Problem::new("invalid", "the range is longer than 92 days")
-                .operation(crate::mcp_registry::USAGE_SUMMARY)
-                .field("start")
-                .hint("Ask for at most 92 days at a time."));
-        }
-        let top = usize::try_from(arguments.get("top").and_then(Value::as_u64).unwrap_or(10))
-            .unwrap_or(10);
-        let (devices, _) = self.every_record("usage.device").await?;
-        let mut devices: Vec<Value> = devices
-            .into_iter()
-            .filter(|d| d["deleted"] != true)
-            .collect();
-        if let Some(wanted) = given("device") {
-            let folded = fold(wanted);
-            let matching: Vec<Value> = devices
-                .iter()
-                .filter(|d| {
-                    d["id"] == wanted
-                        || fold(d["data"]["name"].as_str().unwrap_or_default()).contains(&folded)
-                        || fold(d["data"]["platform"].as_str().unwrap_or_default()) == folded
-                })
-                .cloned()
-                .collect();
-            if matching.is_empty() {
-                return Err(Problem::new("not_found", format!("no device matches {wanted}"))
-                    .operation(crate::mcp_registry::USAGE_SUMMARY)
-                    .field("device")
-                    .candidates(json!(devices.iter().map(|d| json!({"id": d["id"], "name": d["data"]["name"], "platform": d["data"]["platform"]})).collect::<Vec<_>>())));
-            }
-            devices = matching;
-        }
-        let (rows, complete) = self.every_record("usage.app_day").await?;
-        let (first_text, last_text) = (first.to_string(), last.to_string());
-        let mut overall: BTreeMap<String, u64> = BTreeMap::new();
-        let mut total = 0;
-        let mut per_device = Vec::new();
-        for device in &devices {
-            let id = device["id"].as_str().unwrap_or_default();
-            let (apps, days) = usage_tally(&rows, id, &first_text, &last_text);
-            for (bundle, seconds) in &apps {
-                *overall.entry(bundle.clone()).or_default() += seconds;
-            }
-            let device_total: u64 = apps.values().sum();
-            total += device_total;
-            per_device.push(json!({
-                "id": id,
-                "name": device["data"]["name"],
-                "platform": device["data"]["platform"],
-                "total_seconds": device_total,
-                "total": duration(device_total),
-                "top_apps": top_apps(&apps, top),
-                "days": days.iter().map(|(day, s)| json!({"day": day, "seconds": s, "time": duration(*s)})).collect::<Vec<_>>(),
-                "latest_data_at": device["data"]["latest_event_at"],
-            }));
-        }
-        per_device.sort_by(|a, b| {
-            b["total_seconds"]
-                .as_u64()
-                .cmp(&a["total_seconds"].as_u64())
-        });
+        let operation = self.registry.find(crate::mcp_registry::USAGE_SUMMARY);
+        let query = UsageSummaryQuery {
+            first,
+            last,
+            device: given("device").map(str::to_owned),
+            top: usize::try_from(arguments.get("top").and_then(Value::as_u64).unwrap_or(10))
+                .unwrap_or(10),
+        };
+        let summary = self
+            .frontdoor
+            .service
+            .usage_summary(self.principal, &query)
+            .map_err(|error| mcp_check::from_error(&error, operation, self.principal))?;
+        let per_device: Vec<Value> = summary.devices.iter().map(|device| json!({
+            "id": device.id,
+            "name": device.name,
+            "platform": device.platform,
+            "total_seconds": device.total_seconds,
+            "total": duration(device.total_seconds),
+            "top_apps": top_apps(&device.top_apps),
+            "days": device.days.iter().map(|(day, s)| json!({"day": day, "seconds": s, "time": duration(*s)})).collect::<Vec<_>>(),
+            "latest_data_at": device.latest_data_at,
+        })).collect();
+        let total = summary.total_seconds;
         let mut value = json!({
-            "start": first_text,
-            "end": last_text,
+            "start": summary.first,
+            "end": summary.last,
             "time_zone": mac_zone(),
             "total_seconds": total,
             "total": duration(total),
-            "top_apps": top_apps(&overall, top),
+            "top_apps": top_apps(&summary.top_apps),
             "devices": per_device,
-            "complete": complete,
+            "complete": summary.complete,
             "note": "Times are estimates from which app was in focus, so they can differ from the Screen Time app.",
         });
-        if devices.is_empty() {
+        if summary.devices.is_empty() {
             value["no_data"] = json!(
                 "No devices have Screen Time data yet. The owner may need to allow Apple Bridge to read app usage."
             );
         } else if total == 0 {
             value["no_data"] = json!("No app usage was recorded on these days.");
         }
-        if !complete {
+        if !summary.complete {
             value["incomplete"] =
                 json!("There were too many usage rows to read them all; totals may be low.");
         }
@@ -1542,7 +1199,7 @@ impl Call<'_> {
         messages
     }
 
-    pub(crate) async fn screen_time(&self, input: &Map<String, Value>) -> Step<Outcome> {
+    pub(crate) fn screen_time_read(&self, input: &Map<String, Value>) -> Step<Outcome> {
         let mut arguments = input.clone();
         if !["date", "start", "end"]
             .iter()
@@ -1554,7 +1211,7 @@ impl Call<'_> {
             arguments.insert("date".into(), json!(yesterday.to_string()));
         }
         arguments.entry("top").or_insert(json!(5));
-        let mut value = self.usage_summary(&arguments).await?;
+        let mut value = self.usage_summary(&arguments)?;
         if let Some(devices) = value["devices"].as_array_mut() {
             for device in devices {
                 if let Some(fields) = device.as_object_mut()
@@ -1578,7 +1235,7 @@ impl Call<'_> {
             .collect();
         let mut found = self
             .read_one(&Map::from_iter([
-                ("operation".to_owned(), json!("photos.places")),
+                ("operation".to_owned(), json!("photos.list_places")),
                 ("arguments".to_owned(), Value::Object(filters)),
             ]))
             .await?;

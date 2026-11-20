@@ -1,5 +1,7 @@
 use ab_catalog::{AgentOperation, OperationKind, VersionRule};
 use ab_operations::Principal;
+use rmcp::model::Tool;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::OnceLock;
 
@@ -9,16 +11,16 @@ pub(crate) const COMPACT: &[&str] = &[
     "apple_search",
     "apple_read",
     "apple_change",
-    "apple_command_status",
+    "apple_change_status",
     "apple_guide",
     "messages_read",
     "messages_send",
     "reminders_add",
-    "calendar_events",
+    "calendar_list",
     "calendar_add",
     "contacts_find",
-    "notes_create",
-    "screen_time",
+    "notes_add",
+    "screen_time_read",
     "photos_find",
     "photos_show",
 ];
@@ -39,8 +41,24 @@ pub(crate) const BY_TITLE: &[&str] = &[
 pub(crate) struct Registry {
     pub operations: Vec<AgentOperation>,
     pub domains: Vec<(String, String)>,
-    tools: Vec<Value>,
-    examples: Vec<(String, Value)>,
+    tools: Vec<ToolDefinition>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ToolDefinition {
+    #[serde(flatten)]
+    tool: Tool,
+    #[serde(default)]
+    scope: String,
+    effect: ToolEffect,
+    example: Value,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum ToolEffect {
+    Read,
+    Write,
 }
 
 pub(crate) fn registry() -> Option<&'static Registry> {
@@ -69,23 +87,18 @@ fn load() -> Option<Registry> {
     }
     let mut domains = ab_catalog::agent_domains().ok()?;
     domains.sort();
-    let mut tools: Vec<Value> = serde_json::from_str(include_str!("mcp_tools.json")).ok()?;
+    let mut definitions: Vec<Value> = serde_json::from_str(include_str!("mcp_tools.json")).ok()?;
     let change = change_schema();
-    let mut examples = Vec::new();
-    for tool in &mut tools {
+    for tool in &mut definitions {
         if tool["outputSchema"]["$ref"] == "#change" {
             tool["outputSchema"] = change.clone();
         }
-        let name = tool["name"].as_str().unwrap_or_default().to_owned();
-        if let Some(example) = tool.as_object_mut().and_then(|t| t.remove("example")) {
-            examples.push((name, example));
-        }
     }
+    let tools = serde_json::from_value(Value::Array(definitions)).ok()?;
     Some(Registry {
         operations,
         domains,
         tools,
-        examples,
     })
 }
 
@@ -368,53 +381,63 @@ impl Registry {
     }
 
     pub fn example(&self, tool: &str) -> Value {
-        self.examples
-            .iter()
-            .find(|(name, _)| name == tool)
-            .map_or_else(|| json!({}), |(_, example)| example.clone())
+        self.definition(tool)
+            .map_or_else(|| json!({}), |definition| definition.example.clone())
     }
 
-    pub fn tool_schema(&self, tool: &str) -> Option<&Value> {
+    fn definition(&self, name: &str) -> Option<&ToolDefinition> {
         self.tools
             .iter()
-            .find(|t| t["name"] == tool)
-            .map(|t| &t["inputSchema"])
+            .find(|definition| definition.tool.name == name)
+    }
+
+    pub fn tool_schema(&self, tool: &str) -> Option<Value> {
+        self.definition(tool)
+            .map(|definition| json!(definition.tool.input_schema))
+    }
+
+    pub fn tool_scope(&self, name: &str) -> Option<&str> {
+        self.definition(name)
+            .map(|definition| definition.scope.as_str())
     }
 
     pub fn tools(&self, principal: Option<&Principal>) -> Vec<Value> {
+        self.typed_tools(principal)
+            .into_iter()
+            .map(|tool| json!(tool))
+            .collect()
+    }
+
+    pub fn typed_tools(&self, principal: Option<&Principal>) -> Vec<Tool> {
         self.tools
             .iter()
-            .filter(|tool| {
-                let name = tool["name"].as_str().unwrap_or_default();
-                let scope = tool["scope"].as_str().unwrap_or_default();
-                let writes = tool["annotations"]["readOnlyHint"] == false;
+            .filter(|definition| {
                 principal.is_none_or(|principal| {
-                    if writes && read_only(principal) {
+                    if definition.effect == ToolEffect::Write && read_only(principal) {
                         return false;
                     }
-                    if name == "apple_change" {
-                        return self.operations.iter().any(|operation| {
-                            operation.changes
-                                && !operation.read_only()
-                                && allowed(principal, operation)
-                        });
+                    if definition.tool.name == "apple_change" {
+                        return self
+                            .operations
+                            .iter()
+                            .any(|operation| operation.changes && allowed(principal, operation));
                     }
-                    scope.is_empty() || can(principal, scope)
+                    definition.scope.is_empty() || can(principal, &definition.scope)
                 })
             })
-            .map(|tool| {
-                let mut tool = tool.clone();
-                if let Some(fields) = tool.as_object_mut() {
-                    fields.remove("scope");
-                }
-                let changes = match tool["name"].as_str() {
-                    Some("apple_read") => Some(false),
-                    Some("apple_change") => Some(true),
+            .map(|definition| {
+                let mut tool = definition.tool.clone();
+                let changes = match tool.name.as_ref() {
+                    "apple_read" => Some(false),
+                    "apple_change" => Some(true),
                     _ => None,
                 };
-                if let Some(changes) = changes {
-                    tool["inputSchema"]["properties"]["operation"]["enum"] =
-                        json!(self.names(principal, changes));
+                if let Some(changes) = changes
+                    && let Some(operation) = std::sync::Arc::make_mut(&mut tool.input_schema)
+                        .get_mut("properties")
+                        .and_then(|properties| properties.get_mut("operation"))
+                {
+                    operation["enum"] = json!(self.names(principal, changes));
                 }
                 tool
             })
@@ -494,10 +517,6 @@ pub(crate) fn public_name(internal: &str) -> String {
     registry()
         .and_then(|registry| registry.find(internal))
         .map_or_else(|| internal.to_owned(), |operation| operation.public.clone())
-}
-
-pub(crate) fn valid_id(id: &str) -> bool {
-    ab_operations::valid_command_id(id)
 }
 
 pub(crate) fn can(principal: &Principal, scope: &str) -> bool {

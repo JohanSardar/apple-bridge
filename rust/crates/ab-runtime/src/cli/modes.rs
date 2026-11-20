@@ -1,3 +1,4 @@
+use super::{Failure, Outcome, Reason};
 use std::{
     io::IsTerminal,
     path::PathBuf,
@@ -67,14 +68,7 @@ pub fn set_typed(words: &[String]) {
 pub fn legacy_spelling() -> bool {
     let words = TYPED.get().map(Vec::as_slice).unwrap_or_default();
     let first = words.first().map_or("", String::as_str);
-    let second = words.get(1).map_or("", String::as_str);
-    matches!(
-        first,
-        "agent" | "token" | "connector" | "revoke" | "scope" | "setup"
-    ) || matches!(
-        (first, second),
-        ("web", "devices" | "lock") | ("connectors", "pending") | ("agents", "level")
-    )
+    matches!(first, "agent" | "token" | "connector")
 }
 static STDIN_PAYLOAD: AtomicBool = AtomicBool::new(false);
 
@@ -141,8 +135,11 @@ impl Modes {
     }
 
     pub fn interactive(&self) -> bool {
-        if self.json
-            || self.non_interactive == Some(true)
+        !self.json && self.terminal_available()
+    }
+
+    fn terminal_available(&self) -> bool {
+        if self.non_interactive == Some(true)
             || self.ci
             || STDIN_PAYLOAD.load(Ordering::Relaxed)
             || !self.stdin_tty
@@ -199,8 +196,20 @@ impl Modes {
             && std::env::var("APPLE_BRIDGE_LEGACY_JSON").map_or(true, |value| value != "0")
     }
 
+    pub fn require_native_interaction(&self, task: &str, retry: &[&str]) -> Outcome {
+        if self.browser_allowed() {
+            return Ok(());
+        }
+        Err(Failure::new(
+            Reason::TerminalRequired,
+            format!("Run {task} in a terminal on this Mac."),
+        )
+        .data("outcome", "pending")
+        .then("Continue on this Mac", retry.iter().copied()))
+    }
+
     pub fn browser_allowed(&self) -> bool {
-        self.interactive()
+        self.terminal_available()
             && std::env::var_os("SSH_CONNECTION").is_none()
             && std::env::var_os("SSH_TTY").is_none()
     }

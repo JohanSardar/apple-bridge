@@ -68,25 +68,37 @@ fn render_parameters(out: &mut String, input: &Value) {
         out.push_str("No parameters.\n");
         return;
     }
-    let required: Vec<&str> = input
-        .get("required")
-        .and_then(Value::as_array)
-        .map(|items| items.iter().filter_map(Value::as_str).collect())
-        .unwrap_or_default();
     out.push_str("| Parameter | Type | Required | Description |\n");
     out.push_str("| --- | --- | --- | --- |\n");
+    render_fields(out, "", input, properties);
+}
+
+fn render_fields(
+    out: &mut String,
+    prefix: &str,
+    input: &Value,
+    properties: &serde_json::Map<String, Value>,
+) {
+    let required = input["required"].as_array();
     for (name, schema) in properties {
+        let path = format!("{prefix}{name}");
         let _ = writeln!(
             out,
-            "| `{name}` | {} | {} | {} |",
-            type_text(schema),
-            if required.contains(&name.as_str()) {
+            "| `{path}` | {} | {} | {} |",
+            cell(&type_text(schema)),
+            if required.is_some_and(|fields| fields.iter().any(|field| field == name)) {
                 "yes"
             } else {
                 "no"
             },
             cell(&description_text(schema)),
         );
+        if let Some(fields) = schema["properties"].as_object() {
+            render_fields(out, &format!("{path}."), schema, fields);
+        }
+        if let Some(fields) = schema["items"]["properties"].as_object() {
+            render_fields(out, &format!("{path}[]."), &schema["items"], fields);
+        }
     }
 }
 

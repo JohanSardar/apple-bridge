@@ -1,8 +1,7 @@
-use crate::web_pages;
+use crate::{Code, read_body, web_pages};
 use ab_trust::{Authority, Principal, devices::Session, oauth, passkeys};
 use axum::{
     Router,
-    body::to_bytes,
     extract::{Request, State},
     http::{StatusCode, header},
     response::{IntoResponse, Response},
@@ -239,7 +238,13 @@ impl Web {
     }
 }
 pub(crate) fn reject(status: u16, code: &str) -> Response {
-    respond(status, &json!({"error":{"code":code,"message":code}}))
+    reject_with_message(status, code, code)
+}
+pub(crate) fn reject_with_message(status: u16, code: &str, message: &str) -> Response {
+    respond(
+        status,
+        &json!({"error":{"code":code,"message":message,"retryable":matches!(status, 429 | 503)}}),
+    )
 }
 pub(crate) fn respond(status: u16, value: &impl serde::Serialize) -> Response {
     let bytes = serde_json::to_vec(value).unwrap_or_default();
@@ -271,7 +276,9 @@ async fn handle(State(web): State<Arc<Web>>, request: Request) -> Response {
     let (mut parts, body) = request.into_parts();
     let no_store = parts.uri.path().starts_with("/oauth/")
         || parts.uri.path().starts_with("/auth/")
-        || parts.uri.path().starts_with("/approvals");
+        || parts.uri.path().starts_with("/approvals")
+        || parts.uri.path() == "/connect"
+        || parts.uri.path().starts_with("/connect/");
     let auth_rate = parts.uri.path().starts_with("/auth/login/")
         || parts.uri.path().starts_with("/auth/enroll/");
     let head = parts.method == axum::http::Method::HEAD;
@@ -283,12 +290,15 @@ async fn handle(State(web): State<Arc<Web>>, request: Request) -> Response {
     } else {
         1_048_576
     };
-    let bytes = to_bytes(body, cap).await;
+    let bytes = read_body(body, cap).await;
     let secure = parts.extensions.get::<SecureTransport>().is_some();
     let mut response = match bytes {
         Ok(bytes) => tokio::task::spawn_blocking(move || dispatch(&web, &parts, &bytes, secure))
             .await
             .unwrap_or_else(|_| reject(503, "unavailable")),
+        Err(error) if error.code == Code::TooLarge => {
+            reject_with_message(413, "too_large", &error.message)
+        }
         Err(_) => reject(400, "invalid"),
     };
     if head {
@@ -431,12 +441,6 @@ fn dispatch(w: &Web, r: &axum::http::request::Parts, body: &[u8], secure: bool) 
     }
     let q = fields(r.uri.query().unwrap_or_default());
     let mut response = route(w, r, body, &origin, &ip, &q, identity.as_ref());
-    if path.starts_with("/oauth/") || protected {
-        response.headers_mut().insert(
-            header::CACHE_CONTROL,
-            axum::http::HeaderValue::from_static("no-store"),
-        );
-    }
     if let Some((_, s)) = &identity
         && s.kind == "trusted"
     {
@@ -553,14 +557,18 @@ fn connect_request(
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| value.starts_with("application/json"));
     let Ok(input) = serde_json::from_slice::<Value>(body) else {
-        return reject(400, "Send JSON.");
+        return reject_with_message(400, "invalid", "Send JSON.");
     };
     if r.method != axum::http::Method::POST || !json_body {
-        return reject(400, "Send JSON with POST.");
+        return reject_with_message(400, "invalid", "Send JSON with POST.");
     }
     if path == "/connect/request" {
         if !w.allow(&format!("connect-create:{ip}"), true, 10) {
-            return reject(429, "Too many requests. Wait a minute and try again.");
+            return reject_with_message(
+                429,
+                "rate_limited",
+                "Too many requests. Wait a minute and try again.",
+            );
         }
         let name = input["name"].as_str().unwrap_or_default().trim();
         let device = r
@@ -583,7 +591,18 @@ fn connect_request(
             .connectors
             .ask_for_agent(&named, "tailnet", Some(format!("{origin}/mcp")))
             .map_or_else(
-                |_| reject(400, "Send a short name, such as {\"name\": \"Grok Bot\"}, and try again in a minute."),
+                |error| match error {
+                    ab_trust::Error::Invalid => reject_with_message(
+                        400,
+                        "invalid",
+                        "Send a short name, such as {\"name\": \"Grok Bot\"}.",
+                    ),
+                    _ => reject_with_message(
+                        503,
+                        "unavailable",
+                        "Approval is unavailable. Try again in a few minutes.",
+                    ),
+                },
                 |ticket| respond(201, &ticket),
             );
     }

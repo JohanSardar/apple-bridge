@@ -89,8 +89,13 @@ struct RaceActions {
     selected: tokio::sync::Notify,
 }
 impl ActionResolver for RaceActions {
-    fn serialization_key(&self, _: &Principal, c: &Command) -> Result<String, Error> {
-        let key = crate::command_contract::serialization_key(c)?;
+    fn serialization_key_validated(
+        &self,
+        _: &Principal,
+        c: &Command,
+        target: &crate::command_contract::Validated,
+    ) -> Result<String, Error> {
+        let key = crate::command_contract::serialization_key_for(c, target);
         self.selected.notify_one();
         Ok(key)
     }
@@ -141,11 +146,13 @@ async fn queued_version_is_checked_after_the_preceding_object_lock()
         remote: false,
         expires_at: None,
     };
+    let target = crate::command_contract::validate(&record.command)?;
     let task = tokio::spawn(async move {
         gateway
             .execute(
                 record,
                 p,
+                target,
                 tokio::time::Instant::now() + Duration::from_secs(1),
             )
             .await

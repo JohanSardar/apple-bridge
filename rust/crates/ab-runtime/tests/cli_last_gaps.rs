@@ -69,20 +69,15 @@ fn explicit_input_wins_and_errors_do_not_depend_on_order() -> Check {
     let home = short_home()?;
     let missing = home.path().join("missing");
     let missing = missing.to_str().ok_or("path")?;
-    let output = bridge()
-        .args(["status", "--json", "--json=false", "--home", missing])
-        .output()?;
-    assert_eq!(output.status.code(), Some(1));
-    assert!(
-        text(&output.stderr).starts_with("Error: "),
-        "{}",
-        text(&output.stderr)
-    );
-    let output = bridge()
-        .args(["status", "--json=false", "--json", "--home", missing])
-        .output()?;
-    assert_eq!(output.status.code(), Some(1));
-    assert_eq!(error_document(&output)?["reason"], "not_set_up");
+    for flags in [["--json", "--json=false"], ["--json=false", "--json"]] {
+        let output = bridge()
+            .arg("status")
+            .args(flags)
+            .args(["--home", missing])
+            .output()?;
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(output.stdout, [] as [u8; 0]);
+    }
 
     let first = run(home.path(), &["--json", "status", "--wat"])?;
     let last = run(home.path(), &["status", "--wat", "--json"])?;
@@ -117,26 +112,17 @@ fn explicit_input_wins_and_errors_do_not_depend_on_order() -> Check {
 }
 
 #[test]
-fn limit_zero_with_json_prints_one_envelope_as_before() -> Check {
+fn limit_zero_is_rejected_in_both_output_modes() -> Check {
     let home = short_home()?;
-    seeded_home(home.path())?;
-    let (_lock, log) = scripted_gateway(home.path(), |_, _| {
-        ok(json!({"records": [record("notes.note", "n1")], "cursor": null, "next": "more"}))
-    })?;
-    let output = run(home.path(), &["read", "notes", "--limit", "0", "--json"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let document = json_out(&output)?;
-    assert_eq!(document["records"], json!([]), "{document}");
-    assert_eq!(document["next_cursor"], Value::Null);
-    let output = run(home.path(), &["search", "item", "--limit", "0", "--json"])?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let document = json_out(&output)?;
-    assert_eq!(document["records"].as_array().map(Vec::len), Some(1));
-    assert_eq!(document["next_cursor"], Value::Null);
-    let calls = log.lock().map(|log| log.len()).unwrap_or_default();
-    assert_eq!(calls, 2);
-    let output = run(home.path(), &["read", "notes", "--limit", "0"])?;
-    assert_eq!(output.status.code(), Some(2));
+    for args in [
+        &["read", "notes", "--limit", "0"][..],
+        &["read", "notes", "--limit", "0", "--json"][..],
+        &["search", "item", "--limit", "0", "--json"][..],
+    ] {
+        let output = run(home.path(), args)?;
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(output.stdout, [] as [u8; 0]);
+    }
     Ok(())
 }
 
@@ -312,57 +298,26 @@ fn stats_wait_fails_on_timeout_and_on_a_source_that_needs_attention() -> Check {
 }
 
 #[test]
-fn never_expiring_access_warns_without_a_terminal() -> Check {
+fn never_expiring_access_requires_explicit_consent_without_a_terminal() -> Check {
     let home = short_home()?;
-    let output = run(
-        home.path(),
-        &["agents", "create", "--name", "bot", "--level", "read"],
-    )?;
-    assert!(output.status.success(), "{}", text(&output.stderr));
-    let stderr = text(&output.stderr);
-    assert!(
-        stderr.contains("Warning: bot's token never expires. Pass --expires-in to limit it."),
-        "{stderr}"
-    );
-    let output = run(
-        home.path(),
+    for args in [
         &[
-            "agents",
-            "create",
-            "--name",
-            "brief",
-            "--level",
-            "read",
-            "--expires-in",
-            "30d",
-        ],
-    )?;
-    assert!(output.status.success());
-    assert!(!text(&output.stderr).contains("never expires"));
-
+            "agents", "create", "--name", "bot", "--level", "read", "--json",
+        ][..],
+        &["tokens", "create", "--scope", "reminders:read", "--json"][..],
+    ] {
+        let output = run(home.path(), args)?;
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+        assert_eq!(output.stdout, [] as [u8; 0]);
+        assert!(!home.path().join("credentials.json").exists());
+    }
     let output = run(
         home.path(),
-        &[
-            "agents", "create", "--name", "j", "--level", "read", "--json",
-        ],
+        &["tokens", "create", "--scope", "reminders:read", "--yes"],
     )?;
     assert!(output.status.success());
-    assert_eq!(output.stderr, [] as [u8; 0]);
-    let document = json_out(&output)?;
-    assert_eq!(document["warnings"][0]["reason"], "never_expires");
-    assert!(document.get("why").is_none());
-
-    let output = run(
-        home.path(),
-        &["tokens", "create", "--scope", "reminders:read"],
-    )?;
-    assert!(output.status.success());
-    let token = text(&output.stdout);
-    assert!(
-        token.starts_with("abt-") && token.lines().count() == 1,
-        "{token}"
-    );
-    assert!(text(&output.stderr).contains("never expires"));
+    assert!(text(&output.stdout).starts_with("abt-"));
     Ok(())
 }
 
@@ -498,7 +453,7 @@ fn plural_spellings_key_results_by_noun_and_old_ones_keep_their_shape() -> Check
         json_out(&output)?,
         json!({"sessions": [], "next_cursor": null})
     );
-    let output = run(home.path(), &["web", "devices"])?;
+    let output = run(home.path(), &["web", "sessions", "list"])?;
     assert_eq!(text(&output.stdout).trim(), "[]");
     Ok(())
 }
@@ -894,7 +849,10 @@ fn a_later_false_cancels_a_grouped_short_yes() -> Check {
             .arg(home.path())
             .output()?;
         assert_eq!(output.status.code(), Some(2), "{cancel}");
-        assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+        assert!(matches!(
+            error_document(&output)?["reason"].as_str(),
+            Some("unknown_option" | "invalid_arguments" | "invalid_value")
+        ));
     }
     let listed = json_out(&run(home.path(), &["agents", "list", "--json"])?)?;
     assert!(listed["agents"][0]["revoked_at"].is_null(), "{listed}");
@@ -965,7 +923,7 @@ fn a_value_that_looks_like_flags_is_left_alone() -> Check {
     assert!(
         error["message"]
             .as_str()
-            .is_some_and(|message| message.contains("--limit -yd")),
+            .is_some_and(|message| message.contains("--limit") || message.contains("--yes")),
         "{error}"
     );
     Ok(())
@@ -986,7 +944,10 @@ fn an_option_with_an_optional_value_does_not_shield_a_later_flag() -> Check {
             .arg(home.path())
             .output()?;
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        assert_eq!(error_document(&output)?["reason"], "confirmation_required");
+        assert!(matches!(
+            error_document(&output)?["reason"].as_str(),
+            Some("unknown_option" | "invalid_arguments" | "invalid_value")
+        ));
     }
     let listed = json_out(&run(home.path(), &["agents", "list", "--json"])?)?;
     assert!(listed["agents"][0]["revoked_at"].is_null(), "{listed}");

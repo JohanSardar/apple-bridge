@@ -258,6 +258,11 @@ const MESSAGESARGS: &[Field] = &[
         omit: true,
     },
     Field {
+        name: "asset_ids",
+        kind: "[]string",
+        omit: true,
+    },
+    Field {
         name: "files",
         kind: "[]MessageFile",
         omit: true,

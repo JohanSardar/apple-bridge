@@ -8,11 +8,31 @@ impl LocalGateway {
     pub(super) async fn location_approval(
         &self,
         principal: &Principal,
-        query: &NativeQuery,
+        query: &mut NativeQuery,
     ) -> Result<Option<Box<RawValue>>, Error> {
         let photos = super::photos::mutation(&query.op);
         if !photos && (query.op != "location.current" || !principal.is_agent()) {
             return Ok(None);
+        }
+        let request_id = query.id.clone();
+        let lock = self.lock(format!("admission:{}\0{request_id}", principal.id))?;
+        let _admission = lock.lock().await;
+        let existing = match self.state.principal_command(&principal.id, &request_id) {
+            Ok(record) => Some(record.command.id),
+            Err(error) if error.code == Code::NotFound => None,
+            Err(error) => return Err(error),
+        };
+        query.id = existing
+            .clone()
+            .unwrap_or_else(|| crate::scoped_command_id(&principal.id, &request_id));
+        let lock = self.lock(format!("command:{}", query.id))?;
+        let _guard = lock.lock().await;
+        if existing.is_none() {
+            match self.state.command(&query.id) {
+                Ok(_) => query.id = format!("qry_{}", ulid::Ulid::new()),
+                Err(error) if error.code == Code::NotFound => {}
+                Err(error) => return Err(error),
+            }
         }
         let args = if photos {
             let canonical = self.codec.json(query.args.get().as_bytes())?;
@@ -31,60 +51,55 @@ impl LocalGateway {
             wait_ms: 0,
         };
         let hash = self.codec.command_hash(&command)?;
-        let lock = self.lock(format!("command:{}", query.id))?;
-        let _guard = lock.lock().await;
-        match self.state.command(&query.id) {
-            Ok(record) => {
-                if record.principal != principal.id
-                    || record.command.op != query.op
-                    || record.request_hash != hash
-                    || record.command.args.get() != command.args.get()
-                {
-                    return Err(Code::IdReused.into());
-                }
-                if photos && record.state == State::Observed {
-                    return Ok(Some(self.replayed(&query.id)?));
-                }
-                if photos
-                    && matches!(
-                        record.state,
-                        State::Prepared | State::Dispatched | State::Indeterminate
-                    )
-                {
-                    return Err(Code::Indeterminate.into());
-                }
-                let record = self.expire(record)?;
-                if record.admission_era != self.state.admission_era()?
-                    || timestamp(&record.expires_at)? <= self.clock.now()
-                {
-                    return Err(Code::Expired.into());
-                }
-                match record.state {
-                    State::AwaitingApproval => {
-                        if photos {
-                            self.photos_previews.remember(&query.id, &query.args)?;
-                        }
-                        return Ok(Some(raw(
-                            &json!({"id":query.id,"state":"awaiting_approval"}),
-                        )?));
-                    }
-                    State::Admitted => {
-                        let record = self.transition(record, State::Prepared, None, None, None)?;
-                        self.transition(record, State::Dispatched, None, None, None)?;
-                        return Ok(None);
-                    }
-                    _ => return Err(Code::Forbidden.into()),
-                }
+        if existing.is_some() {
+            let record = self.state.command(&query.id)?;
+            if record.principal != principal.id
+                || record.command.op != query.op
+                || record.request_hash != hash
+                || record.command.args.get() != command.args.get()
+            {
+                return Err(Code::IdReused.into());
             }
-            Err(error) if error.code == Code::NotFound => {}
-            Err(error) => return Err(error),
+            if photos && record.state == State::Observed {
+                return Ok(Some(self.replayed(&query.id)?));
+            }
+            if photos
+                && matches!(
+                    record.state,
+                    State::Prepared | State::Dispatched | State::Indeterminate
+                )
+            {
+                return Err(Code::Indeterminate.into());
+            }
+            let record = self.expire(record)?;
+            if record.admission_era != self.state.admission_era()?
+                || timestamp(&record.expires_at)? <= self.clock.now()
+            {
+                return Err(Code::Expired.into());
+            }
+            return match record.state {
+                State::AwaitingApproval => {
+                    if photos {
+                        self.photos_previews.remember(&query.id, &query.args)?;
+                    }
+                    Ok(Some(raw(
+                        &json!({"id":query.id,"state":"awaiting_approval"}),
+                    )?))
+                }
+                State::Admitted => {
+                    let record = self.transition(record, State::Prepared, None, None, None)?;
+                    self.transition(record, State::Dispatched, None, None, None)?;
+                    Ok(None)
+                }
+                _ => Err(Code::Forbidden.into()),
+            };
         }
         let now = self.clock.now();
         if photos && principal.asks_first() {
             self.photos_previews.remember(&query.id, &query.args)?;
         }
-        let record = self.state.transition(
-            None,
+        let record = self.state.admit(
+            &request_id,
             CommandRecord {
                 command,
                 principal: principal.id.clone(),

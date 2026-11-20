@@ -51,7 +51,7 @@ pub fn own_interrupt() {
 }
 
 pub fn parse(arguments: impl IntoIterator<Item = OsString>) -> Result<Cli, clap::Error> {
-    Cli::try_parse_from(argv::prepare(arguments.into_iter().collect()).arguments)
+    Cli::try_parse_from(arguments)
 }
 
 fn requested(matches: &clap::ArgMatches) -> Requested {
@@ -98,7 +98,10 @@ fn scanned(arguments: &[OsString]) -> Requested {
         let mut found = None;
         for (index, token) in tokens.iter().enumerate() {
             if *token == long {
-                found = tokens.get(index + 1).cloned();
+                found = tokens
+                    .get(index + 1)
+                    .filter(|value| !value.starts_with('-'))
+                    .cloned();
             } else if let Some(rest) = token.strip_prefix(&joined) {
                 found = Some(rest.to_owned());
             }
@@ -139,13 +142,6 @@ fn cli_command() -> clap::Command {
     } else {
         command
     }
-}
-
-fn lenient_matches(arguments: &[OsString]) -> clap::ArgMatches {
-    cli_command()
-        .ignore_errors(true)
-        .try_get_matches_from(arguments)
-        .unwrap_or_default()
 }
 
 fn split_fields(fields: &str) -> Vec<String> {
@@ -326,34 +322,40 @@ fn group_without_action(command: &Command) -> Option<&'static str> {
 pub async fn main() -> ExitCode {
     use clap::FromArgMatches;
     let raw: Vec<OsString> = std::env::args_os().collect();
-    let prepared = argv::prepare(raw);
-    access::typed_as(&prepared.typed);
-    modes::set_typed(&prepared.typed);
-    let parsed = cli_command().try_get_matches_from(&prepared.arguments);
+    let words: Vec<_> = raw
+        .iter()
+        .skip(1)
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect();
+    let (path, typed) = argv::resolve(&words);
+    modes::set_typed(&typed);
+    let parsed = cli_command().try_get_matches_from(&raw);
     let requested = if let Ok(matches) = &parsed {
         requested(matches)
     } else {
-        let mut scan = scanned(&prepared.arguments);
-        let lenient = requested(&lenient_matches(&prepared.arguments));
-        scan.explicit_home = scan.explicit_home.or(lenient.explicit_home);
-        scan
+        scanned(&raw)
     };
     let cwd = requested.explicit_cwd.clone();
     Modes::resolve(requested).install();
-    for (old, replacement) in &prepared.notices {
-        if old.starts_with("ignored:") {
-            ui::warn("deprecated", replacement);
-        } else {
-            ui::deprecated(old, replacement);
+    let cli = match parsed.and_then(|matches| Cli::from_arg_matches(&matches)) {
+        Ok(cli) => cli,
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::MissingRequiredArgument | ErrorKind::MissingSubcommand
+            ) && words
+                .iter()
+                .take_while(|word| *word != "--")
+                .any(|word| matches!(word.as_str(), "-h" | "--help")) =>
+        {
+            return print_help(&path);
         }
+        Err(error) => return finish(Err(parse_failure(&error, &path))),
+    };
+    if cli.globals.help {
+        return print_help(&path);
     }
-    if prepared.help {
-        if let Some(stray) = &prepared.stray {
-            return finish(Err(unknown_command(&prepared.path, stray)));
-        }
-        return print_help(&prepared.path);
-    }
-    if prepared.version {
+    if cli.globals.version {
         if Modes::get().json {
             ui::json_document(serde_json::json!({"version": env!("CARGO_PKG_VERSION")}));
         } else {
@@ -361,10 +363,6 @@ pub async fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
-    let cli = match parsed.and_then(|matches| Cli::from_arg_matches(&matches)) {
-        Ok(cli) => cli,
-        Err(error) => return finish(Err(parse_failure(&error, &prepared.path))),
-    };
     let Some(command) = cli.command else {
         return print_help(&[]);
     };
@@ -377,9 +375,6 @@ pub async fn main() -> ExitCode {
     if let Some(group) = group_without_action(&command) {
         let path: Vec<String> = group.split(' ').map(str::to_owned).collect();
         return print_help(&path);
-    }
-    if let Some(replacement) = help::deprecated(&prepared.path.join(" ")) {
-        ui::deprecated(&shown_path(&prepared.path), replacement);
     }
     if empty_home_variable() && cli.globals.home.is_none() {
         return finish(Err(Failure::new(
@@ -396,7 +391,7 @@ pub async fn main() -> ExitCode {
         Ok(home) => home,
         Err(failure) => return finish(Err(failure)),
     };
-    if let Err(failure) = check_fields(&prepared.path) {
+    if let Err(failure) = check_fields(&path) {
         return finish(Err(failure));
     }
     supervise(command, home).await
@@ -461,9 +456,16 @@ fn check_fields(path: &[String]) -> Outcome {
     ))
 }
 
+async fn cancel_task(task: tokio::task::JoinHandle<Outcome>) {
+    task.abort();
+    let _ = task.await;
+}
+
 async fn supervise(command: Command, home: PathBuf) -> ExitCode {
     use tokio::signal::unix::{SignalKind, signal};
     let server = matches!(command, Command::Start(_));
+    let temporary_read = matches!(command, Command::Read(_) | Command::Search(_))
+        || matches!(&command, Command::Call(args) if args.token_env.is_none());
     let (Ok(mut interrupt), Ok(mut terminate), Ok(mut hangup)) = (
         signal(SignalKind::interrupt()),
         signal(SignalKind::terminate()),
@@ -488,6 +490,9 @@ async fn supervise(command: Command, home: PathBuf) -> ExitCode {
         && let Ok(joined) = tokio::time::timeout(Duration::from_secs(10), &mut task).await
     {
         return finish(joined.unwrap_or_else(|error| Err(Failure::internal(&error))));
+    }
+    if temporary_read {
+        cancel_task(task).await;
     }
     children::stop_all();
     let note = ui::cancel_note();
@@ -595,7 +600,6 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             Some(AgentAction::Revoke(args)) => {
                 access::revoke(home, &args.id, access::Selector::Agent)
             }
-            Some(AgentAction::Level(args)) => access::agents_level(home, &args.id, &args.level),
             None => Ok(()),
         },
         Command::Tokens(group) => match group.action {
@@ -610,13 +614,8 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
             Some(TokenAction::Update { id, scope }) => access::update_grants(home, &id, &scope),
             None => Ok(()),
         },
-        Command::Revoke(args) => access::revoke(home, &args.id, access::Selector::Any),
-        Command::Scope(args) => access::update_grants(home, &args.id, &args.scope),
         Command::Connectors(group) => match group.action {
             Some(ConnectorAction::List(args)) => access::connectors_list(home, &args).await,
-            Some(ConnectorAction::Pending) => {
-                access::connectors_list(home, &tree::ListArgs::default()).await
-            }
             Some(ConnectorAction::Allow(decision)) => {
                 access::connectors_decide(home, &decision, true).await
             }
@@ -634,8 +633,6 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
                 Some(SessionsAction::Revoke { .. }) => access::sessions_revoke(home),
                 None => Ok(()),
             },
-            Some(WebAction::Lock) => access::sessions_revoke(home),
-            Some(WebAction::Devices) => access::sessions_list(home, &tree::ListArgs::default()),
             None => Ok(()),
         },
         Command::Pair(args) => commands::pair(home, &args),
@@ -647,9 +644,7 @@ async fn run(command: Command, home: PathBuf) -> Outcome {
         Command::Restore(args) => commands::restore(home, args),
         Command::InstallCredentials => commands::install_credentials(home),
         Command::Shortcuts(group) => match group.action {
-            Some(ShortcutsAction::Install(args) | ShortcutsAction::InstallPack(args)) => {
-                commands::shortcuts(args.pack).await
-            }
+            Some(ShortcutsAction::Install(args)) => commands::shortcuts(args.pack).await,
             None => Ok(()),
         },
         Command::Selftest(group) => match group.action {
@@ -716,7 +711,7 @@ fn help_command(args: &tree::HelpArgs) -> Outcome {
         }
         return Ok(());
     }
-    let (path, _) = argv::resolve_path(&args.path);
+    let (path, _) = argv::resolve(&args.path);
     if path.len() != args.path.len() {
         return Err(unknown_command(&path, &args.path[path.len()]));
     }

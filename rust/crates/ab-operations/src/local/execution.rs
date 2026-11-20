@@ -9,6 +9,7 @@ impl LocalGateway {
         &self,
         mut record: CommandRecord,
         principal: Principal,
+        target: crate::command_contract::Validated,
         deadline: tokio::time::Instant,
     ) -> Result<CommandRecord, Error> {
         if record.source == "iphone"
@@ -26,21 +27,25 @@ impl LocalGateway {
                 None,
             );
         }
-        let key = match self.actions.serialization_key(&principal, &record.command) {
-            Ok(plan) => plan,
-            Err(error) => {
-                return self.transition(
-                    record,
-                    State::Rejected,
-                    Some(Disposition::RejectedBeforeDispatch),
-                    None,
-                    Some(error),
-                );
-            }
-        };
-        let key = self
-            .state
-            .serialization_key(&principal, &record.command, key)?;
+        let key =
+            match self
+                .actions
+                .serialization_key_validated(&principal, &record.command, &target)
+            {
+                Ok(plan) => plan,
+                Err(error) => {
+                    return self.transition(
+                        record,
+                        State::Rejected,
+                        Some(Disposition::RejectedBeforeDispatch),
+                        None,
+                        Some(error),
+                    );
+                }
+            };
+        let key =
+            self.state
+                .serialization_key_validated(&principal, &record.command, &target, key)?;
         let lock = self.lock(format!("object:{key}"))?;
         let Ok(_guard) = tokio::time::timeout_at(deadline, lock.lock()).await else {
             return self.transition(
