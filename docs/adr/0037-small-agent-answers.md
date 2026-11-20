@@ -28,7 +28,7 @@ This adds no combined daily call. Sending is unchanged.
 
 The frontdoor audit line for each MCP call carries `answer_bytes`, a size and never content. `bridge stats --answers` ranks tool and operation pairs by their largest answer, with call count and median, and `--json` prints the same.
 
-`ab-runtime/tests/agent_answers.rs` runs a gateway on a large synthetic Mac. The Mac has lab-demo plus 400 heavy notes, 30 events today across 22 test calendars, an all-day event with an end equal to its start, a multi-day all-day event, 60 overdue reminders, 330 stranger chats and 300 mails. The test calls the default reads over `/mcp` and fails when:
+`ab-runtime/tests/integration/agent_answers.rs` runs a gateway on a large synthetic Mac. The Mac has lab-demo plus 400 heavy notes, 30 events today across 22 test calendars, an all-day event with an end equal to its start, a multi-day all-day event, 60 overdue reminders, 330 stranger chats and 300 mails. The test calls the default reads over `/mcp` and fails when:
 
 - an answer goes over its budget,
 - a list goes over 100 items,

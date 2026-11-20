@@ -767,7 +767,7 @@ fn decode(evidence: &mut Evidence) -> Result<()> {
         evidence,
         "gzip_protobuf_scrubbed_fixtures",
         "ab-native",
-        &["--test", "notes_reader"],
+        &["--test", "stores", "notes_reader::"],
     );
     Ok(())
 }

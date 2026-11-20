@@ -1,0 +1,31 @@
+name: Packaging
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/packaging.yml'
+      - 'Makefile'
+      - 'packaging/**'
+      - 'rust/crates/ab-session/src/production.rs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/packaging.yml'
+      - 'Makefile'
+      - 'packaging/**'
+      - 'rust/crates/ab-session/src/production.rs'
+
+permissions: {}
+
+jobs:
+  checks:
+    name: Packaging checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: make packaging-check

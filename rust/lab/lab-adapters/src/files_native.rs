@@ -94,7 +94,7 @@ pub fn files_native(world: &mut World, _: &Value, evidence: &mut Evidence) -> Re
                 evidence,
                 "incomplete_walk_keeps_rows_complete_walk_removes",
                 "ab-native",
-                &["--test", "files_walk"],
+                &["--test", "stores", "files_walk::"],
             );
             Ok(())
         }
@@ -103,7 +103,7 @@ pub fn files_native(world: &mut World, _: &Value, evidence: &mut Evidence) -> Re
                 evidence,
                 "reader_walk_and_ubiquity_fact",
                 "ab-session",
-                &["--test", "files_mac_facts"],
+                &["--test", "capture", "files_facts::"],
             );
             gateway(world, evidence)
         }

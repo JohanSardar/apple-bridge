@@ -13,8 +13,9 @@ pub use registries::{lint_bootstrap_registrations, lint_source_registries};
 pub use rustsrc::{lint_cargo, lint_rust};
 pub use swift::lint_swift;
 
-const SKIP_DIRS: [&str; 9] = [
+const SKIP_DIRS: [&str; 10] = [
     ".git",
+    ".cargo-home",
     "target",
     ".worktrees",
     ".build",

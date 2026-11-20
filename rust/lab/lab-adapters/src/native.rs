@@ -78,7 +78,7 @@ pub fn media_yield(world: &mut World, _: &Value, evidence: &mut Evidence) -> Res
         evidence,
         "messages_media_derivation_and_retry",
         "ab-session",
-        &["--test", "messages_media"],
+        &["--test", "capture", "messages_media::"],
     );
     let Ok(directory) = build("MediaChecks", true) else {
         evidence.check("native_media_checks_built", false, "native build failed");
@@ -163,7 +163,7 @@ pub fn reminders_parity(world: &mut World, _: &Value, evidence: &mut Evidence) -
         evidence,
         "store_effects_and_invalidation",
         "ab-native",
-        &["--test", "reminders_store_oracle"],
+        &["--test", "stores", "reminders_store_oracle::"],
     );
     let _ = world;
     Ok(())
