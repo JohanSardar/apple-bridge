@@ -28,7 +28,7 @@ These have no maintained library, because they are this server's policy rather t
 
 Two kinds of test hold them to the specs:
 
-- `rust/crates/ab-frontdoor/tests/oauth_compliance.rs` runs the OAuth requirements through the real HTTP routes, using the metadata the real clients publish.
+- `rust/crates/ab-frontdoor/tests/integration/oauth_compliance.rs` runs the OAuth requirements through the real HTTP routes, using the metadata the real clients publish.
 - `lab/compliance/` runs clients we did not write: `oauth4webapi`, a strict client library, and the MCP SDK's own `auth()`. They reject non-conforming metadata and responses.
 
 ## Found and fixed in this review

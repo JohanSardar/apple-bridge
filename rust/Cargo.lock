@@ -320,27 +320,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ab-spikes"
-version = "0.1.13"
-dependencies = [
- "ab-wire",
- "axum",
- "ed25519-dalek",
- "hyper",
- "jiff",
- "libsqlite3-sys",
- "rmcp",
- "rusqlite",
- "rustls",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tokio",
- "x25519-dalek",
- "x509-parser",
-]
-
-[[package]]
 name = "ab-state"
 version = "0.1.13"
 dependencies = [

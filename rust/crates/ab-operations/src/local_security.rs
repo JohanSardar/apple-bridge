@@ -49,6 +49,7 @@ impl Codec for TestCodec {
 #[derive(Debug, Default)]
 struct Seen {
     frames: StdMutex<Vec<Value>>,
+    frame_recorded: tokio::sync::Notify,
     staged: StdMutex<Vec<Vec<u8>>>,
 }
 #[derive(Debug, Default)]
@@ -74,6 +75,7 @@ impl ApplePeer for TestPeer {
                 self.0.staged.lock().map_err(|_| Code::Corrupt)?.push(bytes);
             }
             self.0.frames.lock().map_err(|_| Code::Corrupt)?.push(args);
+            self.0.frame_recorded.notify_one();
             if f.id.starts_with("qry_location_failure.") || f.id.starts_with("qry_photos_failure.")
             {
                 return Ok(IpcFrame {
@@ -872,13 +874,10 @@ async fn print_document_never_takes_a_caller_path() {
 }
 
 async fn wait_for_frame(f: &Fixture) -> Value {
-    for _ in 0..200 {
-        if let Some(frame) = f.peer.0.frames.lock().expect("frames").first().cloned() {
-            return frame;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    panic!("no frame reached the peer");
+    tokio::time::timeout(Duration::from_secs(2), f.peer.0.frame_recorded.notified())
+        .await
+        .expect("no frame reached the peer");
+    f.peer.0.frames.lock().expect("frames")[0].clone()
 }
 
 #[tokio::test]

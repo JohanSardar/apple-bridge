@@ -80,13 +80,17 @@ pub fn run(world: &mut World, _: &Value, evidence: &mut Evidence) -> Result<()> 
         "MAIL-IDLE" => (
             "bounded_fixture_idle_no_checkpoints_and_watcher_resumes",
             "ab-session",
-            &["--test", "capture_producer", "rust_mail"],
+            &["--test", "capture", "capture_producer::rust_mail"],
         ),
-        "MAIL-BODY" => ("native_mail_fixture", "ab-native", &["--test", "mail"]),
+        "MAIL-BODY" => (
+            "native_mail_fixture",
+            "ab-native",
+            &["--test", "stores", "mail::"],
+        ),
         _ => (
             "native_mail_fixture",
             "ab-session",
-            &["--test", "capture_producer", "rust_mail"],
+            &["--test", "capture", "capture_producer::rust_mail"],
         ),
     };
     crate::native_core::rust_tests(evidence, check, package, tests);

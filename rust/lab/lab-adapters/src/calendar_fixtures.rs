@@ -932,7 +932,7 @@ pub fn native_checks(scenario: &str, evidence: &mut Evidence) {
             evidence,
             "store_reader_fields_and_blobs",
             "ab-native",
-            &["--test", "calendar_store_oracle"],
+            &["--test", "stores", "calendar_store_oracle::"],
         );
         return;
     }
@@ -941,7 +941,7 @@ pub fn native_checks(scenario: &str, evidence: &mut Evidence) {
             evidence,
             "changed_push_survives_a_failed_pull",
             "ab-session",
-            &["--test", "native_revalidation"],
+            &["--test", "native_link", "native_revalidation::"],
         );
         return;
     }

@@ -169,7 +169,7 @@ pub fn read(world: &mut World, input: &Value, evidence: &mut Evidence) -> Result
                 evidence,
                 "decoder_fixture_checks",
                 "ab-native",
-                &["--test", "typedstream"],
+                &["--test", "decoders", "typedstream::"],
             );
             let malformed = action(world, "malformed", "message-000001") && settle(world);
             evidence.check("malformed_observed", malformed, "malformed body observed");

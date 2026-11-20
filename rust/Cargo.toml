@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "tools/*", "spikes", "lab/lab-*"]
+members = ["crates/*", "tools/*", "lab/lab-*"]
 
 [workspace.package]
 edition = "2024"
@@ -43,9 +43,6 @@ debug = "line-tables-only"
 
 [profile.dev.package."*"]
 debug = false
-
-[profile.spike-budget]
-inherits = "dev"
 
 [patch.crates-io]
 webauthn-rs-core = { path = "vendor/webauthn-rs-core" }

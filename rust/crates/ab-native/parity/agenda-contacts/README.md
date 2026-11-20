@@ -25,7 +25,7 @@ Native JSON data bytes use the shared Swift-compatible record encoder.
 
 Run `python3 rust/crates/ab-native/parity/agenda-contacts/regenerate.py` from the
 repository root, then `cargo test --manifest-path rust/Cargo.toml -p ab-native
---test agenda_contacts_shadow` with the isolated target required by the run
+--test stores agenda_contacts_shadow::` with the isolated target required by the run
 brief. The generator compiles the exact diff loops extracted from the current
 Swift Calendar and Contacts sources, together with the real Calendar time and
 scope helpers. It supplies synthetic observations, bounded-window lookup results

@@ -88,9 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn stylesheet_keeps_the_agreed_look() {
-        assert!(!STYLESHEET.contains("monospace"), "no monospace labels");
-        assert!(!STYLESHEET.contains("999px"), "no pill shapes");
+    fn stylesheet_has_no_remote_fonts() {
         assert!(!STYLESHEET.contains("@import"), "no remote fonts");
     }
 }

@@ -54,7 +54,7 @@ pub fn decode(world: &mut World, evidence: &mut Evidence) -> Result<()> {
         evidence,
         "scrubbed_native_decoder_fixtures",
         "ab-native",
-        &["--test", "decoders"],
+        &["--test", "decoders", "fixture_decoders::"],
     );
     if !evidence.assertions.iter().all(|a| a.passed) {
         return Ok(());
